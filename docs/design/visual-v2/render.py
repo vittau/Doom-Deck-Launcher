@@ -25,10 +25,16 @@ class Render:
   self.slug=slug;self.s=STYLES[slug]; self.out=ROOT/slug
   atlas=Image.open(self.out/'art-atlas.png').convert('RGB'); w,h=atlas.size;y=self.s['seam']
   self.tiles=[atlas.crop((i*w//3,j0,(i+1)*w//3,j1)) for j0,j1 in [(0,y),(y,h)] for i in range(3)]
- def font(self,size,display=False):return ImageFont.truetype(str(F/self.s['display' if display else 'body']),size)
+ def font(self,size,display=False):
+  font=ImageFont.truetype(str(F/self.s['display' if display else 'body']),size)
+  if display and self.slug=='cinder-1993':font.set_variation_by_axes([700])
+  return font
  def rect(self,box,fill,outline=None,width=1):self.d.rectangle(box,fill=fill,outline=outline,width=width)
  def text(self,x,y,t,size=22,color=None,display=False):
-  self.d.text((x,y),t,font=self.font(size,display),fill=color or self.s['text'],stroke_width=0)
+  if display and self.slug=='cinder-1993':
+   self.d.text((x+1,y+2),t,font=self.font(size,display),fill='#6F3423')
+   self.d.text((x,y-1),t,font=self.font(size,display),fill='#F2B18A')
+  self.d.text((x,y),t,font=self.font(size,display),fill=color or (self.s['accent'] if display and self.slug=='cinder-1993' else self.s['text']),stroke_width=0)
  def fit(self,x,y,t,maxwidth,size=22,color=None,display=False):
   while self.d.textlength(t,font=self.font(size,display))>maxwidth and size>20:size-=1
   assert self.d.textlength(t,font=self.font(size,display))<=maxwidth,(t,maxwidth)
@@ -67,7 +73,6 @@ class Render:
    self.text(x+25,36,t,22)
   self.text(1020,38,'DoomDeckLauncher',20,self.s['muted'])
   self.rect((40,120,1240,210),self.s['canvas'])
-  if self.slug=='cinder-1993':self.text(42,127,title,42,'#723824',True)
   self.text(40,122,title,40,self.s['text'] if self.slug!='cinder-1993' else self.s['accent'],True)
   self.text(40,177,subtitle,22,self.s['muted'])
   self.d.line((40,103,1240,103),fill=self.s['edge'])

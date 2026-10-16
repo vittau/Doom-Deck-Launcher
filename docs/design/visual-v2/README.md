@@ -27,3 +27,15 @@ Palette: canvas `#10130F`, panel `#1D241D`, raised `#303A2C`, text `#F4F1DA`, mu
 Display: **Russo One Regular**, Jovanny Lemonad; body: **Inter Variable 4.1**, The Inter Project Authors. Both unmodified SIL OFL 1.1, confirmed against their bundled source notices. Display 30–48 px; body 22 px, metadata 20 px. Source and licence links are pinned below.
 
 Slint implementation: olive wall PNG, cropped brass 9-slice border with rivets, opaque panel/row fills, simple one-pixel bevels and amber focus rectangles. Warning stripes and signal lamps remain baked into art. No runtime lighting. Estimated cropped art 1.2 MB plus 0.95 MB fonts; the larger variable Inter file can be replaced by upstream static weights in implementation after review. Preserve font licences and reserved names.
+
+## Cinder 1993
+
+[Home](cinder-1993/home.png) · [Play setup](cinder-1993/play-setup-auger.png) · [Style sheet](cinder-1993/style-sheet.png)
+
+Warm umber masonry, oxidized copper and fiery pixel-painted vistas recall an early shooter menu without borrowing its lettering or assets. Bold condensed Teko titles have a baked light-and-shadow bevel; Barlow remains smooth and readable at handheld scale. This direction trades Cathedral's ornamental elegance and Bastion's engineered precision for earthy, tactile nostalgia. Square controls and pale amber focus preserve the production hierarchy while the coarse material treatment supplies the period character.
+
+Palette: canvas `#17100B`, panel `#2A2016`, raised `#403221`, text `#FFF0CC`, muted `#D5C3A1`, focus `#FFD078`, display copper `#E18A63`, edge `#98734C`. Display bevel highlights `#F2B18A`; decorative shadow `#6F3423`.
+
+Display: **Teko**, The Teko Project Authors, unmodified variable font rendered at weight 700; body: **Barlow Regular**, The Barlow Project Authors. Both SIL OFL 1.1, confirmed from source notices. Display 30–48 px; body 22 px, metadata 20 px. The font is a contemporary condensed face, not a DOOM-derived or game bitmap font. No font file is modified to create the bevel.
+
+Slint implementation: brown wall PNG, copper frame cropped as a 9-slice, original emblem, three cover PNGs and opaque brown surfaces. Bake the decorative display bevel into title images if software-renderer text layering proves expensive; keep accessible/translatable title text separately. Prefer static upstream Teko Bold or a reviewed instance for production Slint font loading. No animation or palette shader. Approximate cropped art 1.3 MB plus 125 KB fonts; PNG compression and static font selection determine the final bundle.
