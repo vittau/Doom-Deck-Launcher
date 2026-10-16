@@ -52,20 +52,20 @@ them unvalidated; add after Deck checks).
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1) — table parses; every hash value has a `source`; a test fails on duplicate ids.
-- [ ] **A2** (R2) — synthetic WAD fixtures built in tests (header + directory with marker lumps,
+- [x] **A1** (R1) — table parses; every hash value has a `source`; a test fails on duplicate ids.
+- [x] **A2** (R2) — synthetic WAD fixtures built in tests (header + directory with marker lumps,
   no copyrighted data): E1–E4 family, MAPxx family → Ambiguous, PWAD-magic tolerance via a
   test-only table entry, oversize rejection.
-- [ ] **A3** (R3) — fixture Steam trees with `libraryfolders.vdf` samples (two libraries, odd
+- [x] **A3** (R3) — fixture Steam trees with `libraryfolders.vdf` samples (two libraries, odd
   casing, missing folders); parser fuzz-style tests on malformed VDF.
-- [ ] **A4** (R4, R5) — symlink-escape refusal; refresh only re-hashes changed files;
+- [x] **A4** (R4, R5) — symlink-escape refusal; refresh only re-hashes changed files;
   `best_for` preference.
-- [ ] **A5** (R6) — link creation, refresh, target-changed detection.
+- [x] **A5** (R6) — link creation, refresh, target-changed detection.
 - [ ] **A6** — *Needs Deck Validation:* on the Deck, DDL finds the owner's DOOM + DOOM II
   install and identifies its IWADs (tracked in `docs/deck-testing.md`).
 
 ## Tasks
 
-- [ ] Table + identifier
-- [ ] Steam VDF + discovery + user folders
-- [ ] Registry + canonical links
+- [x] Table + identifier
+- [x] Steam VDF + discovery + user folders
+- [x] Registry + canonical links
