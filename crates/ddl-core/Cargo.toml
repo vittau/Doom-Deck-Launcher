@@ -8,6 +8,11 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
-# Intentionally dependency-free: this crate is the platform-independent logic
-# layer and must stay usable (and testable) without UI or OS crates.
+# The spec 001 skeleton was dependency-free. Spec 006 (downloads and safe
+# archive extraction) adds exactly three, each justified in its worker report:
+# a blocking HTTP client (`ureq`), SHA-256 hashing (`sha2`) and ZIP reading
+# (`zip`). All three are pure Rust, maintained and need no system libraries.
 [dependencies]
+ureq = { workspace = true }
+sha2 = { workspace = true }
+zip = { workspace = true }

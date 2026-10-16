@@ -37,6 +37,22 @@ slint-build = "=1.18.1"
 tracing = "=0.1.44"
 tracing-subscriber = "=0.3.23"
 
+# Downloads and safe archive extraction (spec 006).
+#
+# `ureq` is a small, **blocking** HTTP client with no async runtime: the
+# download pipeline is deliberately synchronous and the UI runs it on a worker
+# thread (spec 006 R1/R2). Only the `rustls` feature is enabled, so TLS uses
+# the pure-Rust `ring` provider and the bundled webpki trust roots — no OpenSSL
+# or other system TLS library is required on the Steam Deck. Automatic
+# redirects, gzip decoding and cookies are all disabled: the fetcher follows
+# redirects itself so it can re-check every target against the host allowlist.
+ureq = { version = "=3.4.2", default-features = false, features = ["rustls"] }
+# SHA-256 verification and content-addressed download caching (spec 006 R1/R3).
+sha2 = "=0.11.1"
+# Reading ZIP archives. Only `deflate` is enabled; stored entries always work
+# and every other compression method is rejected by the extractor (spec 006 R4).
+zip = { version = "=9.0.4", default-features = false, features = ["deflate"] }
+
 # Release binaries are built for Steam Deck; stripping debug info keeps the
 # downloadable tarball small. Debug/release logs are unaffected.
 [profile.release]
