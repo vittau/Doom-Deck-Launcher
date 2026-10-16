@@ -24,4 +24,4 @@ pub use runner::{
     EngineRunner, FakeEngineRunner, LaunchError, LaunchExit, LaunchOutcome, RealEngineRunner,
     RecordedLaunch, SCRUBBED_ENV,
 };
-pub use smoke::{smoke_test, smoke_test_with_timeout, SmokeError, SMOKE_TIMEOUT, VERSION_PREFIX};
+pub use smoke::{SMOKE_TIMEOUT, SmokeError, VERSION_PREFIX, smoke_test, smoke_test_with_timeout};
