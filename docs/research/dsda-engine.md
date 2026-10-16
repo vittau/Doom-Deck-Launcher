@@ -624,14 +624,48 @@ classifies both stderr shapes into actionable errors
 (`crates/ddl-core/src/engines/dsda/smoke.rs`).
 [Run 38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407).
 
+**Confirmed (reviewed v0.30.1 AppImage, extracted locally).** The second e2e run
+([38982231350](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38982231350))
+failed next on `libjack.so.0`. Extracting the reviewed asset
+([`dsda-doom-0.30.1-linux-x86_64.appimage`](https://github.com/dsda-org/dsda-doom/releases/download/v0.30.1/dsda-doom-0.30.1-linux-x86_64.appimage),
+SHA-256 `b06adf3f0c7d4e82dc1870baf97e67e4dc4e663e37f69070ddc02fa3e97608b0`, matching
+`crates/ddl-core/data/engines.toml`) and reading each bundled ELF's `DT_NEEDED`
+shows `usr/bin/dsda-doom` links the **bundled** `libfluidsynth.so.3`, which links
+`libjack.so.0`; `libjack.so.0` is not bundled, so it is a **hard, transitive
+`DT_NEEDED`** of the engine (not an optional `dlopen`). The complete set of
+non-bundled `DT_NEEDED` libraries across `usr/bin/dsda-doom` and every
+`usr/lib/*.so` is: `libGL.so.1`, `libOpenGL.so.0`, `libX11.so.6`,
+`libX11-xcb.so.1`, `libxcb.so.1`, `libasound.so.2`, `libdrm.so.2`, `libgbm.so.1`,
+`libwayland-client.so.0`, `libgpg-error.so.0`, `libjack.so.0`, `libz.so.1`,
+`libstdc++.so.6`, `libgcc_s.so.1`, plus glibc (`libc.so.6`, `libm.so.6`,
+`libpthread.so.0`, `libmvec.so.1`) and the loader. The e2e host job now extracts the
+AppImage and runs this `ldd` sweep once, recording the whole `not found` set.
+
+**Confirmed (SteamOS 3.x package set).** SteamOS 3.8.0's published package manifest
+lists `pipewire-jack 1:1.4.7-1.1` (and **no** `jack2`), and the SteamOS
+`jupiter-rel` mirror's own `pipewire-jack` package installs `usr/lib/libjack.so.0` —
+read from the SteamOS package itself, not only Arch's. The same manifest lists
+`glibc 2.41`, `libglvnd 1.7.0`, `mesa` (which provides `libgbm.so.1`), `alsa-lib`,
+`libdrm`, `libx11`, `libxcb`, `wayland`, `libgpg-error`, `gcc-libs` and `zlib`,
+covering every library above. So SteamOS 3.x provides the engine's system libraries
+in the default library path, and **no DDL-side mitigation is needed**: DDL does not
+bundle system libraries, and doing so would be a separate owner decision.
+[SteamOS 3.8.0 package manifest](https://steamdeck-images.steamos.cloud/steamdeck/20250903.1000/steamdeck-20250903.1000-3.8.0.manifest.pacman);
+[SteamOS `pipewire-jack` package](https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-rel/os/x86_64/);
+[SteamOS 3.7.20 package list](https://gist.github.com/hcartiaux/f5a901d048814dee7adec4830c9e8f5e);
+[Arch `pipewire-jack` (`Provides: libjack.so=0-64`)](https://archlinux.org/packages/extra/x86_64/pipewire-jack/).
+
 **Needs Deck Validation.** Actual `--appimage-extract`/`AppRun` operation, the
 runtime's exact FUSE library/helper requirement (FUSE2 versus FUSE3), mount policy,
 and SteamOS Gaming Mode launch remain unverified. A statically linked outer
 runtime is not evidence that the bundled DSDA executable has no glibc dependency.
 Ubuntu 22.04 is the build environment, **not a proven minimum glibc version** — the
-CI evidence above now measures the requirement at ≥ 2.34 and a GL driver. The exact
-payload ELF version requirements and GL driver behavior must still be measured on
-Deck; source CI dependencies establish GL involvement, not Deck driver support.
+CI evidence above now measures the requirement at ≥ 2.34 and a GL driver, and
+SteamOS 3.8.0 ships glibc 2.41 and every system library the payload needs. The
+remaining Deck check is simply to run the engine `-v` on the host (and confirm it
+fails when a Steam Compatibility tool is forced). The exact payload ELF version
+requirements and GL driver behavior must still be measured on Deck; source CI
+dependencies establish GL involvement, not Deck driver support.
 
 Implications for DDL:
 
@@ -639,6 +673,7 @@ Implications for DDL:
 - **Proposed:** Design extraction/AppRun as a separately validated fallback; do not assume a host `libfuse.so.2` requirement from generic AppImage advice.
 - **Proposed:** Preserve the complete AppDir in a fallback installation so bundled port WAD and libraries remain locatable.
 - **Proposed:** Require a Linux asset inspection plus physical Deck tests before declaring a runtime/glibc/FUSE baseline in an engine-manager spec.
+- **Confirmed:** The engine's non-bundled `DT_NEEDED` set is small and SteamOS 3.x provides all of it; DDL must not bundle system libraries (a redistribution decision, not a launcher one). A host missing one is a host problem, and DDL names the library so the user can install it.
 
 ## 8. License and unmodified upstream download
 

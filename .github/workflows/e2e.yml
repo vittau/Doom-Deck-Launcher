@@ -128,6 +128,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      # The diagnostic step below reads the reviewed tag/asset/hash from
+      # `crates/ddl-core/data/engines.toml`.
+      - uses: actions/checkout@v4
+
       # A scratch XDG root so the run never touches the runner's real state. DDL
       # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`. Set
       # here because the `runner` context is not available in a job-level `env`.
@@ -143,18 +147,89 @@ jobs:
             echo "XDG_STATE_HOME=$root/state"
           } >> "$GITHUB_ENV"
 
+      # Informative, never failing: download the exact reviewed AppImage, extract
+      # it, and run `ldd` on its binary and every bundled `.so`, so one run names
+      # *every* system library the AppImage needs instead of discovering them one
+      # per run. The full `not found` set lands in the step summary. The packages
+      # in the next step are derived from this output.
+      - name: Diagnose the AppImage's missing libraries (informative)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          tag="$(sed -n 's/^tag *= *"\([^"]*\)"/\1/p' crates/ddl-core/data/engines.toml | head -1)"
+          asset="$(sed -n 's/^asset *= *"\([^"]*\)"/\1/p' crates/ddl-core/data/engines.toml | head -1)"
+          sha="$(sed -n 's/^sha256 *= *"\([^"]*\)"/\1/p' crates/ddl-core/data/engines.toml | head -1)"
+          url="https://github.com/dsda-org/dsda-doom/releases/download/${tag}/${asset}"
+          work="$RUNNER_TEMP/ddl-appimage-check"
+          rm -rf "$work"
+          mkdir -p "$work"
+          echo "downloading $url"
+          curl -fL --retry 3 -o "$work/dsda-doom.AppImage" "$url"
+          echo "$sha  $work/dsda-doom.AppImage" | sha256sum -c - \
+            || echo "::warning::the AppImage digest did not match engines.toml"
+          chmod +x "$work/dsda-doom.AppImage"
+          ( cd "$work" && ./dsda-doom.AppImage --appimage-extract >/dev/null )
+          libs="$work/squashfs-root/usr/lib"
+          report="$work/ldd.txt"
+          : > "$report"
+          # The bundled libraries live next to the binary; put them on the search
+          # path so `ldd` reports only the genuinely system libraries.
+          export LD_LIBRARY_PATH="$libs"
+          for elf in "$work/squashfs-root/usr/bin/dsda-doom" "$libs"/*.so*; do
+            echo "== $elf ==" >> "$report"
+            ldd "$elf" >> "$report" 2>&1 || true
+          done
+          notfound="$(grep 'not found' "$report" | awk '{print $1}' | sort -u || true)"
+          {
+            echo "### AppImage DT_NEEDED check (informative)"
+            echo ""
+            echo "The reviewed AppImage (\`${tag}\`, SHA-256 verified) was extracted and \`ldd\` ran on \`usr/bin/dsda-doom\` and every bundled \`usr/lib/*.so\` with the bundled directory on \`LD_LIBRARY_PATH\`."
+            echo ""
+            echo "Libraries **not found** on this runner (deduplicated):"
+            echo ""
+            echo '```'
+            echo "${notfound:-(none)}"
+            echo '```'
+            echo ""
+            echo "<details><summary>Full ldd output</summary>"
+            echo ""
+            echo '```'
+            cat "$report"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "not found: ${notfound:-(none)}"
+
       # Runtime libraries, not build dependencies: this job only runs the
-      # pre-built binary. `libfontconfig1` is the one non-glibc library `ddl` is
-      # hard-linked to (docs/research/steam-runtime-build.md §6). The official
-      # DSDA-Doom AppImage does not bundle the GL driver, and the first e2e run
-      # (38980417407) failed with `libOpenGL.so.0: cannot open shared object
-      # file`; `libgl1` also pulls libglvnd0/libglx0. Keep this list minimal:
-      # any further missing library the smoke test names belongs here.
+      # pre-built binary. Each package is commented with the library it provides.
+      # The list is the AppImage's non-bundled DT_NEEDED set (from the reviewed
+      # v0.30.1 asset; see docs/reports/014-cli-and-linux-e2e.md) plus
+      # `libfontconfig1`, the one non-glibc library `ddl` itself hard-links
+      # (docs/research/steam-runtime-build.md §6). Add any further library the
+      # diagnostic step above reports as missing.
       - name: Install runtime libraries
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libfontconfig1 libgl1 libopengl0
+          packages=(
+            libfontconfig1      # libfontconfig.so.1  (ddl's text stack)
+            libgl1              # libGL.so.1          (bundled libGLU / SDL2 GL)
+            libopengl0          # libOpenGL.so.0      (run 38980417407)
+            libjack-jackd2-0    # libjack.so.0        (bundled libfluidsynth; run 38982231350)
+            libgpg-error0       # libgpg-error.so.0   (bundled libgcrypt)
+            libdrm2             # libdrm.so.2         (bundled SDL2)
+            libgbm1             # libgbm.so.1         (bundled SDL2)
+            libwayland-client0  # libwayland-client.so.0 (bundled SDL2/libdecor)
+            libx11-6            # libX11.so.6         (bundled SDL2/libpulsecommon)
+            libx11-xcb1         # libX11-xcb.so.1     (bundled libpulsecommon)
+            libxcb1             # libxcb.so.1         (bundled libpulsecommon/xcb)
+          )
+          sudo apt-get install -y --no-install-recommends "${packages[@]}"
+          # libasound.so.2 (bundled SDL2 and portmidi): the package was renamed
+          # with the 64-bit time_t transition, so try both names.
+          sudo apt-get install -y --no-install-recommends libasound2t64 \
+            || sudo apt-get install -y --no-install-recommends libasound2
 
       - name: Download the e2e binary
         uses: actions/download-artifact@v4

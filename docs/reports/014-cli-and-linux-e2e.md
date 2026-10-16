@@ -284,8 +284,8 @@ startup stderr into a typed `RuntimeError`:
   names the missing symbols and says to remove any Compatibility tool from DDL's
   Steam shortcut so DSDA-Doom runs on SteamOS directly;
 - `error while loading shared libraries: <lib>` → `RuntimeError::MissingLibrary`,
-  whose message names the library and says to install it, or run on a system that
-  provides it (SteamOS does).
+  whose message names the library and says to install the package that provides it,
+  or run DDL on a system that has it (kept neutral — see follow-up 2).
 
 `smoke_test_with_timeout` returns `SmokeError::Runtime` for these, leaving the FUSE
 `Exited` path intact so the extraction fallback still runs. `InstallError` prints the
@@ -293,6 +293,46 @@ message directly instead of wrapping it as a generic smoke-test failure; `Servic
 maps it to the new `Problem::EngineRuntime`, which the UI renders through the new
 `error-engine-runtime` string and the CLI prints as-is. Unit tests use the exact
 captured stderr lines, plus a manager install test and two CLI tests.
+
+## Follow-up 2: every missing library at once, and SteamOS coverage
+
+The second run
+([38982231350](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38982231350))
+passed the build job and the host job's install step, then the diagnosis worked:
+`ddl: DSDA-Doom could not start because the system library libjack.so.0 is missing.`
+Discovering one library per run is slow, so:
+
+- **The host job now sweeps once.** Before `ddl engine install` it downloads the exact
+  reviewed AppImage (tag/asset/SHA-256 read from `crates/ddl-core/data/engines.toml`,
+  digest verified), extracts it, and runs `ldd` on `usr/bin/dsda-doom` and every
+  bundled `usr/lib/*.so` with the bundled directory on `LD_LIBRARY_PATH`. The
+  deduplicated `not found` set and the full `ldd` output go to
+  `$GITHUB_STEP_SUMMARY`; the step is `continue-on-error` and never fails.
+- **The install step now installs the whole derived set**, each package commented with
+  the library it provides: `libjack-jackd2-0` (libjack.so.0), `libgpg-error0`,
+  `libdrm2`, `libgbm1`, `libwayland-client0`, `libx11-6`, `libx11-xcb1`, `libxcb1`,
+  plus the earlier `libfontconfig1`/`libgl1`/`libopengl0`; `libasound2t64` falls back
+  to `libasound2` for the 64-bit `time_t` rename.
+- **The message is neutral.** `RuntimeError::MissingLibrary` no longer claims
+  "(SteamOS does)"; it says to install the package that provides the library, or run
+  DDL on a system that has it.
+
+I derived the set by extracting the reviewed v0.30.1 AppImage locally (SHA-256
+`b06adf3f…`) and reading every bundled ELF's `DT_NEEDED`. The engine's
+`usr/bin/dsda-doom` links the bundled `libfluidsynth.so.3`, which links
+`libjack.so.0` — a **hard, transitive** dependency, not an optional `dlopen`. The
+complete non-bundled set is: `libGL.so.1`, `libOpenGL.so.0`, `libX11.so.6`,
+`libX11-xcb.so.1`, `libxcb.so.1`, `libasound.so.2`, `libdrm.so.2`, `libgbm.so.1`,
+`libwayland-client.so.0`, `libgpg-error.so.0`, `libjack.so.0`, `libz.so.1`,
+`libstdc++.so.6`, `libgcc_s.so.1`, and glibc.
+
+**SteamOS coverage (Confirmed, cited in `docs/research/dsda-engine.md` §7).** SteamOS
+3.8.0's package manifest lists `pipewire-jack` (and no `jack2`), and the SteamOS
+`jupiter-rel` mirror's own `pipewire-jack` package installs `usr/lib/libjack.so.0`;
+the same manifest lists glibc 2.41, libglvnd, mesa, alsa-lib, libdrm, libx11, libxcb,
+wayland, libgpg-error, gcc-libs and zlib. So the Deck provides every library the
+engine needs, **no DDL-side mitigation is required**, and DDL will not bundle system
+libraries without a separate owner decision.
 
 ## R4 — Docs
 
@@ -351,12 +391,17 @@ or captures the screen.
 
 ## Open questions and items left open
 
-- **A2** stays unchecked: the first e2e run
-  ([38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407))
-  failed in both jobs at the engine step for the host reasons above. The workflow is
-  restructured; the coordinator re-triggers it after merge and will forward any
-  failure. The report should then link the passing run and the AppImage-direct result.
+- **A2** stays unchecked: the first two e2e runs
+  ([38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407),
+  [38982231350](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38982231350))
+  each failed at the engine step on a missing *host* library. The workflow now sweeps
+  the whole AppImage `DT_NEEDED` set once and installs it; the coordinator re-triggers
+  it after merge and will forward any failure. The report should then link the passing
+  run and the AppImage-direct result.
 - **A4** stays unchecked: `ddl doctor` and `ddl launch` from Konsole on the Deck are a
   hardware check, as is confirming the engine runs on the host without a forced
   Compatibility tool.
+- **Owner decision, if it ever comes up:** bundling the engine's system libraries is
+  explicitly *not* done. SteamOS 3.x provides all of them (research §7), so no
+  mitigation is needed today; a future redistribution would be a separate decision.
 - New dependencies: **none**. The parser stays hand-written; the lock uses `std::fs`.
