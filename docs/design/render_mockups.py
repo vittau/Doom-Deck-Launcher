@@ -50,7 +50,6 @@ def chrome(active,title,subtitle,hints):
     for x,label in [(180,'Home'),(340,'Discover'),(520,'Library'),(680,'Settings')]:
         txt(x,30,label,22,'text' if label==active else 'muted',label==active)
         if label==active: d.rectangle((x,70,x+100,73),fill=C['amber'])
-    txt(1020,32,'Native / DSDA',20,'muted')
     d.line((40,103,1240,103),fill=C['line'])
     txt(40,125,title,36,bold=True)
     if subtitle: txt(40,175,subtitle,22,'muted')
@@ -58,12 +57,12 @@ def chrome(active,title,subtitle,hints):
     x=40
     for key,verb in hints:
         width=max(34,int(d.textlength(key,font=font(18,True)))+16)
-        box(x,754,width,30,'raised',6); txt(x+8,758,key,18,'amber',True)
+        box(x,754,width,30,'raised',6); txt(x+8,758,key,18,'muted' if key=='B' and title in ('Pick up where you left off','Discover','Your library','Settings','Welcome to DoomDeckLauncher') else 'amber',True)
         txt(x+width+8,756,verb,20,'muted'); x+=width+20+d.textlength(verb,font=font(20))+22
 
 def save(name): im.save(OUT/(name+'.png'),optimize=True)
 
-chrome('Home','Pick up where you left off','Your last profile, ready again.', [('A','Continue'),('B','Menu'),('X','Details'),('L1/R1','Tabs'),('Start','Menu')])
+chrome('Home','Pick up where you left off','Your last profile, ready again.', [('A','Continue'),('B','Back'),('X','Details'),('L1/R1','Tabs'),('Start','Menu')])
 box(40,230,784,298); cover(64,254,224,250)
 txt(320,255,'CONTINUE',20,'amber',True); txt(320,292,'SIGIL',44,bold=True)
 txt(320,352,'John Romero',22,'muted'); txt(320,394,'Ultimate DOOM · Default profile',22)
@@ -75,7 +74,7 @@ txt(40,558,'Recently played',26,bold=True)
 row(40,606,584,'SIGIL · John Romero','Ultimate DOOM · Last played today')
 row(656,606,584,'AUGER;ZENITH · DBP 37','DOOM II · Last played yesterday'); save('home')
 
-chrome('Discover','Discover','Curated mapsets. Clear requirements before you install.', [('A','Open'),('B','Menu'),('X','Favorite'),('L1/R1','Tabs'),('Start','Menu')])
+chrome('Discover','Discover','Curated mapsets. Clear requirements before you install.', [('A','Open'),('B','Back'),('X','Favorite'),('L1/R1','Tabs'),('Start','Menu')])
 for x,w,label in [(40,152,'Featured'),(208,224,'Beginner Friendly'),(448,140,'Classics'),(604,164,'Cacowards'),(784,456,'Doomer Boards Projects')]:
     box(x,230,w,52,'raised' if x==40 else 'panel',8); txt(x+14,244,label,20,'amber' if x==40 else 'text',x==40)
 for x,title,author,game,ready in [(40,'SIGIL','John Romero','Ultimate DOOM','Base game ready'),(448,'AUGER;ZENITH','Doomer Boards Project 37','DOOM II','Base game ready'),(856,'SIGIL II','John Romero','Ultimate DOOM','Base game ready')]:
@@ -130,7 +129,7 @@ setup(); save('play-setup-sigil')
 setup(True); save('play-blocked-iwad')
 setup(auger=True); save('play-setup-auger')
 
-chrome('Discover','Installing SIGIL','Keep browsing while the installation runs.', [('A','Cancel'),('B','Keep browsing'),('X','Details'),('Start','Menu')])
+chrome('Discover','Installing SIGIL','Keep browsing while the installation runs.', [('A','Cancel'),('B','Back'),('X','Details'),('Start','Menu')])
 cover(40,230,288,330); box(360,230,880,482)
 txt(392,262,'Downloading main package',30,bold=True); txt(392,315,'Official source · romero.com',22,'muted')
 for x,label,col in [(392,'1 Download','amber'),(610,'2 Verify','muted'),(798,'3 Extract','muted'),(1000,'4 Install','muted')]: txt(x,382,label,22,col)
@@ -153,7 +152,7 @@ row(400,492,816,'Roll back','Choose a previous installed version')
 row(400,580,816,'Advanced: unlisted release','Not validated · explicit warning before installation')
 txt(400,675,'Updates never interrupt a running game.',20,'muted'); save('settings')
 
-chrome('','Welcome to DoomDeckLauncher','Get ready in Gaming Mode, with your controller.', [('A','Install engine'),('B','Quit menu'),('Start','Menu')])
+chrome('','Welcome to DoomDeckLauncher','Get ready in Gaming Mode, with your controller.', [('A','Install engine'),('B','Back'),('Start','Menu')])
 box(40,230,584,482); box(648,230,592,482)
 txt(64,260,'1  Install the engine',30,bold=True); txt(64,320,'DSDA-Doom runs your mapsets.',22)
 txt(64,365,'DDL downloads the official engine',22,'muted'); txt(64,399,'and checks it before installation.',22,'muted')
@@ -164,7 +163,7 @@ txt(672,365,'Choose a folder, review the detected',22,'muted'); txt(672,399,'gam
 button(672,530,544,'Add IWAD folder'); button(672,610,544,'Browse without a base game')
 txt(672,679,'Play stays blocked until setup is ready.',20,'muted'); save('first-run')
 
-chrome('Library','Your library','Installed mapsets, local imports and saved profiles.', [('A','Open'),('B','Menu'),('X','Favorite'),('Y','Import'),('L1/R1','Tabs'),('Start','Menu')])
+chrome('Library','Your library','Installed mapsets, local imports and saved profiles.', [('A','Open'),('B','Back'),('X','Favorite'),('Y','Import'),('L1/R1','Tabs'),('Start','Menu')])
 for x,w,s in [(40,160,'All'),(216,160,'Ready'),(392,220,'Needs setup'),(628,200,'Favorites')]:
     box(x,230,w,52,'raised' if x==40 else 'panel',8); txt(x+20,244,s,20,'amber' if x==40 else 'text')
 for x,title,creator,game,last in [(40,'SIGIL','John Romero','Ultimate DOOM','Today'),(656,'AUGER;ZENITH','Doomer Boards Project 37','DOOM II','Yesterday')]:

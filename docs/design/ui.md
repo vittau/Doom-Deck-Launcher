@@ -18,7 +18,7 @@ readability, input repeat/hotplug, game handoff, pistol start behavior and SIGIL
 - Readable at handheld distance on the 7-inch 1280×800 LCD: 22 px body, short lines, generous gaps.
 - Clear over clever: name the required game, explain blockers and show the consequence of toggles.
 - DOOM atmosphere through charcoal, ember accents and strong hierarchy; no texture behind text,
-  copyrighted artwork, franchise logos or bitmap display fonts. Neutral mockup art says “cover art”.
+  copyrighted artwork, franchise logos or bitmap display fonts. Layout-reference art says “cover art”; visual concepts use original abstract generated imagery.
 - Progressive disclosure: title and Play first; files, compatibility and diagnostics one action away.
 - Honest confidence: “Verified” requires recipe evidence for the selected engine and combination.
   Distinguish “Partially checked”, “Not verified” and “Incompatible”; never rely on color alone.
@@ -48,7 +48,23 @@ normal surface (`surface-raised`), hence also to darker surfaces.
 
 Body text must remain ≥4.5:1, large text ≥3:1. Do not reduce text opacity for disabled states;
 use an explicit “Unavailable” label and neutral fill. Focus remains visible on unavailable
-controls that explain a blocker. No photographic backgrounds, transparency layers or blur.
+controls that explain a blocker. No busy art behind text or blur-heavy glass. Art is clipped to dedicated image regions; text sits on opaque surfaces.
+
+### Visual identity: furnace / steel
+
+The visual set uses industrial, hellish technology through original monumental abstract gateways,
+obsidian architecture and copper light. These are mood concepts, not representations of actual
+mapsets. Label them “Original concept art” in each image region; production cover art still needs
+explicit permission and recipe attribution. No franchise logos, sprites, screenshots or borrowed
+textures. Use PNG image regions and flat dark information panels, with only simple linear gradients
+in the surrounding canvas. Never stretch generated text or controls into the implementation.
+
+Additional tokens: `copper #D87850` for decorative rails/emblem only; `steel-edge #46515B` for
+subtle card edges; `canvas-deep #090D11` for chrome and shadows. Existing amber focus/action and
+text tokens remain unchanged with their measured contrast. Cool steel versus warm amber gives
+DDL a recognizable identity without red body text. Texture belongs inside the artwork only;
+content cards remain smooth and opaque. Drop shadow: black at 30%, 0/4 px offset, 8 px radius,
+optional in Slint. No blur or web renderer required. Artwork must not imply verification.
 
 ### Typography and assets
 
@@ -57,7 +73,7 @@ controls that explain a blocker. No photographic backgrounds, transparency layer
 copyright and OFL notice; retain its font license separately from DDL's GPL. The unmodified
 variable TTF and notice in `assets/` are used by the renderer. Implementation may bundle static
 Regular/Semibold instances from the same release if needed by Slint. No decorative face; wordmark
-is Inter Bold text, no imitation DOOM logo.
+pairs Inter Bold DDL lettering with an original angular split-gate emblem. The emblem uses two opposing copper brackets and an amber central beam, buildable as simple vector polygons; no imitation DOOM logo. Remove the unclear “Native / DSDA” header label: engine identity belongs in readiness and launch details.
 
 | Role | Size / line height | Weight |
 | --- | --- | --- |
@@ -76,7 +92,7 @@ height 52 px; 64 px for two-line rows. Long lists scroll inside the content area
 Spacing: 4, 8, 12, 16, 24, 32, 48 px. Outer inset 40; cards 24; column gap 24.
 Radii: 8 for buttons/rows, 12 for cards/sheets, circles only for button glyphs/status markers.
 Layer 0 canvas; layer 1 opaque surface; layer 2 opaque raised sheet with 1 px line border.
-No shadow required. Icons are original 24 px vector outlines, 2 px strokes: check, warning,
+A short dark drop shadow and a 1 px steel edge separate cards; no backdrop blur. Icons are original 24 px vector outlines, 2 px strokes: check, warning,
 folder, download, arrow and info. Pair all meaning-bearing icons with translatable text.
 
 Focus: exactly one active target, 4 px amber outer ring with 4 px canvas separation, enclosing
@@ -121,10 +137,9 @@ accidental scrolling. Proposed stick threshold/repeat require input-spec tuning 
 
 A confirms; B returns one level; X/Y only perform the visible contextual action. L1/R1 switches
 root tabs, preserving each tab's scroll/focus; within detail/setup they do nothing and are omitted
-from hints. Start opens the menu. At root B opens the same menu with “Close menu” focused; it
-never quits immediately. Quit requires confirmation with “Keep playing” (cancel) focused.
+from hints. Start opens the menu. At a root tab B does nothing; it never opens Menu. The persistent legend always labels B as “Back”, including at root where it is inactive. Start alone opens Menu. Quit requires confirmation with “Keep playing” (cancel) focused.
 
-Persistent hint bar shows only available actions in physical order: A, B, X, Y, L1/R1, Start.
+Persistent hint bar shows available actions in physical order (with the inactive B Back hint retained at root): A, B, X, Y, L1/R1, Start.
 A's verb describes the focused action (“Import”, “Toggle”, “Choose folder”), never a misleading
 “Play” when focus is elsewhere. Disabled actions display why in the content; no hidden shortcuts.
 Sheets trap focus; B cancels, returns to the invoking control and discards uncommitted changes.
@@ -285,7 +300,7 @@ DSDA-Doom opens shared progress. After success focus Add IWAD folder; controller
 scan show identified games with confirmation. Finish goes Home, or “Browse without a base game”
 allows Discover but Play stays blocked. Do not require keyboard, shell or Desktop Mode.
 Initial focus Install engine; then Add folder → Review scan matches → Finish / Browse. B from
-picker returns here; B at initial setup opens Quit confirmation. Loading “Checking prerequisites…”;
+picker returns here; B at initial setup does nothing. Start provides Menu and the explicit Quit action. Loading “Checking prerequisites…”;
 empty scan “No supported base games found” / Choose another folder; engine error Retry + Diagnostics;
 offline “Connect to install the engine” / Retry or Browse saved catalog. A local usable engine may
 proceed offline. No automatic IWAD downloads or Steam Input onboarding.
@@ -361,12 +376,12 @@ Each numbered item maps one-to-one to [prior-art §5](../research/prior-art.md#5
 
 ## 8. Handoff, verification and open questions
 
-Raster inventory: Home, Discover, detail, SIGIL setup, missing IWAD, download/install, Settings,
+Layout-reference inventory: Home, Discover, detail, SIGIL setup, missing IWAD, download/install, Settings,
 first run, plus Library and AUGER;ZENITH setup. Every image has one focus ring and persistent hint
-bar. [Renderer](render_mockups.py) draws original flat geometry and Inter text; no generative or
+bar. The [layout renderer](render_mockups.py) draws original flat geometry and Inter text; these reference images contain no generative or
 third-party art. Run with Python + Pillow; no application dependencies added. Actual dimensions,
 file sizes, contrast output and visual review are recorded in [verification.md](verification.md).
-No Rust/Slint code changed, so cargo checks are not relevant; behavioral acceptance below must be
+The high-fidelity [visual set](visual/) supplies the final look; `mockups/` remains the layout reference. Original model-generated art and exact composited UI are documented in [visual-report.md](visual-report.md). No Rust/Slint code changed, so cargo checks are not relevant; behavioral acceptance below must be
 encoded in future UI specs/tests rather than pretending a raster proves interaction.
 
 Implementation acceptance: controller-only walkthrough of every navigation edge; B on every
