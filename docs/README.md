@@ -9,6 +9,7 @@ Spec-driven, deliberately small. Each file holds **current** truth; history live
 | `journal.yml` | Append-only log of decisions, findings and notable changes. |
 | `specs/NNN-name.md` | One spec per deliverable: requirements, acceptance criteria, tasks. Start from `specs/_template.md`. |
 | `research/*.md` | Evidence gathered from upstream source, docs and APIs, each claim cited and labelled. |
+| `orchestration.md` | How the orchestrator and worker agents run the project (Orca ADE). |
 | `deck-testing.md` | Manual test checklist for the physical Steam Deck (added with the first release build). |
 
 ## Flow

@@ -13,6 +13,13 @@ official DSDA-Doom AppImage. License: GPL-3.0-or-later.
 | `docs/research/*.md` | Verified facts about DSDA-Doom, Steam, upstream sources — with links. |
 | `docs/status.md`, `docs/journal.yml` | Current state and changelog. Coordinator-owned. |
 
+## Orchestration
+
+Work is coordinated in Orca ADE: an orchestrator agent writes specs and briefs, dispatches one
+worker per task (own worktree and branch), reviews, merges and releases.
+- **Worker:** follow your injected brief and this file; report with `worker_done`.
+- **Orchestrator, or taking over as one:** read `docs/orchestration.md` first.
+
 ## Workflow (spec-driven)
 
 1. **No spec, no code.** Implement exactly what the spec or task asks. Behaviour the spec does not
@@ -33,6 +40,7 @@ crates/ddl/         binary `ddl`: Slint UI and app wiring
 docs/               decisions, specs, research, status, journal
 catalog/            one TOML recipe per mapset — community-contributed via PR (D-010)
 .github/workflows/  CI and releases (built in a Steam Linux Runtime SDK container)
+scripts/            developer and orchestration helpers
 ```
 
 ## Commands
