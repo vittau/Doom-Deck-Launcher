@@ -767,7 +767,7 @@ impl Runtime {
         ui.set_subtitle(text(
             ui,
             if self.playing {
-                T::PlayingHelp
+                T::PlayingSub
             } else if self.screen == Screen::FirstRun {
                 T::FirstSub
             } else if self.busy {
@@ -775,7 +775,15 @@ impl Runtime {
             } else {
                 match self.screen {
                     Screen::FirstRun => T::FirstHelp,
-                    Screen::Home => T::HomeSub,
+                    Screen::Home => {
+                        if self.snapshot.as_ref().is_some_and(|s| {
+                            s.items.iter().any(|i| i.profile.last_played.is_some())
+                        }) {
+                            T::HomeSub
+                        } else {
+                            T::HomeIntro
+                        }
+                    }
                     Screen::Review | Screen::Browser => T::ScanHelp,
                     Screen::Setup => T::SetupSub,
                     Screen::Detail => T::DetailSub,
@@ -791,7 +799,7 @@ impl Runtime {
         if self.playing {
             b.panel(12., 12., 1200., 478.);
             b.label(40., 60., 1100., 100., text(ui, T::Playing), 40.);
-            b.label(40., 186., 1100., 90., text(ui, T::PlayingHelp), 26.);
+            b.label(40., 186., 1100., 90., text(ui, T::PlayingHelp), 22.);
         } else {
             match self.screen {
                 Screen::Loading => {
@@ -876,7 +884,7 @@ impl Runtime {
                             .collect();
                         recent.sort_by_key(|i| std::cmp::Reverse(i.profile.last_played));
                         if recent.is_empty() {
-                            b.label(36., 402., 720., 54., text(ui, T::NoHistory), 22.);
+                            b.label(36., 402., 720., 54., text(ui, T::NoRecent), 22.);
                         }
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
@@ -999,6 +1007,7 @@ impl Runtime {
                             visible += 1;
                         }
                         if visible == 0 {
+                            b.panel(12., 12., 1200., 300.);
                             b.label(36., 60., 1100., 70., text(ui, T::NoInstalled), 30.);
                             b.button(10, 36., 180., 400., text(ui, T::DiscoverAction), true);
                         }
@@ -1347,7 +1356,9 @@ impl Runtime {
                     };
                     ui.set_subtitle(text(
                         ui,
-                        if self.cancel.is_cancelled() {
+                        if self.problem.is_some() {
+                            T::InstallErrorSub
+                        } else if self.cancel.is_cancelled() {
                             T::CancelPending
                         } else {
                             stage_help
@@ -1378,7 +1389,9 @@ impl Runtime {
                         60.,
                         text(
                             ui,
-                            if self.cancel.is_cancelled() {
+                            if self.problem.is_some() {
+                                T::InstallStopped
+                            } else if self.cancel.is_cancelled() {
                                 T::CancelPending
                             } else {
                                 stage
@@ -1541,7 +1554,7 @@ impl Runtime {
                         1 => self.snapshot.as_ref().map_or(240., |s| {
                             (144. + s.folders.len().max(1) as f32 * 112.).max(240.)
                         }),
-                        2 => 334.,
+                        2 => 280.,
                         3 => 382.,
                         _ => 478.,
                     };
@@ -1668,13 +1681,13 @@ impl Runtime {
                                 );
                                 b.label(
                                     372.,
-                                    162.,
+                                    136.,
                                     816.,
                                     50.,
-                                    s.config_version.clone().into(),
+                                    value(ui, T::ConfigSchema, &s.config_version),
                                     22.,
                                 );
-                                b.button(70, 372., 252., 816., text(ui, T::Reset), true);
+                                b.button(70, 372., 200., 816., text(ui, T::Reset), true);
                             }
                             _ => {
                                 b.label(372., 36., 816., 44., text(ui, T::Logs), 30.);

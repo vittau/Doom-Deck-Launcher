@@ -5,7 +5,9 @@ export global WiringStrings {
     out property <string> extract-help: @tr("Unpacking content into a safe staging directory.");
     out property <string> commit-help: @tr("Saving the completed install; cancellation is temporarily unavailable.");
 
-    out property <string> ready-checks: @tr("Ready to play");
+    out property <string> ready-checks: @tr("Readiness checks");
+    out property <string> no-recent: @tr("No sessions recorded yet.");
+    out property <string> home-intro: @tr("Build your library and begin a new session.");
     out property <string> recent: @tr("Recently played");
     out property <string> found-game: @tr("{} found", root.value);
     out property <string> missing-game: @tr("{} missing", root.value);
@@ -83,7 +85,11 @@ export global WiringStrings {
     out property <string> play: @tr("Play");
     out property <string> unavailable: @tr("Play unavailable");
     out property <string> playing: @tr("Playing…");
+    out property <string> playing-sub: @tr("DDL will be ready when your session ends.");
+    out property <string> config-schema: @tr("Baseline schema {}", root.value);
     out property <string> playing-help: @tr("Game running — return here when you exit");
+    out property <string> install-stopped: @tr("Install stopped");
+    out property <string> install-error-sub: @tr("Review the error and choose your next step.");
     out property <string> install-title: @tr("Download / install");
     out property <string> download: @tr("Downloading…");
     out property <string> verify: @tr("Verifying…");

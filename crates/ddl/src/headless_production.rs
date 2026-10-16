@@ -710,8 +710,8 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ui.invoke_clicked(2);
     ui.invoke_clicked(100);
     assert!(ui.get_sheet_open());
-    press(window, Key::Escape);
     capture(window, "010-remove-folder-dialog.png");
+    press(window, Key::Escape);
     assert!(!state.borrow().snapshot.as_ref().unwrap().folders.is_empty());
     ui.invoke_clicked(100);
     press(window, Key::RightArrow);
