@@ -13,10 +13,33 @@
 # The same digest is used by `.github/workflows/release.yml`; keep them in sync.
 name: CI
 
-# Every branch push and every pull request.
+# Pushes to main and pull requests, only when something that affects the build or tests
+# changed. Docs, status/journal, Markdown and orchestration scripts do not rebuild anything
+# (`docs/design/` stays: the headless UI tests read its reference images). Tag pushes do not
+# run CI either: `release.yml` builds and smoke-tests the tagged commit itself.
 on:
   push:
+    branches: [main]
+    paths:
+      - '**'
+      - '!docs/**'
+      - 'docs/design/**'
+      - '!**/*.md'
+      - '!scripts/orchestration/**'
+      - '!LICENSE'
   pull_request:
+    paths:
+      - '**'
+      - '!docs/**'
+      - 'docs/design/**'
+      - '!**/*.md'
+      - '!scripts/orchestration/**'
+      - '!LICENSE'
+
+# A newer push to the same branch or PR supersedes a running one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 # CI only reads the repository. `release.yml` is the only workflow that writes.
 permissions:
@@ -30,6 +53,8 @@ defaults:
 
 env:
   CARGO_TERM_COLOR: always
+  # CI builds from scratch or from the cache below; incremental artifacts only bloat it.
+  CARGO_INCREMENTAL: 0
   # Keep the failure output useful when a test panics.
   RUST_BACKTRACE: 1
 
@@ -64,6 +89,20 @@ jobs:
           rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
           rustup default "$channel"
           cargo --version
+
+      # Cargo registry and build artifacts, keyed by the lockfile and toolchain pin, so an
+      # unchanged dependency tree is not recompiled on every push.
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: checks-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            checks-${{ runner.os }}-
 
       # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
       # probes fontconfig with pkg-config at build time on Linux. Everything
@@ -120,6 +159,20 @@ jobs:
           rustup default "$channel"
           cargo --version
 
+      # Cargo registry and build artifacts, keyed by the lockfile and toolchain pin, so an
+      # unchanged dependency tree is not recompiled on every push.
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: catalog-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            catalog-${{ runner.os }}-
+
       # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
       # probes fontconfig with pkg-config at build time on Linux. Everything
       # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`. gilrs
@@ -160,6 +213,20 @@ jobs:
           rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
           rustup default "$channel"
           cargo --version
+
+      # Cargo registry and build artifacts, keyed by the lockfile and toolchain pin, so an
+      # unchanged dependency tree is not recompiled on every push.
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: steamrt-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            steamrt-${{ runner.os }}-
 
       # Release profile, exactly what `release.yml` ships. `--locked` keeps the
       # reviewed dependency versions.
