@@ -56,21 +56,21 @@ UI. Automatic background updates (never: OVERVIEW §5 step 8). Mirroring or bund
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1) — the list parses; the seed entry matches the research values.
-- [ ] **A2** (R2, R3) — tests with recorded API fixtures (taken from the research, trimmed):
+- [x] **A1** (R1) — the list parses; the seed entry matches the research values.
+- [x] **A2** (R2, R3) — tests with recorded API fixtures (taken from the research, trimmed):
   asset pattern across all three historical naming schemes, prerelease skipping, ETag/304
   handling, 403/429 fallback to cache, 24 h throttling, classification.
-- [ ] **A3** (R4, R5) — tests with a fake HTTP server and a fake "AppImage" script fixture:
+- [x] **A3** (R4, R5) — tests with a fake HTTP server and a fake "AppImage" script fixture:
   happy path, size mismatch, hash mismatch, smoke failure, FUSE-failure → extraction path
   (the fake responds to `--appimage-extract` by creating `squashfs-root/AppRun`); no partial
   state after failures.
-- [ ] **A4** (R6, R7, R8, R9) — state round-trip, select/rollback/remove rules, run-guard
+- [x] **A4** (R6, R7, R8, R9) — state round-trip, select/rollback/remove rules, run-guard
   refusal, manual registration.
 - [ ] **A5** — *Needs Deck Validation:* install v0.30.1 on the Deck from DDL; launch directly
   and via the extraction fallback (tracked in `docs/deck-testing.md`).
 
 ## Tasks
 
-- [ ] Reviewed list + discovery client + cache
-- [ ] Install pipeline + fallback
-- [ ] State, select/rollback/remove, manual path
+- [x] Reviewed list + discovery client + cache
+- [x] Install pipeline + fallback
+- [x] State, select/rollback/remove, manual path
