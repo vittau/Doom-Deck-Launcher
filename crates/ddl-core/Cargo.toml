@@ -8,6 +8,11 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
-# Intentionally dependency-free: this crate is the platform-independent logic
-# layer and must stay usable (and testable) without UI or OS crates.
 [dependencies]
+serde.workspace = true
+toml.workspace = true
+url.workspace = true
+semver.workspace = true
+sha2.workspace = true
+ureq.workspace = true
+zip.workspace = true

@@ -7,3 +7,5 @@
 #![forbid(unsafe_code)]
 
 pub mod platform;
+
+pub mod catalog;

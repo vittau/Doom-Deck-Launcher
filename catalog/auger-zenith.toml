@@ -1,0 +1,120 @@
+# Confirmed bytes and release metadata: docs/research/upstream-sources.md §5; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "auger-zenith"
+title = "AUGER;ZENITH (Doomer Boards Project 37)"
+authors = ["Doomer Boards Project 37"]
+release = "2021-07-26"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp37_augzen"
+description = "DOOM II: MAP01–MAP22 (21 levels and a credits map). Optional blaster replacements."
+permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Optional typed defaults: warp = [episode, map], pistol_start = false.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/upstream-sources.md §5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
+notes = "Confirmed archive/member identities and source inspection. Proposed complevel 2; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp37_augzen"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/dbp37_augzen.zip", "https://dsdarchive.com/files/wads/doom2/3565/dbp37_augzen.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/megawads/dbp37_augzen.zip"]
+size = 12771737
+sha256 = "7dfb36408a9cd33a6ef429ada3aa68b4745be6abba03b0a3236dacb03872aeb9"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/dbp37_augzen.zip"
+
+[[packages.members]]
+id = "maps"
+path = "DBP37_AUGZEN.wad"
+size = 48797931
+sha256 = "d356de75acdb9c969175bdc3910839fb805415b7244fd7e65d05a9110f53c95a"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "DBP37_AUGZEN.txt"
+size = 6212
+sha256 = "674c33641557b18aa17d10628ba3d567970025b2d916dad3a87d1e9eb5dc3e90"
+keep = true
+
+[[packages.members]]
+id = "alternate"
+path = "DBP37_Addons.zip!/DBP37_AlternateBlaster.wad"
+size = 20145
+sha256 = "8c2fe3a4c65838e333dd9233b806a0e469e4ad9ccab704113de10b05220274e3"
+keep = false
+
+[[packages.members]]
+id = "deckard"
+path = "DBP37_Addons.zip!/DBP37_DeckardBlaster.wad"
+size = 81484
+sha256 = "5e9db49fd849708b61df6fd9826eb99435b16bfde1779f6f7f5f14e3bb9437e5"
+keep = false
+
+[[packages.members]]
+id = "addon-readme"
+path = "DBP37_Addons.zip!/readme.txt"
+size = 388
+sha256 = "f16f2c555e654240e73dca5cdce5f96254a1a9624f271da2ebd8048b006e28bc"
+keep = true
+
+[[components]]
+id = "main"
+label = "AUGER;ZENITH (Doomer Boards Project 37)"
+description = "Main episode/mapset with bundled MIDI music."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components]]
+id = "alternate-blaster"
+label = "Alternate Blaster"
+description = "Zombieman and chaingun muzzle-flash graphics plus pistol sound."
+optional = true
+default = false
+position = 2
+exclusive_group = "blaster"
+
+[[components.members]]
+package = "free"
+member = "alternate"
+role = "graphics"
+
+[[components]]
+id = "deckard-blaster"
+label = "Deckard Blaster"
+description = "Same replacement graphics with a Blade Runner blaster sound bite."
+optional = true
+default = false
+position = 2
+exclusive_group = "blaster"
+
+[[components.members]]
+package = "free"
+member = "deckard"
+role = "sounds"

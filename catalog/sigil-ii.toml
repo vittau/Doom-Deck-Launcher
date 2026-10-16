@@ -1,0 +1,93 @@
+# Confirmed bytes and release metadata: docs/research/reference-sigil.md §1–§5; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "sigil-ii"
+title = "SIGIL II"
+authors = ["John Romero", "James Paddock (MIDI soundtrack)"]
+release = "1.0"
+page = "https://romero.com/sigil"
+description = "Episode 6 for DOOM with a free MIDI soundtrack by James Paddock."
+permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
+
+[base_game]
+game = "doom"
+variants = ["doom-1.9ud"]
+
+[compatibility]
+family = "limit-removing"
+complevel = 3
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Optional typed defaults: warp = [episode, map], pistol_start = false.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
+notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
+
+[[packages]]
+id = "free"
+page = "https://romero.com/sigil"
+urls = ["https://romero.com/s/SIGIL_II_V1_0.zip"]
+size = 2012026
+sha256 = "41741ce797e6faf9ebd0e3d577b5eaf9a648b64d850fbd741c1b9c28d8461017"
+kind = "zip"
+
+[[packages.members]]
+id = "maps"
+path = "SIGIL_II_V1_0.WAD"
+size = 5632323
+sha256 = "9cadd239ea960ad40eeb655757941313cc8cb4f5f1c07a701ac986be4710a359"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "SIGIL_II_V1_0.txt"
+size = 3586
+sha256 = "7c6dab2977c157311d945fb2afa7f8a27399d9a5040e768a82a506a333733f4a"
+keep = true
+
+[[packages.members]]
+id = "readme"
+path = "SIGIL_II_README_V1_0.txt"
+size = 9442
+sha256 = "0db9b8f0ffdad6a36e48d9dbad1be2c72885f1164a75b52665327c5396700706"
+keep = true
+
+[[components]]
+id = "main"
+label = "SIGIL II"
+description = "Main episode/mapset with bundled MIDI music."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components]]
+id = "soundtrack"
+label = "THORR soundtrack"
+description = "Proposed paid soundtrack replacement; user supplied and unvalidated."
+optional = true
+default = false
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+user_supplied = true
+obtain = "Purchase the THORR soundtrack version through romero.com/sigil and import your purchased WAD. Filename/hash are unconfirmed; validate the replacement before play."
+known_sha256 = []
+
+[[components.members]]
+role = "maps"
