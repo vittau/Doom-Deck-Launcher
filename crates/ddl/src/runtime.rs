@@ -2158,6 +2158,11 @@ mod visual_copy_tests {
         assert_eq!(art("sigil-ii"), 1);
         assert_eq!(art("auger-zenith"), 2);
         assert_eq!(art("eviternity"), 3);
+        let catalog = ddl_core::catalog::Catalog::embedded();
+        let recipe = catalog
+            .recipe("eviternity")
+            .expect("real bundled Eviternity recipe");
+        assert_eq!(art(&recipe.id), 3);
         for id in ["community-without-art", "", "SIGIL"] {
             assert_eq!(art(id), 4);
         }

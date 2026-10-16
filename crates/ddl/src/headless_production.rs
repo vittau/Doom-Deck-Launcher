@@ -387,6 +387,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             })
             .collect();
         r.sync(ui);
+        assert!(
+            r.snapshot
+                .as_ref()
+                .unwrap()
+                .items
+                .iter()
+                .any(|i| i.recipe.id == "eviternity")
+        );
+        assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 3));
         capture(window, "010-discover.png");
         // Render-only community entry: no catalog or install-state mutation.
         let item = &mut r.snapshot.as_mut().unwrap().items[0];
