@@ -1,6 +1,6 @@
 # 011 — README: manual Steam Input setup (Classic, Modern + Gyro)
 
-**Status:** Ready  ·  **Milestone:** M3 (drafted early)  ·  **Depends on:** —
+**Status:** Done (A3 needs Deck)  ·  **Milestone:** M3 (drafted early)  ·  **Depends on:** —
 **Policy:** OVERVIEW §8.2 and §11: Steam Input is documented, never automated. No code.
 
 ## Goal

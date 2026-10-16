@@ -1,6 +1,6 @@
 # 001 — Workspace skeleton, CI and release pipeline
 
-**Status:** Ready  ·  **Milestone:** M0  ·  **Depends on:** —
+**Status:** Done  ·  **Milestone:** M0  ·  **Depends on:** —
 
 ## Goal
 

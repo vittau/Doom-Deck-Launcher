@@ -1,6 +1,6 @@
 # 009 — Mapset install, profiles and launch resolution (core)
 
-**Status:** Ready  ·  **Milestone:** M2  ·  **Depends on:** 002 (catalog model), 003 (LaunchPlan),
+**Status:** Done  ·  **Milestone:** M2  ·  **Depends on:** 002 (catalog model), 003 (LaunchPlan),
 005 (config + run guard), 006 (downloads/extraction), 007 (IWAD registry)
 
 ## Goal

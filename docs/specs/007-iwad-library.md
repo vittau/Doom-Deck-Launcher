@@ -1,6 +1,6 @@
 # 007 — IWAD table, identification, discovery and canonical links
 
-**Status:** Ready (after 001 merges)  ·  **Milestone:** M1  ·  **Depends on:** 001
+**Status:** Done  ·  **Milestone:** M1  ·  **Depends on:** 001
 **Evidence:** `docs/research/iwad-identification.md` (all sections); decisions D-010, D-017.
 
 ## Goal

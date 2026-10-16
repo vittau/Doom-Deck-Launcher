@@ -1,6 +1,6 @@
 # 006 — Downloads and safe archive extraction
 
-**Status:** Ready (after 001 merges)  ·  **Milestone:** M2 (pulled forward; 004 needs it)  ·
+**Status:** Done  ·  **Milestone:** M2 (pulled forward; 004 needs it)  ·
 **Depends on:** 001
 
 ## Goal

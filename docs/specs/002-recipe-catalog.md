@@ -1,6 +1,6 @@
 # 002 — Recipe schema, catalog and lint
 
-**Status:** Ready (after 001 merges)  ·  **Milestone:** M2 (schema pulled forward)  ·
+**Status:** Done  ·  **Milestone:** M2 (schema pulled forward)  ·
 **Depends on:** 001; evidence in `research/dsda-engine.md`, `research/upstream-sources.md` §5–§6,
 `research/reference-sigil.md`; decisions D-010, D-011, D-014, D-015, D-016
 

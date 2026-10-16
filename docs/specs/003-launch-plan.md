@@ -1,6 +1,6 @@
 # 003 — Launch plan and engine process runner
 
-**Status:** Ready (after 001 merges)  ·  **Milestone:** M1  ·  **Depends on:** 001
+**Status:** Done  ·  **Milestone:** M1  ·  **Depends on:** 001
 
 ## Goal
 

@@ -1,6 +1,6 @@
 # 005 — DsdaConfigManager v1
 
-**Status:** Ready (after 001 merges)  ·  **Milestone:** M1  ·  **Depends on:** 001; uses 003's
+**Status:** Done  ·  **Milestone:** M1  ·  **Depends on:** 001; uses 003's
 `LaunchPlan` config path
 
 ## Goal

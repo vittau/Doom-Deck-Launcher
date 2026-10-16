@@ -1,6 +1,6 @@
 # 004 — DSDA-Doom engine manager
 
-**Status:** Ready (after 001 and 006 merge)  ·  **Milestone:** M1  ·  **Depends on:** 001,
+**Status:** Done  ·  **Milestone:** M1  ·  **Depends on:** 001,
 006 (download pipeline), 003 (`smoke_test`)
 
 ## Goal
