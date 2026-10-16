@@ -30,6 +30,30 @@ fn main() -> ExitCode {
             println!("{}", cli::version_line());
             ExitCode::SUCCESS
         }
+        Ok(cli::Command::CatalogLint { paths, fetch }) => {
+            let mut network = ddl_core::catalog::HttpsFetch;
+            let errors = ddl_core::catalog::lint_paths(
+                &paths,
+                std::path::Path::new("catalog/hosts.toml"),
+                if fetch { Some(&mut network) } else { None },
+            );
+            if errors.is_empty() {
+                println!(
+                    "Catalog lint passed{}.",
+                    if fetch {
+                        " (fetched packages verified)"
+                    } else {
+                        " (offline)"
+                    }
+                );
+                ExitCode::SUCCESS
+            } else {
+                for error in errors {
+                    eprintln!("{error}");
+                }
+                ExitCode::FAILURE
+            }
+        }
         Ok(cli::Command::Run(options)) => {
             logging::init();
             info!(

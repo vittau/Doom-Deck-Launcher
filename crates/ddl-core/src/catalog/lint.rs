@@ -1,0 +1,754 @@
+use super::*;
+use std::{
+    collections::HashSet,
+    fmt, fs,
+    path::{Path, PathBuf},
+};
+use url::Url;
+
+pub(crate) const MAX_BYTES: u64 = 256 * 1024 * 1024;
+pub(crate) const MAX_RECIPE_BYTES: u64 = 1024 * 1024;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diagnostic {
+    pub file: PathBuf,
+    pub line: usize,
+    pub message: String,
+    pub hint: String,
+}
+impl fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}:{}: {}; hint: {}",
+            self.file.display(),
+            self.line,
+            self.message,
+            self.hint
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Violation {
+    pub key: String,
+    pub message: String,
+    pub hint: String,
+}
+
+pub(crate) fn slug(s: &str) -> bool {
+    !s.is_empty()
+        && s.bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        && s.as_bytes()[0].is_ascii_alphanumeric()
+}
+pub(crate) fn hash(s: &str) -> bool {
+    s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
+}
+pub(crate) fn safe_path(s: &str) -> bool {
+    !s.is_empty()
+        && !s.contains(['\\', ':', '\0'])
+        && !s.starts_with('-')
+        && s.split("!/").count() <= 4
+        && s.split("!/").all(|part| {
+            !part.contains('!')
+                && part
+                    .split('/')
+                    .all(|c| !c.is_empty() && c != "." && c != "..")
+        })
+}
+
+pub(crate) fn checked_url(s: &str, allowed: &[String]) -> Result<Url, String> {
+    let u = Url::parse(s).map_err(|_| "use an absolute HTTPS URL".to_string())?;
+    if u.scheme() != "https"
+        || !u.username().is_empty()
+        || u.password().is_some()
+        || u.port().is_some_and(|p| p != 443)
+        || u.fragment().is_some()
+    {
+        return Err("use HTTPS without credentials, custom ports or fragments".into());
+    }
+    if !u
+        .host_str()
+        .is_some_and(|host| allowed.iter().any(|a| a == host))
+    {
+        return Err(
+            "use an exact host from catalog/hosts.toml (request review for a new host)".into(),
+        );
+    }
+    Ok(u)
+}
+
+fn valid_date(s: &str) -> bool {
+    let parts: Vec<_> = s.split('-').collect();
+    if parts.len() != 3 || parts[0].len() != 4 || parts[1].len() != 2 || parts[2].len() != 2 {
+        return false;
+    }
+    let nums: Option<Vec<u32>> = parts.iter().map(|p| p.parse().ok()).collect();
+    let Some(n) = nums else {
+        return false;
+    };
+    let leap = n[0].is_multiple_of(4) && (!n[0].is_multiple_of(100) || n[0].is_multiple_of(400));
+    let days = match n[1] {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 => {
+            if leap {
+                29
+            } else {
+                28
+            }
+        }
+        _ => 0,
+    };
+    n[0] > 0 && n[2] > 0 && n[2] <= days
+}
+
+/// Linear/pairwise checks prove order for all combinations without an exponential
+/// subset enumeration: each surviving pair must have distinct positions, unless
+/// exclusivity or main replacement prevents that pair from ever coexisting.
+pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
+    let mut errors = Vec::new();
+    let mut issue = |key: String, bad: bool, message: &str, hint: &str| {
+        if bad {
+            errors.push(Violation {
+                key,
+                message: message.into(),
+                hint: hint.into(),
+            });
+        }
+    };
+    issue(
+        "schema_version".into(),
+        r.schema_version != 1,
+        "unsupported schema_version",
+        "use schema_version = 1",
+    );
+    issue(
+        "id".into(),
+        !slug(&r.id),
+        "invalid recipe id",
+        "use a lowercase alphanumeric/hyphen slug",
+    );
+    issue(
+        "id".into(),
+        filename.extension().is_none_or(|ext| ext != "toml")
+            || filename.file_stem().and_then(|s| s.to_str()) != Some(&r.id),
+        "recipe id does not match file name",
+        "name the file <id>.toml",
+    );
+    for (key, value) in [
+        ("title", &r.title),
+        ("release", &r.release),
+        ("description", &r.description),
+        ("permission", &r.permission),
+    ] {
+        issue(
+            key.into(),
+            value.trim().is_empty(),
+            "missing identity/permission text",
+            "supply nonempty text backed by the upstream release",
+        );
+    }
+    issue(
+        "authors".into(),
+        r.authors.is_empty() || r.authors.iter().any(|a| a.trim().is_empty()),
+        "missing authors",
+        "credit the release authors",
+    );
+    issue(
+        "page".into(),
+        checked_url(&r.page, &hosts.pages).is_err(),
+        "invalid canonical page URL",
+        "use HTTPS and an allowlisted page host",
+    );
+    for (i, image) in r.images.iter().enumerate() {
+        issue(
+            format!("images.{i}.path"),
+            !safe_path(&image.path) || image.path.contains("!/"),
+            "unsafe image reference",
+            "use a relative path with no traversal",
+        );
+        issue(
+            format!("images.{i}.permission"),
+            image.permission.trim().is_empty(),
+            "missing image permission",
+            "state permission to use the image",
+        );
+    }
+    let mut variants = HashSet::new();
+    for v in &r.base_game.variants {
+        issue(
+            "base_game.variants".into(),
+            v.is_empty()
+                || !v.as_bytes()[0].is_ascii_alphanumeric()
+                || !v.bytes().all(|b| {
+                    b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'.'
+                })
+                || !variants.insert(v),
+            "invalid or duplicate IWAD variant",
+            "use a known IWAD id (lowercase letters, digits, dots and hyphens)",
+        );
+    }
+    issue(
+        "packages".into(),
+        r.packages.is_empty(),
+        "no packages",
+        "declare at least one source package",
+    );
+    let mut package_ids = HashSet::new();
+    for (i, p) in r.packages.iter().enumerate() {
+        let key = format!("packages.{i}");
+        issue(
+            format!("{key}.id"),
+            !slug(&p.id) || !package_ids.insert(&p.id),
+            "invalid or duplicate package id",
+            "use unique lowercase slugs",
+        );
+        issue(
+            format!("{key}.page"),
+            checked_url(&p.page, &hosts.pages).is_err(),
+            "invalid package page URL",
+            "use HTTPS and an allowlisted page host",
+        );
+        issue(
+            format!("{key}.urls"),
+            p.urls.is_empty()
+                || p.urls
+                    .iter()
+                    .any(|u| checked_url(u, &hosts.downloads).is_err()),
+            "invalid download URLs",
+            "list direct HTTPS URLs on download hosts in hosts.toml",
+        );
+        issue(
+            format!("{key}.size"),
+            p.size == 0 || p.size > MAX_BYTES,
+            "invalid package size",
+            "use an exact positive byte count at most 256 MiB",
+        );
+        issue(
+            format!("{key}.sha256"),
+            !hash(&p.sha256),
+            "malformed package SHA-256",
+            "use exactly 64 hexadecimal digits from reviewed bytes",
+        );
+        issue(
+            format!("{key}.idgames_path"),
+            p.idgames_path
+                .as_ref()
+                .is_some_and(|p| !safe_path(p) || p.contains("!/")),
+            "unsafe idgames path",
+            "use a canonical relative archive path",
+        );
+        issue(
+            format!("{key}.members"),
+            p.members.is_empty(),
+            "no named members",
+            "list exactly the files DDL needs, including permission text",
+        );
+        let mut ids = HashSet::new();
+        let mut paths = HashSet::new();
+        for (j, m) in p.members.iter().enumerate() {
+            let mk = format!("{key}.members.{j}");
+            issue(
+                format!("{mk}.id"),
+                !slug(&m.id) || !ids.insert(&m.id),
+                "invalid or duplicate member id",
+                "use unique lowercase slugs within each package",
+            );
+            issue(
+                format!("{mk}.path"),
+                !safe_path(&m.path) || !paths.insert(&m.path),
+                "unsafe or duplicate member path",
+                "use an exact relative case-sensitive path; nested ZIPs use !/",
+            );
+            issue(
+                format!("{mk}.size"),
+                m.size == 0 || m.size > MAX_BYTES,
+                "invalid member size",
+                "use an exact positive byte count at most 256 MiB",
+            );
+            issue(
+                format!("{mk}.sha256"),
+                !hash(&m.sha256),
+                "malformed member SHA-256",
+                "use exactly 64 hexadecimal digits",
+            );
+            issue(
+                format!("{mk}.path"),
+                m.path
+                    .split("!/")
+                    .collect::<Vec<_>>()
+                    .split_last()
+                    .is_some_and(|(_, parents)| {
+                        parents
+                            .iter()
+                            .any(|p| !p.to_ascii_lowercase().ends_with(".zip"))
+                    }),
+                "nested member crosses a non-ZIP",
+                "only ZIP containers may precede !/",
+            );
+        }
+        if p.kind == PackageKind::Wad {
+            issue(
+                format!("{key}.members"),
+                p.members.len() != 1
+                    || p.members.iter().any(|m| {
+                        m.size != p.size
+                            || !m.sha256.eq_ignore_ascii_case(&p.sha256)
+                            || !m.path.to_ascii_lowercase().ends_with(".wad")
+                            || m.path.contains("!/")
+                    }),
+                "bare WAD member disagrees with package",
+                "declare one .wad member with the package size/hash",
+            );
+        }
+    }
+    let main = r.components.iter().find(|c| c.id == "main");
+    issue(
+        "components".into(),
+        main.is_none(),
+        "missing main component",
+        "declare one required main component",
+    );
+    let mut component_ids = HashSet::new();
+    for (i, c) in r.components.iter().enumerate() {
+        let key = format!("components.{i}");
+        issue(
+            format!("{key}.id"),
+            !slug(&c.id) || !component_ids.insert(&c.id),
+            "invalid or duplicate component id",
+            "use unique lowercase slugs",
+        );
+        issue(
+            format!("{key}.label"),
+            c.label.trim().is_empty() || c.description.trim().is_empty(),
+            "missing component text",
+            "supply label and description",
+        );
+        issue(
+            format!("{key}.optional"),
+            if c.id == "main" {
+                c.optional || !c.default || c.replaces.is_some()
+            } else {
+                !c.optional
+            },
+            "invalid required/optional component",
+            "main must be required and default-on; all others optional",
+        );
+        issue(
+            format!("{key}.position"),
+            c.position == 0,
+            "invalid load position",
+            "use a positive explicit position",
+        );
+        issue(
+            format!("{key}.replaces"),
+            c.replaces.as_ref().is_some_and(|v| v != "main"),
+            "invalid replacement target",
+            "only replaces = \"main\" is supported",
+        );
+        issue(
+            format!("{key}.exclusive_group"),
+            c.exclusive_group.as_ref().is_some_and(|v| !slug(v)),
+            "invalid exclusive group",
+            "use a lowercase slug",
+        );
+        issue(
+            format!("{key}.members"),
+            c.members.is_empty(),
+            "component has no members",
+            "name each loaded member and its role",
+        );
+        issue(
+            format!("{key}.obtain"),
+            if c.user_supplied {
+                c.obtain.as_ref().is_none_or(|s| s.trim().is_empty()) || c.members.len() != 1
+            } else {
+                c.obtain.is_some() || !c.known_sha256.is_empty()
+            },
+            "invalid user-supplied source",
+            "imports require obtain instructions and one member; downloads use package references",
+        );
+        issue(
+            format!("{key}.known_sha256"),
+            c.known_sha256.iter().any(|h| !hash(h)),
+            "malformed known SHA-256",
+            "use reviewed 64-digit hashes or an empty list when unknown",
+        );
+        let mut refs = HashSet::new();
+        for (j, cm) in c.members.iter().enumerate() {
+            let mk = format!("{key}.members.{j}");
+            if c.user_supplied {
+                issue(
+                    mk,
+                    cm.package.is_some() || cm.member.is_some(),
+                    "user-supplied component references a download",
+                    "omit package/member; the player imports this file",
+                );
+                continue;
+            }
+            let member = r
+                .packages
+                .iter()
+                .find(|p| Some(&p.id) == cm.package.as_ref())
+                .and_then(|p| p.members.iter().find(|m| Some(&m.id) == cm.member.as_ref()));
+            issue(
+                mk.clone(),
+                member.is_none(),
+                "unknown package/member reference",
+                "reference a declared package id and member id",
+            );
+            issue(
+                mk.clone(),
+                !refs.insert((&cm.package, &cm.member)),
+                "duplicate component member reference",
+                "list each member once per component",
+            );
+            if let Some(m) = member {
+                let ext = m.path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+                issue(
+                    format!("{mk}.role"),
+                    m.keep
+                        || if cm.role == Role::Dehacked {
+                            !["deh", "bex"].contains(&ext.as_str())
+                        } else {
+                            ext != "wad"
+                        },
+                    "file role inconsistent with member",
+                    "load WADs as maps/music/graphics/sounds, DEH/BEX as dehacked; never load keep members",
+                );
+            }
+        }
+        if c.id != "main" && c.replaces.is_none() {
+            issue(
+                format!("{key}.position"),
+                main.is_some_and(|m| c.position <= m.position),
+                "add-on must load after main",
+                "give the add-on a position greater than main",
+            );
+        }
+        for other in r.components.iter().take(i) {
+            let exclusive =
+                c.exclusive_group.is_some() && c.exclusive_group == other.exclusive_group;
+            let replacement = (c.replaces.is_some()
+                && (other.id == "main" || other.replaces.is_some()))
+                || (other.replaces.is_some() && c.id == "main");
+            issue(
+                format!("{key}.position"),
+                !exclusive && !replacement && c.position == other.position,
+                "ambiguous load order for an allowed combination",
+                "assign distinct positions or declare exclusivity",
+            );
+            let shared = c.members.iter().any(|a| {
+                a.package.is_some()
+                    && other
+                        .members
+                        .iter()
+                        .any(|b| a.package == b.package && a.member == b.member)
+            });
+            issue(
+                format!("{key}.members"),
+                shared && !exclusive && !replacement,
+                "member loaded twice in an allowed combination",
+                "remove the duplicate or make the components exclusive",
+            );
+        }
+    }
+    let defaults: Vec<_> = r
+        .components
+        .iter()
+        .filter(|c| c.optional && c.default)
+        .map(|c| c.id.as_str())
+        .collect();
+    issue(
+        "components".into(),
+        r.load_order(&defaults).is_err(),
+        "invalid default component combination",
+        "default-enable at most one exclusive choice or replacement",
+    );
+    issue(
+        "compatibility.complevel".into(),
+        matches!(r.compatibility.complevel, Complevel::Number(n) if n > 17 && n != 21),
+        "unreviewed complevel",
+        "use vanilla, 0–17, 21, boom, mbf or mbf21 (never 18–20)",
+    );
+    let range = semver::VersionReq::parse(&r.compatibility.engine.range);
+    let version = semver::Version::parse(&r.verification.engine_version);
+    issue(
+        "compatibility.engine.range".into(),
+        range.is_err() || matches!((&range, &version), (Ok(r), Ok(v)) if !r.matches(v)),
+        "invalid engine version range",
+        "use a semver requirement containing the evidence engine version",
+    );
+    issue(
+        "verification.engine_version".into(),
+        version.is_err(),
+        "invalid engine version",
+        "record the exact inspected/tested semantic version",
+    );
+    issue(
+        "compatibility.runtime.warp".into(),
+        r.compatibility
+            .runtime
+            .warp
+            .as_ref()
+            .is_some_and(|w| w.len() > 2 || w.iter().any(|n| *n > 99)),
+        "invalid warp",
+        "use zero to two integers in 0–99, per DSDA v0.30.1",
+    );
+    issue(
+        "verification.date".into(),
+        !valid_date(&r.verification.date),
+        "invalid verification date",
+        "use a real YYYY-MM-DD date",
+    );
+    issue(
+        "verification.tester".into(),
+        r.verification.tester.trim().is_empty() || r.verification.notes.trim().is_empty(),
+        "missing verification evidence",
+        "record tester and nonempty notes without claiming unperformed tests",
+    );
+    issue(
+        "verification.inspected".into(),
+        r.verification.status == VerificationStatus::Inspected
+            && r.verification.inspected.is_empty(),
+        "missing inspection evidence",
+        "record inspected archives, lumps and source documents",
+    );
+    issue(
+        "compatibility.engine.status".into(),
+        r.verification.status == VerificationStatus::Inspected
+            && r.compatibility.engine.status != VerificationStatus::Inspected,
+        "inspection mislabeled as engine test",
+        "mark the engine range inspected when only desk research exists",
+    );
+    errors
+}
+
+fn diag(file: &Path, line: usize, message: impl ToString, hint: &str) -> Diagnostic {
+    Diagnostic {
+        file: file.into(),
+        line,
+        message: message.to_string(),
+        hint: hint.into(),
+    }
+}
+
+/// Bounded reads keep even local/untrusted catalog input from exhausting memory.
+fn read_text(path: &Path) -> Result<String, Diagnostic> {
+    use std::io::Read;
+    let file = fs::File::open(path)
+        .map_err(|e| diag(path, 1, e, "check the file path and permissions"))?;
+    let mut text = String::new();
+    file.take(MAX_RECIPE_BYTES + 1)
+        .read_to_string(&mut text)
+        .map_err(|e| diag(path, 1, e, "use UTF-8 TOML"))?;
+    if text.len() as u64 > MAX_RECIPE_BYTES {
+        return Err(diag(
+            path,
+            1,
+            "catalog document exceeds 1 MiB",
+            "reduce the document size",
+        ));
+    }
+    Ok(text)
+}
+
+fn parse<T: serde::de::DeserializeOwned>(path: &Path, text: &str) -> Result<T, Diagnostic> {
+    toml::from_str(text).map_err(|e: toml::de::Error| {
+        let line = e.span().map_or(1, |s| {
+            text[..s.start].bytes().filter(|b| *b == b'\n').count() + 1
+        });
+        diag(
+            path,
+            line,
+            e.message(),
+            "fix the schema/type; remove unknown keys and supply required fields",
+        )
+    })
+}
+
+/// Semantic diagnostics use TOML's own spanned generic deserialization, so
+/// repeated keys in different array tables still point to the correct value.
+enum Located {
+    Table(std::collections::BTreeMap<String, toml::Spanned<Located>>),
+    Array(Vec<toml::Spanned<Located>>),
+    Scalar,
+}
+impl<'de> serde::Deserialize<'de> for Located {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Located;
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a TOML value")
+            }
+            fn visit_map<M: serde::de::MapAccess<'de>>(
+                self,
+                mut map: M,
+            ) -> Result<Located, M::Error> {
+                let mut values = std::collections::BTreeMap::new();
+                while let Some((key, value)) = map.next_entry()? {
+                    values.insert(key, value);
+                }
+                Ok(Located::Table(values))
+            }
+            fn visit_seq<S: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: S,
+            ) -> Result<Located, S::Error> {
+                let mut values = Vec::new();
+                while let Some(value) = seq.next_element()? {
+                    values.push(value);
+                }
+                Ok(Located::Array(values))
+            }
+            fn visit_str<E: serde::de::Error>(self, _: &str) -> Result<Located, E> {
+                Ok(Located::Scalar)
+            }
+            fn visit_string<E: serde::de::Error>(self, _: String) -> Result<Located, E> {
+                Ok(Located::Scalar)
+            }
+            fn visit_i64<E: serde::de::Error>(self, _: i64) -> Result<Located, E> {
+                Ok(Located::Scalar)
+            }
+            fn visit_u64<E: serde::de::Error>(self, _: u64) -> Result<Located, E> {
+                Ok(Located::Scalar)
+            }
+            fn visit_f64<E: serde::de::Error>(self, _: f64) -> Result<Located, E> {
+                Ok(Located::Scalar)
+            }
+            fn visit_bool<E: serde::de::Error>(self, _: bool) -> Result<Located, E> {
+                Ok(Located::Scalar)
+            }
+        }
+        de.deserialize_any(Visitor)
+    }
+}
+fn line_for(text: &str, key: &str) -> usize {
+    let Ok(root) = toml::from_str::<Located>(text) else {
+        return 1;
+    };
+    let mut current = &root;
+    let mut offset = 0;
+    for part in key.split('.') {
+        let value = match current {
+            Located::Table(t) => t.get(part),
+            Located::Array(a) => part.parse::<usize>().ok().and_then(|i| a.get(i)),
+            Located::Scalar => None,
+        };
+        let Some(value) = value else {
+            break;
+        };
+        offset = value.span().start;
+        current = value.get_ref();
+    }
+    text[..offset].bytes().filter(|b| *b == b'\n').count() + 1
+}
+
+/// Lints directories or individual recipes. Hosts are supplied explicitly so
+/// callers/tests need not depend on cwd. Network occurs only with `Some(fetch)`.
+pub fn lint_paths(
+    paths: &[PathBuf],
+    hosts_path: &Path,
+    mut fetch: Option<&mut dyn Fetch>,
+) -> Vec<Diagnostic> {
+    let hosts_text = match read_text(hosts_path) {
+        Ok(t) => t,
+        Err(e) => return vec![e],
+    };
+    let hosts: Hosts = match parse(hosts_path, &hosts_text) {
+        Ok(h) => h,
+        Err(e) => return vec![e],
+    };
+    if hosts.schema_version != 1
+        || hosts.pages.is_empty()
+        || hosts.downloads.is_empty()
+        || hosts.pages.iter().chain(&hosts.downloads).any(|h| {
+            Url::parse(&format!("https://{h}/"))
+                .ok()
+                .is_none_or(|u| u.host_str() != Some(h.as_str()) || u.path() != "/")
+        })
+    {
+        return vec![diag(
+            hosts_path,
+            1,
+            "invalid host allowlist",
+            "use schema 1 and exact lowercase hostnames",
+        )];
+    }
+    let mut files = Vec::new();
+    let mut errors = Vec::new();
+    for path in paths {
+        if path.is_dir() {
+            match fs::read_dir(path) {
+                Ok(entries) => {
+                    for entry in entries {
+                        match entry {
+                            Ok(e)
+                                if e.path().extension().is_some_and(|x| x == "toml")
+                                    && e.path().file_name().is_none_or(|n| n != "hosts.toml") =>
+                            {
+                                files.push(e.path())
+                            }
+                            Ok(_) => {}
+                            Err(e) => errors.push(diag(path, 1, e, "check directory permissions")),
+                        }
+                    }
+                }
+                Err(e) => errors.push(diag(path, 1, e, "check the catalog directory")),
+            }
+        } else {
+            files.push(path.clone());
+        }
+    }
+    files.sort();
+    files.dedup();
+    if files.is_empty() {
+        errors.push(diag(
+            paths.first().map_or(Path::new("catalog"), |p| p.as_path()),
+            1,
+            "no recipe files found",
+            "provide catalog/ or explicit .toml files",
+        ));
+    }
+    let mut ids = HashSet::new();
+    for path in files {
+        let text = match read_text(&path) {
+            Ok(t) => t,
+            Err(e) => {
+                errors.push(e);
+                continue;
+            }
+        };
+        let r: Recipe = match parse(&path, &text) {
+            Ok(r) => r,
+            Err(e) => {
+                errors.push(e);
+                continue;
+            }
+        };
+        let violations = validate(&r, &path, &hosts);
+        let valid = violations.is_empty();
+        for v in violations {
+            errors.push(diag(&path, line_for(&text, &v.key), v.message, &v.hint));
+        }
+        if !ids.insert(r.id.clone()) {
+            errors.push(diag(
+                &path,
+                line_for(&text, "id"),
+                "duplicate recipe id",
+                "use one file per stable recipe id",
+            ));
+        }
+        if valid && let Some(fetcher) = fetch.as_deref_mut() {
+            for (i, p) in r.packages.iter().enumerate() {
+                if let Err(e) = fetch::fetch_package(p, &hosts, fetcher) {
+                    errors.push(diag(&path, line_for(&text, &format!("packages.{i}")), e, "check upstream bytes, size, SHA-256 and exact member paths; never guess new hashes"));
+                }
+            }
+        }
+    }
+    errors
+}

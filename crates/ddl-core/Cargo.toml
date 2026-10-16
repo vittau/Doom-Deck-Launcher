@@ -8,20 +8,20 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
-# Versions are pinned with `=` in the same spirit as the workspace
-# `[workspace.dependencies]` table: a `Cargo.lock` refresh must not silently pull
-# a different release than the one reviewed. They are declared here rather than
-# in the workspace table so parallel spec branches that add the same crates do
-# not collide on identical lines of the root manifest.
+# Versions are pinned with `=` in the workspace `[workspace.dependencies]` table (or here,
+# for crates only ddl-core uses): a `Cargo.lock` refresh must not silently pull a different
+# release than the one reviewed.
 [dependencies]
-# `serde`/`serde_json`: machine-written state must be versioned JSON (D-006);
-# the derive macros keep the state schema explicit. Both are maintained by the
-# serde project (spec 005, R8).
-serde = { version = "=1.0.229", features = ["derive"] }
+# Versioned machine state (JSON) and hand-authored data (TOML), D-006 — specs 002, 005.
+serde.workspace = true
 serde_json = "=1.0.154"
-# `toml`: the DSDA config baseline is hand-authored data and must live in TOML
-# in the repository (D-006, spec 005 R2). Maintained by the toml-rs project.
-toml = "=1.1.8"
+toml.workspace = true
+# Catalog schema validation and opt-in fetch lint (spec 002).
+url.workspace = true
+semver.workspace = true
+sha2.workspace = true
+ureq.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
 # Test-only. Creates unique temporary directories for provisioning/guard/merge

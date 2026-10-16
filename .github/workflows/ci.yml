@@ -1,8 +1,9 @@
 # Continuous integration for DoomDeckLauncher (spec 001, R6).
 #
-# Two jobs:
+# Three jobs:
 #   * `checks`       - formatting, lints and unit tests on the GitHub-hosted
 #                      Ubuntu runner, mirroring the commands in `AGENTS.md`;
+#   * `catalog-lint` - offline recipe validation on every pull request;
 #   * `steamrt-build`- a release-mode build inside the same Steam Linux Runtime
 #                      SDK container the release uses, to prove the binary
 #                      actually links against SteamOS/Yocto-era libraries before
@@ -84,6 +85,52 @@ jobs:
 
       - name: cargo test --workspace
         run: cargo test --workspace --locked
+
+  catalog-lint:
+    name: Offline catalog lint
+    # Run for every PR, including every catalog/ change; no network fetches in CI.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # The checkout supplies `rust-toolchain.toml`, which the next step reads.
+      - uses: actions/checkout@v4
+
+      # Install rustup only (`--default-toolchain none`): the exact channel and
+      # components come from `rust-toolchain.toml`, so CI can never drift from
+      # local development. No third-party toolchain action is used, which keeps
+      # the supply chain to `actions/*` and the official rustup script.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          # Make cargo/rustc visible to the remaining steps.
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          # Read the channel back out of the pin, then install it explicitly so
+          # this job never depends on rustup's on-demand install behaviour.
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          # `rustfmt`/`clippy` are repeated here on purpose: `components` in
+          # rust-toolchain.toml is for local development, this line is what the
+          # CI job relies on.
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
+      # probes fontconfig with pkg-config at build time on Linux. Everything
+      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`, so no
+      # other -dev package is needed here.
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev
+
+      - name: Validate all recipes
+        run: cargo run --locked -p ddl -- catalog lint catalog/
 
   steamrt-build:
     name: Steam Runtime release build

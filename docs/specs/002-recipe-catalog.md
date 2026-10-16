@@ -66,12 +66,12 @@ order validation, UI, `/idgames` search.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R8) — typed Rust model in `ddl-core` with serde, round-trip tests on the
+- [x] **A1** (R1–R8) — typed Rust model in `ddl-core` with serde, round-trip tests on the
   reference recipes.
-- [ ] **A2** (R9) — lint unit tests per rule, including failing fixtures with expected messages.
-- [ ] **A3** (R9) — `ddl catalog lint --fetch` passes for the three reference recipes.
-- [ ] **A4** (R10) — CI job lints `catalog/` on pull requests.
-- [ ] **A5** (R11) — three reference recipes merged.
+- [x] **A2** (R9) — lint unit tests per rule, including failing fixtures with expected messages.
+- [x] **A3** (R9) — `ddl catalog lint --fetch` passes for the three reference recipes.
+- [x] **A4** (R10) — CI job lints `catalog/` on pull requests.
+- [x] **A5** (R11) — three reference recipes merged.
 
 ## Reference recipe data
 

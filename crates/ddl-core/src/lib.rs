@@ -10,3 +10,5 @@
 pub mod dsda_config;
 pub mod engines;
 pub mod platform;
+
+pub mod catalog;

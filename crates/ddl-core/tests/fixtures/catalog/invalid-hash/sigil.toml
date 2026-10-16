@@ -1,0 +1,115 @@
+# Confirmed bytes and release metadata: docs/research/reference-sigil.md §1–§5; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "sigil"
+title = "SIGIL"
+authors = ["John Romero"]
+release = "1.23"
+page = "https://romero.com/sigil"
+description = "Episode 5 for DOOM, with a MIDI soundtrack and an optional Episode 3 compatibility replacement."
+permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
+
+[base_game]
+game = "doom"
+variants = ["doom-1.9ud"]
+
+[compatibility]
+family = "limit-removing"
+complevel = 3
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Optional typed defaults: warp = [episode, map], pistol_start = false.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
+notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
+
+[[packages]]
+id = "free"
+page = "https://romero.com/sigil"
+urls = ["https://romero.com/s/SIGIL_V1_23-8fh4.zip"]
+size = 3270225
+sha256 = "bad"
+kind = "zip"
+
+[[packages.members]]
+id = "maps"
+path = "SIGIL_V1_23.wad"
+size = 4640555
+sha256 = "29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d"
+keep = false
+
+[[packages.members]]
+id = "compat"
+path = "SIGIL_COMPAT_V1_23.wad"
+size = 4634503
+sha256 = "a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "SIGIL_V1_23.txt"
+size = 5001
+sha256 = "d1445fb883296f69dde7dbd300032bb0c8804f6a6a4b944f8fbb5231bcb79b9e"
+keep = true
+
+[[packages.members]]
+id = "readme"
+path = "SIGIL_README_V1_23.txt"
+size = 10580
+sha256 = "9d3877d88eb49a0475300f465b1c2771c847ac0e83550d31c74de24018fbef6c"
+keep = true
+
+[[components]]
+id = "main"
+label = "SIGIL"
+description = "Main episode/mapset with bundled MIDI music."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components]]
+id = "compat"
+label = "Episode 3 compatibility WAD"
+description = "Replaces E3 instead of adding E5; DSDA-Doom supports the main UMAPINFO episode."
+optional = true
+default = false
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+
+[[components.members]]
+package = "free"
+member = "compat"
+role = "maps"
+
+[[components]]
+id = "soundtrack"
+label = "Buckethead soundtrack"
+description = "Proposed paid soundtrack replacement; user supplied and unvalidated."
+optional = true
+default = false
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+user_supplied = true
+obtain = "Purchase the Buckethead soundtrack version through romero.com/sigil and import your purchased WAD. Filename/hash are unconfirmed; validate the replacement before play."
+known_sha256 = []
+
+[[components.members]]
+role = "maps"
