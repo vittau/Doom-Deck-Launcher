@@ -33,8 +33,8 @@ sensitivity interact — honest about what still needs testing on hardware.
 
 ## Acceptance criteria
 
-- [ ] **A1** — every binding named in the tables exists in `research/dsda-engine.md` §4 (list the
+- [x] **A1** — every binding named in the tables exists in `research/dsda-engine.md` §4 (list the
   key names in the report).
-- [ ] **A2** — no instruction asks the user to edit `.vdf` files, import community layouts or use
+- [x] **A2** — no instruction asks the user to edit `.vdf` files, import community layouts or use
   a wizard.
 - [ ] **A3** — *Needs Deck Validation:* the owner follows the steps in Gaming Mode.
