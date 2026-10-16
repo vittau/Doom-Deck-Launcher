@@ -50,6 +50,10 @@ while True:
         if last.get(name) == digest: state += "+UNCHANGED"
         last[name] = digest
         errs = sorted({m.group(1).lower() for l in tail[-12:] if "Tip:" not in l for m in [ERR.search(l)] if m})
+        if state.startswith("working"):
+            # While a turn runs, compiler/test output often says "error"; only prompts and
+            # limits matter then. Generic errors are reported once the worker is idle.
+            errs = [e for e in errs if e not in ("error", "panicked", "not supported", "exceeded")]
         ctx = ""
         for l in reversed(tail):
             m = CTX.search(l)
