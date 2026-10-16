@@ -1807,9 +1807,9 @@ impl Runtime {
                 }
             }
         }
-        if let Some(problem) = self.problem {
+        if let Some(problem) = &self.problem {
             b.panel(12., 510., 1200., 222.);
-            b.label(36., 530., 1152., 88., text(ui, problem_copy(problem)), 22.);
+            b.label(36., 530., 1152., 88., problem_text(ui, problem), 22.);
             b.button(800, 36., 638., 552., text(ui, T::Retry), true);
             b.button(801, 612., 638., 576., text(ui, T::Diagnostics), false);
         }
@@ -1903,7 +1903,7 @@ fn blocker_copy(b: &Blocker) -> (T, T) {
         Blocker::IntegrityFailed { .. } => (T::IntegrityFailed, T::Install),
     }
 }
-fn problem_copy(p: Problem) -> T {
+fn problem_copy(p: &Problem) -> T {
     match p {
         Problem::Storage => T::ErrorStorage,
         Problem::State => T::ErrorState,
@@ -1917,6 +1917,24 @@ fn problem_copy(p: Problem) -> T {
         Problem::UnknownFile => T::UnknownFile,
         Problem::Launch => T::ErrorLaunch,
         Problem::Busy => T::ErrorBusy,
+        Problem::EngineRuntime(_) => T::ErrorEngineRuntime,
+    }
+}
+
+/// The problem panel's label: a static key, or the engine runtime's own
+/// actionable message (spec 014 follow-up).
+fn problem_text(ui: &AppWindow, problem: &Problem) -> slint::SharedString {
+    match problem_detail(problem) {
+        Some(detail) => value(ui, T::ErrorEngineRuntime, detail),
+        None => text(ui, problem_copy(problem)),
+    }
+}
+
+/// The runtime detail a problem carries, when it has one.
+fn problem_detail(problem: &Problem) -> Option<String> {
+    match problem {
+        Problem::EngineRuntime(runtime) => Some(runtime.to_string()),
+        _ => None,
     }
 }
 struct Nodes {
@@ -2177,5 +2195,26 @@ mod visual_copy_tests {
         assert_eq!(human_bytes(3 * 1024 * 1024 * 1024), "3.0 GiB");
         assert_eq!(elide_path_start("/short", 10), "/short");
         assert_eq!(elide_path_start("/long/日本語/maps", 9), "…日本語/maps");
+    }
+
+    #[test]
+    fn engine_runtime_problems_carry_their_actionable_detail() {
+        let missing =
+            Problem::EngineRuntime(ddl_core::engines::dsda::RuntimeError::MissingLibrary {
+                library: "libOpenGL.so.0".to_owned(),
+            });
+        let detail = problem_detail(&missing).expect("a runtime problem has a detail");
+        assert!(detail.contains("libOpenGL.so.0"), "{detail}");
+        assert!(matches!(problem_copy(&missing), T::ErrorEngineRuntime));
+
+        let glibc = Problem::EngineRuntime(ddl_core::engines::dsda::RuntimeError::Glibc {
+            missing: vec!["GLIBC_2.34".to_owned()],
+        });
+        let detail = problem_detail(&glibc).expect("a runtime problem has a detail");
+        assert!(detail.contains("GLIBC_2.34"), "{detail}");
+        assert!(detail.contains("Compatibility tool"), "{detail}");
+
+        // Every other problem stays a static key.
+        assert!(problem_detail(&Problem::Engine).is_none());
     }
 }

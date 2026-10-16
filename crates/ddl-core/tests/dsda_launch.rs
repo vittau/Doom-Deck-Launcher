@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 
 use ddl_core::engines::dsda::{
     AssignAllowlist, AssignOverride, Complevel, EngineRunner, FakeEngineRunner, LaunchError,
-    LaunchExit, LaunchPlan, PathField, RealEngineRunner, Skill, SmokeError, ValidationError, Warp,
-    smoke_test, smoke_test_with_timeout,
+    LaunchExit, LaunchPlan, PathField, RealEngineRunner, RuntimeError, Skill, SmokeError,
+    ValidationError, Warp, smoke_test, smoke_test_with_timeout,
 };
 
 /// The workspace-built helper the runner tests start instead of the engine.
@@ -445,5 +445,44 @@ mod smoke {
         let missing = tree.path().join("not-an-engine");
 
         assert!(matches!(smoke_test(&missing), Err(SmokeError::Startup(_))));
+    }
+
+    /// The real CI run 38980417407 failure: a bare Ubuntu runner lacks
+    /// `libOpenGL.so.0`.
+    #[test]
+    fn smoke_test_classifies_a_missing_shared_library() {
+        let tree = TestDir::new("smoke-runtime-lib");
+        let executable = script(
+            &tree,
+            "dsda-doom",
+            "echo 'dsda-doom.AppImage: error while loading shared libraries: libOpenGL.so.0: cannot \
+             open shared object file: No such file or directory' >&2\nexit 127",
+        );
+
+        match smoke_test(&executable) {
+            Err(SmokeError::Runtime(RuntimeError::MissingLibrary { library })) => {
+                assert_eq!(library, "libOpenGL.so.0");
+            }
+            other => panic!("expected a runtime error, got {other:?}"),
+        }
+    }
+
+    /// The real CI run 38980417407 failure: the extracted `AppRun` inside the
+    /// Steam Runtime SDK container needs glibc ≥ 2.34.
+    #[test]
+    fn smoke_test_classifies_an_old_glibc() {
+        let tree = TestDir::new("smoke-runtime-glibc");
+        let executable = script(
+            &tree,
+            "dsda-doom",
+            "echo \"/lib/x86_64-linux-gnu/libc.so.6: version 'GLIBC_2.34' not found\" >&2\nexit 1",
+        );
+
+        match smoke_test(&executable) {
+            Err(SmokeError::Runtime(RuntimeError::Glibc { missing })) => {
+                assert_eq!(missing, vec!["GLIBC_2.34".to_owned()]);
+            }
+            other => panic!("expected a runtime error, got {other:?}"),
+        }
     }
 }

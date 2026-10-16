@@ -935,6 +935,33 @@ exit 1
     }
 
     #[test]
+    fn a_runtime_smoke_failure_is_reported_actionably() {
+        // Real stderr from CI run 38980417407: the extracted AppRun needs a
+        // newer glibc than the Steam Runtime SDK container provides.
+        const OLD_GLIBC: &str = "#!/bin/sh\necho \"/lib/x86_64-linux-gnu/libc.so.6: version 'GLIBC_2.34' not found (required by AppRun)\" 1>&2\nexit 1\n";
+        let temp = TestDir::new("install-glibc");
+        let (server, hash, length) = serve(OLD_GLIBC);
+        let manager = manager(temp.path());
+        let request = InstallRequest {
+            version: "0.30.1".to_owned(),
+            tag: None,
+            source_url: server.url("/f"),
+            expected_size: length,
+            expected_sha256: hash,
+            reviewed: true,
+            force_extract: false,
+        };
+        let error = manager
+            .perform_install(request, &server.url("/f"))
+            .unwrap_err();
+        let text = error.to_string();
+        assert!(text.contains("GLIBC_2.34"), "{text}");
+        assert!(text.contains("Compatibility tool"), "{text}");
+        assert!(!dirs(temp.path()).engines.join("0.30.1").exists());
+        assert_no_staging(temp.path());
+    }
+
+    #[test]
     fn a_non_fuse_smoke_failure_is_reported_and_leaves_nothing() {
         const BROKEN: &str = r#"#!/bin/sh
 echo "I_Error: boom" 1>&2

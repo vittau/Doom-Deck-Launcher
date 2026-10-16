@@ -21,7 +21,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Problem {
     Storage,
     State,
@@ -36,24 +36,30 @@ pub enum Problem {
     Launch,
     /// Another DDL process is changing the same state (spec 014, R2).
     Busy,
+    /// The engine could not start because the host runtime is missing something
+    /// (spec 014 follow-up).
+    EngineRuntime(dsda::RuntimeError),
 }
 
 impl fmt::Display for Problem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Storage => "could not write or read DDL's user storage",
-            Self::State => "could not read DDL's saved state",
-            Self::Network => "a network request failed",
-            Self::Update => "the update check failed",
-            Self::Checksum => "a downloaded file failed its checksum",
-            Self::UnsafeArchive => "an archive was refused as unsafe",
-            Self::Cancelled => "cancelled",
-            Self::Engine => "the engine operation failed",
-            Self::Config => "the DSDA configuration operation failed",
-            Self::UnknownFile => "the file is not a component DDL recognizes",
-            Self::Launch => "the engine could not be launched",
-            Self::Busy => "another DDL process is changing DDL's state; close it and try again",
-        })
+        match self {
+            Self::Storage => f.write_str("could not write or read DDL's user storage"),
+            Self::State => f.write_str("could not read DDL's saved state"),
+            Self::Network => f.write_str("a network request failed"),
+            Self::Update => f.write_str("the update check failed"),
+            Self::Checksum => f.write_str("a downloaded file failed its checksum"),
+            Self::UnsafeArchive => f.write_str("an archive was refused as unsafe"),
+            Self::Cancelled => f.write_str("cancelled"),
+            Self::Engine => f.write_str("the engine operation failed"),
+            Self::Config => f.write_str("the DSDA configuration operation failed"),
+            Self::UnknownFile => f.write_str("the file is not a component DDL recognizes"),
+            Self::Launch => f.write_str("the engine could not be launched"),
+            Self::Busy => {
+                f.write_str("another DDL process is changing DDL's state; close it and try again")
+            }
+            Self::EngineRuntime(runtime) => write!(f, "{runtime}"),
+        }
     }
 }
 
@@ -442,6 +448,17 @@ impl Services {
                         let kind = match &e {
                             dsda::Error::Install(dsda::InstallError::Download(d)) => {
                                 download_error(d)
+                            }
+                            // A host-runtime failure gets its own, actionable
+                            // problem so the UI can name the cause (spec 014
+                            // follow-up).
+                            dsda::Error::Install(dsda::InstallError::Smoke(smoke)) => {
+                                match smoke.as_ref() {
+                                    dsda::SmokeError::Runtime(runtime) => {
+                                        Problem::EngineRuntime(runtime.clone())
+                                    }
+                                    _ => Problem::Engine,
+                                }
                             }
                             _ => Problem::Engine,
                         };
