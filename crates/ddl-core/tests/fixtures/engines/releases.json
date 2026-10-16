@@ -1,0 +1,89 @@
+[
+  {
+    "tag_name": "v0.30.1",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-09T19:16:04Z",
+    "html_url": "https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.1",
+    "assets": [
+      {
+        "name": "dsda-doom-0.30.1-linux-x86_64.appimage",
+        "size": 14608888,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.30.1/dsda-doom-0.30.1-linux-x86_64.appimage",
+        "digest": "sha256:b06adf3f0c7d4e82dc1870baf97e67e4dc4e663e37f69070ddc02fa3e97608b0"
+      },
+      {
+        "name": "dsda-doom-0.30.1-mac-uni.zip",
+        "size": 11490973,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.30.1/dsda-doom-0.30.1-mac-uni.zip",
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+      }
+    ]
+  },
+  {
+    "tag_name": "v0.30.2-rc1",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-10-15T00:00:00Z",
+    "html_url": "https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.2-rc1",
+    "assets": [
+      {
+        "name": "dsda-doom-0.30.2-rc1-linux-x86_64.appimage",
+        "size": 14620000,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.30.2-rc1/dsda-doom-0.30.2-rc1-linux-x86_64.appimage",
+        "digest": null
+      }
+    ]
+  },
+  {
+    "tag_name": "v0.30.0-draft",
+    "draft": true,
+    "prerelease": false,
+    "published_at": null,
+    "html_url": "https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.0-draft",
+    "assets": [
+      {
+        "name": "dsda-doom-0.30.0-draft-linux-x86_64.appimage",
+        "size": 14600696,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.30.0-draft/dsda-doom-0.30.0-draft-linux-x86_64.appimage",
+        "digest": null
+      }
+    ]
+  },
+  {
+    "tag_name": "v0.29.3",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2025-07-03T00:00:43Z",
+    "html_url": "https://github.com/dsda-org/dsda-doom/releases/tag/v0.29.3",
+    "assets": [
+      {
+        "name": "dsda-doom-0.29.3-Linux.appimage",
+        "size": 14842360,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.29.3/dsda-doom-0.29.3-Linux.appimage",
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+      },
+      {
+        "name": "dsda-doom-0.29.3-mac-arm64.zip",
+        "size": 11000000,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.29.3/dsda-doom-0.29.3-mac-arm64.zip",
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003"
+      }
+    ]
+  },
+  {
+    "tag_name": "v0.28.1",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2024-08-18T14:37:14Z",
+    "html_url": "https://github.com/dsda-org/dsda-doom/releases/tag/v0.28.1",
+    "assets": [
+      {
+        "name": "dsda-doom-0.28.1.zip",
+        "size": 13121468,
+        "browser_download_url": "https://github.com/dsda-org/dsda-doom/releases/download/v0.28.1/dsda-doom-0.28.1.zip",
+        "digest": null
+      }
+    ]
+  }
+]

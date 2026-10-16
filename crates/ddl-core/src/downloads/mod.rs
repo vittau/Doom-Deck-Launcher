@@ -46,7 +46,7 @@ pub mod hash;
 pub mod host;
 
 #[cfg(test)]
-mod test_http;
+pub(crate) mod test_http;
 
 pub use cancel::CancellationToken;
 pub use error::{Error, LimitKind};
