@@ -22,6 +22,7 @@ with. Every claim is labelled:
 | Slint backend | `winit` (`backend-winit`: X11 + Wayland) | Proposed |
 | Slint renderer | FemtoVG (`renderer-femtovg`, OpenGL ES via EGL/GLX) | Proposed |
 | Slint default features | Disabled; explicit minimal feature set | Proposed |
+| Slint feature set | `compat-1-18`, `std`, `backend-winit`, `renderer-femtovg`, `renderer-software` | Confirmed (compiles on macOS and in CI) |
 
 ## 2. Why sniper (Steam Runtime 3) rather than Steam Runtime 4
 
@@ -117,7 +118,7 @@ DDL depends on Slint as:
 
 ```toml
 slint = { version = "=1.18.1", default-features = false, features = [
-    "compat-1-18", "std", "backend-winit", "renderer-femtovg",
+    "compat-1-18", "std", "backend-winit", "renderer-femtovg", "renderer-software",
 ] }
 ```
 
@@ -125,20 +126,33 @@ slint = { version = "=1.18.1", default-features = false, features = [
   is the default renderer; the mandatory feature is `compat-1-18`
   ([Slint 1.18.1 "Feature flags and backend selection" docs](https://docs.rs/slint/1.18.1/slint/docs/cargo_features/index.html)).
 - **Proposed** — `default-features = false` was chosen deliberately. The defaults also
-  enable `system-tray` (pulls in `ksni` on Linux), `accessibility` (pulls in AccessKit)
-  and `renderer-software`; a placeholder menu needs none of them, and every dropped
-  dependency is one less library that can be missing on SteamOS.
-  `backend-winit` (rather than `backend-winit-x11` or `backend-winit-wayland`) keeps
-  both X11 and Wayland support so the same binary works in Gaming Mode (gamescope/X11)
-  and under a Wayland session.
+  enable `system-tray` (pulls in `ksni` on Linux) and `accessibility` (pulls in
+  AccessKit); a placeholder menu needs neither, and every dropped dependency is one
+  less library that can be missing on SteamOS. `backend-winit` (rather than
+  `backend-winit-x11` or `backend-winit-wayland`) keeps both X11 and Wayland support
+  so the same binary works in Gaming Mode (gamescope/X11) and under a Wayland session.
 - **Confirmed** — FemtoVG renders through OpenGL/OpenGL ES. `glutin` loads EGL and GLX
   with `libloading` and `glow` loads the GL function pointers at runtime, so nothing is
   linked at build time; the libraries must exist when DDL starts.
+- **Proposed** — `renderer-software` is compiled in as well, for two reasons: it is the
+  renderer the **headless UI test** uses (see below), and it gives a GPU-free fallback
+  (`SLINT_BACKEND=winit-software`) on machines without a usable GL/EGL stack.
 - **Needs Deck Validation** — that FemtoVG can create a GL/EGL context under gamescope
-  in Gaming Mode. If it cannot, add the `renderer-software` feature (plus
-  `SLINT_BACKEND=winit-software`) as the fallback; that is a two-line change in
-  `crates/ddl/Cargo.toml` and the documented startup path. Not added now, because it
-  would ship an unused renderer in the placeholder.
+  in Gaming Mode. If it cannot, launch with `SLINT_BACKEND=winit-software`; that only
+  needs the flag, because the software renderer is already part of the binary.
+
+### Headless verification of the UI
+
+Requirement R4 is checked without a display: `crates/ddl/src/headless.rs` installs a
+`MinimalSoftwareWindow` as the Slint platform, dispatches `KeyPressed` events at the
+window (the same path a keyboard backend uses) and renders frames with the software
+renderer at 1280×800. The test asserts the focus index after Up/Down/Return/Escape,
+that Return on "Quit" and Escape both request an exit, and that the rendered highlight
+band actually moves between frames. The frames are written as PNGs to
+`target/headless/` (or `$DDL_HEADLESS_DIR`) so a human can inspect what the placeholder
+screen draws, on any platform, without opening a window. **Confirmed** on macOS and in
+CI.
+
 
 ## 6. Shared library requirements of the released binary
 

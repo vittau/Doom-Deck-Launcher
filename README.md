@@ -87,6 +87,11 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
+`cargo test` never opens a window: the placeholder screen is verified headlessly with
+Slint's software renderer, and the frames it draws at 1280×800 are written to
+`target/headless/*.png` (see `crates/ddl/src/headless.rs`). To inspect them somewhere
+else, set `DDL_HEADLESS_DIR`.
+
 Release binaries are not built on a development machine: they are produced by
 GitHub Actions inside a pinned Steam Linux Runtime SDK container, so that they run
 against the libraries SteamOS actually provides. See

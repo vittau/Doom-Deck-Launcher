@@ -62,6 +62,10 @@ Gamepad input, DSDA-Doom handling, any real screen content, Flatpak, auto-update
   unknown-option behaviour.
 - [x] **A4** (R4) — `cargo run -p ddl -- --windowed` on macOS shows the menu; focus moves with
   arrows; Quit exits 0 (describe what you observed, screenshot if possible).
+  *Verified headlessly instead, at the owner's request (no visible window, no screen capture):
+  `crates/ddl/src/headless.rs` renders the component off-screen with Slint's software renderer
+  at 1280x800, drives Up/Down/Return/Escape through `WindowEvent::KeyPressed` and writes the
+  frames to `target/headless/*.png`.*
 - [ ] **A5** (R6, R7) — workflows are syntactically valid YAML and every step's command was
   reviewed; actual CI execution is verified by the coordinator after push.
 - [x] **A6** (R8) — research doc exists with pinned image digest and cited sources.
