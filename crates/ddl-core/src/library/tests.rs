@@ -472,3 +472,54 @@ fn cancellable_install_reports_stages_and_never_commits_a_cancelled_selection() 
         assert!(stages.contains(&stop));
     }
 }
+
+#[test]
+fn main_to_replacement_to_main_keeps_valid_records_without_redownloading() {
+    use crate::downloads::CancellationToken;
+    let dir = TempDir::new().unwrap();
+    let f = fixture("replacement", "http://127.0.0.1/placeholder");
+    let inner = zip_bytes(&[("addon.wad", &f.addon)]);
+    let bytes = zip_bytes(&[
+        ("main.wad", &f.main),
+        ("addons.zip", &inner),
+        ("credits.txt", &f.credits),
+    ]);
+    let requests = Arc::new(AtomicUsize::new(0));
+    let count = requests.clone();
+    let server = Server::start(move |_| {
+        count.fetch_add(1, Ordering::SeqCst);
+        Response::ok(bytes.clone())
+    });
+    let mut recipe = f.recipe;
+    recipe.packages[0].urls = vec![server.url("/package")];
+    recipe.components[1].replaces = Some("main".into());
+    recipe.components[1].position = 1;
+    let installer = Installer::new(
+        dir.path().join("data"),
+        dir.path().join("cache"),
+        HostAllowlist::new(["127.0.0.1"]),
+    )
+    .with_fetcher(Fetcher::new(dir.path().join("cache")).allow_http_for_tests());
+    let main = installer.install(&recipe, &[]).unwrap();
+    let path = main.find_downloaded("free", "main").unwrap().path.clone();
+    let alternate = installer.install(&recipe, &["addon"]).unwrap();
+    assert!(alternate.find_downloaded("free", "main").is_some());
+    assert!(alternate.find_downloaded("free", "addon").is_some());
+    let restored = installer.install(&recipe, &[]).unwrap();
+    assert!(restored.find_downloaded("free", "addon").is_some());
+    assert_eq!(requests.load(Ordering::SeqCst), 1);
+    // Same-size drift of an unused member is dropped, rather than blessed in the new record.
+    std::fs::write(&path, vec![b'X'; f.main.len()]).unwrap();
+    let alternate = installer.install(&recipe, &["addon"]).unwrap();
+    assert!(alternate.find_downloaded("free", "main").is_none());
+    // Selecting main repairs it from the verified cached package, still without a network request.
+    installer.install(&recipe, &[]).unwrap();
+    assert_eq!(std::fs::read(path).unwrap(), f.main);
+    assert_eq!(requests.load(Ordering::SeqCst), 1);
+    let cancel = CancellationToken::new();
+    cancel.cancel();
+    assert!(matches!(
+        installer.import_user_component_with_cancel(&recipe, "unknown", dir.path(), &cancel),
+        Err(InstallError::Download(crate::downloads::Error::Cancelled))
+    ));
+}

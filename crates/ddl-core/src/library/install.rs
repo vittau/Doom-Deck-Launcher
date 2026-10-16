@@ -12,7 +12,7 @@
 //! re-uses the archive already on disk and never re-downloads it (spec 006, R3).
 
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -286,7 +286,11 @@ impl Installer {
                         && path.is_file()
                 });
             match reused {
-                Some(stored) => members.push(stored.clone()),
+                Some(stored) if record_matches(stored, cancel)? => members.push(stored.clone()),
+                Some(stored) => {
+                    tracing::warn!(path=%stored.path.display(),"replacing an invalid installed member");
+                    missing.push((package, member));
+                }
                 None => missing.push((package, member)),
             }
         }
@@ -348,17 +352,40 @@ impl Installer {
             });
         }
 
-        // Keep user imports that are still on disk.
+        // The manifest records everything still installed, not just this launch selection.
+        // Changing to a replacement must not forget a previously installed main or add-on.
         if let Some(held) = &existing {
             for entry in &held.members {
-                if entry.package.is_none()
-                    && entry.component.is_some()
-                    && entry.path.is_file()
-                    && !members
-                        .iter()
-                        .any(|held| held.package.is_none() && held.component == entry.component)
-                {
+                if members.iter().any(|m| {
+                    m.package == entry.package
+                        && m.member == entry.member
+                        && m.component == entry.component
+                }) {
+                    continue;
+                }
+                if entry.path.starts_with(&install_dir) && record_matches(entry, cancel)? {
                     members.push(entry.clone());
+                } else {
+                    tracing::warn!(path=%entry.path.display(),"dropping an invalid prior install record");
+                }
+            }
+        }
+        let mut installed_packages: Vec<InstalledPackage> = needed_packages
+            .iter()
+            .map(|p| InstalledPackage {
+                id: p.id.clone(),
+                sha256: p.sha256.clone(),
+                size: p.size,
+            })
+            .collect();
+        if let Some(held) = &existing {
+            for package in &held.packages {
+                if !installed_packages.iter().any(|p| p.id == package.id)
+                    && members
+                        .iter()
+                        .any(|m| m.package.as_deref() == Some(&package.id))
+                {
+                    installed_packages.push(package.clone());
                 }
             }
         }
@@ -371,14 +398,7 @@ impl Installer {
             installed_at: existing
                 .as_ref()
                 .map_or_else(|| self.clock.now_unix_secs(), |held| held.installed_at),
-            packages: needed_packages
-                .iter()
-                .map(|package| InstalledPackage {
-                    id: package.id.clone(),
-                    sha256: package.sha256.clone(),
-                    size: package.size,
-                })
-                .collect(),
+            packages: installed_packages,
             members,
         };
 
@@ -422,6 +442,23 @@ impl Installer {
         component_id: &str,
         source: &Path,
     ) -> Result<ImportOutcome, InstallError> {
+        self.import_user_component_with_cancel(
+            recipe,
+            component_id,
+            source,
+            &CancellationToken::new(),
+        )
+    }
+
+    /// Imports cooperatively, leaving no manifest update when cancelled before commit.
+    pub fn import_user_component_with_cancel(
+        &self,
+        recipe: &Recipe,
+        component_id: &str,
+        source: &Path,
+        cancel: &CancellationToken,
+    ) -> Result<ImportOutcome, InstallError> {
+        check_cancel(cancel)?;
         let component = recipe
             .components
             .iter()
@@ -459,7 +496,7 @@ impl Installer {
                 got: size,
             });
         }
-        let sha256 = hash_file(source)?;
+        let sha256 = hash_file(source, cancel)?;
         let matched = component
             .known_sha256
             .iter()
@@ -479,7 +516,34 @@ impl Installer {
             .map_err(|error| io_error("create the import directory", error))?;
         let destination = directory.join(name);
         let temporary = destination.with_file_name(format!(".{name}.{}.tmp", std::process::id()));
-        fs::copy(source, &temporary).map_err(|error| io_error("copy the imported file", error))?;
+        let copy = || -> Result<(), InstallError> {
+            let mut input =
+                fs::File::open(source).map_err(|e| io_error("read imported file", e))?;
+            let mut output =
+                fs::File::create(&temporary).map_err(|e| io_error("stage imported file", e))?;
+            let mut bytes = [0u8; 64 * 1024];
+            loop {
+                check_cancel(cancel)?;
+                let count = input
+                    .read(&mut bytes)
+                    .map_err(|e| io_error("read imported file", e))?;
+                if count == 0 {
+                    break;
+                }
+                output
+                    .write_all(&bytes[..count])
+                    .map_err(|e| io_error("write imported file", e))?;
+            }
+            output
+                .sync_all()
+                .map_err(|e| io_error("flush imported file", e))?;
+            check_cancel(cancel)?;
+            Ok(())
+        };
+        if let Err(error) = copy() {
+            let _ = fs::remove_file(&temporary);
+            return Err(error);
+        }
         restrict_permissions(&temporary)?;
         fs::rename(&temporary, &destination)
             .map_err(|error| io_error("place the imported file", error))?;
@@ -612,11 +676,12 @@ fn safe_component(value: &str) -> Option<&str> {
 }
 
 /// Hashes a file in bounded chunks so a large import never loads whole.
-fn hash_file(path: &Path) -> Result<String, InstallError> {
+fn hash_file(path: &Path, cancel: &CancellationToken) -> Result<String, InstallError> {
     let mut file = fs::File::open(path).map_err(|error| io_error("open imported file", error))?;
     let mut hasher = Sha256Digest::new();
     let mut buffer = vec![0u8; 64 * 1024];
     loop {
+        check_cancel(cancel)?;
         let read = file
             .read(&mut buffer)
             .map_err(|error| io_error("read imported file", error))?;
@@ -760,5 +825,33 @@ impl From<crate::downloads::Error> for InstallError {
 impl From<ManifestError> for InstallError {
     fn from(error: ManifestError) -> Self {
         Self::Manifest(error)
+    }
+}
+
+fn check_cancel(cancel: &CancellationToken) -> Result<(), InstallError> {
+    if cancel.is_cancelled() {
+        Err(InstallError::Download(crate::downloads::Error::Cancelled))
+    } else {
+        Ok(())
+    }
+}
+
+fn record_matches(
+    entry: &InstalledMember,
+    cancel: &CancellationToken,
+) -> Result<bool, InstallError> {
+    check_cancel(cancel)?;
+    if !fs::metadata(&entry.path)
+        .is_ok_and(|m| m.is_file() && m.len() == entry.size && m.len() <= MAX_MEMBER_BYTES)
+    {
+        return Ok(false);
+    }
+    match hash_file(&entry.path, cancel) {
+        Ok(hash) => Ok(hash.eq_ignore_ascii_case(&entry.sha256)),
+        Err(error @ InstallError::Download(crate::downloads::Error::Cancelled)) => Err(error),
+        Err(error) => {
+            tracing::warn!(%error,path=%entry.path.display(),"could not verify prior installed member");
+            Ok(false)
+        }
     }
 }
