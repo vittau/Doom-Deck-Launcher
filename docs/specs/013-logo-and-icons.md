@@ -1,6 +1,6 @@
 # 013 — Project logo, app icon and Steam artwork
 
-**Status:** Ready (after 012 merges)  ·  **Milestone:** M2  ·  **Depends on:** 012
+**Status:** Ready  ·  **Milestone:** M2  ·  **Depends on:** 012
 **Evidence:** D-020, D-021 (Ember Cathedral identity), `docs/design/visual-v2/`.
 
 ## Goal

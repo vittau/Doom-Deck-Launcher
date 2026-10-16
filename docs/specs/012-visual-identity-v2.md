@@ -1,6 +1,6 @@
 # 012 — Visual identity v2 (DOOM-flavoured) and production UI polish
 
-**Status:** Phase B in progress  ·  **Milestone:** M2  ·  **Depends on:** 010
+**Status:** Done (A4 needs Deck)  ·  **Milestone:** M2  ·  **Depends on:** 010
 **Evidence:** D-020; `docs/design/ui.md` (interaction contract stays), `docs/research/prior-art.md`
 (UZDeck critique), spec 008 fixture PNGs and `docs/reports/010-ui-wiring.md` (current screens).
 

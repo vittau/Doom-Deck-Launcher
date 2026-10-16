@@ -221,3 +221,12 @@
     trigger it; release.yml builds tags), superseded runs are cancelled, and the cargo
     registry + target are cached per job keyed by Cargo.lock and the toolchain pin.
   refs: [.github/workflows/ci.yml]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 012 phase B merged — Ember Cathedral (intensified) across every production screen:
+    carved wall, native-size bronze 9-slice ornaments, continuous art bands, Pirata One titles
+    + Barlow body (OFL, shipped in the tarball), exclusive add-on choice row, readiness checks
+    with marks, plus the 010 review density fixes. 310 tests. Eviternity recipe and spec 013
+    (logo) dispatched.
+  refs: [docs/reports/012-visual-identity-v2.md, docs/decisions.md]
