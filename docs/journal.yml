@@ -213,3 +213,11 @@
     Cathedral; D-021 records it, intensified (visible wall texture, thicker frames, top art
     band, legible logotype). Phase B dispatched.
   refs: [docs/decisions.md, docs/design/visual-v2/README.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    CI trimmed on the owner's request: runs only on pushes to main and PRs that touch build
+    inputs (docs except docs/design, Markdown, orchestration scripts and tags no longer
+    trigger it; release.yml builds tags), superseded runs are cancelled, and the cargo
+    registry + target are cached per job keyed by Cargo.lock and the toolchain pin.
+  refs: [.github/workflows/ci.yml]
