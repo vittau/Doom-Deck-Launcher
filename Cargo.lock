@@ -765,6 +765,12 @@ dependencies = [
 [[package]]
 name = "ddl-core"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+]
 
 [[package]]
 name = "derive_more"

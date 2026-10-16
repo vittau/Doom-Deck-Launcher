@@ -6,4 +6,5 @@
 //! `recipes`, `resolver`, ...) arrives with later specs.
 #![forbid(unsafe_code)]
 
+pub mod dsda_config;
 pub mod platform;

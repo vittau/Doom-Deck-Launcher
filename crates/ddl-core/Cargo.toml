@@ -8,6 +8,22 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
-# Intentionally dependency-free: this crate is the platform-independent logic
-# layer and must stay usable (and testable) without UI or OS crates.
+# Versions are pinned with `=` in the same spirit as the workspace
+# `[workspace.dependencies]` table: a `Cargo.lock` refresh must not silently pull
+# a different release than the one reviewed. They are declared here rather than
+# in the workspace table so parallel spec branches that add the same crates do
+# not collide on identical lines of the root manifest.
 [dependencies]
+# `serde`/`serde_json`: machine-written state must be versioned JSON (D-006);
+# the derive macros keep the state schema explicit. Both are maintained by the
+# serde project (spec 005, R8).
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+# `toml`: the DSDA config baseline is hand-authored data and must live in TOML
+# in the repository (D-006, spec 005 R2). Maintained by the toml-rs project.
+toml = "=1.1.8"
+
+[dev-dependencies]
+# Test-only. Creates unique temporary directories for provisioning/guard/merge
+# tests without touching the developer's real config (spec 005, A2–A5).
+tempfile = "=3.27.0"
