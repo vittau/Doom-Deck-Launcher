@@ -47,21 +47,21 @@ config provisioning (spec 005), UI.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2) — table-driven tests: argv for minimal plan, multi-file plus patches,
+- [x] **A1** (R1, R2) — table-driven tests: argv for minimal plan, multi-file plus patches,
   warp, pistol start, assigns; snapshot of exact token order.
-- [ ] **A2** (R3) — one test per validation error, including repeated-flag impossibility (no
+- [x] **A2** (R3) — one test per validation error, including repeated-flag impossibility (no
   API can emit `-file` twice) and pistol start + record rejection.
-- [ ] **A3** (R4) — fake runner tests; a real-runner test on a harmless system binary
+- [x] **A3** (R4) — fake runner tests; a real-runner test on a harmless system binary
   (e.g. `/bin/sh -c 'exit 3'` is **not** allowed — use a small test helper binary built from the
   workspace) proving exit status, signal death and log capture; environment scrubbing tested.
-- [ ] **A4** (R5) — smoke test against a fake executable script fixture written by the test
+- [x] **A4** (R5) — smoke test against a fake executable script fixture written by the test
   (exit 0 with version, wrong output, non-zero, timeout).
-- [ ] **A5** (R6) — `describe()` snapshot test, including `~` shortening.
+- [x] **A5** (R6) — `describe()` snapshot test, including `~` shortening.
 - [ ] **A6** — *Needs Deck Validation:* launch the official AppImage with a generated plan on the
   Deck (tracked in `docs/deck-testing.md`).
 
 ## Tasks
 
-- [ ] Types and validation
-- [ ] argv builder and describe
-- [ ] Runner trait, real runner, fake, smoke test
+- [x] Types and validation
+- [x] argv builder and describe
+- [x] Runner trait, real runner, fake, smoke test
