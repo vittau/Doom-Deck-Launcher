@@ -233,6 +233,15 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     assert_eq!(focus(), 2);
     press(&window, Key::LeftArrow);
     assert_eq!(focus(), 1);
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), -1);
+    press(&window, Key::LeftArrow);
+    assert_eq!(focus(), -1, "spatial navigation never wraps");
+    press(&window, Key::RightArrow);
+    assert_eq!(focus(), -2);
+    press(&window, Key::LeftArrow);
+    press(&window, Key::DownArrow);
+    assert_eq!(focus(), 1);
     window.dispatch_event(WindowEvent::WindowActiveChanged(false));
     assert!(!ui.get_input_active());
     window.dispatch_event(WindowEvent::WindowActiveChanged(true));

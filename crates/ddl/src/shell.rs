@@ -272,9 +272,13 @@ impl Shell {
         }
         if self.focus < 0 {
             match direction {
-                Action::Down => self.focus = self.remembered[self.tab],
-                Action::Left if self.root() => self.tab((self.tab + 3) % 4),
-                Action::Right if self.root() => self.tab((self.tab + 1) % 4),
+                Action::Down => {
+                    let tab = (-self.focus - 1) as usize;
+                    self.tab(tab);
+                    self.focus = self.remembered[tab];
+                }
+                Action::Left if self.root() && self.focus < -1 => self.focus += 1,
+                Action::Right if self.root() && self.focus > -4 => self.focus -= 1,
                 _ => {}
             }
             return;
@@ -935,7 +939,9 @@ impl Shell {
         );
         ui.set_detail_hint(self.sheet.is_none() && self.screen == Screen::Home);
         ui.set_import_hint(self.sheet.is_none() && self.screen == Screen::Library);
-        let hint = if self.sheet.is_some() {
+        let hint = if self.focus < 0 {
+            Copy::Select
+        } else if self.sheet.is_some() {
             Copy::Confirm
         } else {
             match (self.screen, self.focus) {
