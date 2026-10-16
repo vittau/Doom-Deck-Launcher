@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M2 — `v0.0.3-ember` pre-release (Ember Cathedral UI, logo, 4 mapsets); awaiting Deck validation  ·  **Updated:** 2026-10-16
+**Milestone:** M2 — `v0.0.4-cli` pre-release (Ember UI, logo, 4 mapsets, Konsole CLI, engine diagnosis); Linux e2e green; awaiting Deck validation  ·  **Updated:** 2026-10-16
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -24,9 +24,9 @@
 | Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Done (A3 needs Deck) |
 | Visual identity v2 (DOOM-flavoured, D-020) + production polish | `specs/012-visual-identity-v2.md` | Done (A4 needs Deck) — Ember Cathedral in the production UI |
 | Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | Done (A4 needs Deck) — Ember Gate SVG logo; owner uploads `docs/design/logo/social-preview.png` in GitHub settings |
-| Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | In progress (opencode) |
+| Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | Done — e2e green on real network (run 38983844913): AppImage direct + extraction, 4 mapsets, D-011 argv |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
-| AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
+| AppImage on Deck (FUSE vs extract) | `deck-testing.md`, `research/dsda-engine.md` §7 | Linux host: direct FUSE works (CI); SteamOS 3.8 ships every engine library (glibc 2.41, pipewire-jack); must not run under a Steam Compatibility tool. Deck check pending |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
 

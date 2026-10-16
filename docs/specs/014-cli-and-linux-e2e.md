@@ -1,6 +1,6 @@
 # 014 — Headless CLI and a real-network Linux end-to-end job
 
-**Status:** Ready  ·  **Milestone:** M2  ·  **Depends on:** 004, 007, 009, 010
+**Status:** Done (A4 needs Deck)  ·  **Milestone:** M2  ·  **Depends on:** 004, 007, 009, 010
 **Why now:** the owner cannot test on the Deck for a while. Exercising the real download,
 verification, extraction, AppImage and launch-planning paths on a real Linux machine (GitHub's
 Ubuntu runner and the Steam Runtime SDK container) catches most non-hardware failures before
@@ -61,7 +61,7 @@ Any change to the UI flows. Downloading IWADs (never). Scheduled e2e runs.
 
 - [x] **A1** (R1, R2) — unit/integration tests for each subcommand with the existing fakes
   (loopback HTTP, fake engine, temp XDG), including `--force-extract` and the dry-run argv.
-- [ ] **A2** (R3) — the e2e workflow ran once on `main` (coordinator triggers it) and passed;
+- [x] **A2** (R3) — the e2e workflow ran once on `main` (coordinator triggers it) and passed — run 38983844913;
   the report links the run and summarises the AppImage-direct result on plain Ubuntu.
 - [x] **A3** (R4) — README and `deck-testing.md` updated; fmt, clippy `-D warnings`, tests green.
 - [ ] **A4** — *Needs Deck Validation:* `ddl doctor` and `ddl launch` work from Konsole.

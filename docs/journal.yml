@@ -289,3 +289,14 @@
     GLIBCXX_3.4.29 (sniper has 2.31). Consequence: DDL's shortcut must not use a Steam
     Compatibility tool; e2e now builds in sniper and runs on the host. Fix in progress.
   refs: ["https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407", docs/specs/014-cli-and-linux-e2e.md]
+- date: 2026-10-16
+  type: release
+  summary: >-
+    Spec 014 done: headless CLI (engine status/install --force-extract, iwad scan, mapset
+    list/install, launch --dry-run, doctor) and a manual real-network e2e (build in sniper, run
+    on an Ubuntu host) that passed in run 38983844913 — AppImage direct via FUSE and the
+    extraction fallback both pass -v, all four mapsets install, dry-run argv matches D-011.
+    Engine runtime failures (glibc, missing libraries) now produce actionable messages.
+    SteamOS 3.8.0's manifest confirms every engine library (glibc 2.41, pipewire-jack, mesa,
+    libglvnd). Pre-release v0.0.4-cli.
+  refs: [docs/specs/014-cli-and-linux-e2e.md, docs/reports/014-cli-and-linux-e2e.md, "https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38983844913"]
