@@ -160,3 +160,11 @@
     checks, -v smoke test, FUSE → --appimage-extract fallback, JSON state, select/rollback/
     remove/manual path. Unreviewed releases without an API digest are refused.
   refs: [docs/specs/004-engine-manager.md, docs/reports/004-engine-manager.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 009 merged — installer on the shared fetcher (SHA-256 cache reuse for add-ons),
+    install manifests, user-supplied import, per-mapset profiles, pure resolver with six typed
+    Blockers + separate prepare(), Will-launch summary, embedded catalog, lint --fetch on the
+    shared downloader. 294 tests green. D-019 recorded.
+  refs: [docs/specs/009-install-resolve.md, docs/reports/009-install-resolve.md]
