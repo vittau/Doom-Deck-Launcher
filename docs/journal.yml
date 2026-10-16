@@ -50,3 +50,15 @@
     monitoring, known stalls, push policy) and scripts/orchestration/worker_health.py;
     AGENTS.md points to them. Merged prior-art review (research/prior-art.md).
   refs: [docs/orchestration.md, AGENTS.md, docs/research/prior-art.md]
+- date: 2026-10-16
+  type: finding
+  summary: >-
+    DSDA-Doom v0.30.1 engine research merged. Last repeated CLI flag wins; omitted complevel
+    defaults to MBF21; -pistolstart gives per-map reset but not while recording; config is
+    rewritten whole and non-atomically on quit; isolation needs -save/-data/-shotdir/
+    -noautoload beyond -config; smoke probe is -v; AppImage is type 2 with extraction support.
+  refs: [docs/research/dsda-engine.md]
+- date: 2026-10-16
+  type: decision
+  summary: D-011 launch contract, D-012 config ownership, D-013 engine acquisition.
+  refs: [docs/decisions.md]
