@@ -10,9 +10,10 @@
 | Upstream sources: DSDA releases/AppImage, `/idgames` API, AUGER;ZENITH | `research/upstream-sources.md` | Done |
 | Reference mapsets SIGIL / SIGIL II | `research/reference-sigil.md` | Done |
 | Prior art: UZDeck / GZDeck (incl. UI critique) | `research/prior-art.md` | Done |
-| Recipe schema, catalog, lint | `specs/002-recipe-catalog.md` | Draft — waiting on research |
+| Recipe schema, catalog, lint, reference recipes | `specs/002-recipe-catalog.md` | Ready — waits for 001 |
 | Launch plan and engine process runner | `specs/003-launch-plan.md` | Ready — waits for 001 |
-| Engine manager (discover, download, verify, install, rollback) | `specs/004-…` | Not written — waits for upstream research |
+| Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | Ready — waits for 001, 006 |
+| Downloads and safe ZIP extraction (nested) | `specs/006-downloads-extraction.md` | Ready — waits for 001 |
 | DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Ready — waits for 001 |
 | UI design system and mockups (Codex) | `design/ui.md`, `design/mockups/` | In progress |
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | In progress |

@@ -1,7 +1,8 @@
 # 002 — Recipe schema, catalog and lint
 
-**Status:** Draft (waiting on `research/dsda-engine.md`, `research/upstream-sources.md`,
-`research/reference-sigil.md`)  ·  **Milestone:** M2 (schema pulled forward)  ·  **Depends on:** 001
+**Status:** Ready (after 001 merges)  ·  **Milestone:** M2 (schema pulled forward)  ·
+**Depends on:** 001; evidence in `research/dsda-engine.md`, `research/upstream-sources.md` §5–§6,
+`research/reference-sigil.md`; decisions D-010, D-011, D-014, D-015, D-016
 
 ## Goal
 
@@ -17,23 +18,34 @@ maintainers can review with confidence. End users only ever see the curated resu
   matches the file name. Versioned by `schema_version`.
 - **R2** — **Identity and credits:** title, authors, release/version label, canonical page URL,
   description, optional image references with stated permission, license or permission text.
-- **R3** — **Base game:** the required IWAD by game id (e.g. `doom` Ultimate DOOM, `doom2`,
-  `tnt`, `plutonia`) plus the accepted IWAD versions by hash. It is shown to the user;
-  Play is blocked without a matching IWAD (D-010).
-- **R4** — **Packages:** one or more downloads, each with id, URL(s) from allowlisted hosts
-  (primary and mirrors), exact size and SHA-256, and archive type (ZIP first; a bare WAD is a
-  package without an archive). Each file DDL needs is named by its exact path inside the archive.
-- **R5** — **Components:** a required `main` component and zero or more **optional components**
-  (e.g. AUGER;ZENITH's add-on PWAD, a SIGIL soundtrack WAD), each with a label, description,
-  default on/off, its files and their roles (maps, music, graphics, dehacked, ...), and any
-  conflicts with other components. Variant choices that exclude each other (e.g. SIGIL's compat
-  WAD) are modelled explicitly.
-- **R6** — **Load order:** explicit and total for every allowed combination of components.
-  `-file` and `-deh` placement follow the engine research. Nothing in an archive is loaded unless
-  the recipe names it.
-- **R7** — **Compatibility:** port family and complevel using only values DSDA-Doom accepts; the
-  tested engine version range; required runtime arguments limited to a typed allowlist (no
-  free-form command lines).
+- **R3** — **Base game:** the required game id (`doom`, `doom2`, `tnt`, `plutonia`) and, when
+  the content needs it, the accepted IWAD variants (e.g. SIGIL requires Ultimate DOOM 1.9 and
+  refuses shareware). Variant ids refer to DDL's known-IWAD table (separate spec); until that
+  table exists, the lint accepts any variant id matching `[a-z0-9-]+`. Shown to the user; Play is
+  blocked without a matching IWAD (D-010).
+- **R4** — **Packages:** one or more downloads, each with id, canonical page (e.g. the /idgames
+  entry), direct URLs on allowlisted hosts (primary plus mirrors, D-015), exact size and SHA-256,
+  and type (`zip` or a bare `wad`). Each file DDL needs is a **member** named by its exact,
+  case-sensitive path inside the package, crossing nested ZIPs with `!/`
+  (`DBP37_Addons.zip!/DBP37_AlternateBlaster.wad`), and carries its own size and SHA-256.
+  Permission/credit text files (e.g. `SIGIL_V1_23.txt`) are listed as `keep` members so they
+  stay in the install unmodified.
+- **R5** — **Components:** a required `main` component and zero or more **optional components**,
+  each with id, label, description, default on/off, its members and their roles (maps, music,
+  graphics, sounds, dehacked), and an optional `exclusive_group` (at most one component of a
+  group is enabled). A component may **replace** the main one (SIGIL's E3 compat WAD; a paid
+  soundtrack WAD that replaces the main WAD) instead of adding to it. A component may be
+  `user_supplied` (D-014): no URL, a label telling the user where to obtain it, and optional
+  known SHA-256 values.
+- **R6** — **Load order:** explicit position for every component (`main`, then optional
+  components in declared order unless a component says otherwise), producing one ordered `-file`
+  list and one ordered `-deh` list (D-011) for every allowed combination. DEHACKED lumps inside
+  WADs load automatically and are not listed. Nothing in a package is loaded unless named.
+- **R7** — **Compatibility:** port family (`vanilla`, `limit-removing`, `boom`, `mbf`, `mbf21`)
+  and an explicit complevel from the reviewed set (`vanilla`, 0–17, 21, `boom`, `mbf`, `mbf21`;
+  never the placeholders 18–20, never omitted; D-011); optional start map (`-warp`); the tested
+  engine version range; extra runtime options only from a typed allowlist (no free-form command
+  lines).
 - **R8** — **Verification evidence:** status (`verified`, `partial`, `incompatible`, ...),
   tester, date, engine version, notes and known limitations (OVERVIEW §7 stages).
 - **R9** — **Lint** (`ddl catalog lint [paths]`): schema validity, unknown keys rejected, id/file
@@ -61,10 +73,17 @@ order validation, UI, `/idgames` search.
 - [ ] **A4** (R10) — CI job lints `catalog/` on pull requests.
 - [ ] **A5** (R11) — three reference recipes merged.
 
-## Open questions (resolved by research before Ready)
+## Reference recipe data
 
-- Exact DSDA CLI handling of `-file` vs `-deh`, and whether DEHACKED lumps inside WADs load
-  automatically.
-- Complevel values and aliases to allow; how to express "let the engine detect it" (COMPLVL lump).
-- Whether the official sources (romero.com, Doomer Boards hosts, /idgames mirrors) allow direct
-  download, and the host allowlist that follows.
+Take every value from the research documents; do not invent any.
+- **AUGER;ZENITH** — D-016 and `research/upstream-sources.md` §5. Status `inspected` (not yet
+  Deck-verified); complevel 2 marked Proposed.
+- **SIGIL** v1.23 and **SIGIL II** v1.0 — `research/reference-sigil.md` §1–§5: Ultimate DOOM,
+  complevel 3 marked Proposed, SIGIL's compat WAD as an exclusive replacement, the paid
+  soundtracks as `user_supplied` replacements. Status `inspected`.
+
+## Initial host allowlist
+
+`www.doomworld.com` (pages only), `www.gamers.org`, `dsdarchive.com` and other /idgames mirrors
+listed in `research/upstream-sources.md` §3.4, `romero.com` (and the exact download host it
+uses, per `research/reference-sigil.md` §1). Kept in `catalog/hosts.toml`.
