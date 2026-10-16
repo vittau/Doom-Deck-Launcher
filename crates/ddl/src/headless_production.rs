@@ -392,13 +392,16 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         let item = &mut r.snapshot.as_mut().unwrap().items[0];
         item.recipe.id = "community-without-art".into();
         item.recipe.title = "Community map (render fixture)".into();
+        item.recipe.authors = vec!["Render fixture — not catalog metadata".into()];
         r.sync(ui);
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 4));
+        assert_eq!(ui.get_band_art(), 4);
         capture(window, "013-discover-fallback.png");
         r.snapshot.as_mut().unwrap().items[0].recipe.id = "eviternity".into();
         r.snapshot.as_mut().unwrap().items[0].recipe.title = "Eviternity (render fixture)".into();
         r.sync(ui);
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 3));
+        assert_eq!(ui.get_band_art(), 3);
         capture(window, "013-discover-eviternity.png");
         r.snapshot = saved;
         r.sync(ui);

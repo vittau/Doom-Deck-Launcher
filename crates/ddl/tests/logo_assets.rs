@@ -24,7 +24,9 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
         assert_eq!((info.width, info.height), (width, height), "{file}");
         assert_eq!(info.color_type, png::ColorType::Rgba);
         let alpha: Vec<_> = pixels[..info.buffer_size()]
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|p| p[3])
             .collect();
         assert!(alpha.contains(&255), "{file} has visible content");
