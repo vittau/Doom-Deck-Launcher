@@ -734,16 +734,35 @@ impl Runtime {
             }
         };
         let named = matches!(self.screen, Screen::Detail | Screen::Setup)
-            .then(|| self.item()).flatten();
+            .then(|| self.item())
+            .flatten();
         ui.set_heading(if let Some(item) = named {
-            ui.global::<crate::WiringStrings>().set_value(text(ui, heading));
-            ui.global::<crate::WiringStrings>().set_other(display_title(&item.recipe).into());
+            ui.global::<crate::WiringStrings>()
+                .set_value(text(ui, heading));
+            ui.global::<crate::WiringStrings>()
+                .set_other(display_title(&item.recipe).into());
             text(ui, T::ContextTitle)
-        } else { text(ui, heading) });
-        ui.set_art_band(matches!(self.screen, Screen::Home | Screen::Discover | Screen::Library | Screen::Detail | Screen::Setup | Screen::Progress) && !self.playing);
+        } else {
+            text(ui, heading)
+        });
+        ui.set_art_band(
+            matches!(
+                self.screen,
+                Screen::Home
+                    | Screen::Discover
+                    | Screen::Library
+                    | Screen::Detail
+                    | Screen::Setup
+                    | Screen::Progress
+            ) && !self.playing,
+        );
         let band_item = if self.screen == Screen::Home {
-            self.snapshot.as_ref().and_then(|s| s.items.iter().max_by_key(|i| i.profile.last_played))
-        } else { self.item() };
+            self.snapshot
+                .as_ref()
+                .and_then(|s| s.items.iter().max_by_key(|i| i.profile.last_played))
+        } else {
+            self.item()
+        };
         ui.set_band_art(band_item.map_or(0, |i| art(&i.recipe.id)));
         ui.set_subtitle(text(
             ui,
@@ -818,8 +837,27 @@ impl Runtime {
                             display_title(&item.recipe).into(),
                             36.,
                         );
-                        b.label(308., 132., 448., 36., item.recipe.authors.join(", ").into(), 22.);
-                        b.label(308., 176., 448., 64., format!("{} · {}", game(ui, item.recipe.base_game.game), text(ui, T::Profile)).into(), 22.);
+                        b.label(
+                            308.,
+                            132.,
+                            448.,
+                            36.,
+                            item.recipe.authors.join(", ").into(),
+                            22.,
+                        );
+                        b.label(
+                            308.,
+                            176.,
+                            448.,
+                            64.,
+                            format!(
+                                "{} · {}",
+                                game(ui, item.recipe.base_game.game),
+                                text(ui, T::Profile)
+                            )
+                            .into(),
+                            22.,
+                        );
                         b.button(1, 308., 252., 448., text(ui, T::Continue), true);
                     } else {
                         b.label(36., 42., 720., 100., text(ui, T::HomeEmpty), 36.);
@@ -828,7 +866,11 @@ impl Runtime {
                     }
                     b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
                     if let Some(s) = &self.snapshot {
-                        let mut recent: Vec<_> = s.items.iter().filter(|i| i.profile.last_played.is_some()).collect();
+                        let mut recent: Vec<_> = s
+                            .items
+                            .iter()
+                            .filter(|i| i.profile.last_played.is_some())
+                            .collect();
                         recent.sort_by_key(|i| std::cmp::Reverse(i.profile.last_played));
                         if recent.is_empty() {
                             b.label(36., 402., 720., 54., text(ui, T::NoHistory), 22.);
@@ -836,14 +878,51 @@ impl Runtime {
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
                             b.art(x, 400., 56., 66., art(&i.recipe.id));
-                            b.label(x + 72., 400., 270., 32., display_title(&i.recipe).into(), 26.);
+                            b.label(
+                                x + 72.,
+                                400.,
+                                270.,
+                                32.,
+                                display_title(&i.recipe).into(),
+                                26.,
+                            );
                             b.label(x + 72., 436., 270., 30., text(ui, T::Profile), 20.);
                         }
                         b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
-                        b.label(852., 104., 336., 54., s.engine.as_ref().map_or_else(|| text(ui, T::NoEngine), |e| value(ui, T::EngineVersion, &e.version)), 22.);
-                        for (n, g) in [ddl_core::catalog::Game::Doom, ddl_core::catalog::Game::Doom2].into_iter().enumerate() {
-                            let found = s.items.iter().any(|i| i.recipe.base_game.game == g && base_ready(s, &i.recipe));
-                            b.label(852., 174. + n as f32 * 44., 336., 40., value(ui, if found { T::FoundGame } else { T::MissingGame }, game(ui, g)), 22.);
+                        b.label(
+                            852.,
+                            104.,
+                            336.,
+                            54.,
+                            s.engine.as_ref().map_or_else(
+                                || text(ui, T::NoEngine),
+                                |e| value(ui, T::EngineVersion, &e.version),
+                            ),
+                            22.,
+                        );
+                        for (n, g) in [
+                            ddl_core::catalog::Game::Doom,
+                            ddl_core::catalog::Game::Doom2,
+                        ]
+                        .into_iter()
+                        .enumerate()
+                        {
+                            let found = s
+                                .items
+                                .iter()
+                                .any(|i| i.recipe.base_game.game == g && base_ready(s, &i.recipe));
+                            b.label(
+                                852.,
+                                174. + n as f32 * 44.,
+                                336.,
+                                40.,
+                                value(
+                                    ui,
+                                    if found { T::FoundGame } else { T::MissingGame },
+                                    game(ui, g),
+                                ),
+                                22.,
+                            );
                         }
                         b.label(852., 274., 336., 68., text(ui, T::Verification), 20.);
                     }
@@ -1089,9 +1168,15 @@ impl Runtime {
                             82.,
                             448.,
                             36.,
-                            if self.snapshot.as_ref().is_some_and(|s| base_ready(s, &item.recipe)) {
+                            if self
+                                .snapshot
+                                .as_ref()
+                                .is_some_and(|s| base_ready(s, &item.recipe))
+                            {
                                 value(ui, T::FoundGame, game(ui, item.recipe.base_game.game))
-                            } else { value(ui, T::MissingGame, game(ui, item.recipe.base_game.game)) },
+                            } else {
+                                value(ui, T::MissingGame, game(ui, item.recipe.base_game.game))
+                            },
                             22.,
                         );
                         let usable = self.snapshot.as_ref().is_some_and(|s| s.config_usable);
@@ -1101,7 +1186,11 @@ impl Runtime {
                                 130.,
                                 448.,
                                 28.,
-                                if summary.content.len() == 1 { text(ui, T::ContentSingle) } else { value(ui, T::ContentCount, summary.content.len()) },
+                                if summary.content.len() == 1 {
+                                    text(ui, T::ContentSingle)
+                                } else {
+                                    value(ui, T::ContentCount, summary.content.len())
+                                },
                                 22.,
                             );
                             for (i, entry) in summary.content.iter().enumerate() {
@@ -1241,7 +1330,14 @@ impl Runtime {
                         InstallStage::Extract => T::Extract,
                         InstallStage::Commit => T::Commit,
                     });
-                    ui.set_subtitle(text(ui, if self.cancel.is_cancelled() { T::CancelPending } else { stage }));
+                    ui.set_subtitle(text(
+                        ui,
+                        if self.cancel.is_cancelled() {
+                            T::CancelPending
+                        } else {
+                            stage
+                        },
+                    ));
                     b.label(36., 112., 1100., 36., text(ui, T::StageSequence), 22.);
                     b.label(
                         36.,
@@ -1305,6 +1401,7 @@ impl Runtime {
                     }
                 }
                 Screen::Review => {
+                    b.panel(12., 12., 1200., 478.);
                     if let Some(s) = &self.snapshot {
                         if let Some(entry) = s.iwads.iter().find(|e| !e.candidates.is_empty()) {
                             b.label(36., 24., 1152., 54., text(ui, T::Ambiguous), 30.);
@@ -1359,7 +1456,7 @@ impl Runtime {
                 }
                 Screen::Browser => {
                     if let Some(d) = &self.directory {
-                        ui.set_subtitle(d.path.display().to_string().into());
+                        ui.set_subtitle(elide_path_start(&d.path.display().to_string(), 88).into());
                         b.panel(12., 12., 360., 478.);
                         b.label(36., 28., 312., 38., text(ui, T::Shortcuts), 26.);
                         for (i, p) in d.shortcuts.iter().enumerate() {
@@ -1400,12 +1497,23 @@ impl Runtime {
                                 SharedString::default(),
                                 true,
                             );
+                            if services::hidden_path(p) {
+                                b.nodes.last_mut().unwrap().tone = 1;
+                            }
                         }
                     }
                 }
                 Screen::Settings => {
-                    b.panel(12., 12., 312., 478.);
-                    b.panel(348., 12., 864., 478.);
+                    b.panel(12., 12., 312., 360.);
+                    let height = match self.settings_section {
+                        1 => self.snapshot.as_ref().map_or(240., |s| {
+                            (144. + s.folders.len().max(1) as f32 * 112.).max(240.)
+                        }),
+                        2 => 334.,
+                        3 => 382.,
+                        _ => 478.,
+                    };
+                    b.panel(348., 12., 864., height);
                     for (i, label) in [T::Engine, T::Folders, T::Config, T::Diagnostics]
                         .iter()
                         .enumerate()
@@ -1485,7 +1593,7 @@ impl Runtime {
                                             if self.updates_checked {
                                                 T::NoUpdates
                                             } else {
-                                                T::Verification
+                                                T::PreCheck
                                             },
                                         ),
                                         20.,
@@ -1495,6 +1603,9 @@ impl Runtime {
                             1 => {
                                 b.button(70, 372., 36., 380., text(ui, T::AddFolder), true);
                                 b.button(71, 776., 36., 412., text(ui, T::Rescan), false);
+                                if s.folders.is_empty() {
+                                    b.label(372., 128., 816., 84., text(ui, T::NoFolders), 22.);
+                                }
                                 for (i, p) in s.folders.iter().enumerate() {
                                     b.row(
                                         100 + i as i32,
@@ -1836,5 +1947,23 @@ fn human_bytes(bytes: u64) -> String {
         amount /= 1024.;
         unit += 1;
     }
-    if unit == 0 { format!("{bytes} B") } else { format!("{amount:.1} {}", UNITS[unit]) }
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{amount:.1} {}", UNITS[unit])
+    }
+}
+
+/// Keep the destination end of a long breadcrumb. Character-based to preserve UTF-8.
+fn elide_path_start(path: &str, limit: usize) -> String {
+    let count = path.chars().count();
+    if count <= limit {
+        return path.into();
+    }
+    format!(
+        "…{}",
+        path.chars()
+            .skip(count - limit.saturating_sub(1))
+            .collect::<String>()
+    )
 }

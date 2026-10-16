@@ -610,7 +610,24 @@ impl Services {
                 entries.push((p, metadata.is_dir()));
             }
         }
-        entries.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        entries.sort_by(|a, b| {
+            hidden_path(&a.0)
+                .cmp(&hidden_path(&b.0))
+                .then(b.1.cmp(&a.1))
+                .then_with(|| {
+                    a.0.file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .cmp(
+                            &b.0.file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_lowercase(),
+                        )
+                })
+                .then(a.0.cmp(&b.0))
+        });
         let mut shortcuts = vec![self.env.home.clone()];
         shortcuts.extend(
             iwads::libraries(&self.env.home)
@@ -823,4 +840,10 @@ mod steam_wiring_tests {
         assert!(browser.shortcuts.contains(&home));
         assert!(browser.shortcuts.contains(&common));
     }
+}
+
+/// Dot-prefixed names are presented after visible entries, retaining controller access.
+pub(crate) fn hidden_path(path: &Path) -> bool {
+    path.file_name()
+        .is_some_and(|name| name.to_string_lossy().starts_with('.'))
 }

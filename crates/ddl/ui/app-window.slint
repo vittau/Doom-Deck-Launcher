@@ -60,7 +60,7 @@ component Node inherits Rectangle {
         color: item.primary ? Tokens.on-accent : item.tone == 1 ? Tokens.muted : item.tone == 2 ? Tokens.success : item.tone == 3 ? Tokens.warning : item.tone == 4 ? Tokens.danger : Tokens.text;
         font-family: item.kind == 0 && item.size >= 26 ? "Pirata One" : "Barlow";
         font-size: item.size * 1px; font-weight: item.kind == 2 || item.kind == 3 || item.size >= 26 ? 600 : 400;
-        wrap: word-wrap; vertical-alignment: center;
+        wrap: word-wrap; vertical-alignment: item.kind == 0 ? top : center;
     }
     if item.detail != "": Text {
         x: 16px; y: 38px; width: parent.width - 32px; height: parent.height - 42px;
