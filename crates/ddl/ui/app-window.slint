@@ -1,110 +1,155 @@
-// Placeholder shell for DoomDeckLauncher (spec 001, R4).
-//
-// Scope: a fullscreen window with the product name and a three-entry menu that
-// is driven by the keyboard only. Gamepad input arrives with the input spike,
-// and the real screens replace this component in later specs.
-//
-// Design rules honoured here:
-//   * no hover-dependent behaviour: the focus highlight is drawn purely from
-//     the `selected` index, never from pointer state;
-//   * readable at 1280x800 (the Steam Deck panel resolution);
-//   * "Quit" and Escape both ask the host to exit with status 0.
-
-export component AppWindow inherits Window {
-    // Title shown by the window manager and by Steam's overlay. Exposed as a
-    // property as well, so the headless test in `src/headless.rs` can assert it.
-    in property <string> window-title: "DoomDeckLauncher";
-    title: root.window-title;
-
-    // Which menu entry is focused. Kept in the UI so the highlight is reactive.
-    in-out property <int> selected: 0;
-
-    // Placeholder entries, in display order. The last entry quits.
-    in property <[string]> items: ["Play", "Settings", "Quit"];
-
-    // Enter/Return was pressed on the focused entry.
-    callback menu-activated(int);
-    // The user asked to leave DoomDeckLauncher ("Quit" entry or Escape).
-    callback quit-requested();
-
-    // Keyboard events are delivered to the focused element; this window has no
-    // focusable widgets, so route them to the invisible scope at the bottom.
-    forward-focus: key-handler;
-
-    background: #0b0e13;
-
-    VerticalLayout {
-        alignment: center;
-        padding-left: 180px;
-        padding-right: 180px;
-        spacing: 24px;
-
-        Text {
-            text: "DoomDeckLauncher";
-            font-size: 46px;
-            font-weight: 700;
-            color: #f2f5f9;
-            horizontal-alignment: center;
+import "assets/InterVariable.ttf";
+import { Tokens } from "tokens.slint";
+export { Strings } from "strings.slint";
+export struct ViewNode {
+    id: int, x: float, y: float, w: float, h: float,
+    kind: int, label: string, detail: string, tone: int, size: float, art: int,
+    primary: bool, actionable: bool,
+}
+component Node inherits Rectangle {
+    in property <ViewNode> item;
+    in property <bool> focused;
+    callback activate(int);
+    x: item.x * 1px; y: item.y * 1px;
+    width: item.w * 1px; height: item.h * 1px;
+    background: item.kind == 1 || item.kind == 4 ? Tokens.surface : item.kind == 2 || item.kind == 3 ? (item.primary ? Tokens.focus : Tokens.raised) : transparent;
+    border-radius: item.kind == 1 || item.kind == 4 ? Tokens.card-radius : Tokens.row-radius;
+    border-width: item.kind == 1 ? 1px : 0px;
+    border-color: Tokens.steel-edge;
+    if focused: Rectangle {
+        x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px;
+        background: transparent; border-radius: 16px; border-color: Tokens.focus; border-width: 4px;
+    }
+    if item.kind == 4: Rectangle {
+        clip: true; border-radius: Tokens.card-radius;
+        Image {
+            source: @image-url("assets/furnace-art-sheet.png");
+            image-fit: cover;
+            source-clip-x: item.art * 512; source-clip-y: 0;
+            source-clip-width: 512; source-clip-height: 1024;
         }
-
-        Text {
-            text: "pre-alpha placeholder - keyboard only";
-            font-size: 18px;
-            color: #8b97a8;
-            horizontal-alignment: center;
-        }
-
-        // The menu itself. Plain rectangles keep the highlight fully under our
-        // control (no widget hover/focus styling leaking in).
-        for label[index] in items : Rectangle {
-            min-height: 76px;
-            border-radius: 12px;
-            border-width: index == root.selected ? 4px : 2px;
-            border-color: index == root.selected ? #9dc4ff : #2b3442;
-            background: index == root.selected ? #2f6fdb : #161b23;
-
-            Text {
-                text: label;
-                font-size: 30px;
-                color: #ffffff;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-        }
-
-        Text {
-            text: "Up/Down: move    Enter: select    Quit or Escape: exit";
-            font-size: 18px;
-            color: #8b97a8;
-            horizontal-alignment: center;
+        Rectangle {
+            x: 8px; y: parent.height - (root.item.w < 240 ? 64px : 36px); width: parent.width - 16px; height: root.item.w < 240 ? 56px : 28px;
+            background: Tokens.deep;
+            Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
         }
     }
-
-    // Non-visual keyboard handler that holds the focus for the whole window.
-    key-handler := FocusScope {
-        width: 100%;
-        height: 100%;
-
+    if item.kind != 1 && item.kind != 4: Text {
+        x: item.kind == 0 ? 0px : 16px; y: item.kind == 0 ? 0px : 8px;
+        width: parent.width - (item.kind == 0 ? 0px : 32px);
+        height: item.detail == "" ? parent.height - (item.kind == 0 ? 0px : 16px) : 30px;
+        text: item.label;
+        color: item.primary ? Tokens.on-accent : item.tone == 1 ? Tokens.muted : item.tone == 2 ? Tokens.success : item.tone == 3 ? Tokens.warning : item.tone == 4 ? Tokens.danger : Tokens.text;
+        font-size: item.size * 1px; font-weight: item.kind == 2 || item.kind == 3 || item.size >= 26 ? 600 : 400;
+        wrap: word-wrap; vertical-alignment: center;
+    }
+    if item.detail != "": Text {
+        x: 16px; y: 38px; width: parent.width - 32px; height: parent.height - 42px;
+        text: item.detail; color: Tokens.muted; font-size: Tokens.metadata; wrap: word-wrap;
+    }
+    if item.actionable: TouchArea {
+        mouse-cursor: none;
+        clicked => { root.activate(root.item.id); }
+    }
+}
+export component AppWindow inherits Window {
+    title: @tr("DoomDeckLauncher");
+    width: 1280px; height: 800px;
+    default-font-family: "Inter Variable"; default-font-size: Tokens.body;
+    background: Tokens.canvas;
+    in property <[ViewNode]> nodes;
+    in property <int> focused: 0;
+    in property <int> active-tab: 0;
+    in property <bool> root-screen: true;
+    in property <string> heading;
+    in property <string> subtitle;
+    in property <string> a-hint: @tr("Open");
+    in property <bool> favorite-hint: false;
+    in property <bool> import-hint: false;
+    in property <bool> detail-hint: false;
+    in property <string> toast;
+    in property <float> scroll-offset: 0;
+    in property <[ViewNode]> sheet-nodes;
+    in property <bool> sheet-open: false;
+    in property <string> sheet-title;
+    callback quit-requested();
+    in property <bool> setup-screen: false;
+    callback action(int);
+    callback clicked(int);
+    out property <bool> input-active: keys.has-focus;
+    forward-focus: keys;
+    // Pointer motion never changes the logical target; clicks use the same action path.
+    TouchArea { x: 0px; y: 0px; width: parent.width; height: parent.height; mouse-cursor: none; }
+    Rectangle {
+        x: 0px; y: 0px; width: parent.width; height: 104px; background: Tokens.deep;
+        Image { x: 40px; y: 24px; width: 40px; height: 56px; source: @image-url("assets/ddl.svg"); }
+        Text { x: 88px; y: 26px; text: @tr("DDL"); font-size: 32px; font-weight: 700; color: Tokens.text; }
+        for label[index] in [@tr("Home"), @tr("Discover"), @tr("Library"), @tr("Settings")]: Rectangle {
+            x: (214 + index * 180) * 1px; y: 24px; width: 148px; height: 52px;
+            background: root.active-tab == index ? Tokens.raised : transparent; border-radius: 8px;
+            if root.focused == -index - 1 && !root.sheet-open: Rectangle { x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px; border-width: 4px; border-color: Tokens.focus; border-radius: 16px; background: transparent; }
+            Text { text: label; color: Tokens.text; horizontal-alignment: center; vertical-alignment: center; }
+            if root.active-tab == index: Rectangle { y: 56px; x: 24px; width: 100px; height: 3px; background: Tokens.focus; }
+            TouchArea { mouse-cursor: none; clicked => { if root.root-screen && !root.sheet-open { root.action(20 + index); } } }
+        }
+        Text { x: parent.width - 260px; y: 36px; text: @tr("DoomDeckLauncher"); color: Tokens.muted; font-size: Tokens.metadata; }
+        Rectangle { x: 40px; y: 102px; width: parent.width - 80px; height: 1px; background: Tokens.steel-edge; }
+    }
+    Text { x: 40px; y: 124px; width: parent.width - 80px; height: 48px; text: root.heading; font-size: Tokens.page; font-weight: 700; color: Tokens.text; }
+    Text { x: 40px; y: 176px; width: parent.width - 80px; height: 32px; text: root.subtitle; color: Tokens.muted; }
+    Flickable {
+        x: 28px; y: 218px; width: parent.width - 56px; height: parent.height - 294px;
+        content-width: 1224px; content-height: 502px;
+        content-y: -root.scroll-offset * 1px;
+        for item in root.nodes: Node { visible: !root.setup-screen || item.x < 700; item: item; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
+    }
+    if root.setup-screen: Rectangle {
+        x: 28px; y: 218px; width: parent.width - 56px; height: parent.height - 294px;
+        for item in root.nodes: Node { visible: item.x >= 700; item: item; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
+    }
+    if root.toast != "": Rectangle {
+        x: 40px; y: parent.height - 124px; width: parent.width - 80px; height: 52px;
+        background: Tokens.raised; border-radius: 8px;
+        Text { x: 16px; text: root.toast; color: Tokens.text; vertical-alignment: center; }
+    }
+    Rectangle {
+        x: 0px; width: parent.width; y: parent.height - 64px; height: 64px; background: Tokens.deep;
+        HorizontalLayout {
+            padding-left: 40px; padding-right: 40px; spacing: 24px;
+            Text { text: @tr("A  {}", root.a-hint); color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
+            Text { text: @tr("B  Back"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            if root.favorite-hint: Text { text: @tr("X  Favorite"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            if root.detail-hint: Text { text: @tr("X  Details"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            if root.import-hint: Text { text: @tr("Y  Import"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            if root.root-screen && !root.sheet-open: Text { text: @tr("L1/R1  Tabs"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            Text { text: @tr("Start  Menu"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+        }
+    }
+    if root.sheet-open: Rectangle {
+        x: 0px; y: 0px; width: parent.width; height: parent.height; background: #090D11E0;
+        Rectangle {
+            x: (parent.width - 720px) / 2; y: (parent.height - 300px) / 2; width: 720px; height: 300px;
+            background: Tokens.raised; border-width: 1px; border-color: Tokens.line; border-radius: 12px;
+            Text { x: 32px; y: 32px; width: parent.width - 64px; height: 96px; text: root.sheet-title; color: Tokens.text; font-size: Tokens.section; wrap: word-wrap; }
+            for item in root.sheet-nodes: Node { item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
+        }
+    }
+    keys := FocusScope {
         key-pressed(event) => {
-            if (event.text == Key.UpArrow) {
-                root.selected = root.selected > 0 ? root.selected - 1 : 0;
-                return accept;
-            }
-            if (event.text == Key.DownArrow) {
-                root.selected = root.selected < root.items.length - 1 ? root.selected + 1 : root.selected;
-                return accept;
-            }
-            if (event.text == Key.Return) {
-                root.menu-activated(root.selected);
-                if (root.selected == root.items.length - 1) {
-                    root.quit-requested();
-                }
-                return accept;
-            }
-            if (event.text == Key.Escape) {
-                root.quit-requested();
-                return accept;
-            }
+            if event.text == Key.UpArrow { root.action(0); return accept; }
+            if event.text == Key.DownArrow { root.action(1); return accept; }
+            if event.text == Key.LeftArrow { root.action(2); return accept; }
+            if event.text == Key.RightArrow { root.action(3); return accept; }
+            if event.text == Key.Return { root.action(4); return accept; }
+            if event.text == Key.Escape { root.action(5); return accept; }
+            if event.text == "x" { root.action(6); return accept; }
+            if event.text == "y" { root.action(7); return accept; }
+            if event.text == Key.Tab { root.action(event.modifiers.shift ? 8 : 9); return accept; }
+            if event.text == Key.F1 { root.action(20); return accept; }
+            if event.text == Key.F2 { root.action(21); return accept; }
+            if event.text == Key.F3 { root.action(22); return accept; }
+            if event.text == Key.F4 { root.action(23); return accept; }
+            if event.text == Key.Menu { root.action(10); return accept; }
             return reject;
         }
     }

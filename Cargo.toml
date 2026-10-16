@@ -33,6 +33,8 @@ slint = { version = "=1.18.1", default-features = false, features = [
 ] }
 # Build-time .slint -> Rust compiler, invoked from `crates/ddl/build.rs`.
 slint-build = "=1.18.1"
+# Native controller events; D-018 / spec 008.
+gilrs = "=0.11.2"
 # Structured diagnostics (spec 001, R5).
 tracing = "=0.1.44"
 tracing-subscriber = "=0.3.23"

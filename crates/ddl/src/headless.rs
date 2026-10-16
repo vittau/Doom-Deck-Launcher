@@ -1,30 +1,10 @@
-//! Headless verification of the placeholder window (spec 001, R4).
-//!
-//! The product runs on a Steam Deck, so the automated tests must not need a
-//! display, a window, or a GPU — and nobody working on the repository should
-//! have windows popping up while `cargo test` runs. Both are achieved here by
-//! driving Slint without a windowing system:
-//!
-//! * a [`MinimalSoftwareWindow`] is installed as the Slint platform, so the
-//!   component is created off-screen;
-//! * [`WindowEvent`]s are dispatched straight at the window, which is exactly
-//!   what a real keyboard backend does, so Up/Down/Return/Escape exercise the
-//!   same `.slint` handlers the Deck will exercise;
-//! * the CPU renderer draws the component into a pixel buffer at 1280×800,
-//!   and the frames are written as PNGs (into `target/headless/` by default,
-//!   or `$DDL_HEADLESS_DIR`) so a human can look at what the menu draws.
-//!
-//! Everything lives in one `#[test]` on purpose: Slint's context — and with it
-//! the installed platform — is thread-local, and a single platform can only be
-//! installed once per thread.
-
-use std::cell::Cell;
+//! Spec 008: off-screen software rendering and real synthetic keyboard dispatch.
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use slint::Model as _;
 use slint::platform::software_renderer::{MinimalSoftwareWindow, RepaintBufferType};
 use slint::platform::{Key, Platform, PlatformError, WindowAdapter, WindowEvent};
+use slint::{ComponentHandle, Model as _};
 use slint::{PhysicalSize, Rgb8Pixel, SharedPixelBuffer};
 
 use crate::AppWindow;
@@ -32,11 +12,6 @@ use crate::AppWindow;
 /// Steam Deck panel resolution (spec 001, R4).
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 800;
-
-/// Colours from `ui/app-window.slint`, as the renderer writes them.
-const BACKGROUND: (u8, u8, u8) = (0x0b, 0x0e, 0x13);
-const FOCUSED_ROW: (u8, u8, u8) = (0x2f, 0x6f, 0xdb);
-const UNFOCUSED_ROW: (u8, u8, u8) = (0x16, 0x1b, 0x23);
 
 /// A minimal platform whose only window is the off-screen one.
 struct HeadlessPlatform {
@@ -49,7 +24,7 @@ impl Platform for HeadlessPlatform {
     }
 }
 
-/// Installs the headless platform and creates the placeholder component at
+/// Installs the headless platform and creates the fixture component at
 /// 1280×800 with a scale factor of 1 (what the Deck reports).
 fn setup() -> (Rc<MinimalSoftwareWindow>, AppWindow) {
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
@@ -99,7 +74,11 @@ fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
     let path = dir.join(name);
 
     let file = std::fs::File::create(&path).expect("create the snapshot file");
-    let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), WIDTH, HEIGHT);
+    let mut encoder = png::Encoder::new(
+        std::io::BufWriter::new(file),
+        buffer.width(),
+        buffer.height(),
+    );
     encoder.set_color(png::ColorType::Rgb);
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header().expect("write the PNG header");
@@ -110,99 +89,342 @@ fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
     path
 }
 
+/// Exact reference and software frame side by side; no desktop screenshot involved.
+fn comparison(name: &str, actual: &SharedPixelBuffer<Rgb8Pixel>) {
+    let design = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/design");
+    let visual = design.join("visual").join(name);
+    let reference = if visual.exists() {
+        visual
+    } else {
+        design.join("mockups").join(name)
+    };
+    if !reference.exists() {
+        return;
+    }
+    let decoder = png::Decoder::new(std::io::BufReader::new(
+        std::fs::File::open(reference).unwrap(),
+    ));
+    let mut reader = decoder.read_info().unwrap();
+    let mut bytes = vec![0; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut bytes).unwrap();
+    assert_eq!((info.width, info.height), (WIDTH, HEIGHT));
+    assert_eq!(info.color_type, png::ColorType::Rgb);
+    let mut side = SharedPixelBuffer::<Rgb8Pixel>::new(WIDTH * 2, HEIGHT);
+    for y in 0..HEIGHT as usize {
+        let row = &mut side.make_mut_slice()[y * WIDTH as usize * 2..(y + 1) * WIDTH as usize * 2];
+        row[..WIDTH as usize]
+            .copy_from_slice(&actual.as_slice()[y * WIDTH as usize..(y + 1) * WIDTH as usize]);
+        for (x, pixel) in row[WIDTH as usize..].iter_mut().enumerate() {
+            let index = (y * WIDTH as usize + x) * 3;
+            *pixel = Rgb8Pixel {
+                r: bytes[index],
+                g: bytes[index + 1],
+                b: bytes[index + 2],
+            };
+        }
+    }
+    write_png(&format!("comparison-{name}"), &side);
+}
+
 #[test]
-fn placeholder_menu_is_keyboard_navigable_and_draws_a_focus_highlight() {
+fn fixture_screens_navigation_and_focus_render_headlessly() {
+    use crate::{
+        fixtures::{MapsetId, files},
+        input::Action,
+        shell::Screen,
+    };
     let (window, ui) = setup();
-
-    // R4: the window carries the product name and three placeholder entries.
-    assert_eq!(ui.get_window_title(), "DoomDeckLauncher");
-    let items = ui.get_items();
-    let labels: Vec<String> = (0..items.row_count())
-        .map(|index| items.row_data(index).expect("every row exists").to_string())
-        .collect();
-    assert_eq!(labels, ["Play", "Settings", "Quit"]);
-
-    // Callbacks are recorded instead of acted upon: exiting the process is the
-    // binary's job, not the test's.
-    let activated = Rc::new(Cell::new(-1));
-    let quits = Rc::new(Cell::new(0));
-    {
-        let activated = activated.clone();
-        ui.on_menu_activated(move |index| activated.set(index));
+    let state = crate::shell::attach(&ui);
+    let quits = Rc::new(std::cell::Cell::new(0));
+    let q = quits.clone();
+    ui.on_quit_requested(move || q.set(q.get() + 1));
+    let capture = |name: &str| {
+        let original = state.borrow().focus;
+        let sheet = ui.get_sheet_open();
+        let nodes = if sheet {
+            ui.get_sheet_nodes()
+        } else {
+            ui.get_nodes()
+        };
+        let controls: Vec<_> = (0..nodes.row_count())
+            .filter_map(|i| nodes.row_data(i))
+            .filter(|n| n.actionable)
+            .collect();
+        for node in controls {
+            if !sheet {
+                state.borrow_mut().focus = node.id;
+                state.borrow_mut().sync(&ui);
+            } else {
+                ui.set_focused(node.id);
+            }
+            let frame = render(&window);
+            let (x, y) = if sheet {
+                (280. + node.x, 250. + node.y)
+            } else {
+                (
+                    28. + node.x,
+                    218. + node.y
+                        - if ui.get_setup_screen() && node.x >= 700. {
+                            0.
+                        } else {
+                            ui.get_scroll_offset()
+                        },
+                )
+            };
+            for (px, py) in [
+                (x + node.w / 2., y - 6.),
+                (x + node.w / 2., y + node.h + 6.),
+                (x - 6., y + node.h / 2.),
+                (x + node.w + 6., y + node.h / 2.),
+            ] {
+                assert!(
+                    px >= 0. && px < WIDTH as f32 && py >= 0. && py < HEIGHT as f32,
+                    "ring bounds {name} target {}",
+                    node.id
+                );
+                let pixel = frame.as_slice()[py as usize * WIDTH as usize + px as usize];
+                assert_eq!(
+                    (pixel.r, pixel.g, pixel.b),
+                    (0xff, 0xca, 0x70),
+                    "ring edge {name} target {} at {px},{py}",
+                    node.id
+                );
+            }
+        }
+        if !sheet {
+            state.borrow_mut().focus = original;
+            state.borrow_mut().sync(&ui);
+        } else {
+            ui.set_focused(original);
+        }
+        let frame = render(&window);
+        assert!(
+            count_color(&frame, (0xff, 0xca, 0x70)) > 500,
+            "amber focus pixels in {name}"
+        );
+        write_png(name, &frame);
+        comparison(name, &frame);
+    };
+    let focus = || state.borrow().focus;
+    assert_eq!(focus(), 1);
+    capture("home.png");
+    window.dispatch_event(WindowEvent::PointerMoved {
+        position: slint::LogicalPosition::new(600., 470.),
+    });
+    assert_eq!(focus(), 1, "pointer motion ignored");
+    for event in [
+        WindowEvent::PointerPressed {
+            position: slint::LogicalPosition::new(600., 470.),
+            button: slint::platform::PointerEventButton::Left,
+        },
+        WindowEvent::PointerReleased {
+            position: slint::LogicalPosition::new(600., 470.),
+            button: slint::platform::PointerEventButton::Left,
+        },
+    ] {
+        window.dispatch_event(event);
     }
-    {
-        let quits = quits.clone();
-        ui.on_quit_requested(move || quits.set(quits.get() + 1));
-    }
-
-    // R4: "Play" holds the initial focus.
-    assert_eq!(ui.get_selected(), 0);
-
-    // R4: Down moves the highlight and stops at the last entry.
-    for (expected, why) in [(1, "Down moves to Settings"), (2, "Down moves to Quit")] {
-        press(&window, Key::DownArrow);
-        assert_eq!(ui.get_selected(), expected, "{why}");
-    }
-    press(&window, Key::DownArrow);
     assert_eq!(
-        ui.get_selected(),
-        2,
-        "Down must not run past the last entry"
+        state.borrow().screen,
+        Screen::Detail,
+        "click activates the same control"
     );
-
-    // R4: Up moves it back and stops at the first entry.
-    for (expected, why) in [(1, "Up moves to Settings"), (0, "Up moves to Play")] {
-        press(&window, Key::UpArrow);
-        assert_eq!(ui.get_selected(), expected, "{why}");
-    }
-    press(&window, Key::UpArrow);
-    assert_eq!(ui.get_selected(), 0, "Up must not run past the first entry");
-
-    // R4: the highlight is clearly visible and follows the selection, which is
-    // what the two rendered frames prove.
-    let play_focused = render(&window);
-    press(&window, Key::DownArrow);
-    press(&window, Key::DownArrow);
-    assert_eq!(ui.get_selected(), 2);
-    let quit_focused = render(&window);
-
-    let play_png = write_png("menu-play-focused.png", &play_focused);
-    let quit_png = write_png("menu-quit-focused.png", &quit_focused);
-
-    let highlight = count_color(&play_focused, FOCUSED_ROW);
-    assert!(
-        highlight > 10_000,
-        "the focused row must be a solid highlight band, found {highlight} pixels"
-    );
-    assert!(
-        count_color(&quit_focused, FOCUSED_ROW) > 10_000,
-        "the highlight must also be drawn on the last row"
-    );
-    assert!(
-        count_color(&play_focused, UNFOCUSED_ROW) > 10_000,
-        "unfocused rows must still be drawn"
-    );
-    assert!(
-        count_color(&play_focused, BACKGROUND) > 10_000,
-        "the window background must be painted"
-    );
-    assert_ne!(
-        play_focused.as_bytes(),
-        quit_focused.as_bytes(),
-        "moving the selection must visibly move the highlight"
-    );
-    assert!(
-        !play_png.as_os_str().is_empty() && !quit_png.as_os_str().is_empty(),
-        "frames are written to disk"
-    );
-
-    // R4: Return activates the focused entry, and "Quit" ends the session.
-    press(&window, Key::Return);
-    assert_eq!(activated.get(), 2, "Return activates the focused entry");
-    assert_eq!(quits.get(), 1, "activating Quit asks the host to exit");
-
-    // R4: Escape on the menu exits too, without activating anything.
     press(&window, Key::Escape);
-    assert_eq!(quits.get(), 2, "Escape asks the host to exit");
-    assert_eq!(activated.get(), 2, "Escape must not activate a menu entry");
+    assert_eq!(focus(), 2);
+    press(&window, Key::LeftArrow);
+    assert_eq!(focus(), 1);
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), -1);
+    press(&window, Key::LeftArrow);
+    assert_eq!(focus(), -1, "spatial navigation never wraps");
+    press(&window, Key::RightArrow);
+    assert_eq!(focus(), -2);
+    press(&window, Key::LeftArrow);
+    press(&window, Key::DownArrow);
+    assert_eq!(focus(), 1);
+    window.dispatch_event(WindowEvent::WindowActiveChanged(false));
+    assert!(!ui.get_input_active());
+    window.dispatch_event(WindowEvent::WindowActiveChanged(true));
+    assert!(ui.get_input_active());
+
+    press(&window, Key::Escape);
+    assert_eq!(state.borrow().screen, Screen::Home);
+    assert!(!ui.get_sheet_open());
+    press(&window, Key::Tab);
+    assert_eq!(state.borrow().screen, Screen::Discover);
+    assert_eq!(focus(), 10);
+    press(&window, Key::DownArrow);
+    assert_eq!(focus(), 20);
+    capture("discover.png");
+    press(&window, Key::RightArrow);
+    assert_eq!(focus(), 21);
+    press(&window, Key::Return);
+    assert_eq!(state.borrow().screen, Screen::Detail);
+    press(&window, Key::Tab);
+    assert_eq!(
+        state.borrow().screen,
+        Screen::Detail,
+        "shoulders ignored on child screens"
+    );
+    press(&window, Key::Escape);
+    assert_eq!(focus(), 21, "Back restores grid target");
+    press(&window, Key::LeftArrow);
+    assert_eq!(focus(), 20);
+    press(&window, Key::Return);
+    capture("mapset-detail.png");
+    press(&window, Key::Return);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(focus(), 50);
+    capture("play-setup-sigil.png");
+    press(&window, Key::Return);
+    assert_eq!(ui.get_toast(), "Not wired yet");
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    press(&window, Key::LeftArrow);
+    assert_eq!(focus(), 45, "nearest options row from Play");
+    press(&window, Key::Return);
+    assert!(state.borrow().profiles[0].pistol);
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), 43);
+    press(&window, Key::Return);
+    assert!(state.borrow().profiles[0].advanced);
+    press(&window, Key::Return);
+    assert!(ui.get_sheet_open());
+    assert_eq!(focus(), 100);
+    press(&window, Key::Escape);
+    assert!(!state.borrow().profiles[0].compat);
+    assert_eq!(focus(), 43);
+    press(&window, Key::Return);
+    press(&window, Key::RightArrow);
+    press(&window, Key::Return);
+    assert!(state.borrow().profiles[0].compat);
+    assert_eq!(
+        files(MapsetId::Sigil, &state.borrow().profiles[0]),
+        vec!["SIGIL_COMPAT_V1_23.wad"]
+    );
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), 42);
+    press(&window, Key::Return);
+    assert_eq!(ui.get_toast(), "Not wired yet");
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), 41);
+    press(&window, Key::Return);
+    assert_eq!(
+        files(MapsetId::Sigil, &state.borrow().profiles[0]).len(),
+        1,
+        "required row cannot disable main"
+    );
+    press(&window, Key::Escape);
+    assert_eq!(focus(), 30);
+    press(&window, Key::Escape);
+    assert_eq!(focus(), 20);
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), 11);
+    press(&window, Key::UpArrow);
+    assert_eq!(focus(), -2);
+    let header = render(&window);
+    let pixel = header.as_slice()[18 * WIDTH as usize + 468];
+    assert_eq!(
+        (pixel.r, pixel.g, pixel.b),
+        (0xff, 0xca, 0x70),
+        "top tab focus ring"
+    );
+    press(&window, Key::DownArrow);
+    assert_eq!(focus(), 11);
+    press(&window, Key::F3);
+    assert_eq!(state.borrow().screen, Screen::Library);
+    capture("library.png");
+    press(&window, Key::F4);
+    assert_eq!(state.borrow().screen, Screen::Settings);
+    capture("settings.png");
+    press(&window, Key::DownArrow);
+    assert_eq!(focus(), 61);
+    press(&window, Key::RightArrow);
+    assert_eq!(focus(), 70);
+    press(&window, Key::Escape);
+    assert_eq!(focus(), 61);
+    press(&window, Key::Menu);
+    assert!(ui.get_sheet_open());
+    assert_eq!(focus(), 100);
+    capture("quit-confirmation.png");
+    press(&window, Key::Tab);
+    assert_eq!(focus(), 100, "sheet traps root tab switching");
+    press(&window, Key::Escape);
+    assert_eq!(focus(), 61);
+    press(&window, Key::F2);
+    press(&window, Key::DownArrow);
+    press(&window, Key::RightArrow);
+    press(&window, Key::Return);
+    press(&window, Key::Return);
+    assert_eq!(state.borrow().mapset, MapsetId::Auger);
+    assert!(
+        !state.borrow().profiles[1].pistol,
+        "mapset options stay independent"
+    );
+    for expected in [4, 5, 1, 2, 3] {
+        ui.invoke_clicked(44);
+        assert_eq!(state.borrow().profiles[1].skill, expected);
+    }
+    assert_eq!(state.borrow().profiles[0].skill, 3);
+    // Use the same public click callback as pointer activation, never private rendering shortcuts.
+    ui.invoke_clicked(43);
+    assert_eq!(
+        files(MapsetId::Auger, &state.borrow().profiles[1]),
+        vec!["DBP37_AUGZEN.wad", "DBP37_AlternateBlaster.wad"]
+    );
+    capture("play-setup-auger.png");
+    ui.invoke_clicked(43);
+    assert_eq!(
+        files(MapsetId::Auger, &state.borrow().profiles[1])[1],
+        "DBP37_DeckardBlaster.wad"
+    );
+    ui.invoke_clicked(43);
+    assert_eq!(files(MapsetId::Auger, &state.borrow().profiles[1]).len(), 1);
+    press(&window, Key::Escape);
+    press(&window, Key::Escape);
+    press(&window, Key::RightArrow);
+    assert_eq!(focus(), 22);
+    press(&window, Key::Return);
+    press(&window, Key::Return);
+    assert_eq!(ui.get_toast(), "Not wired yet");
+    assert_eq!(
+        state.borrow().screen,
+        Screen::Detail,
+        "Install is a fixture action"
+    );
+    ui.invoke_clicked(37);
+    assert_eq!(state.borrow().mapset, MapsetId::Sigil2);
+    capture("play-blocked-iwad.png");
+    press(&window, Key::Return);
+    assert_eq!(ui.get_toast(), "Not wired yet");
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    ui.invoke_clicked(51);
+    assert_eq!(
+        ui.get_toast(),
+        crate::copy::text(&ui, crate::copy::Copy::Missing)
+    );
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    let before = focus();
+    state.borrow().hotplug(&ui, false);
+    assert_eq!(focus(), before);
+    state.borrow().hotplug(&ui, true);
+    assert_eq!(focus(), before);
+    // Cycle through all root tabs; a full cycle restores the same control.
+    press(&window, Key::Escape);
+    press(&window, Key::Escape);
+    for _ in 0..4 {
+        press(&window, Key::Tab);
+    }
+    assert_eq!(focus(), 22);
+    state.borrow_mut().action(&ui, Action::Menu);
+    press(&window, Key::Escape);
+    assert_eq!(focus(), 22);
+    assert_eq!(quits.get(), 0, "B and cancelled sheets never quit");
+    press(&window, Key::Menu);
+    press(&window, Key::Return);
+    assert_eq!(quits.get(), 0, "Keep playing is the safe default");
+    press(&window, Key::Menu);
+    press(&window, Key::RightArrow);
+    press(&window, Key::Return);
+    assert_eq!(quits.get(), 1, "only explicit confirmation quits");
+    let _ = ui.window(); // ComponentHandle methods are available without showing a window.
 }

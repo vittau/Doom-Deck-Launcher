@@ -1,13 +1,15 @@
 //! `ddl` — DoomDeckLauncher, a native DOOM mapset launcher for Steam Deck.
 //!
-//! Spec 001 only needs a runnable shell: argument handling, structured logging
-//! and a fullscreen placeholder menu. Gamepad input, DSDA-Doom handling and the
-//! real screens arrive with later specs.
+//! Fixture-backed, controller-first UI shell (spec 008).
 
 mod cli;
+mod copy;
+mod fixtures;
 #[cfg(test)]
 mod headless;
+mod input;
 mod logging;
+mod shell;
 
 use std::process::ExitCode;
 
@@ -83,18 +85,13 @@ fn main() -> ExitCode {
     }
 }
 
-/// Builds and runs the placeholder window until the user quits.
+/// Builds and runs the fixture shell until the user quits.
 fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
     log_directories();
 
     let ui = AppWindow::new()?;
-    ui.set_selected(0);
-
-    // "Play" and "Settings" are placeholders; spec 001 (R4) only requires the
-    // focus movement to be visible, so they log and do nothing.
-    ui.on_menu_activated(|index| info!(index, "menu item activated"));
-
-    // Both the "Quit" entry and Escape end up here and must exit with status 0.
+    let state = shell::attach(&ui);
+    // Only the confirmed Quit action reaches this callback.
     ui.on_quit_requested(|| {
         info!("quit requested, closing the window");
         if let Err(err) = slint::quit_event_loop() {
@@ -112,6 +109,21 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
         debug!("using the full screen");
     }
 
+    use slint::ComponentHandle;
+    let weak = ui.as_weak();
+    let timer = slint::Timer::default();
+    let mut gamepads = input::Gamepads::new();
+    timer.start(slint::TimerMode::Repeated, input::CONFIG.poll, move || {
+        if let Some(ui) = weak.upgrade() {
+            let (actions, connections) = gamepads.poll(ui.get_input_active());
+            for connected in connections {
+                state.borrow().hotplug(&ui, connected);
+            }
+            for action in actions {
+                state.borrow_mut().action(&ui, action);
+            }
+        }
+    });
     ui.run()?;
     Ok(())
 }
@@ -119,7 +131,7 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
 /// Resolves and logs DDL's XDG directories.
 ///
 /// A missing `HOME` is reported as a warning rather than aborting: the
-/// placeholder screen needs no directories, and spec 001 (R2) only requires
+/// fixture shell needs no directories, and spec 001 (R2) only requires
 /// resolution to fail cleanly.
 fn log_directories() {
     use ddl_core::platform::paths;
