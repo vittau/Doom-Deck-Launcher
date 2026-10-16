@@ -1,0 +1,127 @@
+# Continuous integration for DoomDeckLauncher (spec 001, R6).
+#
+# Two jobs:
+#   * `checks`       - formatting, lints and unit tests on the GitHub-hosted
+#                      Ubuntu runner, mirroring the commands in `AGENTS.md`;
+#   * `steamrt-build`- a release-mode build inside the same Steam Linux Runtime
+#                      SDK container the release uses, to prove the binary
+#                      actually links against SteamOS/Yocto-era libraries before
+#                      anyone downloads it.
+#
+# The container image is pinned by digest (see `docs/research/steam-runtime-build.md`).
+# The same digest is used by `.github/workflows/release.yml`; keep them in sync.
+name: CI
+
+# Every branch push and every pull request.
+on:
+  push:
+  pull_request:
+
+# CI only reads the repository. `release.yml` is the only workflow that writes.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # Keep the failure output useful when a test panics.
+  RUST_BACKTRACE: 1
+
+jobs:
+  checks:
+    name: fmt, clippy, test
+    runs-on: ubuntu-latest
+    steps:
+      # The checkout supplies `rust-toolchain.toml`, which the next step reads.
+      - uses: actions/checkout@v4
+
+      # Install rustup only (`--default-toolchain none`): the exact channel and
+      # components come from `rust-toolchain.toml`, so CI can never drift from
+      # local development. No third-party toolchain action is used, which keeps
+      # the supply chain to `actions/*` and the official rustup script.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          # Make cargo/rustc visible to the remaining steps.
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          # Read the channel back out of the pin, then install it explicitly so
+          # this job never depends on rustup's on-demand install behaviour.
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          # `rustfmt`/`clippy` are repeated here on purpose: `components` in
+          # rust-toolchain.toml is for local development, this line is what the
+          # CI job relies on.
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
+      # probes fontconfig with pkg-config at build time on Linux. Everything
+      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`, so no
+      # other -dev package is needed here.
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev
+
+      # The three commands from AGENTS.md. `--locked` makes CI fail if
+      # `Cargo.lock` is out of date instead of silently updating it.
+      - name: cargo fmt --all --check
+        run: cargo fmt --all --check
+
+      - name: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: cargo test --workspace
+        run: cargo test --workspace --locked
+
+  steamrt-build:
+    name: Steam Runtime release build
+    runs-on: ubuntu-latest
+    # Steam Linux Runtime 3.0 "sniper" SDK, pinned by the digest of tag
+    # 3.0.20261007.263965 (see docs/research/steam-runtime-build.md for why
+    # sniper and how the digest was verified).
+    container:
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
+    steps:
+      # The image is Debian 11 based and has no Rust, so install rustup here too
+      # (same steps as the `checks` job; the image already ships curl and a C
+      # toolchain, and `HOME` is set by the runner).
+      - uses: actions/checkout@v4
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      # Release profile, exactly what `release.yml` ships. `--locked` keeps the
+      # reviewed dependency versions.
+      - name: cargo build --release -p ddl
+        run: cargo build --release --locked -p ddl
+
+      # `--version` and `--help` exit before any window is created, so they work
+      # on a headless runner and prove the binary starts against the runtime's
+      # libraries.
+      - name: Smoke test the release binary
+        run: |
+          set -euo pipefail
+          ./target/release/ddl --version
+          ./target/release/ddl --help
+
+      # The authoritative list of shared libraries the binary needs on
+      # SteamOS; recorded in the CI log and summarised in
+      # docs/research/steam-runtime-build.md.
+      - name: Print shared library requirements
+        run: ldd target/release/ddl
