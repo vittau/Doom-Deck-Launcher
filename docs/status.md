@@ -34,7 +34,7 @@
 
 | Item | Notes |
 | --- | --- |
-| **Widescreen status bars** (owner request 2026-10-16) — research in progress (opencode) | Detect the installed PWAD and offer the matching widescreen status bar from NightFright's collection (https://github.com/NightFright2k19/doom_widehud), downloaded and applied automatically as an optional component loaded after the mapset. Research first: licence/permission per file, how the collection maps to PWAD releases (names/hashes), DSDA-Doom's support for wide STBAR graphics and its interaction with complevels, and how to pin downloads (tagged release + SHA-256, D-015). |
+| **Widescreen status bars** (owner request 2026-10-16) | Research done (`research/widescreen-statusbars.md`): DSDA v0.30.1 draws a wide `STBAR` automatically; the collection has **no licence** (blocker for auto-download); covers only Eviternity of our 4 mapsets (+ IWAD bars). Proposed path: `user_supplied` component matched by SHA-256 (D-014), or written permission from the author. Awaiting owner decision. |
 | Favorites and categories in Discover | Needs a `tags` field in recipes (spec 010 scope decision). |
 | Multiple profiles per mapset | UI shows one Default profile today (spec 010); `deck-testing.md` C4. |
 | Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |

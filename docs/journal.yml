@@ -253,3 +253,11 @@
     0.0.3): Ember Cathedral UI, logo, four mapsets (SIGIL, SIGIL II, AUGER;ZENITH,
     Eviternity). Deck checks F1–F11. Session paused by the owner after this release.
   refs: [docs/reports/013-logo-and-icons.md, docs/deck-testing.md]
+- date: 2026-10-16
+  type: research
+  summary: >-
+    Widescreen status bars researched: DSDA-Doom v0.30.1 sizes the status bar from the STBAR
+    patch (no flag); NightFright's doom_widehud has no licence or permission text (blocker for
+    automatic download), covers Eviternity and the IWADs but not SIGIL, SIGIL II or AUGER;ZENITH,
+    and the Eviternity bar derives from CC BY-NC-ND art. Owner decision pending.
+  refs: [docs/research/widescreen-statusbars.md]
