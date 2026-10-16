@@ -16,9 +16,6 @@ JOBS=[('emblem.svg', ASSETS/'logo/icon.png',256,256),
       ('steam-logo.svg',ART/'logo.png',1280,720),
       ('social-preview.svg',HERE/'social-preview.png',1280,640),
       ('contact-sheet.svg',HERE/'contact-sheet.png',900,720)]
-for name in ['eviternity','fallback']:
-    JOBS.extend([(name+'-cover.svg',ASSETS/f'ember/{name}.png',512,586),
-                 (name+'-band.svg',ASSETS/f'ember/{name}-band.png',400,88)])
 def main():
     p=argparse.ArgumentParser(); p.add_argument('--resvg',default='resvg');p.add_argument('--check',action='store_true');args=p.parse_args()
     version=subprocess.check_output([args.resvg,'--version'],text=True).strip()
