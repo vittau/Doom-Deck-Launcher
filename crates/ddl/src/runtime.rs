@@ -1089,7 +1089,9 @@ impl Runtime {
                             82.,
                             448.,
                             36.,
-                            game(ui, item.recipe.base_game.game),
+                            if self.snapshot.as_ref().is_some_and(|s| base_ready(s, &item.recipe)) {
+                                value(ui, T::FoundGame, game(ui, item.recipe.base_game.game))
+                            } else { value(ui, T::MissingGame, game(ui, item.recipe.base_game.game)) },
                             22.,
                         );
                         let usable = self.snapshot.as_ref().is_some_and(|s| s.config_usable);
@@ -1123,9 +1125,9 @@ impl Runtime {
                             }
                             b.label(
                                 740.,
-                                264.,
+                                260.,
                                 448.,
-                                48.,
+                                56.,
                                 value(ui, T::Complevel, summary.complevel),
                                 20.,
                             );
@@ -1239,9 +1241,11 @@ impl Runtime {
                         InstallStage::Extract => T::Extract,
                         InstallStage::Commit => T::Commit,
                     });
+                    ui.set_subtitle(text(ui, if self.cancel.is_cancelled() { T::CancelPending } else { stage }));
+                    b.label(36., 112., 1100., 36., text(ui, T::StageSequence), 22.);
                     b.label(
                         36.,
-                        132.,
+                        160.,
                         1100.,
                         60.,
                         text(
@@ -1279,12 +1283,12 @@ impl Runtime {
                     if let Some(p) = self.progress.and_then(|p| p.transfer) {
                         let label = if let Some(total) = p.total {
                             ui.global::<crate::WiringStrings>()
-                                .set_value(p.downloaded.to_string().into());
+                                .set_value(human_bytes(p.downloaded).into());
                             ui.global::<crate::WiringStrings>()
-                                .set_other(total.to_string().into());
+                                .set_other(human_bytes(total).into());
                             text(ui, T::Bytes)
                         } else {
-                            value(ui, T::BytesUnknown, p.downloaded)
+                            value(ui, T::BytesUnknown, human_bytes(p.downloaded))
                         };
                         b.label(36., 252., 1100., 42., label, 26.);
                     }
@@ -1821,4 +1825,16 @@ pub fn attach_environment(ui: &AppWindow, env: Environment) -> Rc<RefCell<Runtim
 
 fn display_title(recipe: &ddl_core::catalog::Recipe) -> &str {
     recipe.title.split(" (").next().unwrap_or(&recipe.title)
+}
+
+/// IEC byte units preserve useful transfer precision without invented speed estimates.
+fn human_bytes(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut amount = bytes as f64;
+    let mut unit = 0;
+    while amount >= 1024. && unit < UNITS.len() - 1 {
+        amount /= 1024.;
+        unit += 1;
+    }
+    if unit == 0 { format!("{bytes} B") } else { format!("{amount:.1} {}", UNITS[unit]) }
 }
