@@ -24,7 +24,7 @@ Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run
 | S5 | No crash on exit; Steam returns to the library | Gaming | ⏳ | |
 | S6 | Output of `ldd ddl` — any "not found" libraries? | Desktop | ⏳ | paste missing ones |
 
-## Release 0.0.2 — first playable build (spec 010)
+## Release 0.0.2+ — first playable build (spec 010); 0.0.3 adds Ember UI, logo, Eviternity
 
 Visuals are the interim look; the DOOM-flavoured identity (spec 012, D-020) comes later. Run in
 this order (≈30 min); then the E, C, M and I tables below. S1–S6 apply too: `--windowed` and
@@ -39,6 +39,9 @@ the controller now work (gilrs).
 | F5 | Quit DSDA (menu → Quit): DDL comes back with focus on Play, no stray input | Gaming | ⏳ | covers E4/I1 |
 | F6 | AUGER;ZENITH add-on choice (None / Alternate / Deckard) persists after relaunch of DDL | Gaming | ⏳ | |
 | F7 | Missing IWAD (e.g. no Ultimate DOOM): Play disabled with the reason and **Add IWAD folder** | Gaming | ⏳ | |
+| F9 | **0.0.3:** Ember Cathedral look is readable at arm's length; screens render without lag (S3) | Gaming | ⏳ | spec 012 A4 |
+| F10 | **0.0.3:** Eviternity installs (≈50 MB) and plays at complevel 11 (MAP01, music, DEHACKED changes active) | Gaming | ⏳ | complevel Proposed |
+| F11 | **0.0.3:** Steam artwork from `ddl/art/` set by hand per the README looks right in the library | Gaming | ⏳ | spec 013 A4 |
 | F8 | Logs: `~/.local/state/ddl/logs/ddl.log` exists; attach it to any ❌ | Desktop | ⏳ | path shown in Settings → Diagnostics |
 
 ## Engine (specs 003, 004)

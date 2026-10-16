@@ -245,3 +245,11 @@
     complevel 11 Proposed from the authors' MBF guidance, embedded DEHACKED auto-applied by
     DSDA v0.30.1 under -noautoload. Its cover art comes with spec 013.
   refs: [catalog/eviternity.toml, docs/research/reference-eviternity.md]
+- date: 2026-10-16
+  type: release
+  summary: >-
+    Spec 013 merged (Ember Gate SVG logo: header, loading, About, window icon; Steam artwork in
+    ddl/art/; README branding; Eviternity + fallback art). Pre-release v0.0.3-ember (crate
+    0.0.3): Ember Cathedral UI, logo, four mapsets (SIGIL, SIGIL II, AUGER;ZENITH,
+    Eviternity). Deck checks F1–F11. Session paused by the owner after this release.
+  refs: [docs/reports/013-logo-and-icons.md, docs/deck-testing.md]

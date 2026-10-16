@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M1/M2 exit — first playable build; awaiting Deck validation  ·  **Updated:** 2026-10-16
+**Milestone:** M2 — `v0.0.3-ember` pre-release (Ember Cathedral UI, logo, 4 mapsets); awaiting Deck validation  ·  **Updated:** 2026-10-16
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -23,7 +23,7 @@
 | Eviternity recipe (owner request) | `catalog/eviternity.toml`, `research/reference-eviternity.md` | Done — complevel 11 Proposed; needs Deck |
 | Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Done (A3 needs Deck) |
 | Visual identity v2 (DOOM-flavoured, D-020) + production polish | `specs/012-visual-identity-v2.md` | Done (A4 needs Deck) — Ember Cathedral in the production UI |
-| Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | In progress (Codex) |
+| Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | Done (A4 needs Deck) — Ember Gate SVG logo; owner uploads `docs/design/logo/social-preview.png` in GitHub settings |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
@@ -39,3 +39,4 @@
 | Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |
 | Catalog updates without a DDL release | D-019 embeds the catalog; fetching updates is a separate decision. |
 | GOG IWAD paths | After the Steam paths are validated on the Deck (spec 007). |
+| Repaint Eviternity + fallback covers | Spec 013 made them flat vector art; the other covers are painted. Regenerate both in the painted Ember style (Codex). |
