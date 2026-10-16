@@ -230,3 +230,18 @@
     with marks, plus the 010 review density fixes. 310 tests. Eviternity recipe and spec 013
     (logo) dispatched.
   refs: [docs/reports/012-visual-identity-v2.md, docs/decisions.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    Backlog for the next major release added to status.md; first entry is the owner's request
+    for automatic widescreen status bars (NightFright's doom_widehud) matched to the installed
+    PWAD. Needs research and a spec before any code.
+  refs: [docs/status.md, "https://github.com/NightFright2k19/doom_widehud"]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Eviternity (2019 final, DOOM II, CC BY-NC-ND 4.0) added to the catalog: 49,938,319-byte
+    /idgames ZIP from three byte-identical mirrors (DSDArchive excluded: different txt),
+    complevel 11 Proposed from the authors' MBF guidance, embedded DEHACKED auto-applied by
+    DSDA v0.30.1 under -noautoload. Its cover art comes with spec 013.
+  refs: [catalog/eviternity.toml, docs/research/reference-eviternity.md]
