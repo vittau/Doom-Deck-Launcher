@@ -1,0 +1,431 @@
+//! Installer tests (spec 009, A1/A2): a local HTTP server serves a generated
+//! archive, so no test touches the real network.
+
+use std::io::{Cursor, Write};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use tempfile::TempDir;
+
+use super::*;
+use crate::catalog::{
+    BaseGame, Compatibility, Complevel, Component, ComponentMember, EngineEvidence, EvidenceStatus,
+    Game, Image, Member, Package, PackageKind, PortFamily, Recipe, Role, RuntimeDefaults,
+    Verification, VerificationStatus,
+};
+use crate::downloads::test_http::{Response, Server};
+use crate::downloads::{Fetcher, HostAllowlist, Sha256};
+
+fn sha(bytes: &[u8]) -> String {
+    Sha256::of(bytes).to_hex()
+}
+
+fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in entries {
+        writer
+            .start_file(
+                *name,
+                zip::write::SimpleFileOptions::default()
+                    .compression_method(zip::CompressionMethod::Deflated),
+            )
+            .unwrap();
+        writer.write_all(bytes).unwrap();
+    }
+    writer.finish().unwrap().into_inner()
+}
+
+fn base_recipe(id: &str) -> Recipe {
+    Recipe {
+        schema_version: 1,
+        id: id.to_owned(),
+        title: "Test mapset".to_owned(),
+        authors: vec!["Test Author".to_owned()],
+        release: "1.0".to_owned(),
+        page: "https://example.invalid/page".to_owned(),
+        description: "A synthetic mapset for tests.".to_owned(),
+        permission: "Test permission text.".to_owned(),
+        images: Vec::<Image>::new(),
+        base_game: BaseGame {
+            game: Game::Doom2,
+            variants: Vec::new(),
+        },
+        packages: Vec::new(),
+        components: Vec::new(),
+        compatibility: Compatibility {
+            family: PortFamily::Vanilla,
+            complevel: Complevel::Number(2),
+            complevel_status: EvidenceStatus::Proposed,
+            engine: EngineEvidence {
+                range: "=0.30.1".to_owned(),
+                status: VerificationStatus::Inspected,
+            },
+            runtime: RuntimeDefaults::default(),
+        },
+        verification: Verification {
+            status: VerificationStatus::Inspected,
+            tester: "test".to_owned(),
+            date: "2026-10-16".to_owned(),
+            engine_version: "0.30.1".to_owned(),
+            inspected: vec!["synthetic fixture".to_owned()],
+            notes: "synthetic".to_owned(),
+            limitations: Vec::new(),
+        },
+    }
+}
+
+/// A recipe with one ZIP package and a main + optional add-on component.
+struct Fixture {
+    recipe: Recipe,
+    main: Vec<u8>,
+    addon: Vec<u8>,
+    credits: Vec<u8>,
+}
+
+fn fixture(id: &str, url: &str) -> Fixture {
+    let main = b"MAIN WAD BYTES".to_vec();
+    let addon = b"ADDON WAD BYTES".to_vec();
+    let credits = b"permission text".to_vec();
+    let inner = zip_bytes(&[("addon.wad", &addon)]);
+    let zip = zip_bytes(&[
+        ("main.wad", &main),
+        ("addons.zip", &inner),
+        ("credits.txt", &credits),
+    ]);
+
+    let mut recipe = base_recipe(id);
+    recipe.packages = vec![Package {
+        id: "free".to_owned(),
+        page: "https://example.invalid/page".to_owned(),
+        urls: vec![url.to_owned()],
+        size: zip.len() as u64,
+        sha256: sha(&zip),
+        kind: PackageKind::Zip,
+        idgames_path: None,
+        members: vec![
+            Member {
+                id: "main".to_owned(),
+                path: "main.wad".to_owned(),
+                size: main.len() as u64,
+                sha256: sha(&main),
+                keep: false,
+            },
+            Member {
+                id: "addon".to_owned(),
+                path: "addons.zip!/addon.wad".to_owned(),
+                size: addon.len() as u64,
+                sha256: sha(&addon),
+                keep: false,
+            },
+            Member {
+                id: "credits".to_owned(),
+                path: "credits.txt".to_owned(),
+                size: credits.len() as u64,
+                sha256: sha(&credits),
+                keep: true,
+            },
+        ],
+    }];
+    recipe.components = vec![
+        Component {
+            id: "main".to_owned(),
+            label: "Main mapset".to_owned(),
+            description: "Main content.".to_owned(),
+            optional: false,
+            default: true,
+            position: 1,
+            exclusive_group: None,
+            replaces: None,
+            user_supplied: false,
+            obtain: None,
+            known_sha256: Vec::new(),
+            members: vec![ComponentMember {
+                package: Some("free".to_owned()),
+                member: Some("main".to_owned()),
+                role: Role::Maps,
+            }],
+        },
+        Component {
+            id: "addon".to_owned(),
+            label: "Optional add-on".to_owned(),
+            description: "An additive WAD.".to_owned(),
+            optional: true,
+            default: false,
+            position: 2,
+            exclusive_group: None,
+            replaces: None,
+            user_supplied: false,
+            obtain: None,
+            known_sha256: Vec::new(),
+            members: vec![ComponentMember {
+                package: Some("free".to_owned()),
+                member: Some("addon".to_owned()),
+                role: Role::Maps,
+            }],
+        },
+    ];
+
+    Fixture {
+        recipe,
+        main,
+        addon,
+        credits,
+    }
+}
+
+/// A deterministic clock for `installed_at` assertions.
+struct TestClock(u64);
+
+impl Clock for TestClock {
+    fn now_unix_secs(&self) -> u64 {
+        self.0
+    }
+}
+
+fn installer(data: &TempDir, cache: &TempDir) -> Installer {
+    Installer::new(data.path(), cache.path(), HostAllowlist::new(["127.0.0.1"]))
+        .with_fetcher(Fetcher::new(cache.path()).allow_http_for_tests())
+}
+
+#[test]
+fn installs_main_only_then_adds_the_addon_without_redownloading() {
+    let fixture = fixture("auger-test", "https://127.0.0.1/unused");
+    let mut recipe = fixture.recipe.clone();
+    let zip = zip_bytes(&[
+        ("main.wad", &fixture.main),
+        ("addons.zip", &zip_bytes(&[("addon.wad", &fixture.addon)])),
+        ("credits.txt", &fixture.credits),
+    ]);
+    let served = zip.clone();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::clone(&hits);
+    let server = Server::start(move |_request| {
+        counter.fetch_add(1, Ordering::SeqCst);
+        Response::ok(served.clone())
+    });
+    recipe.packages[0].urls = vec![server.url("/package.zip")];
+    recipe.packages[0].size = zip.len() as u64;
+    recipe.packages[0].sha256 = sha(&zip);
+
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache).with_clock(Box::new(TestClock(1_700_000_000)));
+    let install_dir = installer.install_dir(&recipe).expect("safe path");
+    assert_eq!(install_dir, data.path().join("library/auger-test/1.0"));
+
+    // Main only: the add-on member and its package are not needed.
+    let manifest = installer.install(&recipe, &[]).expect("install main");
+    assert_eq!(hits.load(Ordering::SeqCst), 1, "one download");
+    assert_eq!(manifest.recipe_id, "auger-test");
+    assert_eq!(manifest.release, "1.0");
+    assert_eq!(manifest.packages.len(), 1);
+    assert_eq!(manifest.installed_at, 1_700_000_000);
+
+    let main_path = install_dir.join("free/main.wad");
+    assert_eq!(std::fs::read(&main_path).unwrap(), fixture.main);
+    // A keep member is installed so permission text survives.
+    let credits_path = install_dir.join("free/credits.txt");
+    assert_eq!(std::fs::read(&credits_path).unwrap(), fixture.credits);
+    assert!(!install_dir.join("free/addon.wad").exists());
+    assert!(install_dir.join(MANIFEST_FILE).is_file());
+
+    // Adding the add-on reuses the cached package: no second download.
+    let manifest = installer
+        .install(&recipe, &["addon"])
+        .expect("install with addon");
+    assert_eq!(hits.load(Ordering::SeqCst), 1, "cache hit, no re-download");
+    assert_eq!(manifest.members.len(), 3);
+    let addon_path = install_dir.join("free/addon.wad");
+    assert_eq!(std::fs::read(&addon_path).unwrap(), fixture.addon);
+    assert!(manifest.find_downloaded("free", "addon").is_some());
+    assert!(
+        manifest
+            .find_downloaded("free", "credits")
+            .is_some_and(|held| held.keep)
+    );
+    // The install time is stable across the update.
+    assert_eq!(manifest.installed_at, 1_700_000_000);
+
+    // No staging directories are left behind.
+    for entry in std::fs::read_dir(data.path().join("library")).unwrap() {
+        let name = entry.unwrap().file_name();
+        assert!(
+            !name.to_string_lossy().starts_with(".staging-"),
+            "leftover staging dir: {name:?}"
+        );
+    }
+
+    // The record reloads from disk and round-trips.
+    let reloaded = installer
+        .load_manifest(&recipe)
+        .expect("load")
+        .expect("installed");
+    assert_eq!(reloaded, manifest);
+}
+
+#[test]
+fn a_changed_recipe_is_refused_rather_than_silently_updating() {
+    let fixture = fixture("changed-test", "https://127.0.0.1/unused");
+    let mut recipe = fixture.recipe.clone();
+    let zip = zip_bytes(&[
+        ("main.wad", &fixture.main),
+        ("addons.zip", &zip_bytes(&[("addon.wad", &fixture.addon)])),
+        ("credits.txt", &fixture.credits),
+    ]);
+    let served = zip.clone();
+    let server = Server::start(move |_request| Response::ok(served.clone()));
+    recipe.packages[0].urls = vec![server.url("/package.zip")];
+    recipe.packages[0].size = zip.len() as u64;
+    recipe.packages[0].sha256 = sha(&zip);
+
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache);
+    installer.install(&recipe, &[]).expect("install");
+
+    // A catalog update changes the recipe's meaning.
+    recipe.compatibility.complevel = Complevel::Number(9);
+    let error = installer.install(&recipe, &[]).expect_err("recipe change");
+    assert!(
+        matches!(error, InstallError::RecipeChanged { .. }),
+        "{error}"
+    );
+    assert!(error.to_string().contains("changed"));
+}
+
+#[test]
+fn imports_known_and_unknown_user_files_and_never_rejects_unknown_hashes() {
+    let fixture = fixture("import-test", "https://127.0.0.1/unused");
+    let mut recipe = fixture.recipe.clone();
+    let zip = zip_bytes(&[
+        ("main.wad", &fixture.main),
+        ("addons.zip", &zip_bytes(&[("addon.wad", &fixture.addon)])),
+        ("credits.txt", &fixture.credits),
+    ]);
+    let served = zip.clone();
+    let server = Server::start(move |_request| Response::ok(served.clone()));
+    recipe.packages[0].urls = vec![server.url("/package.zip")];
+    recipe.packages[0].size = zip.len() as u64;
+    recipe.packages[0].sha256 = sha(&zip);
+
+    let known = b"purchased soundtrack bytes".to_vec();
+    let unknown = b"a different soundtrack file".to_vec();
+    recipe.components.push(Component {
+        id: "soundtrack".to_owned(),
+        label: "Paid soundtrack".to_owned(),
+        description: "User supplied.".to_owned(),
+        optional: true,
+        default: false,
+        position: 1,
+        exclusive_group: Some("edition".to_owned()),
+        replaces: Some("main".to_owned()),
+        user_supplied: true,
+        obtain: Some("Import your purchased file.".to_owned()),
+        known_sha256: vec![sha(&known)],
+        members: vec![ComponentMember {
+            package: None,
+            member: None,
+            role: Role::Music,
+        }],
+    });
+
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache);
+
+    // Importing before the mapset is installed is a typed error.
+    let mut fresh = recipe.clone();
+    fresh.id = "not-installed".to_owned();
+    assert!(matches!(
+        installer.import_user_component(&fresh, "soundtrack", &data.path().join("x.wad")),
+        Err(InstallError::NotInstalled)
+    ));
+
+    installer.install(&recipe, &[]).expect("install main");
+
+    let known_path = data.path().join("known.wad");
+    std::fs::write(&known_path, &known).unwrap();
+    let outcome = installer
+        .import_user_component(&recipe, "soundtrack", &known_path)
+        .expect("import known");
+    assert!(outcome.matched, "known hash must match");
+    assert_eq!(outcome.sha256, sha(&known));
+    assert_eq!(std::fs::read(&outcome.path).unwrap(), known);
+
+    // An unknown hash is accepted, only reported as unmatched (D-014).
+    let unknown_path = data.path().join("unknown.wad");
+    std::fs::write(&unknown_path, &unknown).unwrap();
+    let outcome = installer
+        .import_user_component(&recipe, "soundtrack", &unknown_path)
+        .expect("import unknown");
+    assert!(!outcome.matched, "unknown hash is never rejected");
+    assert_eq!(outcome.sha256, sha(&unknown));
+
+    let manifest = installer
+        .load_manifest(&recipe)
+        .expect("load")
+        .expect("installed");
+    let imported = manifest.find_imported("soundtrack").expect("recorded");
+    assert_eq!(imported.sha256, sha(&unknown));
+    assert_eq!(imported.path, outcome.path);
+
+    // A downloaded component cannot be imported.
+    assert!(matches!(
+        installer.import_user_component(&recipe, "main", &known_path),
+        Err(InstallError::NotUserSupplied { .. })
+    ));
+    // An unknown component is a typed error.
+    assert!(matches!(
+        installer.import_user_component(&recipe, "nope", &known_path),
+        Err(InstallError::UnknownComponent { .. })
+    ));
+}
+
+#[test]
+fn installing_a_user_supplied_component_never_downloads_it() {
+    let fixture = fixture("user-only", "https://127.0.0.1/unused");
+    let mut recipe = fixture.recipe.clone();
+    let zip = zip_bytes(&[
+        ("main.wad", &fixture.main),
+        ("addons.zip", &zip_bytes(&[("addon.wad", &fixture.addon)])),
+        ("credits.txt", &fixture.credits),
+    ]);
+    let served = zip.clone();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::clone(&hits);
+    let server = Server::start(move |_request| {
+        counter.fetch_add(1, Ordering::SeqCst);
+        Response::ok(served.clone())
+    });
+    recipe.packages[0].urls = vec![server.url("/package.zip")];
+    recipe.packages[0].size = zip.len() as u64;
+    recipe.packages[0].sha256 = sha(&zip);
+    recipe.components.push(Component {
+        id: "soundtrack".to_owned(),
+        label: "Paid soundtrack".to_owned(),
+        description: "User supplied.".to_owned(),
+        optional: true,
+        default: false,
+        position: 2,
+        exclusive_group: None,
+        replaces: None,
+        user_supplied: true,
+        obtain: Some("Import your purchased file.".to_owned()),
+        known_sha256: Vec::new(),
+        members: vec![ComponentMember {
+            package: None,
+            member: None,
+            role: Role::Music,
+        }],
+    });
+
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache);
+    let manifest = installer
+        .install(&recipe, &["soundtrack"])
+        .expect("install with a user-supplied component enabled");
+    // Only the downloadable package was fetched; the soundtrack was not.
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+    assert!(manifest.find_imported("soundtrack").is_none());
+}
