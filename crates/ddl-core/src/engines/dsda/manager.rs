@@ -76,7 +76,7 @@ pub struct EngineManager {
     clock: Box<dyn Clock>,
     api: Box<dyn ReleaseApi>,
     download_base: String,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
 }
 
@@ -96,7 +96,7 @@ impl EngineManager {
             clock,
             api,
             download_base: RELEASE_DOWNLOAD_BASE.to_owned(),
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
         }
     }
@@ -119,15 +119,15 @@ impl EngineManager {
     }
 
     /// Allows plain-HTTP downloads. Test-only: production is HTTPS-only.
-    #[cfg(test)]
-    pub(crate) fn with_http_for_tests(mut self) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn with_http_for_tests(mut self) -> Self {
         self.allow_http_for_tests = true;
         self
     }
 
     /// Overrides the release download base URL. Test-only.
-    #[cfg(test)]
-    pub(crate) fn with_download_base(mut self, base: impl Into<String>) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn with_download_base(mut self, base: impl Into<String>) -> Self {
         self.download_base = base.into();
         self
     }
@@ -200,6 +200,20 @@ impl EngineManager {
     /// list, [`Error::AlreadyInstalled`] when it already is, and the install
     /// errors in [`Error::Install`] otherwise.
     pub fn install_reviewed(&self, version: &str) -> Result<InstalledEngine, Error> {
+        self.install_reviewed_with_progress(
+            version,
+            &crate::downloads::CancellationToken::new(),
+            &mut |_| {},
+        )
+    }
+
+    /// Reviewed install with UI cancellation and progress callbacks.
+    pub fn install_reviewed_with_progress(
+        &self,
+        version: &str,
+        cancel: &crate::downloads::CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+    ) -> Result<InstalledEngine, Error> {
         let entry = self
             .reviewed
             .get_by_version(version)
@@ -214,7 +228,7 @@ impl EngineManager {
             expected_sha256: entry.sha256(),
             reviewed: true,
         };
-        self.perform_install(request, &url)
+        self.perform_install_with_progress(request, &url, cancel, progress)
     }
 
     /// Installs an unreviewed release. Requires `allow_unreviewed == true` and a
@@ -266,6 +280,21 @@ impl EngineManager {
         request: InstallRequest,
         source_url: &str,
     ) -> Result<InstalledEngine, Error> {
+        self.perform_install_with_progress(
+            request,
+            source_url,
+            &crate::downloads::CancellationToken::new(),
+            &mut |_| {},
+        )
+    }
+
+    fn perform_install_with_progress(
+        &self,
+        request: InstallRequest,
+        source_url: &str,
+        cancel: &crate::downloads::CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+    ) -> Result<InstalledEngine, Error> {
         let mut state = self.installed()?;
         if state.get(&request.version).is_some() {
             return Err(Error::AlreadyInstalled(request.version.clone()));
@@ -274,12 +303,14 @@ impl EngineManager {
             host_of(source_url).ok_or_else(|| Error::InvalidSourceUrl(source_url.to_owned()))?;
         let allowed = HostAllowlist::new([host]);
         let fetcher = self.fetcher();
-        let engine = install::install(
+        let engine = install::install_with_progress(
             &self.dirs.engines,
             &request,
             &fetcher,
             &allowed,
             self.clock.as_ref(),
+            cancel,
+            progress,
         )
         .map_err(Error::Install)?;
 
@@ -457,7 +488,7 @@ impl EngineManager {
     fn fetcher(&self) -> Fetcher {
         #[allow(unused_mut)]
         let mut fetcher = Fetcher::new(self.dirs.cache.clone());
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         {
             if self.allow_http_for_tests {
                 fetcher = fetcher.allow_http_for_tests();

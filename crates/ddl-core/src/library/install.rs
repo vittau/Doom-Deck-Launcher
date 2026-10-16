@@ -111,8 +111,8 @@ impl Installer {
 
     /// Replaces the fetcher (tests reach a loopback server through the spec 006
     /// test seam).
-    #[cfg(test)]
-    pub(crate) fn with_fetcher(mut self, fetcher: Fetcher) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn with_fetcher(mut self, fetcher: Fetcher) -> Self {
         self.fetcher = fetcher;
         self
     }
@@ -184,6 +184,21 @@ impl Installer {
         recipe: &Recipe,
         enabled: &[&str],
     ) -> Result<InstallManifest, InstallError> {
+        self.install_with_progress(recipe, enabled, &CancellationToken::new(), &mut |_| {})
+    }
+
+    /// Cancellable install; cancellation is deferred during atomic commit.
+    pub fn install_with_progress(
+        &self,
+        recipe: &Recipe,
+        enabled: &[&str],
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+    ) -> Result<InstallManifest, InstallError> {
+        use crate::downloads::{InstallProgress, InstallStage};
+        if cancel.is_cancelled() {
+            return Err(InstallError::Download(crate::downloads::Error::Cancelled));
+        }
         let install_dir = self.install_dir(recipe)?;
         let manifest_path = install_dir.join(MANIFEST_FILE);
         let existing = InstallManifest::load_optional(&manifest_path)?;
@@ -294,7 +309,12 @@ impl Installer {
             if package_missing.is_empty() {
                 continue;
             }
-            let cached = self.download_package(package)?;
+            if cancel.is_cancelled() {
+                return Err(InstallError::Download(crate::downloads::Error::Cancelled));
+            }
+            progress(InstallProgress::stage(InstallStage::Download));
+            let cached = self.download_package(package, cancel, progress)?;
+            progress(InstallProgress::stage(InstallStage::Extract));
             let dest = base.join(&package.id);
             match package.kind {
                 PackageKind::Zip => {
@@ -310,6 +330,10 @@ impl Installer {
             }
         }
 
+        if cancel.is_cancelled() {
+            return Err(InstallError::Download(crate::downloads::Error::Cancelled));
+        }
+        progress(InstallProgress::stage(InstallStage::Verify));
         for (package, member) in &missing {
             members.push(InstalledMember {
                 package: Some(package.id.clone()),
@@ -356,6 +380,10 @@ impl Installer {
             members,
         };
 
+        if cancel.is_cancelled() {
+            return Err(InstallError::Download(crate::downloads::Error::Cancelled));
+        }
+        progress(InstallProgress::stage(InstallStage::Commit));
         if fresh {
             manifest.save(&base.join(MANIFEST_FILE))?;
             if let Some(parent) = install_dir.parent() {
@@ -476,7 +504,12 @@ impl Installer {
         })
     }
 
-    fn download_package(&self, package: &Package) -> Result<PathBuf, InstallError> {
+    fn download_package(
+        &self,
+        package: &Package,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+    ) -> Result<PathBuf, InstallError> {
         let Some(first) = package.urls.first() else {
             return Err(InstallError::InvalidRecipe {
                 detail: format!("package `{}` has no download URLs", package.id),
@@ -494,10 +527,10 @@ impl Installer {
         )
         .with_urls(package.urls.iter().cloned())
         .with_size(package.size);
-        let cancel = CancellationToken::new();
-        let mut progress = |_progress| {};
         self.fetcher
-            .download(&request, &cancel, &mut progress)
+            .download(&request, cancel, &mut |p| {
+                progress(crate::downloads::InstallProgress::transfer(p))
+            })
             .map_err(InstallError::Download)
     }
 }

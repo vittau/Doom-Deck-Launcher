@@ -122,7 +122,7 @@ pub struct Fetcher {
     agent: Agent,
     downloads_dir: PathBuf,
     redirect_exceptions: Vec<String>,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
 }
 
@@ -153,11 +153,11 @@ impl Fetcher {
             .timeout_recv_body(Some(read_timeout));
         // Production is HTTPS-only. Tests relax the transport to reach a
         // loopback HTTP server; the scheme policy is still exercised directly.
-        #[cfg(not(test))]
+        #[cfg(not(any(test, feature = "test-support")))]
         {
             builder = builder.https_only(true);
         }
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         {
             builder = builder.https_only(false);
         }
@@ -170,7 +170,7 @@ impl Fetcher {
                 .iter()
                 .map(|host| (*host).to_owned())
                 .collect(),
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
         }
     }
@@ -194,8 +194,8 @@ impl Fetcher {
     }
 
     /// Allows plain-HTTP URLs. Test-only: production is HTTPS-only.
-    #[cfg(test)]
-    pub(crate) fn allow_http_for_tests(mut self) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn allow_http_for_tests(mut self) -> Self {
         self.allow_http_for_tests = true;
         self
     }
@@ -345,7 +345,7 @@ impl Fetcher {
         let scheme = uri.scheme_str().unwrap_or_default();
         #[allow(unused_mut)]
         let mut scheme_ok = scheme == "https";
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         {
             if self.allow_http_for_tests && scheme == "http" {
                 scheme_ok = true;

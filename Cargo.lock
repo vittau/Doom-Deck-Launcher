@@ -790,8 +790,11 @@ dependencies = [
  "ddl-core",
  "gilrs",
  "png",
+ "serde",
+ "serde_json",
  "slint",
  "slint-build",
+ "tempfile",
  "tracing",
  "tracing-subscriber",
 ]
