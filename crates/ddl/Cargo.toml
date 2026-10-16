@@ -26,6 +26,13 @@ serde_json.workspace = true
 [build-dependencies]
 slint-build = { workspace = true }
 
+[features]
+# Test-only seams for the Linux end-to-end workflow (spec 014, R3): the
+# `DDL_TEST_IWAD_SEAM` IWAD injection. Release builds never enable it
+# (`release.yml` builds with no features), so the seam is compiled out of
+# anything users download.
+test-support = ["ddl-core/test-support"]
+
 # Test-only. `png` is used by the headless UI test (`src/headless.rs`) to write
 # the off-screen frames the software renderer produces, so a human can look at
 # exactly what the menu draws without opening a window. It is maintained by the

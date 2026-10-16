@@ -3,6 +3,7 @@
 //! Controller-first UI backed by core services (spec 010).
 
 mod cli;
+mod cli_exec;
 #[cfg(test)]
 mod copy;
 #[cfg(test)]
@@ -30,8 +31,8 @@ const EXIT_USAGE: u8 = 2;
 
 fn main() -> ExitCode {
     match cli::parse(std::env::args_os().skip(1)) {
-        Ok(cli::Command::Help) => {
-            print!("{}", cli::help_text());
+        Ok(cli::Command::Help(topic)) => {
+            print!("{}", cli::help_for(topic));
             ExitCode::SUCCESS
         }
         Ok(cli::Command::Version) => {
@@ -79,6 +80,17 @@ fn main() -> ExitCode {
                 }
                 Err(err) => {
                     error!(error = %err, "DoomDeckLauncher stopped with an error");
+                    ExitCode::FAILURE
+                }
+            }
+        }
+        Ok(command) => {
+            // Every other subcommand is headless: it never creates a window.
+            logging::init();
+            match cli_exec::run(command) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(failure) => {
+                    eprintln!("{}: {failure}", cli::BIN);
                     ExitCode::FAILURE
                 }
             }
