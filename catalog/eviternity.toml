@@ -1,0 +1,91 @@
+# Confirmed bytes and release metadata: docs/research/reference-eviternity.md §1–§7; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "eviternity"
+title = "Eviternity (Final version)"
+authors = [
+  "Joshua \"Dragonfly\" O'Sullivan (project lead)",
+  "James \"Jimmy\" Paddock",
+  "Derek \"Afterglow\" MacDonald",
+  "James \"an_mutt\" Collins",
+  "Seongbae \"antares031\" Park",
+  "AtroNx",
+  "StormCatcher.77",
+  "Brett \"Mechadon\" Harrell",
+  "Xaser Acheron",
+  "Tristan \"Eris Falling\" Clark",
+  "Paul \"skillsaw\" DeBruyne",
+  "Ola \"ukiro\" Björling",
+]
+release = "Final version (v1.0), 2019-02-10"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity"
+description = "DOOM II megawad: 32 maps (six 5-map chapters plus two secret maps), MBF format with bundled OTEX textures, MIDI music and an embedded DEHACKED patch."
+permission = "Licensed CC BY-NC-ND 4.0. DDL downloads the unmodified archive from its canonical /idgames source; no modification, repackaging or commercial use, and the bundled credits and changelog are kept intact and unedited. See the kept text members for the full terms and resource credits."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "mbf"
+complevel = 11
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-eviternity.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release thread"]
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Proposed complevel 11 (MBF) from the authors' port/format guidance; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and map selection.", "The DSDArchive copy is not byte-identical (same WAD, different Eviternity.txt), so it is not a mirror here."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/eviternity.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/megawads/eviternity.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/eviternity.zip"]
+size = 49938319
+sha256 = "ad2f8b73108df7e4d3843d46a9e903238ac7e321ae9281f8c61f67fb92983656"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/eviternity.zip"
+
+[[packages.members]]
+id = "maps"
+path = "Eviternity.wad"
+size = 130864796
+sha256 = "21b7e13435f79d9d24e3c4fab3c257785c176c14f4d9ed217ea3288a73025062"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "Eviternity.txt"
+size = 14999
+sha256 = "3e1c5f1a08fb0b1d924fc6a832ac22ec78f98e0a536fe75bb8024b99a283209c"
+keep = true
+
+[[packages.members]]
+id = "changelog"
+path = "Eviternity_Changelog.txt"
+size = 24284
+sha256 = "d467780f0291dc51bd94b4a5f222bb44930be42419855aa1681cc28c7eaa9978"
+keep = true
+
+[[components]]
+id = "main"
+label = "Eviternity"
+description = "Main 32-map megawad with bundled OTEX textures, MIDI music and an embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
