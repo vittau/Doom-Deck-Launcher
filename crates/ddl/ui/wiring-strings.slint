@@ -1,4 +1,18 @@
 export global WiringStrings {
+    out property <string> ready-checks: @tr("Ready to play");
+    out property <string> recent: @tr("Recently played");
+    out property <string> found-game: @tr("{} found", root.value);
+    out property <string> missing-game: @tr("{} missing", root.value);
+    out property <string> discover-sub: @tr("Curated worlds. Choose your next descent.");
+    out property <string> library-sub: @tr("Installed worlds, ready for your next session.");
+    out property <string> detail-sub: @tr("Requirements, content and source.");
+    out property <string> setup-sub: @tr("Review components and gameplay before launching.");
+    out property <string> settings-sub: @tr("Manage your engine, base games and settings.");
+    out property <string> pre-check: @tr("Check when you are ready. No update check has run.");
+    out property <string> content-single: @tr("1 content file");
+    out property <string> stage-sequence: @tr("Download → Verify → Extract → Install");
+    out property <string> no-folders: @tr("No folders added. Add a folder or rescan your Steam libraries.");
+    out property <string> context-title: @tr("{} / {}", root.value, root.other);
     out property <string> connected: @tr("Controller connected");
     out property <string> disconnected: @tr("Connect a controller to continue");
     in property <string> value;
@@ -102,8 +116,8 @@ export global WiringStrings {
     out property <string> reviewed-update: @tr("Install reviewed update");
     out property <string> trust: @tr("Reviewed transfer digest · gameplay needs Deck validation");
     out property <string> verification: @tr("Verification pending · Needs Deck Validation");
-    out property <string> bytes: @tr("{} / {} bytes", root.value, root.other);
-    out property <string> bytes-unknown: @tr("{} bytes received", root.value);
+    out property <string> bytes: @tr("{} / {}", root.value, root.other);
+    out property <string> bytes-unknown: @tr("{} received", root.value);
     out property <string> content-count: @tr("{} content files", root.value);
     out property <string> complevel: @tr("Complevel {} · recipe recommendation (not yet verified)", root.value);
     out property <string> engine-version: @tr("DSDA-Doom {}", root.value);

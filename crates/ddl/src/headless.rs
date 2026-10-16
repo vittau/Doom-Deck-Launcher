@@ -207,7 +207,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
                 let pixel = frame.as_slice()[py as usize * WIDTH as usize + px as usize];
                 assert_eq!(
                     (pixel.r, pixel.g, pixel.b),
-                    (0xff, 0xca, 0x70),
+                    (0xff, 0xd0, 0x78),
                     "ring edge {name} target {} at {px},{py}",
                     node.id
                 );
@@ -221,7 +221,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
         }
         let frame = render(&window);
         assert!(
-            count_color(&frame, (0xff, 0xca, 0x70)) > 500,
+            count_color(&frame, (0xff, 0xd0, 0x78)) > 500,
             "amber focus pixels in {name}"
         );
         write_png(name, &frame);
@@ -347,7 +347,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     let pixel = header.as_slice()[18 * WIDTH as usize + 468];
     assert_eq!(
         (pixel.r, pixel.g, pixel.b),
-        (0xff, 0xca, 0x70),
+        (0xff, 0xd0, 0x78),
         "top tab focus ring"
     );
     press(&window, Key::DownArrow);

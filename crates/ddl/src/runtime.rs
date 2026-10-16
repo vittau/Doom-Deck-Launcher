@@ -733,7 +733,18 @@ impl Runtime {
                 }
             }
         };
-        ui.set_heading(text(ui, heading));
+        let named = matches!(self.screen, Screen::Detail | Screen::Setup)
+            .then(|| self.item()).flatten();
+        ui.set_heading(if let Some(item) = named {
+            ui.global::<crate::WiringStrings>().set_value(text(ui, heading));
+            ui.global::<crate::WiringStrings>().set_other(display_title(&item.recipe).into());
+            text(ui, T::ContextTitle)
+        } else { text(ui, heading) });
+        ui.set_art_band(matches!(self.screen, Screen::Home | Screen::Discover | Screen::Library | Screen::Detail | Screen::Setup | Screen::Progress) && !self.playing);
+        let band_item = if self.screen == Screen::Home {
+            self.snapshot.as_ref().and_then(|s| s.items.iter().max_by_key(|i| i.profile.last_played))
+        } else { self.item() };
+        ui.set_band_art(band_item.map_or(0, |i| art(&i.recipe.id)));
         ui.set_subtitle(text(
             ui,
             if self.playing {
@@ -747,10 +758,12 @@ impl Runtime {
                     Screen::FirstRun => T::FirstHelp,
                     Screen::Home => T::HomeSub,
                     Screen::Review | Screen::Browser => T::ScanHelp,
-                    Screen::Setup => T::ProfileHelp,
-                    Screen::Detail | Screen::Discover | Screen::Library => T::Verification,
+                    Screen::Setup => T::SetupSub,
+                    Screen::Detail => T::DetailSub,
+                    Screen::Discover => T::DiscoverSub,
+                    Screen::Library => T::LibrarySub,
                     Screen::Progress => T::InstallTitle,
-                    Screen::Settings => T::ConfigReady,
+                    Screen::Settings => T::SettingsSub,
                     Screen::Loading => T::Loading,
                 }
             },
@@ -805,16 +818,36 @@ impl Runtime {
                             display_title(&item.recipe).into(),
                             36.,
                         );
-                        b.label(308., 132., 448., 80., text(ui, T::HomeSub), 22.);
+                        b.label(308., 132., 448., 36., item.recipe.authors.join(", ").into(), 22.);
+                        b.label(308., 176., 448., 64., format!("{} · {}", game(ui, item.recipe.base_game.game), text(ui, T::Profile)).into(), 22.);
                         b.button(1, 308., 252., 448., text(ui, T::Continue), true);
                     } else {
-                        b.label(36., 60., 720., 100., text(ui, T::HomeEmpty), 36.);
-                        b.label(36., 180., 720., 80., text(ui, T::NoHistory), 22.);
-                        b.button(1, 36., 320., 720., text(ui, T::DiscoverAction), true);
+                        b.label(36., 42., 720., 100., text(ui, T::HomeEmpty), 36.);
+                        b.label(36., 160., 720., 80., text(ui, T::NoHistory), 22.);
+                        b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), true);
                     }
-                    b.label(852., 36., 336., 48., text(ui, T::BaseGames), 30.);
-                    b.label(852., 108., 336., 160., text(ui, T::ScanHelp), 22.);
-                    b.button(2, 852., 320., 336., text(ui, T::DiscoverAction), false);
+                    b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
+                    if let Some(s) = &self.snapshot {
+                        let mut recent: Vec<_> = s.items.iter().filter(|i| i.profile.last_played.is_some()).collect();
+                        recent.sort_by_key(|i| std::cmp::Reverse(i.profile.last_played));
+                        if recent.is_empty() {
+                            b.label(36., 402., 720., 54., text(ui, T::NoHistory), 22.);
+                        }
+                        for (n, i) in recent.into_iter().take(2).enumerate() {
+                            let x = 36. + n as f32 * 360.;
+                            b.art(x, 400., 56., 66., art(&i.recipe.id));
+                            b.label(x + 72., 400., 270., 32., display_title(&i.recipe).into(), 26.);
+                            b.label(x + 72., 436., 270., 30., text(ui, T::Profile), 20.);
+                        }
+                        b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
+                        b.label(852., 104., 336., 54., s.engine.as_ref().map_or_else(|| text(ui, T::NoEngine), |e| value(ui, T::EngineVersion, &e.version)), 22.);
+                        for (n, g) in [ddl_core::catalog::Game::Doom, ddl_core::catalog::Game::Doom2].into_iter().enumerate() {
+                            let found = s.items.iter().any(|i| i.recipe.base_game.game == g && base_ready(s, &i.recipe));
+                            b.label(852., 174. + n as f32 * 44., 336., 40., value(ui, if found { T::FoundGame } else { T::MissingGame }, game(ui, g)), 22.);
+                        }
+                        b.label(852., 274., 336., 68., text(ui, T::Verification), 20.);
+                    }
+                    b.button(2, 852., 386., 336., text(ui, T::DiscoverAction), false);
                 }
                 Screen::Discover | Screen::Library => {
                     if let Some(s) = &self.snapshot {
@@ -1066,7 +1099,7 @@ impl Runtime {
                                 130.,
                                 448.,
                                 28.,
-                                value(ui, T::ContentCount, summary.content.len()),
+                                if summary.content.len() == 1 { text(ui, T::ContentSingle) } else { value(ui, T::ContentCount, summary.content.len()) },
                                 22.,
                             );
                             for (i, entry) in summary.content.iter().enumerate() {
@@ -1574,8 +1607,8 @@ impl Runtime {
 fn art(id: &str) -> i32 {
     match id {
         "sigil" => 0,
-        "auger-zenith" => 1,
-        "sigil-ii" => 2,
+        "auger-zenith" => 2,
+        "sigil-ii" => 1,
         _ => 0,
     }
 }

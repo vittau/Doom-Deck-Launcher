@@ -3,6 +3,21 @@ use crate::{AppWindow, WiringStrings};
 use slint::ComponentHandle;
 #[derive(Clone, Copy)]
 pub enum Text {
+    ReadyChecks,
+    Recent,
+    FoundGame,
+    MissingGame,
+    DiscoverSub,
+    LibrarySub,
+    DetailSub,
+    SetupSub,
+    SettingsSub,
+    PreCheck,
+    ContentSingle,
+    StageSequence,
+    NoFolders,
+    ContextTitle,
+
     UpdateError,
     Connected,
     Disconnected,
@@ -134,6 +149,21 @@ pub enum Text {
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
     match key {
+        Text::ReadyChecks => s.get_ready_checks(),
+        Text::Recent => s.get_recent(),
+        Text::FoundGame => s.get_found_game(),
+        Text::MissingGame => s.get_missing_game(),
+        Text::DiscoverSub => s.get_discover_sub(),
+        Text::LibrarySub => s.get_library_sub(),
+        Text::DetailSub => s.get_detail_sub(),
+        Text::SetupSub => s.get_setup_sub(),
+        Text::SettingsSub => s.get_settings_sub(),
+        Text::PreCheck => s.get_pre_check(),
+        Text::ContentSingle => s.get_content_single(),
+        Text::StageSequence => s.get_stage_sequence(),
+        Text::NoFolders => s.get_no_folders(),
+        Text::ContextTitle => s.get_context_title(),
+
         Text::UpdateError => s.get_update_error(),
         Text::Connected => s.get_connected(),
         Text::Disconnected => s.get_disconnected(),

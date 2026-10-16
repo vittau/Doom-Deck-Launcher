@@ -1,4 +1,6 @@
 import "assets/InterVariable.ttf";
+import "assets/Barlow-Regular.ttf";
+import "assets/PirataOne-Regular.ttf";
 import { Tokens } from "tokens.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
@@ -6,6 +8,15 @@ export struct ViewNode {
     id: int, x: float, y: float, w: float, h: float,
     kind: int, label: string, detail: string, tone: int, size: float, art: int,
     primary: bool, actionable: bool,
+}
+component Frame inherits Image {
+    source: @image-url("assets/ember/frame.png", nine-slice(28));
+    image-fit: fill;
+}
+component Cover inherits Image {
+    in property <int> art;
+    source: art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : @image-url("assets/ember/sigil.png");
+    image-fit: cover;
 }
 component Node inherits Rectangle {
     in property <ViewNode> item;
@@ -17,9 +28,15 @@ component Node inherits Rectangle {
     border-radius: item.kind == 1 || item.kind == 4 ? Tokens.card-radius : Tokens.row-radius;
     border-width: item.kind == 1 ? 1px : 0px;
     border-color: Tokens.steel-edge;
+    if item.kind == 1: Frame { x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px; }
+    if item.kind == 2 || item.kind == 3: Rectangle {
+        x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
+        background: transparent; border-width: 1px; border-color: root.item.primary ? Tokens.text : Tokens.line; border-radius: Tokens.row-radius;
+    }
     if focused: Rectangle {
         x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px;
-        background: transparent; border-radius: 16px; border-color: Tokens.focus; border-width: 4px;
+        background: Tokens.deep; border-radius: 16px; border-color: Tokens.focus; border-width: 4px;
+        Rectangle { x: 8px; y: 8px; width: parent.width - 16px; height: parent.height - 16px; background: root.item.kind == 1 ? Tokens.surface : root.item.primary ? Tokens.focus : Tokens.raised; border-radius: Tokens.row-radius; }
     }
     if item.kind == 6: Rectangle {
         y: (parent.height - 12px) / 2; height: 12px; width: parent.width;
@@ -28,13 +45,8 @@ component Node inherits Rectangle {
     }
     if item.kind == 4: Rectangle {
         clip: true; border-radius: Tokens.card-radius;
-        Image {
-            source: @image-url("assets/furnace-art-sheet.png");
-            image-fit: cover;
-            source-clip-x: item.art * 512; source-clip-y: 0;
-            source-clip-width: 512; source-clip-height: 1024;
-        }
-        Rectangle {
+        Cover { art: root.item.art; }
+        if root.item.h >= 80: Rectangle {
             x: 8px; y: parent.height - (root.item.w < 240 ? 64px : 36px); width: parent.width - 16px; height: root.item.w < 240 ? 56px : 28px;
             background: Tokens.deep;
             Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
@@ -46,6 +58,7 @@ component Node inherits Rectangle {
         height: item.detail == "" ? parent.height - (item.kind == 0 ? 0px : 16px) : 30px;
         text: item.label;
         color: item.primary ? Tokens.on-accent : item.tone == 1 ? Tokens.muted : item.tone == 2 ? Tokens.success : item.tone == 3 ? Tokens.warning : item.tone == 4 ? Tokens.danger : Tokens.text;
+        font-family: item.kind == 0 && item.size >= 26 ? "Pirata One" : "Barlow";
         font-size: item.size * 1px; font-weight: item.kind == 2 || item.kind == 3 || item.size >= 26 ? 600 : 400;
         wrap: word-wrap; vertical-alignment: center;
     }
@@ -78,13 +91,15 @@ component Hint inherits HorizontalLayout {
 export component AppWindow inherits Window {
     title: @tr("DoomDeckLauncher");
     width: 1280px; height: 800px;
-    default-font-family: "Inter Variable"; default-font-size: Tokens.body;
+    default-font-family: "Barlow"; default-font-size: Tokens.body;
     background: Tokens.canvas;
     in property <[ViewNode]> nodes;
     in property <int> focused: 0;
     in property <int> active-tab: 0;
     in property <bool> root-screen: true;
     in property <bool> input-locked: false;
+    in property <bool> art-band;
+    in property <int> band-art;
     in property <string> heading;
     in property <string> subtitle;
     in property <string> a-hint: @tr("Open");
@@ -105,10 +120,11 @@ export component AppWindow inherits Window {
     forward-focus: keys;
     // Pointer motion never changes the logical target; clicks use the same action path.
     TouchArea { x: 0px; y: 0px; width: parent.width; height: parent.height; mouse-cursor: none; }
+    Image { x: 0px; y: 104px; width: parent.width; height: parent.height - 168px; source: @image-url("assets/ember/wall.png"); image-fit: fill; }
     Rectangle {
         x: 0px; y: 0px; width: parent.width; height: 104px; background: Tokens.deep;
-        Image { x: 40px; y: 24px; width: 40px; height: 56px; source: @image-url("assets/ddl.svg"); }
-        Text { x: 88px; y: 26px; text: @tr("DDL"); font-size: 32px; font-weight: 700; color: Tokens.text; }
+        Image { x: 40px; y: 24px; width: 40px; height: 56px; source: @image-url("assets/ember/emblem.png"); image-fit: contain; }
+        Image { x: 88px; y: 25px; width: 106px; height: 52px; source: @image-url("assets/ember/logotype.png"); image-fit: contain; }
         for label[index] in [@tr("Home"), @tr("Discover"), @tr("Library"), @tr("Settings")]: Rectangle {
             x: (214 + index * 180) * 1px; y: 24px; width: 148px; height: 52px;
             background: root.active-tab == index ? Tokens.raised : transparent; border-radius: 8px;
@@ -120,8 +136,16 @@ export component AppWindow inherits Window {
         Text { x: parent.width - 260px; y: 36px; text: @tr("DoomDeckLauncher"); color: Tokens.muted; font-size: Tokens.metadata; }
         Rectangle { x: 40px; y: 102px; width: parent.width - 80px; height: 1px; background: Tokens.steel-edge; }
     }
-    Text { x: 40px; y: 124px; width: parent.width - 80px; height: 48px; text: root.heading; font-size: Tokens.page; font-weight: 700; color: Tokens.text; }
-    Text { x: 40px; y: 176px; width: parent.width - 80px; height: 32px; text: root.subtitle; color: Tokens.muted; }
+    Rectangle { x: 40px; y: 120px; width: root.art-band ? 784px : parent.width - 80px; height: 88px; background: Tokens.deep; }
+    if root.art-band: Rectangle {
+        x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
+        Image { source: root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : @image-url("assets/ember/sigil-band.png"); image-fit: cover; }
+        Rectangle { x: 168px; y: 60px; width: 232px; height: 28px; background: Tokens.deep;
+            Text { x: 8px; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+        }
+    }
+    Text { x: 40px; y: 124px; width: root.art-band ? 784px : parent.width - 80px; height: 48px; text: root.heading; font-family: "Pirata One"; font-size: Tokens.page; color: Tokens.text; }
+    Text { x: 40px; y: 176px; width: root.art-band ? 784px : parent.width - 80px; height: 32px; text: root.subtitle; color: Tokens.muted; overflow: elide; }
     Flickable {
         x: 28px; y: 218px; width: parent.width - 56px; height: parent.height - 294px;
         content-width: 1224px; content-height: 502px + root.scroll-offset * 1px;
@@ -134,7 +158,7 @@ export component AppWindow inherits Window {
     }
     if root.toast != "": Rectangle {
         x: 40px; y: 172px; width: parent.width - 80px; height: 64px;
-        background: Tokens.raised; border-radius: 8px;
+        background: Tokens.raised; border-radius: 8px; border-width: 2px; border-color: Tokens.line;
         Text { x: 16px; width: parent.width - 32px; text: root.toast; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; wrap: word-wrap; }
     }
     Rectangle {
@@ -153,10 +177,11 @@ export component AppWindow inherits Window {
     }
     if root.input-locked: Text {x:40px;y:parent.height - 64px;height:64px;text:@tr("Game running — return here when you exit");color:Tokens.muted;vertical-alignment:center;}
     if root.sheet-open: Rectangle {
-        x: 0px; y: 0px; width: parent.width; height: parent.height; background: #090D11E0;
+        x: 0px; y: 0px; width: parent.width; height: parent.height; background: #120C0DE0;
         Rectangle {
             x: (parent.width - 720px) / 2; y: (parent.height - 300px) / 2; width: 720px; height: 300px;
             background: Tokens.raised; border-width: 1px; border-color: Tokens.line; border-radius: 12px;
+            Frame { width: parent.width; height: parent.height; }
             Text { x: 32px; y: 32px; width: parent.width - 64px; height: 96px; text: root.sheet-title; color: Tokens.text; font-size: Tokens.section; wrap: word-wrap; }
             for item in root.sheet-nodes: Node { item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
         }
