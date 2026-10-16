@@ -20,6 +20,8 @@
 | UI visual pass: hi-fi generated mockups, identity (Codex) | `design/visual/` | Done — note: required components must render as locked, not as a toggle |
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |
 | IWAD table, identifier, Steam discovery, canonical links | `specs/007-iwad-library.md` | Done (A6 needs Deck) |
+| Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Draft — after 008 + 009 |
+| README manual Steam Input guide | `specs/011-readme-steam-input.md` | In progress |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | In progress (Codex) |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
