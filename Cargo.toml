@@ -1,0 +1,43 @@
+# Cargo workspace for DoomDeckLauncher (DDL).
+#
+# Layout follows decision D-005: `crates/ddl-core` holds pure logic with no UI
+# dependencies, `crates/ddl` is the Slint binary named `ddl`.
+[workspace]
+resolver = "3"
+members = ["crates/ddl-core", "crates/ddl"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# Minimum supported Rust version. Kept in lockstep with the exact toolchain in
+# `rust-toolchain.toml` so the two can never disagree.
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/vittau/Doom-Deck-Launcher"
+authors = ["The DoomDeckLauncher contributors"]
+
+# All third-party versions are pinned with `=` so a `Cargo.lock` refresh can
+# never silently pull a different release than the one that was reviewed.
+[workspace.dependencies]
+# Declarative native UI. Used under its GPLv3 option (decision D-001); no
+# Slint attribution badge is required.
+slint = { version = "=1.18.1", default-features = false, features = [
+    "compat-1-18",
+    "std",
+    "backend-winit",
+    "renderer-femtovg",
+    # Also compile the CPU renderer: it is the fallback on machines without a
+    # usable GL/EGL stack (SLINT_BACKEND=winit-software) and the renderer the
+    # headless UI test uses. See docs/research/steam-runtime-build.md.
+    "renderer-software",
+] }
+# Build-time .slint -> Rust compiler, invoked from `crates/ddl/build.rs`.
+slint-build = "=1.18.1"
+# Structured diagnostics (spec 001, R5).
+tracing = "=0.1.44"
+tracing-subscriber = "=0.3.23"
+
+# Release binaries are built for Steam Deck; stripping debug info keeps the
+# downloadable tarball small. Debug/release logs are unaffected.
+[profile.release]
+strip = true

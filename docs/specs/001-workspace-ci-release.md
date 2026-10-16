@@ -54,24 +54,28 @@ Gamepad input, DSDA-Doom handling, any real screen content, Flatpak, auto-update
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R5) — `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] **A1** (R1, R5) — `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`
   and `cargo test --workspace` pass on macOS.
-- [ ] **A2** (R2) — unit tests cover: XDG var set and absolute, set but relative (ignored),
+- [x] **A2** (R2) — unit tests cover: XDG var set and absolute, set but relative (ignored),
   unset (fallback), missing `HOME` (error).
-- [ ] **A3** (R3) — tests (or a scripted check in the report) show `--version`, `--help`,
+- [x] **A3** (R3) — tests (or a scripted check in the report) show `--version`, `--help`,
   unknown-option behaviour.
-- [ ] **A4** (R4) — `cargo run -p ddl -- --windowed` on macOS shows the menu; focus moves with
+- [x] **A4** (R4) — `cargo run -p ddl -- --windowed` on macOS shows the menu; focus moves with
   arrows; Quit exits 0 (describe what you observed, screenshot if possible).
+  *Verified headlessly instead, at the owner's request (no visible window, no screen capture):
+  `crates/ddl/src/headless.rs` renders the component off-screen with Slint's software renderer
+  at 1280x800, drives Up/Down/Return/Escape through `WindowEvent::KeyPressed` and writes the
+  frames to `target/headless/*.png`.*
 - [ ] **A5** (R6, R7) — workflows are syntactically valid YAML and every step's command was
   reviewed; actual CI execution is verified by the coordinator after push.
-- [ ] **A6** (R8) — research doc exists with pinned image digest and cited sources.
+- [x] **A6** (R8) — research doc exists with pinned image digest and cited sources.
 - [ ] **A7** (R4, R7) — *Needs Deck Validation:* the release tarball runs in Desktop and Gaming
   Mode (added to `docs/deck-testing.md` by the coordinator).
 
 ## Tasks
 
-- [ ] Workspace, toolchain, crates, `paths` module + tests
-- [ ] CLI parsing, logging, Slint placeholder menu
-- [ ] Runtime/container research → `docs/research/steam-runtime-build.md`
-- [ ] `ci.yml`, `release.yml`
-- [ ] `README.md`
+- [x] Workspace, toolchain, crates, `paths` module + tests
+- [x] CLI parsing, logging, Slint placeholder menu
+- [x] Runtime/container research → `docs/research/steam-runtime-build.md`
+- [x] `ci.yml`, `release.yml`
+- [x] `README.md`

@@ -1,0 +1,31 @@
+[package]
+name = "ddl"
+description = "DoomDeckLauncher: a native DOOM mapset launcher for Steam Deck"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+# `cargo install` style metadata is deliberately omitted until a release spec
+# asks for it; the binary is shipped as a tarball (spec 001, R7).
+
+[[bin]]
+name = "ddl"
+path = "src/main.rs"
+
+[dependencies]
+ddl-core = { path = "../ddl-core" }
+slint = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[build-dependencies]
+slint-build = { workspace = true }
+
+# Test-only. `png` is used by the headless UI test (`src/headless.rs`) to write
+# the off-screen frames the software renderer produces, so a human can look at
+# exactly what the menu draws without opening a window. It is maintained by the
+# image-rs project and adds no system library requirements.
+[dev-dependencies]
+png = "=0.18.1"

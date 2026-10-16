@@ -1,0 +1,140 @@
+# Release pipeline for DoomDeckLauncher (spec 001, R7).
+#
+# Pushing a `v*` tag builds `ddl` inside the pinned Steam Linux Runtime SDK,
+# packages `ddl-linux-x86_64.tar.gz`, writes its checksum, and publishes both
+# files as a GitHub Release with the `gh` CLI.
+#
+# Two jobs, deliberately:
+#   * `build`   runs inside the Steam Runtime container (it has the right libc
+#               and C toolchain, but no `gh`);
+#   * `publish` runs on the plain runner, which ships the `gh` CLI, and only
+#               touches the artifacts the build job produced.
+#
+# Only first-party `actions/*` actions are used; there is no third-party
+# release action in the supply chain.
+name: Release
+
+# Tag pushes only, e.g. `v0.1.0` or `v0.1.0-rc1`.
+on:
+  push:
+    tags:
+      - "v*"
+
+# Read-only by default; the `publish` job opts into `contents: write`.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build Steam Deck tarball
+    runs-on: ubuntu-latest
+    # Steam Linux Runtime 3.0 "sniper" SDK, pinned by digest (tag
+    # 3.0.20261007.263965). The digest - not the tag - is what makes the build
+    # reproducible, and the same digest is used by `.github/workflows/ci.yml`.
+    # Rationale and provenance: docs/research/steam-runtime-build.md.
+    container:
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
+    steps:
+      - uses: actions/checkout@v4
+
+      # The SDK image is Debian 11 based and does not ship Rust, so install the
+      # pinned toolchain from rustup. `rust-toolchain.toml` names the exact
+      # channel; the same channel is used by CI and local development. The
+      # image already provides curl, a C compiler, pkg-config and the fontconfig
+      # headers Slint needs on Linux.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      # Identical to the build in `ci.yml`: whatever CI proved must be what we
+      # ship. `--locked` pins the reviewed dependency versions from Cargo.lock.
+      - name: Build ddl in release mode
+        run: cargo build --release --locked -p ddl
+
+      # A tag could in principle point at a commit CI never saw, so smoke test
+      # again here. Both flags exit before a window is created.
+      - name: Smoke test the release binary
+        run: |
+          set -euo pipefail
+          ./target/release/ddl --version
+          ./target/release/ddl --help
+
+      # Package layout required by the spec: a top-level `ddl/` directory
+      # containing the binary, LICENSE and README.md. `--owner=0 --group=0
+      # --numeric-owner` keeps the archive reproducible, and the file modes are
+      # set explicitly so the binary stays executable after extraction.
+      - name: Package ddl-linux-x86_64.tar.gz
+        run: |
+          set -euo pipefail
+          staging="$(mktemp -d)"
+          mkdir -p "$staging/ddl"
+          install -m 0755 target/release/ddl "$staging/ddl/ddl"
+          install -m 0644 LICENSE "$staging/ddl/LICENSE"
+          install -m 0644 README.md "$staging/ddl/README.md"
+          tar --owner=0 --group=0 --numeric-owner -C "$staging" -czf ddl-linux-x86_64.tar.gz ddl
+          sha256sum ddl-linux-x86_64.tar.gz > ddl-linux-x86_64.tar.gz.sha256
+          echo "--- archive contents ---"
+          tar -tzf ddl-linux-x86_64.tar.gz
+          echo "--- checksum ---"
+          cat ddl-linux-x86_64.tar.gz.sha256
+
+      # Hand the two files to the publishing job. `actions/upload-artifact` is
+      # first-party and avoids relying on the release assets of a failed run.
+      - name: Upload the tarball and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: ddl-linux-x86_64
+          path: |
+            ddl-linux-x86_64.tar.gz
+            ddl-linux-x86_64.tar.gz.sha256
+          if-no-files-found: error
+
+  publish:
+    name: Create the GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # Creating a release writes to the repository.
+    permissions:
+      contents: write
+    steps:
+      # `gh` needs a checkout to resolve the repository from `origin`.
+      - uses: actions/checkout@v4
+        with:
+          # Full history so `--generate-notes` can describe the release.
+          fetch-depth: 0
+
+      # Both assets land in the workspace root, ready to attach.
+      - name: Download the release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ddl-linux-x86_64
+
+      # `gh release create` with the default GITHUB_TOKEN. Tags containing `-`
+      # (e.g. `v0.1.0-rc1`) are marked as prereleases; plain `vX.Y.Z` tags are
+      # full releases.
+      - name: Create the release with the gh CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          args=(--title "DoomDeckLauncher ${GITHUB_REF_NAME}" --generate-notes)
+          case "${GITHUB_REF_NAME}" in
+            *-*) args+=(--prerelease) ;;
+          esac
+          gh release create "${GITHUB_REF_NAME}" "${args[@]}" \
+            ddl-linux-x86_64.tar.gz \
+            ddl-linux-x86_64.tar.gz.sha256

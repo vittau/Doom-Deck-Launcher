@@ -1,0 +1,14 @@
+# Exact, pinned Rust toolchain (spec 001, R1).
+#
+# `channel` is a full stable version, not `stable`, so local development, CI
+# (`.github/workflows/ci.yml`) and the release build (`.github/workflows/release.yml`)
+# all compile with byte-identical toolchains. `rust-version` in the workspace
+# `Cargo.toml` states the same minimum in metadata form.
+#
+# `rustfmt` and `clippy` are listed as components so a fresh rustup install
+# (including the ones inside the Steam Linux Runtime SDK container) can run
+# `cargo fmt` and `cargo clippy` without extra setup.
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

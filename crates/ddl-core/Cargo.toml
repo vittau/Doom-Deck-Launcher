@@ -1,0 +1,13 @@
+[package]
+name = "ddl-core"
+description = "DoomDeckLauncher core logic (no UI dependencies)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+# Intentionally dependency-free: this crate is the platform-independent logic
+# layer and must stay usable (and testable) without UI or OS crates.
+[dependencies]
