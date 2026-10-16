@@ -142,3 +142,13 @@
     lists, validation, prepare_dirs, describe with ~ shortening), no-shell RealEngineRunner
     with DOOM* env scrubbing and per-launch logs, FakeEngineRunner, -v smoke test.
   refs: [docs/specs/003-launch-plan.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Specs 002, 006, 007 merged. Catalog: TOML recipes for AUGER;ZENITH, SIGIL, SIGIL II with
+    nested-ZIP members, exclusive add-on group and user-supplied soundtracks; `ddl catalog
+    lint [--fetch]`, CONTRIBUTING.md, PR template, CI job. Downloads: blocking ureq fetcher
+    with allowlist/redirect checks/mirrors/cache, safe ZIP extractor with !/ nesting. IWADs:
+    26-variant table, content identifier, Steam VDF discovery, registry, canonical symlinks.
+    Unified hashing crates on digest 0.11. 228 tests green.
+  refs: [docs/specs/002-recipe-catalog.md, docs/specs/006-downloads-extraction.md, docs/specs/007-iwad-library.md]
