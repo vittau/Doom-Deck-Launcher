@@ -154,6 +154,7 @@ pub struct Environment {
 }
 #[cfg(test)]
 pub struct TestEnvironment {
+    pub api: std::sync::Arc<dsda::CannedApi>,
     pub catalog: Catalog,
     pub engine_base: String,
     pub reviewed: dsda::ReviewedList,
@@ -214,7 +215,7 @@ impl Services {
             EngineManager::with_parts(
                 dsda::EngineDirs::for_paths(paths),
                 test.reviewed.clone(),
-                Box::new(dsda::CannedApi::new()),
+                Box::new(TestApi(test.api.clone())),
                 Box::new(dsda::SystemClock),
             )
             .with_http_for_tests()
@@ -762,5 +763,64 @@ mod tests {
         assert!(!view.config_usable);
         assert!(view.config_notice);
         assert_eq!(view.items.len(), 3);
+    }
+}
+
+#[cfg(test)]
+struct TestApi(std::sync::Arc<dsda::CannedApi>);
+#[cfg(test)]
+impl dsda::ReleaseApi for TestApi {
+    fn fetch(&self, etag: Option<&str>) -> Result<dsda::ApiResponse, dsda::ApiError> {
+        dsda::ReleaseApi::fetch(self.0.as_ref(), etag)
+    }
+}
+
+#[cfg(test)]
+mod steam_wiring_tests {
+    use super::*;
+    #[test]
+    fn startup_discovers_steam_iwads_without_scanning_home_and_browser_offers_the_library() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("home");
+        let common = home.join(".local/share/Steam/steamapps/common");
+        let game = common.join(iwads::steam::KNOWN_INSTALL_DIRS[0]);
+        fs::create_dir_all(&game).unwrap();
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .unwrap();
+        let mut bytes = b"IWAD".to_vec();
+        bytes.extend_from_slice(&36i32.to_le_bytes());
+        bytes.extend_from_slice(&12i32.to_le_bytes());
+        for e in 1..=4 {
+            for m in 1..=9 {
+                bytes.extend_from_slice(&[0; 8]);
+                let name = format!("E{e}M{m}");
+                let mut lump = [0; 8];
+                lump[..name.len()].copy_from_slice(name.as_bytes());
+                bytes.extend_from_slice(&lump);
+            }
+        }
+        fs::write(game.join("renamed.wad"), &bytes).unwrap();
+        fs::write(home.join("not-authorized.wad"), &bytes).unwrap();
+        let mut services = Services::open(Environment {
+            paths,
+            home: home.clone(),
+            test: None,
+        })
+        .unwrap();
+        services
+            .execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        let snapshot = services.snapshot().unwrap();
+        assert_eq!(snapshot.iwads.len(), 1);
+        assert_eq!(snapshot.iwads[0].source, iwads::Source::Steam);
+        assert!(snapshot.iwads[0].variant.is_none());
+        assert!(!snapshot.iwads[0].candidates.is_empty());
+        let browser = services
+            .browse(&home, false, &CancellationToken::new())
+            .unwrap();
+        assert!(browser.shortcuts.contains(&home));
+        assert!(browser.shortcuts.contains(&common));
     }
 }

@@ -181,7 +181,9 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .with_log_path(paths.state.join("logs/fake-engine.log")),
     );
     let exit = Arc::new(std::sync::atomic::AtomicI32::new(255));
+    let api = Arc::new(dsda::CannedApi::new());
     let test = Arc::new(TestEnvironment {
+        api: api.clone(),
         catalog,
         reviewed,
         engine_base: server.url(""),
@@ -441,6 +443,76 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     state.borrow_mut().focus = 1;
     state.borrow_mut().sync(ui);
     capture(window, "010-settings.png");
+    assert!(
+        api.requests().is_empty(),
+        "startup and local actions never check online releases"
+    );
+    api.push_error(dsda::ApiError::new("synthetic offline"));
+    ui.invoke_clicked(70);
+    wait(&state, |r| !r.busy);
+    assert_eq!(state.borrow().problem, Some(Problem::Update));
+    assert!(state.borrow().snapshot.as_ref().unwrap().engine.is_some());
+    press(window, Key::Escape);
+    api.push(dsda::ApiResponse {
+        status: 200,
+        etag: Some("test".into()),
+        body: "[]".into(),
+    });
+    ui.invoke_clicked(70);
+    idle(&state);
+    assert_eq!(api.requests().len(), 2);
+    let mut installed = dsda::InstalledState::load(
+        &dsda::EngineDirs::for_paths(&paths)
+            .engines
+            .join(dsda::STATE_FILE),
+    )
+    .unwrap();
+    let mut previous = installed.active_entry().unwrap().clone();
+    previous.version = "0.30.0".into();
+    previous.tag = Some("v0.30.0".into());
+    installed.insert(previous);
+    installed.previous_good = Some("0.30.0".into());
+    installed
+        .save(
+            &dsda::EngineDirs::for_paths(&paths)
+                .engines
+                .join(dsda::STATE_FILE),
+        )
+        .unwrap();
+    let profile = state.borrow().snapshot.as_ref().unwrap().items[0]
+        .profile
+        .clone();
+    state.borrow_mut().start(ui, Command::Save(profile));
+    idle(&state);
+    ui.invoke_clicked(71);
+    idle(&state);
+    assert_eq!(
+        state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .engine
+            .as_ref()
+            .unwrap()
+            .version,
+        "0.30.0"
+    );
+    ui.invoke_clicked(71);
+    idle(&state);
+    assert_eq!(
+        state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .engine
+            .as_ref()
+            .unwrap()
+            .version,
+        "0.30.1"
+    );
+
     ui.invoke_clicked(3);
     ui.invoke_clicked(70);
     press(window, Key::Return);

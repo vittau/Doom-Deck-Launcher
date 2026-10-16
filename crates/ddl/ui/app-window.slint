@@ -21,6 +21,11 @@ component Node inherits Rectangle {
         x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px;
         background: transparent; border-radius: 16px; border-color: Tokens.focus; border-width: 4px;
     }
+    if item.kind == 6: Rectangle {
+        y: (parent.height - 12px) / 2; height: 12px; width: parent.width;
+        background: Tokens.raised; border-radius: 6px;
+        Rectangle {height: parent.height; x: root.item.art < 0 ? parent.width / 3 : 0px; width: root.item.art < 0 ? parent.width / 3 : parent.width * root.item.art / 1000; background: Tokens.focus; border-radius: 6px;}
+    }
     if item.kind == 4: Rectangle {
         clip: true; border-radius: Tokens.card-radius;
         Image {
@@ -79,6 +84,7 @@ export component AppWindow inherits Window {
     in property <int> focused: 0;
     in property <int> active-tab: 0;
     in property <bool> root-screen: true;
+    in property <bool> input-locked: false;
     in property <string> heading;
     in property <string> subtitle;
     in property <string> a-hint: @tr("Open");
@@ -127,13 +133,13 @@ export component AppWindow inherits Window {
         for item in root.nodes: Node { visible: item.x >= 700; item: item; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }
     if root.toast != "": Rectangle {
-        x: 40px; y: 172px; width: parent.width - 80px; height: 40px;
+        x: 40px; y: 172px; width: parent.width - 80px; height: 64px;
         background: Tokens.raised; border-radius: 8px;
-        Text { x: 16px; width: parent.width - 32px; text: root.toast; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; overflow: elide; }
+        Text { x: 16px; width: parent.width - 32px; text: root.toast; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; wrap: word-wrap; }
     }
     Rectangle {
         x: 0px; width: parent.width; y: parent.height - 64px; height: 64px; background: Tokens.deep;
-        HorizontalLayout {
+        if !root.input-locked: HorizontalLayout {
             y: 18px; height: 28px; alignment: start;
             padding-left: 40px; padding-right: 40px; spacing: 24px;
             Hint { badge: @tr("A"); label: root.a-hint; }
@@ -145,6 +151,7 @@ export component AppWindow inherits Window {
             Hint { badge: @tr("Start"); label: @tr("Menu"); pill: true; }
         }
     }
+    if root.input-locked: Text {x:40px;y:parent.height - 64px;height:64px;text:@tr("Game running — return here when you exit");color:Tokens.muted;vertical-alignment:center;}
     if root.sheet-open: Rectangle {
         x: 0px; y: 0px; width: parent.width; height: parent.height; background: #090D11E0;
         Rectangle {

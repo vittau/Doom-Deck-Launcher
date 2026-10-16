@@ -164,7 +164,10 @@ fn stage(
     )
     .with_size(request.expected_size);
     use crate::downloads::{InstallProgress, InstallStage};
-    progress(InstallProgress::stage(InstallStage::Download));
+    progress(InstallProgress::transfer(crate::downloads::Progress {
+        downloaded: 0,
+        total: Some(request.expected_size),
+    }));
     let cached = fetcher.download(&download, cancel, &mut |p| {
         progress(InstallProgress::transfer(p))
     })?;

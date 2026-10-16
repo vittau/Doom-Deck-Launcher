@@ -66,6 +66,7 @@ pub struct Runtime {
     settings_section: usize,
     advanced: bool,
     updates: Vec<String>,
+    updates_checked: bool,
     pub last_exit: Option<ddl_core::engines::dsda::LaunchOutcome>,
 }
 impl Runtime {
@@ -97,6 +98,7 @@ impl Runtime {
             settings_section: 0,
             advanced: false,
             updates: vec![],
+            updates_checked: false,
             last_exit: None,
         }
     }
@@ -195,7 +197,10 @@ impl Runtime {
                     self.screen = Screen::Browser;
                     self.focus = 1;
                 }
-                Event::Updates(u) => self.updates = u,
+                Event::Updates(u) => {
+                    self.updates = u;
+                    self.updates_checked = true;
+                }
                 Event::EngineExit(outcome) => {
                     if !outcome.exit_status.is_clean() {
                         ui.set_toast(value(ui, T::EngineFailed, outcome.log_path.display()));
@@ -1000,7 +1005,7 @@ impl Runtime {
                                 detail,
                                 c.optional,
                             );
-                            y += 96.;
+                            y += b.nodes.last().unwrap().h + 16.;
                         }
                         b.row(
                             42,
@@ -1011,7 +1016,7 @@ impl Runtime {
                             text(ui, T::AdvancedHelp),
                             true,
                         );
-                        y += 96.;
+                        y += b.nodes.last().unwrap().h + 16.;
                         b.button(
                             40,
                             36.,
@@ -1180,7 +1185,21 @@ impl Runtime {
                 }
                 Screen::Progress => {
                     b.panel(12., 12., 1200., 478.);
-                    b.label(36., 40., 1100., 60., text(ui, T::InstallTitle), 36.);
+                    let subject = match self.pending.as_ref().or(self.retry.as_ref()) {
+                        Some(Command::InstallEngine(version)) => {
+                            value(ui, T::EngineVersion, version)
+                        }
+                        Some(Command::Install(id)) => self
+                            .snapshot
+                            .as_ref()
+                            .and_then(|s| s.items.iter().find(|i| i.recipe.id == *id))
+                            .map_or_else(
+                                || text(ui, T::InstallTitle),
+                                |i| display_title(&i.recipe).into(),
+                            ),
+                        _ => text(ui, T::InstallTitle),
+                    };
+                    b.label(36., 40., 1100., 60., subject, 36.);
                     let stage = self.progress.map_or(T::Working, |p| match p.stage {
                         InstallStage::Download => T::Download,
                         InstallStage::Verify => T::Verify,
@@ -1202,6 +1221,28 @@ impl Runtime {
                         ),
                         30.,
                     );
+                    b.push(
+                        -999,
+                        36.,
+                        206.,
+                        1152.,
+                        24.,
+                        6,
+                        SharedString::default(),
+                        SharedString::default(),
+                        false,
+                        false,
+                    );
+                    b.nodes.last_mut().unwrap().art = self
+                        .progress
+                        .filter(|p| p.stage == InstallStage::Download)
+                        .and_then(|p| p.transfer)
+                        .and_then(|p| {
+                            p.total
+                                .filter(|t| *t > 0)
+                                .map(|t| (p.downloaded.saturating_mul(1000) / t).min(1000) as i32)
+                        })
+                        .unwrap_or(-1);
                     if let Some(p) = self.progress.and_then(|p| p.transfer) {
                         let label = if let Some(total) = p.total {
                             ui.global::<crate::WiringStrings>()
@@ -1212,7 +1253,7 @@ impl Runtime {
                         } else {
                             value(ui, T::BytesUnknown, p.downloaded)
                         };
-                        b.label(36., 212., 1100., 42., label, 26.);
+                        b.label(36., 252., 1100., 42., label, 26.);
                     }
                     if self.busy {
                         b.button(1, 36., 320., 400., text(ui, T::Cancel), false);
@@ -1268,7 +1309,7 @@ impl Runtime {
                                 b.row(
                                     -1,
                                     36.,
-                                    100. + i as f32 * 92.,
+                                    100. + i as f32 * 112.,
                                     1152.,
                                     e.variant.clone().unwrap_or_default().into(),
                                     e.path.display().to_string().into(),
@@ -1295,7 +1336,7 @@ impl Runtime {
                                     .to_string_lossy()
                                     .into_owned()
                                     .into(),
-                                p.display().to_string().into(),
+                                SharedString::default(),
                                 true,
                             );
                         }
@@ -1397,7 +1438,21 @@ impl Runtime {
                                         false,
                                     );
                                 } else {
-                                    b.label(372., 420., 816., 48., text(ui, T::NoUpdates), 20.);
+                                    b.label(
+                                        372.,
+                                        420.,
+                                        816.,
+                                        48.,
+                                        text(
+                                            ui,
+                                            if self.updates_checked {
+                                                T::NoUpdates
+                                            } else {
+                                                T::Verification
+                                            },
+                                        ),
+                                        20.,
+                                    );
                                 }
                             }
                             1 => {
@@ -1407,7 +1462,7 @@ impl Runtime {
                                     b.row(
                                         100 + i as i32,
                                         372.,
-                                        128. + i as f32 * 96.,
+                                        128. + i as f32 * 112.,
                                         816.,
                                         text(ui, T::Remove),
                                         p.display().to_string().into(),
@@ -1488,6 +1543,7 @@ impl Runtime {
         ui.set_focused(self.focus);
         ui.set_active_tab(self.tab_index() as i32);
         ui.set_root_screen(self.root() && !self.playing);
+        ui.set_input_locked(self.playing);
         ui.set_setup_screen(setup && !self.playing);
         ui.set_a_hint(
             self.nodes
@@ -1663,7 +1719,18 @@ impl Nodes {
         detail: SharedString,
         actionable: bool,
     ) {
-        self.push(id, x, y, w, 80., 3, label, detail, actionable, false);
+        self.push(
+            id,
+            x,
+            y,
+            w,
+            if detail.len() > 50 { 96. } else { 80. },
+            3,
+            label,
+            detail,
+            actionable,
+            false,
+        );
     }
     fn card(&mut self, id: i32, x: f32, y: f32, w: f32, h: f32) {
         self.push(
