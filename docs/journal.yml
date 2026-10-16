@@ -135,3 +135,10 @@
   type: decision
   summary: D-018 — gilrs for DDL's gamepad input (Proposed, Deck validation). Spec 008 (UI shell) written.
   refs: [docs/decisions.md, docs/specs/008-ui-shell.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 003 merged — typed LaunchPlan (reviewed complevels only, single -file/-deh/-assign
+    lists, validation, prepare_dirs, describe with ~ shortening), no-shell RealEngineRunner
+    with DOOM* env scrubbing and per-launch logs, FakeEngineRunner, -v smoke test.
+  refs: [docs/specs/003-launch-plan.md]

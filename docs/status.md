@@ -11,7 +11,7 @@
 | Reference mapsets SIGIL / SIGIL II | `research/reference-sigil.md` | Done |
 | Prior art: UZDeck / GZDeck (incl. UI critique) | `research/prior-art.md` | Done |
 | Recipe schema, catalog, lint, reference recipes | `specs/002-recipe-catalog.md` | In progress (Codex) |
-| Launch plan and engine process runner | `specs/003-launch-plan.md` | In progress |
+| Launch plan and engine process runner | `specs/003-launch-plan.md` | Done (A6 needs Deck) |
 | Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | Ready — waits for 001, 006 |
 | Downloads and safe ZIP extraction (nested) | `specs/006-downloads-extraction.md` | In progress |
 | DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Done (A6 needs Deck) |
