@@ -26,6 +26,9 @@ sha2.workspace = true
 sha1.workspace = true
 md-5.workspace = true
 crc32fast.workspace = true
+# Structured diagnostics: the catalog loader logs why a recipe was skipped
+# (spec 009, R7). Already a workspace dependency used by `crates/ddl`.
+tracing.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
