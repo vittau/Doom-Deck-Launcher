@@ -56,6 +56,14 @@ fn setup() -> (Rc<MinimalSoftwareWindow>, AppWindow) {
     .expect("this test is the only thing installing a Slint platform in its thread");
 
     let ui = AppWindow::new().expect("ui/app-window.slint must compile and instantiate");
+    assert_eq!(
+        (
+            ui.get_app_icon().size().width,
+            ui.get_app_icon().size().height
+        ),
+        (256, 256)
+    );
+    assert!(include_str!("../ui/app-window.slint").contains("icon: app-icon;"));
 
     window.dispatch_event(WindowEvent::ScaleFactorChanged { scale_factor: 1.0 });
     window.set_size(PhysicalSize::new(WIDTH, HEIGHT));

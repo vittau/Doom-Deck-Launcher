@@ -39,11 +39,11 @@ Writing Steam's `shortcuts.vdf` or grid folder (never, OVERVIEW §8). Desktop-fi
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R2) — SVG masters, export script and usage note committed; the emblem is shown at 32, 64, 256 px
+- [x] **A1** (R1–R2) — SVG masters, export script and usage note committed; the emblem is shown at 32, 64, 256 px
   on dark and light in one contact-sheet PNG.
-- [ ] **A2** (R3) — headless renders of header, loading and About show the logo; a test asserts
+- [x] **A2** (R3) — headless renders of header, loading and About show the logo; a test asserts
   the window icon is set.
-- [ ] **A3** (R4–R5) — release workflow packages `ddl/art/*`; README section and logo present;
+- [x] **A3** (R4–R5) — release workflow packages `ddl/art/*`; README section and logo present;
   fmt, clippy `-D warnings`, tests green.
 - [ ] **A4** — *Needs Deck Validation:* the custom artwork and icon look right in the Steam
   library and Gaming Mode.

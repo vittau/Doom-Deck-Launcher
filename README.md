@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/design/logo/full-name.svg" alt="DoomDeckLauncher — Ember Gate logo" width="700"></p>
+
 # DoomDeckLauncher
 
 **A native DOOM mapset launcher for Steam Deck.**
@@ -47,6 +49,7 @@ real screens are still ahead. Follow the repository's specs and journal for prog
    ddl/
    ├── ddl        # the executable
    ├── LICENSE
+   ├── art/       # Steam icons, capsules, hero and transparent logo
    └── README.md
    ```
 
@@ -66,6 +69,40 @@ Once DDL can launch a game, set up your controls as described in
 [Recommended Steam Deck Controller Setup](#recommended-steam-deck-controller-setup):
 Steam Input is configured by hand in Gaming Mode, and DDL never edits your controller
 files.
+
+## Make it look native in Steam
+
+The release includes original Ember Gate artwork in `ddl/art/`. In Desktop Mode,
+add DDL as a non-Steam game, then apply the images manually:
+
+1. Open the shortcut's **Properties**, click its icon and select `art/icon-256.png`
+   (or `icon-512.png`). Choose PNG / all files in the picker if needed.
+2. In the Library grid, right-click DDL → **Manage → Set custom artwork** and
+   choose `art/library-capsule.png`. For its wide Recent Games tile, repeat with
+   `art/wide-capsule.png` on that tile (it appears after launching DDL).
+3. Open DDL's Library details page, right-click the large background → **Set
+   custom background** → `art/hero.png`. Right-click there again → **Set custom
+   logo** → `art/logo.png`. Adjust the logo position if desired.
+4. Return to Gaming Mode and check the artwork in your Library.
+
+| File in `art/` | Size |
+| --- | --- |
+| `icon-256.png`, `icon-512.png` | 256×256, 512×512 |
+| `library-capsule.png` | 600×900 |
+| `wide-capsule.png` | 920×430 |
+| `hero.png` | 3840×1240 |
+| `logo.png` (transparent) | 1280×720 |
+
+**Confirmed:** sizes follow Valve's [Library Assets](https://partner.steamgames.com/doc/store/assets/libraryassets)
+and [Shortcut Icon](https://partner.steamgames.com/doc/store/assets/community) specifications
+(reviewed 2026-10-16). These are the intended artwork dimensions; they are not a
+claim that the custom picker rejects other sizes. Menu wording can vary with the
+Steam client. **Needs Deck Validation:** the final crop and appearance in Gaming
+Mode. DDL never writes Steam configuration; all steps above are manual.
+
+Repository owners can upload [social-preview.png](docs/design/logo/social-preview.png)
+(1280×640) in GitHub **Settings → General → Social preview**. See the
+[logo usage and export guide](docs/design/logo/README.md) for SVG masters.
 
 ## Recommended Steam Deck Controller Setup
 
