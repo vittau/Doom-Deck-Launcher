@@ -27,80 +27,62 @@ readability, input repeat/hotplug, game handoff, pistol start behavior and SIGIL
 
 ### Color tokens
 
-Opaque sRGB only. Contrast calculated with WCAG relative luminance. Exact computed values are
-in [verification.md](verification.md); rounded lower-bound ratios below apply to the brightest
-normal surface (`surface-raised`), hence also to darker surfaces.
+Ember Cathedral, intensified (D-021). Opaque sRGB surfaces protect all body text. WCAG
+relative-luminance ratios below use the brightest normal surface (`raised`).
 
-| Token | Hex | Use / contrast constraint |
+| Token | Hex | Use |
 | --- | --- | --- |
-| canvas | `#101418` | Window background |
-| surface | `#1B2229` | Cards and content groups |
-| surface-raised | `#26313B` | Selected fill, sheets, controls |
-| text | `#F4F1EA` | Primary text; ≥11:1 on all surfaces |
-| text-muted | `#B9C3CB` | Secondary text, including inactive controls; ≥7:1 |
-| focus / accent | `#FFCA70` | Focus ring and primary action; ≥8:1 against surfaces |
-| on-accent | `#101418` | Text on accent; ≥12:1 |
-| success | `#88D9B0` | Check + “Ready”; ≥7.9:1 |
-| warning | `#FFCA70` | Warning icon + explicit message; ≥8:1 |
-| danger | `#FFA69C` | Error icon + explicit message; ≥6:1 |
-| line | `#667482` | Non-text separators; never a focus indicator |
-| ember | `#C56342` | Decorative stripe only, never small text |
+| canvas / deep / on-accent | `#120C0D` | Chrome, separation, primary-button text |
+| surface | `#211719` | Opaque information panels |
+| raised | `#352527` | Rows, controls, sheets |
+| text | `#F8EAD5` | Bone foreground, 12.25:1 on raised |
+| muted | `#D0BCA7` | Secondary / hidden-folder text, 7.91:1 on raised |
+| focus / warning | `#FFD078` | Amber ring and primary action, 10.43:1 on raised |
+| success | `#88D9B0` | Positive checks with explicit text |
+| danger | `#FFA69C` | Error with explicit text |
+| line / steel-edge | `#80533B` | Decorative bronze separators |
+| ember / copper | `#B8583F` | Decorative oxblood trim |
 
-Body text must remain ≥4.5:1, large text ≥3:1. Do not reduce text opacity for disabled states;
-use an explicit “Unavailable” label and neutral fill. Focus remains visible on unavailable
-controls that explain a blocker. No busy art behind text or blur-heavy glass. Art is clipped to dedicated image regions; text sits on opaque surfaces.
+Body ≥4.5:1, large text ≥3:1. Hidden folders use muted text on opaque raised rows, never
+reduced opacity. Unavailable controls give explicit reasons and preserve readable text.
 
-### Visual identity: furnace / steel
+### Visual identity: Ember Cathedral
 
-The visual set uses industrial, hellish technology through original monumental abstract gateways,
-obsidian architecture and copper light. These are mood concepts, not representations of actual
-mapsets. Label them “Original concept art” in each image region; production cover art still needs
-explicit permission and recipe attribution. No franchise logos, sprites, screenshots or borrowed
-textures. Use PNG image regions and flat dark information panels, with only simple linear gradients
-in the surrounding canvas. Never stretch generated text or controls into the implementation.
-
-Additional tokens: `copper #D87850` for decorative rails/emblem only; `steel-edge #46515B` for
-subtle card edges; `canvas-deep #090D11` for chrome and shadows. Existing amber focus/action and
-text tokens remain unchanged with their measured contrast. Cool steel versus warm amber gives
-DDL a recognizable identity without red body text. Texture belongs inside the artwork only;
-content cards remain smooth and opaque. Drop shadow: black at 30%, 0/4 px offset, 8 px radius,
-optional in Slint. No blur or web renderer required. Artwork must not imply verification.
+Original carved oxblood wall repeats seamlessly, visibly surrounding smooth information panels.
+Pre-rendered bronze / red-stone frames use 28 px nine-slice borders, preserving corners at all
+panel sizes. Dedicated top art bands and cover regions carry “Original concept art” plaques.
+The original angular broken-circle emblem pairs with a clearly legible bone Barlow DDL logotype;
+no franchise lettering, sprites or copied textures. See `visual-v2/ember-cathedral/prompt.txt`
+for the retained original generation prompt and `crates/ddl/ui/assets/ember/build_assets.py`
+for the offline production compositor. Art does not imply gameplay verification.
 
 ### Typography and assets
 
-**Inter 4.1**, SIL Open Font License 1.1 (**Confirmed**, [license](https://github.com/rsms/inter/blob/v4.1/LICENSE.txt),
-[source/release](https://github.com/rsms/inter/releases/tag/v4.1)). It can be bundled with its
-copyright and OFL notice; retain its font license separately from DDL's GPL. The unmodified
-variable TTF and notice in `assets/` are used by the renderer. Implementation may bundle static
-Regular/Semibold instances from the same release if needed by Slint. No decorative face; wordmark
-pairs Inter Bold DDL lettering with an original angular split-gate emblem. The emblem uses two opposing copper brackets and an amber central beam, buildable as simple vector polygons; no imitation DOOM logo. Remove the unclear “Native / DSDA” header label: engine identity belongs in readiness and launch details.
+**Pirata One** for page, hero and section titles (≥26 px); **Barlow Regular** for body,
+controls, filenames and metadata. Both unmodified TTFs and SIL OFL 1.1 notices are bundled,
+with notices included in release tarballs. Verified sources and notices are retained in
+[visual-v2/fonts/SOURCE.txt](visual-v2/fonts/SOURCE.txt); Inter remains bundled for legacy assets.
 
-| Role | Size / line height | Weight |
+| Role | Size / line height | Face |
 | --- | --- | --- |
-| Page title | 36 / 44 px | 700 |
-| Hero title | 44 / 52 px | 700 |
-| Section / card title | 26 / 34 px | 600 |
-| Body / controls | 22 / 30 px | 400 / 600 |
-| Metadata / hint bar | 20 / 28 px | 400 / 600 |
+| Page title | 36 / 44 px | Pirata One |
+| Hero title | 44 / 52 px | Pirata One |
+| Section / card title | 26 / 34 px | Pirata One |
+| Body / controls | 22 / 30 px | Barlow |
+| Metadata / hint bar | 20 / 28 px | Barlow |
 
-Preserve filename case. Wrap titles and descriptions; truncate paths in the middle with full
-path in a focusable details view. No essential information in tooltips. Minimum interactive
-height 52 px; 64 px for two-line rows. Long lists scroll inside the content area.
+Preserve filename case. Wrap titles and descriptions; directory breadcrumbs elide from the
+start so the destination remains visible. No essential tooltips. Minimum control height 52 px;
+64 px for two-line rows. Long lists scroll inside the content area.
 
 ### Geometry, elevation, icons and motion
 
 Spacing: 4, 8, 12, 16, 24, 32, 48 px. Outer inset 40; cards 24; column gap 24.
-Radii: 8 for buttons/rows, 12 for cards/sheets, circles only for button glyphs/status markers.
-Layer 0 canvas; layer 1 opaque surface; layer 2 opaque raised sheet with 1 px line border.
-A short dark drop shadow and a 1 px steel edge separate cards; no backdrop blur. Icons are original 24 px vector outlines, 2 px strokes: check, warning,
-folder, download, arrow and info. Pair all meaning-bearing icons with translatable text.
-
-Focus: exactly one active target, 4 px amber outer ring with 4 px canvas separation, enclosing
-its complete bounds. Ring never changes layout, clips at pane edges or disappears on Play.
-Active tab uses an underline, selection uses a check; neither substitutes for the focus ring.
-Use dark separation around amber primary buttons so ring is still distinct. No pulsing focus.
-Motion: 100 ms color transition, 160 ms sheet transition, no parallax or zoom. Focus moves
-immediately. Indeterminate progress may pulse only the bar; reduced-motion setting makes it static.
+Opaque flat panels with carved perimeters; bevelled bronze controls and circular / pill footer
+badges. One active target: 4 px amber outer ring with 4 px dark separation around its complete
+bounds. Active-tab underline and selection never replace the ring. Focus does not change layout.
+Original simple icons always pair with text. No continuous animation, pulsing, blur or parallax;
+pre-rendered PNG materials and nine-slice frames keep idle work low in the software renderer.
 
 ### Layout and translation
 
