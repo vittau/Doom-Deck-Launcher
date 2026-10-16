@@ -49,19 +49,19 @@ Recipe parsing (002), install records and library (later spec), UI. Formats othe
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R3) — local HTTP test server (no internet): happy path, redirect limit,
+- [x] **A1** (R1, R3) — local HTTP test server (no internet): happy path, redirect limit,
   redirect to a non-allowlisted host, HTTP refused, size exceeded, hash mismatch then mirror
   success, cache hit with re-hash.
-- [ ] **A2** (R2) — progress monotonic; cancel mid-stream leaves no temp file.
-- [ ] **A3** (R4) — fixtures generated in tests: flat zip, nested zip (`a.zip!/b.wad`), missing
+- [x] **A2** (R2) — progress monotonic; cancel mid-stream leaves no temp file.
+- [x] **A3** (R4) — fixtures generated in tests: flat zip, nested zip (`a.zip!/b.wad`), missing
   member with case hint, member hash check.
-- [ ] **A4** (R5) — adversarial fixtures generated in tests: `../` traversal, absolute path,
+- [x] **A4** (R5) — adversarial fixtures generated in tests: `../` traversal, absolute path,
   symlink entry, zip bomb ratio, too many members, depth > 2; each rejected with its typed error
   and nothing written outside staging.
-- [ ] **A5** — `cargo test` needs no network.
+- [x] **A5** — `cargo test` needs no network.
 
 ## Tasks
 
-- [ ] Fetcher with allowlist, redirects, limits, hashing, mirrors, cache
-- [ ] Progress/cancel
-- [ ] ZIP extraction with nested paths and safety limits
+- [x] Fetcher with allowlist, redirects, limits, hashing, mirrors, cache
+- [x] Progress/cancel
+- [x] ZIP extraction with nested paths and safety limits
