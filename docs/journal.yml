@@ -168,3 +168,10 @@
     Blockers + separate prepare(), Will-launch summary, embedded catalog, lint --fetch on the
     shared downloader. 294 tests green. D-019 recorded.
   refs: [docs/specs/009-install-resolve.md, docs/reports/009-install-resolve.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 011 merged — README "Recommended Steam Deck Controller Setup": Classic and
+    Modern + Gyro layouts mapped to DSDA defaults, double-input and sensitivity guidance,
+    strict-demo keyboard+mouse alternative, unverified items listed.
+  refs: [README.md, docs/reports/011-readme-steam-input.md]
