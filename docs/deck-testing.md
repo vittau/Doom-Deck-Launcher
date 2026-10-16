@@ -24,7 +24,24 @@ Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run
 | S5 | No crash on exit; Steam returns to the library | Gaming | ⏳ | |
 | S6 | Output of `ldd ddl` — any "not found" libraries? | Desktop | ⏳ | paste missing ones |
 
-## Engine (specs 003, 004) — later releases
+## Release 0.0.2 — first playable build (spec 010)
+
+Visuals are the interim look; the DOOM-flavoured identity (spec 012, D-020) comes later. Run in
+this order (≈30 min); then the E, C, M and I tables below. S1–S6 apply too: `--windowed` and
+the controller now work (gilrs).
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| F1 | First run: **Install DSDA-Doom** downloads, shows progress, finishes; cancel mid-way then retry works | Gaming | ⏳ | covers E1/E2 |
+| F2 | IWADs: Steam DOOM + DOOM II found automatically, or **Add IWAD folder** browser reaches `/run/media/*` (SD card) with D-pad only | Gaming | ⏳ | covers C3; note paths |
+| F3 | Discover → SIGIL → **Install**: download + extraction with progress; then SIGIL II and AUGER;ZENITH | Gaming | ⏳ | note any error text |
+| F4 | Play setup shows base game found, numbered load order, complevel; **Play** starts DSDA fullscreen | Gaming | ⏳ | covers E4 |
+| F5 | Quit DSDA (menu → Quit): DDL comes back with focus on Play, no stray input | Gaming | ⏳ | covers E4/I1 |
+| F6 | AUGER;ZENITH add-on choice (None / Alternate / Deckard) persists after relaunch of DDL | Gaming | ⏳ | |
+| F7 | Missing IWAD (e.g. no Ultimate DOOM): Play disabled with the reason and **Add IWAD folder** | Gaming | ⏳ | |
+| F8 | Logs: `~/.local/state/ddl/logs/ddl.log` exists; attach it to any ❌ | Desktop | ⏳ | path shown in Settings → Diagnostics |
+
+## Engine (specs 003, 004)
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
@@ -41,7 +58,7 @@ Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run
 | C1 | Change a DSDA menu option, quit, relaunch from DDL: it persists | Gaming | ⏳ | |
 | C2 | A standalone DSDA install's config (`~/.dsda-doom/` or `~/.local/share/dsda-doom/`) is untouched | Desktop | ⏳ | |
 | C3 | DDL finds the DOOM + DOOM II Steam install and identifies its IWADs (`base/` and `rerelease/`) | Gaming | ⏳ | |
-| C4 | Saves for two profiles stay separate | Gaming | ⏳ | |
+| C4 | Saves for two profiles stay separate | Gaming | ⏳ | UI has one Default profile per mapset for now (spec 010); later spec |
 
 ## Reference mapsets
 
