@@ -1,0 +1,54 @@
+# DDL DSDA-Doom baseline template: `steam-deck-default` (spec 005, R2).
+#
+# This is hand-authored data, so it is stored as TOML (D-006). DDL renders it to
+# DSDA's own line-oriented `name value` config format (R1) and writes the result
+# to its private `<config dir>/dsda/active.cfg` (R3). It never edits the config a
+# separately installed DSDA-Doom keeps under `~/.dsda-doom/` or
+# `$XDG_DATA_HOME/dsda-doom/` (D-012).
+#
+# `values` below lists only the keys DDL owns. Unknown keys are rejected when the
+# file is loaded, so a typo cannot silently claim ownership of a key DSDA would
+# otherwise own.
+#
+# Every value that is marked "upstream default" was transcribed from DSDA-Doom
+# v0.30.1 `prboom2/src/dsda/configuration.c` (see `docs/research/dsda-engine.md`
+# §4). Those values are the engine's own defaults and are **not** Steam Deck
+# tuning; Deck-calibrated values are out of scope for v1 and arrive later from
+# on-device testing (OVERVIEW §8.1).
+
+# Increments whenever the baseline changes; DDL uses it to detect a migration and
+# to name `<config dir>/dsda/base/<template_version>.cfg` (R3, R5). Kept as a
+# string so a future `1.1` needs no schema change.
+template_version = "1"
+
+# DSDA-Doom versions this template was written and checked against. Pinned to the
+# one researched tagged release; see `docs/research/dsda-engine.md` (v0.30.1,
+# commit 8ed581ad5c868b4dba1c39eb21d29e4ddbed9fad). Range ends are inclusive.
+dsda_version_min = "0.30.1"
+dsda_version_max = "0.30.1"
+
+[values]
+# --- DDL intent, not an upstream default -------------------------------------
+# Enable the game controller. DSDA's upstream default is 0 (keyboard only), so
+# DDL deliberately changes this to 1 so a fresh Deck has pad input in-game.
+use_game_controller = 1
+
+# --- upstream defaults, not Deck tuning --------------------------------------
+# Keep mouse input enabled so trackpad / gyro-as-mouse keeps working alongside
+# the pad (OVERVIEW §8.1); upstream default is already 1.
+use_mouse = 1
+# Analog response and deadzones (OVERVIEW §8.1); upstream defaults.
+left_analog_deadzone = 6556
+right_analog_deadzone = 6556
+left_analog_sensitivity_x = 100
+left_analog_sensitivity_y = 100
+right_analog_sensitivity_x = 1536
+right_analog_sensitivity_y = 768
+analog_look_acceleration = 0
+# Mouse response (OVERVIEW §8.1); upstream defaults.
+dsda_mouse_acceleration = 0
+mouse_sensitivity_horiz = 10
+mouse_sensitivity_mlook = 10
+# Analog roles and look direction (OVERVIEW §8.1); upstream defaults.
+swap_analogs = 0
+invert_analog_look = 0
