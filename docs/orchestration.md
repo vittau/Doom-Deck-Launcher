@@ -8,7 +8,9 @@ Read this before taking over as orchestrator. Workers only need `AGENTS.md` and 
 - **Owner** (human): sets direction, tests release builds on a physical Steam Deck LCD. Wants an
   autonomous end-to-end flow: escalate only questions that change the project's direction
   (scope, platform or engine, legal/licensing risk, conflict with an explicit owner request).
-  Decide everything else, record it, and report it in the next status update.
+  Decide everything else, record it, and report it in the next status update. When the owner's
+  input is needed, also notify them on Telegram through the Make MCP scenario "Integration
+  Telegram Bot" (inputs `question`, `context`, `options`, `request_id`).
 - **Orchestrator** (Claude Opus 5.5, effort high, running in an Orca terminal): turns research
   into specs, writes task briefs, dispatches and monitors workers, reviews and merges their
   branches, pushes, tags pre-releases, and owns `docs/status.md`, `docs/journal.yml`,
