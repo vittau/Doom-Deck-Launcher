@@ -181,6 +181,7 @@ impl Drop for Extraction {
 pub struct Extractor {
     staging_root: PathBuf,
     limits: ExtractLimits,
+    cancel: super::CancellationToken,
 }
 
 impl Extractor {
@@ -191,6 +192,21 @@ impl Extractor {
         Self {
             staging_root: staging_root.into(),
             limits: ExtractLimits::default(),
+            cancel: super::CancellationToken::new(),
+        }
+    }
+
+    /// Cooperatively cancels between decompression chunks and archive members.
+    #[must_use]
+    pub fn with_cancellation(mut self, cancel: super::CancellationToken) -> Self {
+        self.cancel = cancel;
+        self
+    }
+    fn check_cancelled(&self) -> Result<(), Error> {
+        if self.cancel.is_cancelled() {
+            Err(Error::Cancelled)
+        } else {
+            Ok(())
         }
     }
 
@@ -215,6 +231,7 @@ impl Extractor {
     /// See [`Error`]. On any failure the staging directory is removed and
     /// nothing is written outside it.
     pub fn extract(&self, package: &Path, members: &[MemberRequest]) -> Result<Extraction, Error> {
+        self.check_cancelled()?;
         let staging = create_staging_dir(&self.staging_root)?;
         let mut counters = Counters { total: 0 };
         let mut extracted: Vec<ExtractedMember> = Vec::with_capacity(members.len());
@@ -262,6 +279,7 @@ impl Extractor {
         self.check_archive_limits(&archive)?;
 
         for member in members {
+            self.check_cancelled()?;
             let segments = parse_member_path(&member.path)?;
             let depth = segments.len() - 1;
             if depth > usize::from(self.limits.max_nesting_depth) {
@@ -372,6 +390,7 @@ impl Extractor {
         let mut written: u64 = 0;
         let mut buffer = vec![0u8; EXTRACT_BUFFER];
         loop {
+            self.check_cancelled()?;
             let read = file
                 .read(&mut buffer)
                 .map_err(|error| archive_corrupt(&error.to_string()))?;
@@ -432,6 +451,7 @@ impl Extractor {
         let mut written: u64 = 0;
         let mut buffer = vec![0u8; EXTRACT_BUFFER];
         loop {
+            self.check_cancelled()?;
             let read = file
                 .read(&mut buffer)
                 .map_err(|error| archive_corrupt(&error.to_string()))?;
@@ -1069,5 +1089,22 @@ mod tests {
                 bytes[index + 38..index + 42].copy_from_slice(&attributes.to_le_bytes());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    #[test]
+    fn cancelled_extraction_does_not_read_or_create_staging() {
+        let dir = tempfile::tempdir().unwrap();
+        let cancel = crate::downloads::CancellationToken::new();
+        cancel.cancel();
+        let staging = dir.path().join("staging");
+        let extractor = super::Extractor::new(&staging).with_cancellation(cancel);
+        assert!(matches!(
+            extractor.extract(&dir.path().join("absent.zip"), &[]),
+            Err(super::Error::Cancelled)
+        ));
+        assert!(!staging.exists());
     }
 }

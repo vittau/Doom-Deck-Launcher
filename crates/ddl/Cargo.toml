@@ -20,6 +20,8 @@ slint = { workspace = true }
 gilrs = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
 
 [build-dependencies]
 slint-build = { workspace = true }
@@ -30,3 +32,6 @@ slint-build = { workspace = true }
 # image-rs project and adds no system library requirements.
 [dev-dependencies]
 png = "=0.18.1"
+tempfile.workspace = true
+zip.workspace = true
+ddl-core = { path = "../ddl-core", features = ["test-support"] }

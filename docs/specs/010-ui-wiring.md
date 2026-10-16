@@ -50,7 +50,7 @@ plays — controller only (OVERVIEW §3, Milestone 1–2 exit criteria).
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R8) — headless end-to-end test as in R8 passes; headless PNGs of each state.
+- [x] **A1** (R1–R8) — headless end-to-end test as in R8 passes; headless PNGs of each state.
 - [ ] **A2** — fmt, clippy `-D warnings`, tests green; CI green.
 - [ ] **A3** — *Needs Deck Validation:* the full journey on the Deck (`docs/deck-testing.md`
   E1–E5, C1–C4, M1–M6).

@@ -75,6 +75,31 @@ pub fn install(
     allowed_hosts: &HostAllowlist,
     clock: &dyn Clock,
 ) -> Result<InstalledEngine, InstallError> {
+    install_with_progress(
+        engines_root,
+        request,
+        fetcher,
+        allowed_hosts,
+        clock,
+        &CancellationToken::new(),
+        &mut |_| {},
+    )
+}
+
+/// Installs with transfer notifications and cancellation before atomic commit.
+pub fn install_with_progress(
+    engines_root: &Path,
+    request: &InstallRequest,
+    fetcher: &Fetcher,
+    allowed_hosts: &HostAllowlist,
+    clock: &dyn Clock,
+    cancel: &CancellationToken,
+    progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+) -> Result<InstalledEngine, InstallError> {
+    use crate::downloads::{InstallProgress, InstallStage};
+    if cancel.is_cancelled() {
+        return Err(crate::downloads::Error::Cancelled.into());
+    }
     if !is_safe_component(&request.version) {
         return Err(InstallError::UnsafeVersion(request.version.clone()));
     }
@@ -84,8 +109,13 @@ pub fn install(
     let staging = unique_staging_dir(engines_root, &request.version);
     fs::create_dir_all(&staging).map_err(|error| io_error("create staging directory", error))?;
 
-    match stage(&staging, request, fetcher, allowed_hosts) {
+    match stage(&staging, request, fetcher, allowed_hosts, cancel, progress) {
         Ok((mode, relative)) => {
+            if cancel.is_cancelled() {
+                let _ = fs::remove_dir_all(&staging);
+                return Err(crate::downloads::Error::Cancelled.into());
+            }
+            progress(InstallProgress::stage(InstallStage::Commit));
             let final_dir = engines_root.join(&request.version);
             // A directory without a state record is a leftover from an
             // interrupted install; replace it.
@@ -123,6 +153,8 @@ fn stage(
     request: &InstallRequest,
     fetcher: &Fetcher,
     allowed_hosts: &HostAllowlist,
+    cancel: &CancellationToken,
+    progress: &mut dyn FnMut(crate::downloads::InstallProgress),
 ) -> Result<(Mode, PathBuf), InstallError> {
     let download = DownloadRequest::new(
         request.source_url.clone(),
@@ -131,9 +163,18 @@ fn stage(
         allowed_hosts.clone(),
     )
     .with_size(request.expected_size);
-    let cancel = CancellationToken::new();
-    let mut progress = |_progress| {};
-    let cached = fetcher.download(&download, &cancel, &mut progress)?;
+    use crate::downloads::{InstallProgress, InstallStage};
+    progress(InstallProgress::transfer(crate::downloads::Progress {
+        downloaded: 0,
+        total: Some(request.expected_size),
+    }));
+    let cached = fetcher.download(&download, cancel, &mut |p| {
+        progress(InstallProgress::transfer(p))
+    })?;
+    if cancel.is_cancelled() {
+        return Err(crate::downloads::Error::Cancelled.into());
+    }
+    progress(InstallProgress::stage(InstallStage::Verify));
 
     let appimage = staging.join(APPIMAGE_FILE);
     fs::copy(&cached, &appimage)
@@ -158,7 +199,11 @@ fn stage(
             reported: version,
         }),
         Err(SmokeError::Exited { stderr, exit: _ }) if indicates_fuse(&stderr) => {
-            extract_and_stage_apprun(staging, &appimage, request)
+            if cancel.is_cancelled() {
+                return Err(crate::downloads::Error::Cancelled.into());
+            }
+            progress(InstallProgress::stage(InstallStage::Extract));
+            extract_and_stage_apprun(staging, &appimage, request, cancel)
         }
         Err(error) => Err(InstallError::Smoke(Box::new(error))),
     }
@@ -169,8 +214,9 @@ fn extract_and_stage_apprun(
     staging: &Path,
     appimage: &Path,
     request: &InstallRequest,
+    cancel: &CancellationToken,
 ) -> Result<(Mode, PathBuf), InstallError> {
-    run_extraction(appimage, staging)?;
+    run_extraction(appimage, staging, cancel)?;
 
     let relative = PathBuf::from(EXTRACT_DIR).join(EXTRACT_ENTRY);
     let apprun = staging.join(&relative);
@@ -200,7 +246,11 @@ pub fn indicates_fuse(stderr: &str) -> bool {
 
 /// Runs `<appimage> --appimage-extract` in `workdir`, bounded by
 /// [`EXTRACT_TIMEOUT`].
-fn run_extraction(appimage: &Path, workdir: &Path) -> Result<(), InstallError> {
+fn run_extraction(
+    appimage: &Path,
+    workdir: &Path,
+    cancel: &CancellationToken,
+) -> Result<(), InstallError> {
     let mut child = Command::new(appimage)
         .arg("--appimage-extract")
         .current_dir(workdir)
@@ -219,6 +269,12 @@ fn run_extraction(appimage: &Path, workdir: &Path) -> Result<(), InstallError> {
 
     let deadline = Instant::now() + EXTRACT_TIMEOUT;
     let status = loop {
+        if cancel.is_cancelled() {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = stderr_reader.join();
+            return Err(crate::downloads::Error::Cancelled.into());
+        }
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() >= deadline => {

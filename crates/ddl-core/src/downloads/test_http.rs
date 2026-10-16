@@ -5,7 +5,7 @@
 //! download test runs against `Server`, a real `TcpListener` on `127.0.0.1`
 //! that answers from a closure. It speaks just enough HTTP for the fetcher:
 //! one request per connection, `Content-Length`, `Location` and a status line.
-#![cfg(test)]
+#![cfg(any(test, feature = "test-support"))]
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};

@@ -45,8 +45,8 @@ pub mod fetch;
 pub mod hash;
 pub mod host;
 
-#[cfg(test)]
-pub(crate) mod test_http;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_http;
 
 pub use cancel::CancellationToken;
 pub use error::{Error, LimitKind};
@@ -54,3 +54,32 @@ pub use extract::{ExtractLimits, ExtractedMember, Extraction, Extractor, MemberR
 pub use fetch::{DEFAULT_REDIRECT_EXCEPTIONS, DownloadRequest, Fetcher, MAX_REDIRECTS, Progress};
 pub use hash::Sha256;
 pub use host::HostAllowlist;
+
+/// Install stages with no fabricated completion percentage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstallStage {
+    Download,
+    Verify,
+    Extract,
+    Commit,
+}
+/// Worker-thread install notification. Byte totals apply only to Download.
+#[derive(Debug, Clone, Copy)]
+pub struct InstallProgress {
+    pub stage: InstallStage,
+    pub transfer: Option<Progress>,
+}
+impl InstallProgress {
+    pub fn stage(stage: InstallStage) -> Self {
+        Self {
+            stage,
+            transfer: None,
+        }
+    }
+    pub fn transfer(progress: Progress) -> Self {
+        Self {
+            stage: InstallStage::Download,
+            transfer: Some(progress),
+        }
+    }
+}

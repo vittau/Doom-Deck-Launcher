@@ -33,11 +33,43 @@ pub fn init() {
         Err(_) => LevelFilter::INFO,
     };
 
+    // Initialize before any window/event loop exists. Worker diagnostics and engine logs
+    // then share the location exposed in Settings.
+    let file = ddl_core::platform::paths::resolve(&|key: &str| std::env::var(key).ok())
+        .ok()
+        .and_then(|paths| {
+            let dir = paths.state.join("logs");
+            std::fs::create_dir_all(&dir).ok()?;
+            std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(dir.join("ddl.log"))
+                .ok()
+        })
+        .map(|file| std::sync::Arc::new(std::sync::Mutex::new(file)));
     let _ = tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
+        .with_writer(move || LogWriter { file: file.clone() })
         .with_max_level(level)
         // Plain text: logs are read from a file or a Steam launch log, where
         // escape codes are noise.
         .with_ansi(false)
         .try_init();
+}
+
+struct LogWriter {
+    file: Option<std::sync::Arc<std::sync::Mutex<std::fs::File>>>,
+}
+impl std::io::Write for LogWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        std::io::stderr().write_all(bytes)?;
+        if let Some(file) = &self.file
+            && let Ok(mut file) = file.lock()
+        {
+            file.write_all(bytes)?;
+        }
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        std::io::stderr().flush()
+    }
 }

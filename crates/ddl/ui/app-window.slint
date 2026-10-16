@@ -1,5 +1,6 @@
 import "assets/InterVariable.ttf";
 import { Tokens } from "tokens.slint";
+export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
 export struct ViewNode {
     id: int, x: float, y: float, w: float, h: float,
@@ -19,6 +20,11 @@ component Node inherits Rectangle {
     if focused: Rectangle {
         x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px;
         background: transparent; border-radius: 16px; border-color: Tokens.focus; border-width: 4px;
+    }
+    if item.kind == 6: Rectangle {
+        y: (parent.height - 12px) / 2; height: 12px; width: parent.width;
+        background: Tokens.raised; border-radius: 6px;
+        Rectangle {height: parent.height; x: root.item.art < 0 ? parent.width / 3 : 0px; width: root.item.art < 0 ? parent.width / 3 : parent.width * root.item.art / 1000; background: Tokens.focus; border-radius: 6px;}
     }
     if item.kind == 4: Rectangle {
         clip: true; border-radius: Tokens.card-radius;
@@ -52,6 +58,23 @@ component Node inherits Rectangle {
         clicked => { root.activate(root.item.id); }
     }
 }
+component Badge inherits Rectangle {
+    in property <string> label;
+    in property <bool> pill: false;
+    width: pill ? 54px : 28px; height: 28px;
+    background: Tokens.raised; border-width: 1px; border-color: Tokens.muted;
+    border-radius: pill ? 7px : 14px;
+    Text { text: root.label; color: Tokens.text; font-size: 16px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+}
+component Hint inherits HorizontalLayout {
+    in property <string> badge;
+    in property <string> label;
+    in property <bool> pill: false;
+    spacing: 8px; alignment: start; horizontal-stretch: 0;
+    height: 28px;
+    Badge { label: root.badge; pill: root.pill; }
+    Text { text: root.label; color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+}
 export component AppWindow inherits Window {
     title: @tr("DoomDeckLauncher");
     width: 1280px; height: 800px;
@@ -61,6 +84,7 @@ export component AppWindow inherits Window {
     in property <int> focused: 0;
     in property <int> active-tab: 0;
     in property <bool> root-screen: true;
+    in property <bool> input-locked: false;
     in property <string> heading;
     in property <string> subtitle;
     in property <string> a-hint: @tr("Open");
@@ -73,6 +97,7 @@ export component AppWindow inherits Window {
     in property <bool> sheet-open: false;
     in property <string> sheet-title;
     callback quit-requested();
+    callback services-ready();
     in property <bool> setup-screen: false;
     callback action(int);
     callback clicked(int);
@@ -99,7 +124,7 @@ export component AppWindow inherits Window {
     Text { x: 40px; y: 176px; width: parent.width - 80px; height: 32px; text: root.subtitle; color: Tokens.muted; }
     Flickable {
         x: 28px; y: 218px; width: parent.width - 56px; height: parent.height - 294px;
-        content-width: 1224px; content-height: 502px;
+        content-width: 1224px; content-height: 502px + root.scroll-offset * 1px;
         content-y: -root.scroll-offset * 1px;
         for item in root.nodes: Node { visible: !root.setup-screen || item.x < 700; item: item; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }
@@ -108,23 +133,25 @@ export component AppWindow inherits Window {
         for item in root.nodes: Node { visible: item.x >= 700; item: item; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }
     if root.toast != "": Rectangle {
-        x: 40px; y: parent.height - 124px; width: parent.width - 80px; height: 52px;
+        x: 40px; y: 172px; width: parent.width - 80px; height: 64px;
         background: Tokens.raised; border-radius: 8px;
-        Text { x: 16px; text: root.toast; color: Tokens.text; vertical-alignment: center; }
+        Text { x: 16px; width: parent.width - 32px; text: root.toast; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; wrap: word-wrap; }
     }
     Rectangle {
         x: 0px; width: parent.width; y: parent.height - 64px; height: 64px; background: Tokens.deep;
-        HorizontalLayout {
+        if !root.input-locked: HorizontalLayout {
+            y: 18px; height: 28px; alignment: start;
             padding-left: 40px; padding-right: 40px; spacing: 24px;
-            Text { text: @tr("A  {}", root.a-hint); color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
-            Text { text: @tr("B  Back"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
-            if root.favorite-hint: Text { text: @tr("X  Favorite"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
-            if root.detail-hint: Text { text: @tr("X  Details"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
-            if root.import-hint: Text { text: @tr("Y  Import"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
-            if root.root-screen && !root.sheet-open: Text { text: @tr("L1/R1  Tabs"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
-            Text { text: @tr("Start  Menu"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            Hint { badge: @tr("A"); label: root.a-hint; }
+            Hint { badge: @tr("B"); label: @tr("Back"); }
+            if root.favorite-hint: Hint { badge: @tr("X"); label: @tr("Favorite"); }
+            if root.detail-hint: Hint { badge: @tr("X"); label: @tr("Details"); }
+            if root.import-hint: Hint { badge: @tr("Y"); label: @tr("Import"); }
+            if root.root-screen && !root.sheet-open: Hint { badge: @tr("L1/R1"); label: @tr("Tabs"); pill: true; }
+            Hint { badge: @tr("Start"); label: @tr("Menu"); pill: true; }
         }
     }
+    if root.input-locked: Text {x:40px;y:parent.height - 64px;height:64px;text:@tr("Game running — return here when you exit");color:Tokens.muted;vertical-alignment:center;}
     if root.sheet-open: Rectangle {
         x: 0px; y: 0px; width: parent.width; height: parent.height; background: #090D11E0;
         Rectangle {

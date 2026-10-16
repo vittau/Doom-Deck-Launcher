@@ -1,15 +1,21 @@
 //! `ddl` — DoomDeckLauncher, a native DOOM mapset launcher for Steam Deck.
 //!
-//! Fixture-backed, controller-first UI shell (spec 008).
+//! Controller-first UI backed by core services (spec 010).
 
 mod cli;
+#[cfg(test)]
 mod copy;
+#[cfg(test)]
 mod fixtures;
 #[cfg(test)]
 mod headless;
 mod input;
 mod logging;
+mod runtime;
+mod services;
+#[cfg(test)]
 mod shell;
+mod wiring_copy;
 
 use std::process::ExitCode;
 
@@ -85,12 +91,10 @@ fn main() -> ExitCode {
     }
 }
 
-/// Builds and runs the fixture shell until the user quits.
+/// Builds and runs the production shell until the user quits.
 fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
-    log_directories();
-
     let ui = AppWindow::new()?;
-    let state = shell::attach(&ui);
+    let state = runtime::attach(&ui)?;
     // Only the confirmed Quit action reaches this callback.
     ui.on_quit_requested(|| {
         info!("quit requested, closing the window");
@@ -115,7 +119,9 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
     let mut gamepads = input::Gamepads::new();
     timer.start(slint::TimerMode::Repeated, input::CONFIG.poll, move || {
         if let Some(ui) = weak.upgrade() {
-            let (actions, connections) = gamepads.poll(ui.get_input_active());
+            let (actions, connections) =
+                gamepads.poll(ui.get_input_active() && !state.borrow().playing);
+            state.borrow_mut().neutral_poll(actions.is_empty());
             for connected in connections {
                 state.borrow().hotplug(&ui, connected);
             }
@@ -126,24 +132,4 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
     });
     ui.run()?;
     Ok(())
-}
-
-/// Resolves and logs DDL's XDG directories.
-///
-/// A missing `HOME` is reported as a warning rather than aborting: the
-/// fixture shell needs no directories, and spec 001 (R2) only requires
-/// resolution to fail cleanly.
-fn log_directories() {
-    use ddl_core::platform::paths;
-
-    match paths::resolve(&|key: &str| std::env::var(key).ok()) {
-        Ok(dirs) => debug!(
-            config = %dirs.config.display(),
-            data = %dirs.data.display(),
-            cache = %dirs.cache.display(),
-            state = %dirs.state.display(),
-            "resolved DDL directories"
-        ),
-        Err(err) => warn!(error = %err, "could not resolve DDL directories"),
-    }
 }

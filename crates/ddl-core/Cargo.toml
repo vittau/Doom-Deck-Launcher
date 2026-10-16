@@ -40,3 +40,7 @@ tempfile.workspace = true
 [[bin]]
 name = "ddl-launch-probe"
 path = "src/bin/ddl-launch-probe.rs"
+
+[features]
+# Explicit offline integration-test seams; never enabled by release builds.
+test-support = []
