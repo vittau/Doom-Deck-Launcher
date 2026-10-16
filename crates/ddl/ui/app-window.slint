@@ -1,0 +1,109 @@
+// Placeholder shell for DoomDeckLauncher (spec 001, R4).
+//
+// Scope: a fullscreen window with the product name and a three-entry menu that
+// is driven by the keyboard only. Gamepad input arrives with the input spike,
+// and the real screens replace this component in later specs.
+//
+// Design rules honoured here:
+//   * no hover-dependent behaviour: the focus highlight is drawn purely from
+//     the `selected` index, never from pointer state;
+//   * readable at 1280x800 (the Steam Deck panel resolution);
+//   * "Quit" and Escape both ask the host to exit with status 0.
+
+export component AppWindow inherits Window {
+    // Title shown by the window manager and by Steam's overlay.
+    title: "DoomDeckLauncher";
+
+    // Which menu entry is focused. Kept in the UI so the highlight is reactive.
+    in-out property <int> selected: 0;
+
+    // Placeholder entries, in display order. The last entry quits.
+    in property <[string]> items: ["Play", "Settings", "Quit"];
+
+    // Enter/Return was pressed on the focused entry.
+    callback menu-activated(int);
+    // The user asked to leave DoomDeckLauncher ("Quit" entry or Escape).
+    callback quit-requested();
+
+    // Keyboard events are delivered to the focused element; this window has no
+    // focusable widgets, so route them to the invisible scope at the bottom.
+    forward-focus: key-handler;
+
+    background: #0b0e13;
+
+    VerticalLayout {
+        alignment: center;
+        padding-left: 180px;
+        padding-right: 180px;
+        spacing: 24px;
+
+        Text {
+            text: "DoomDeckLauncher";
+            font-size: 46px;
+            font-weight: 700;
+            color: #f2f5f9;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "pre-alpha placeholder - keyboard only";
+            font-size: 18px;
+            color: #8b97a8;
+            horizontal-alignment: center;
+        }
+
+        // The menu itself. Plain rectangles keep the highlight fully under our
+        // control (no widget hover/focus styling leaking in).
+        for label[index] in items : Rectangle {
+            min-height: 76px;
+            border-radius: 12px;
+            border-width: index == root.selected ? 4px : 2px;
+            border-color: index == root.selected ? #9dc4ff : #2b3442;
+            background: index == root.selected ? #2f6fdb : #161b23;
+
+            Text {
+                text: label;
+                font-size: 30px;
+                color: #ffffff;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: "Up/Down: move    Enter: select    Quit or Escape: exit";
+            font-size: 18px;
+            color: #8b97a8;
+            horizontal-alignment: center;
+        }
+    }
+
+    // Non-visual keyboard handler that holds the focus for the whole window.
+    key-handler := FocusScope {
+        width: 100%;
+        height: 100%;
+
+        key-pressed(event) => {
+            if (event.text == Key.UpArrow) {
+                root.selected = root.selected > 0 ? root.selected - 1 : 0;
+                return accept;
+            }
+            if (event.text == Key.DownArrow) {
+                root.selected = root.selected < root.items.length - 1 ? root.selected + 1 : root.selected;
+                return accept;
+            }
+            if (event.text == Key.Return) {
+                root.menu-activated(root.selected);
+                if (root.selected == root.items.length - 1) {
+                    root.quit-requested();
+                }
+                return accept;
+            }
+            if (event.text == Key.Escape) {
+                root.quit-requested();
+                return accept;
+            }
+            return reject;
+        }
+    }
+}
