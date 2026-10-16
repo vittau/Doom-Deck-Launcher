@@ -677,7 +677,7 @@ mod tests {
         s.execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
             .unwrap();
         let snapshot = s.snapshot().unwrap();
-        assert_eq!(snapshot.items.len(), 3);
+        assert_eq!(snapshot.items.len(), 4);
         assert!(snapshot.engine.is_none());
         assert!(snapshot.config_usable);
         assert!(snapshot.iwads.is_empty());
@@ -762,7 +762,7 @@ mod tests {
         let view = s.snapshot().unwrap();
         assert!(!view.config_usable);
         assert!(view.config_notice);
-        assert_eq!(view.items.len(), 3);
+        assert_eq!(view.items.len(), 4);
     }
 }
 
