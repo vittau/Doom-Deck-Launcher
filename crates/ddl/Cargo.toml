@@ -33,4 +33,5 @@ slint-build = { workspace = true }
 [dev-dependencies]
 png = "=0.18.1"
 tempfile.workspace = true
+zip.workspace = true
 ddl-core = { path = "../ddl-core", features = ["test-support"] }

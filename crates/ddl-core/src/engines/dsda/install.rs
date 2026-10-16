@@ -200,7 +200,7 @@ fn stage(
                 return Err(crate::downloads::Error::Cancelled.into());
             }
             progress(InstallProgress::stage(InstallStage::Extract));
-            extract_and_stage_apprun(staging, &appimage, request)
+            extract_and_stage_apprun(staging, &appimage, request, cancel)
         }
         Err(error) => Err(InstallError::Smoke(Box::new(error))),
     }
@@ -211,8 +211,9 @@ fn extract_and_stage_apprun(
     staging: &Path,
     appimage: &Path,
     request: &InstallRequest,
+    cancel: &CancellationToken,
 ) -> Result<(Mode, PathBuf), InstallError> {
-    run_extraction(appimage, staging)?;
+    run_extraction(appimage, staging, cancel)?;
 
     let relative = PathBuf::from(EXTRACT_DIR).join(EXTRACT_ENTRY);
     let apprun = staging.join(&relative);
@@ -242,7 +243,11 @@ pub fn indicates_fuse(stderr: &str) -> bool {
 
 /// Runs `<appimage> --appimage-extract` in `workdir`, bounded by
 /// [`EXTRACT_TIMEOUT`].
-fn run_extraction(appimage: &Path, workdir: &Path) -> Result<(), InstallError> {
+fn run_extraction(
+    appimage: &Path,
+    workdir: &Path,
+    cancel: &CancellationToken,
+) -> Result<(), InstallError> {
     let mut child = Command::new(appimage)
         .arg("--appimage-extract")
         .current_dir(workdir)
@@ -261,6 +266,12 @@ fn run_extraction(appimage: &Path, workdir: &Path) -> Result<(), InstallError> {
 
     let deadline = Instant::now() + EXTRACT_TIMEOUT;
     let status = loop {
+        if cancel.is_cancelled() {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = stderr_reader.join();
+            return Err(crate::downloads::Error::Cancelled.into());
+        }
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() >= deadline => {

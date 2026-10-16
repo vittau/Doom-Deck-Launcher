@@ -61,7 +61,7 @@ pub struct Runtime {
     pub problem: Option<Problem>,
     pub directory: Option<Directory>,
     import_component: Option<String>,
-    review_index: usize,
+    review_return: (Screen, i32),
     settings_section: usize,
     advanced: bool,
     updates: Vec<String>,
@@ -91,7 +91,7 @@ impl Runtime {
             problem: None,
             directory: None,
             import_component: None,
-            review_index: 0,
+            review_return: (Screen::FirstRun, 2),
             settings_section: 0,
             advanced: false,
             updates: vec![],
@@ -134,14 +134,23 @@ impl Runtime {
             return;
         }
         self.busy = true;
+        if matches!(command, Command::Play(_)) {
+            self.playing = true;
+            self.neutral = true;
+        }
         self.problem = None;
+        ui.set_toast(SharedString::default());
         self.progress = None;
         self.cancel = CancellationToken::new();
-        self.return_to = (self.screen, self.focus);
+        if self.screen != Screen::Progress {
+            self.return_to = (self.screen, self.focus);
+        }
         self.pending = Some(command.clone());
         self.retry = Some(command.clone());
         if matches!(command, Command::InstallEngine(_) | Command::Install(_)) {
-            self.enter(Screen::Progress, 1);
+            if self.screen != Screen::Progress {
+                self.enter(Screen::Progress, 1);
+            }
         }
         let env = self.env.clone();
         let cancel = self.cancel.clone();
@@ -216,8 +225,21 @@ impl Runtime {
                                 }
                                 Some(Command::Scan(_) | Command::Choose(..)) => {
                                     self.screen = Screen::Review;
-                                    self.focus = 1;
-                                    self.review_index = 0;
+                                    self.focus = if self.snapshot.as_ref().is_some_and(|s| {
+                                        s.iwads.iter().any(|e| !e.candidates.is_empty())
+                                    }) {
+                                        10
+                                    } else {
+                                        1
+                                    };
+                                    if matches!(command, Some(Command::Scan(_))) {
+                                        self.review_return = if self.return_to.0 == Screen::Browser
+                                        {
+                                            self.history.pop().unwrap_or((Screen::FirstRun, 2))
+                                        } else {
+                                            self.return_to
+                                        };
+                                    }
                                 }
                                 Some(Command::Install(_)) => {
                                     self.screen = Screen::Setup;
@@ -238,6 +260,7 @@ impl Runtime {
                         }
                         Err(problem) => {
                             self.problem = Some(problem);
+                            self.focus = 800;
                             if self.screen == Screen::Loading {
                                 self.screen = Screen::FirstRun;
                             }
@@ -254,12 +277,12 @@ impl Runtime {
     }
     pub fn hotplug(&self, ui: &AppWindow, connected: bool) {
         if !self.playing {
-            ui.set_toast(crate::copy::text(
+            ui.set_toast(text(
                 ui,
                 if connected {
-                    crate::copy::Copy::Connected
+                    T::Connected
                 } else {
-                    crate::copy::Copy::Disconnected
+                    T::Disconnected
                 },
             ));
         }
@@ -306,6 +329,8 @@ impl Runtime {
                 } else if self.screen == Screen::Browser {
                     self.import_component = None;
                     (self.screen, self.focus) = self.history.pop().unwrap_or(self.return_to);
+                } else if self.screen == Screen::Settings && self.focus >= 70 {
+                    self.focus = 1 + self.settings_section as i32;
                 } else if let Some(place) = self.history.pop() {
                     (self.screen, self.focus) = place;
                 } else if self.screen == Screen::Review {
@@ -321,7 +346,9 @@ impl Runtime {
             }
             Action::Menu => {
                 if self.busy {
-                    self.enter(Screen::Progress, 1);
+                    if self.screen != Screen::Progress {
+                        self.enter(Screen::Progress, 1);
+                    }
                 } else {
                     self.show_sheet(Sheet::Quit);
                 }
@@ -427,8 +454,18 @@ impl Runtime {
                 self.focus = 10;
             }
             (Screen::Discover | Screen::Library, 10..=99) => {
-                self.selected = (self.focus - 10) as usize;
-                self.enter(Screen::Detail, 1);
+                if self.screen == Screen::Library
+                    && self
+                        .snapshot
+                        .as_ref()
+                        .is_some_and(|s| s.items.iter().all(|i| i.manifest.is_none()))
+                {
+                    self.screen = Screen::Discover;
+                    self.focus = 10;
+                } else {
+                    self.selected = (self.focus - 10) as usize;
+                    self.enter(Screen::Detail, 1);
+                }
             }
             (Screen::Detail, 1) => {
                 if let Some(item) = self.item() {
@@ -441,8 +478,15 @@ impl Runtime {
             }
             (Screen::Detail, 2) => self.enter(Screen::Setup, 50),
             (Screen::Setup, 1) => {
-                if self.snapshot.as_ref().is_some_and(|s| s.engine.is_none()) {
+                if self.snapshot.as_ref().is_some_and(|s| !s.config_usable) {
+                    self.enter(Screen::Settings, 70);
+                    self.settings_section = 2;
+                } else if self.snapshot.as_ref().is_some_and(|s| s.engine.is_none()) {
                     self.start(ui, Command::InstallEngine("0.30.1".into()));
+                } else if let Some(Blocker::ComponentNotProvided { component, .. }) =
+                    self.item().and_then(|i| i.launch.as_ref().err()).cloned()
+                {
+                    self.browse(ui, Some(component));
                 } else {
                     self.browse(ui, None);
                 }
@@ -492,8 +536,7 @@ impl Runtime {
                 }
             }
             (Screen::Review, 1) => {
-                self.screen = self.return_to.0;
-                self.focus = 2;
+                (self.screen, self.focus) = self.review_return;
             }
             (Screen::Review, 10..=199) => {
                 if let Some(entry) = self
@@ -555,7 +598,13 @@ impl Runtime {
                 self.focus = 70;
             }
             (Screen::Settings, 70) => match self.settings_section {
-                0 => self.start(ui, Command::Updates),
+                0 => {
+                    if self.snapshot.as_ref().is_some_and(|s| s.engine.is_none()) {
+                        self.start(ui, Command::InstallEngine("0.30.1".into()));
+                    } else {
+                        self.start(ui, Command::Updates)
+                    }
+                }
                 2 => self.show_sheet(Sheet::Reset),
                 _ => {}
             },
@@ -656,7 +705,16 @@ impl Runtime {
             } else if self.busy {
                 T::Working
             } else {
-                T::HomeSub
+                match self.screen {
+                    Screen::FirstRun => T::FirstHelp,
+                    Screen::Home => T::HomeSub,
+                    Screen::Review | Screen::Browser => T::ScanHelp,
+                    Screen::Setup => T::ProfileHelp,
+                    Screen::Detail | Screen::Discover | Screen::Library => T::Verification,
+                    Screen::Progress => T::InstallTitle,
+                    Screen::Settings => T::ConfigReady,
+                    Screen::Loading => T::Loading,
+                }
             },
         ));
         let mut b = Nodes::new(ui);
@@ -699,7 +757,14 @@ impl Runtime {
                     b.panel(828., 12., 384., 478.);
                     if let Some(item) = latest {
                         b.art(36., 36., 240., 300., art(&item.recipe.id));
-                        b.label(308., 56., 448., 60., item.recipe.title.clone().into(), 36.);
+                        b.label(
+                            308.,
+                            56.,
+                            448.,
+                            60.,
+                            display_title(&item.recipe).into(),
+                            36.,
+                        );
                         b.label(308., 132., 448., 80., text(ui, T::HomeSub), 22.);
                         b.button(1, 308., 252., 448., text(ui, T::Continue), true);
                     } else {
@@ -727,7 +792,7 @@ impl Runtime {
                                 y + 174.,
                                 344.,
                                 42.,
-                                item.recipe.title.clone().into(),
+                                display_title(&item.recipe).into(),
                                 26.,
                             );
                             b.label(
@@ -804,7 +869,14 @@ impl Runtime {
                         );
                         b.button(2, 12., 438., 360., text(ui, T::Setup), false);
                         b.panel(404., 12., 808., 478.);
-                        b.label(428., 36., 760., 60., item.recipe.title.clone().into(), 40.);
+                        b.label(
+                            428.,
+                            36.,
+                            760.,
+                            60.,
+                            display_title(&item.recipe).into(),
+                            40.,
+                        );
                         b.label(
                             428.,
                             110.,
@@ -978,18 +1050,38 @@ impl Runtime {
                             }
                             b.label(
                                 740.,
-                                282.,
+                                264.,
                                 448.,
-                                60.,
+                                48.,
                                 value(ui, T::Complevel, summary.complevel),
                                 20.,
                             );
                             b.label(
                                 740.,
-                                348.,
+                                316.,
                                 448.,
                                 30.,
                                 value(ui, T::EngineVersion, &summary.engine_version),
+                                20.,
+                            );
+                            b.label(
+                                740.,
+                                354.,
+                                448.,
+                                32.,
+                                format!(
+                                    "{} · {}",
+                                    value(ui, T::Skill, summary.skill),
+                                    text(
+                                        ui,
+                                        if summary.pistol_start {
+                                            T::PistolOn
+                                        } else {
+                                            T::PistolOff
+                                        }
+                                    )
+                                )
+                                .into(),
                                 20.,
                             );
                             b.button(
@@ -1001,6 +1093,7 @@ impl Runtime {
                                 usable && !self.busy,
                             );
                             if !usable {
+                                b.button(1, 740., 402., 448., text(ui, T::Reset), true);
                                 ui.set_subtitle(text(ui, T::ErrorConfig));
                             }
                         } else if let Err(blocker) = &item.launch {
@@ -1031,6 +1124,8 @@ impl Runtime {
                                 );
                             }
                             b.button(50, 740., 402., 448., text(ui, T::Unavailable), false);
+                            b.nodes.last_mut().unwrap().actionable = false;
+                            b.nodes.last_mut().unwrap().tone = 1;
                             if self.focus == 50 {
                                 self.focus = if matches!(
                                     blocker,
@@ -1082,6 +1177,12 @@ impl Runtime {
                     }
                     if self.busy {
                         b.button(1, 36., 320., 400., text(ui, T::Cancel), false);
+                        if self
+                            .progress
+                            .is_some_and(|p| p.stage == InstallStage::Commit)
+                        {
+                            b.nodes.last_mut().unwrap().actionable = false;
+                        }
                     } else if self.problem.is_none() {
                         b.label(36., 320., 1100., 60., text(ui, T::NoTasks), 26.);
                     }
@@ -1320,9 +1421,10 @@ impl Runtime {
             }
         }
         if let Some(problem) = self.problem {
-            ui.set_subtitle(text(ui, problem_copy(problem)));
-            b.button(800, 12., 510., 584., text(ui, T::Retry), true);
-            b.button(801, 628., 510., 584., text(ui, T::Diagnostics), false);
+            b.panel(12., 510., 1200., 222.);
+            b.label(36., 530., 1152., 88., text(ui, problem_copy(problem)), 22.);
+            b.button(800, 36., 638., 552., text(ui, T::Retry), true);
+            b.button(801, 612., 638., 576., text(ui, T::Diagnostics), false);
         }
         self.nodes = b.nodes;
         if !self.playing
@@ -1569,4 +1671,8 @@ pub fn attach_environment(ui: &AppWindow, env: Environment) -> Rc<RefCell<Runtim
     state.borrow_mut().start(ui, Command::Startup);
     state.borrow_mut().sync(ui);
     state
+}
+
+fn display_title(recipe: &ddl_core::catalog::Recipe) -> &str {
+    recipe.title.split(" (").next().unwrap_or(&recipe.title)
 }

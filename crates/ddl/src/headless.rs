@@ -18,7 +18,29 @@ struct HeadlessPlatform {
     window: Rc<MinimalSoftwareWindow>,
 }
 
+type QueuedCallback = Box<dyn FnOnce() + Send>;
+static EVENTS: std::sync::Mutex<Vec<QueuedCallback>> = std::sync::Mutex::new(Vec::new());
+struct HeadlessProxy;
+impl slint::platform::EventLoopProxy for HeadlessProxy {
+    fn quit_event_loop(&self) -> Result<(), slint::EventLoopError> {
+        Ok(())
+    }
+    fn invoke_from_event_loop(&self, event: QueuedCallback) -> Result<(), slint::EventLoopError> {
+        EVENTS.lock().unwrap().push(event);
+        Ok(())
+    }
+}
+fn pump_events() {
+    let events = std::mem::take(&mut *EVENTS.lock().unwrap());
+    for event in events {
+        event();
+    }
+}
 impl Platform for HeadlessPlatform {
+    fn new_event_loop_proxy(&self) -> Option<Box<dyn slint::platform::EventLoopProxy>> {
+        Some(Box::new(HeadlessProxy))
+    }
+
     fn create_window_adapter(&self) -> Result<Rc<dyn WindowAdapter>, PlatformError> {
         Ok(self.window.clone())
     }
@@ -427,4 +449,8 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     press(&window, Key::Return);
     assert_eq!(quits.get(), 1, "only explicit confirmation quits");
     let _ = ui.window(); // ComponentHandle methods are available without showing a window.
+    production::journey(&window, &ui);
 }
+
+#[path = "headless_production.rs"]
+mod production;

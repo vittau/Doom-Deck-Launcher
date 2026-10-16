@@ -3,6 +3,7 @@
 //! Controller-first UI backed by core services (spec 010).
 
 mod cli;
+#[cfg(test)]
 mod copy;
 #[cfg(test)]
 mod fixtures;

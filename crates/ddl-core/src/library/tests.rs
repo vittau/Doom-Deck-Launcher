@@ -429,3 +429,46 @@ fn installing_a_user_supplied_component_never_downloads_it() {
     assert_eq!(hits.load(Ordering::SeqCst), 1);
     assert!(manifest.find_imported("soundtrack").is_none());
 }
+
+#[test]
+fn cancellable_install_reports_stages_and_never_commits_a_cancelled_selection() {
+    use crate::downloads::{CancellationToken, InstallStage};
+    for stop in [
+        InstallStage::Download,
+        InstallStage::Extract,
+        InstallStage::Verify,
+    ] {
+        let dir = TempDir::new().unwrap();
+        let fixture = fixture("cancel-ui", "http://127.0.0.1/not-used");
+        let mut recipe = fixture.recipe;
+        // Use the full fixture archive (including the nested add-on), as its digest specifies.
+        let inner = zip_bytes(&[("addon.wad", &fixture.addon)]);
+        let body = zip_bytes(&[
+            ("main.wad", &fixture.main),
+            ("addons.zip", &inner),
+            ("credits.txt", &fixture.credits),
+        ]);
+        let server = Server::start(move |_| Response::ok(body.clone()));
+        recipe.packages[0].urls = vec![server.url("/package")];
+        let installer = Installer::new(
+            dir.path().join("data"),
+            dir.path().join("cache"),
+            HostAllowlist::new(["127.0.0.1"]),
+        )
+        .with_fetcher(Fetcher::new(dir.path().join("cache")).allow_http_for_tests());
+        let cancel = CancellationToken::new();
+        let mut stages = vec![];
+        let result = installer.install_with_progress(&recipe, &[], &cancel, &mut |p| {
+            stages.push(p.stage);
+            if p.stage == stop {
+                cancel.cancel();
+            }
+        });
+        assert!(matches!(
+            result,
+            Err(InstallError::Download(crate::downloads::Error::Cancelled))
+        ));
+        assert!(installer.load_manifest(&recipe).unwrap().is_none());
+        assert!(stages.contains(&stop));
+    }
+}

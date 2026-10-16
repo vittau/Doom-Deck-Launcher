@@ -156,7 +156,7 @@ pub struct TestEnvironment {
     pub catalog: Catalog,
     pub engine_base: String,
     pub reviewed: dsda::ReviewedList,
-    pub runner: dsda::FakeEngineRunner,
+    pub runner: std::sync::Arc<dyn EngineRunner + Send + Sync>,
 }
 
 pub struct Services {
@@ -224,8 +224,14 @@ impl Services {
         let config =
             DsdaConfigManager::new(&paths.config).map_err(|e| logged(Problem::Config, e))?;
         let profiles = ProfileStore::new(&paths.config, &paths.data);
-        let registry = Registry::load(&paths.config.join("iwads.json"))
-            .map_err(|e| logged(Problem::State, e))?;
+        let registry_path = paths.config.join("iwads.json");
+        let registry = match Registry::load(&registry_path) {
+            Ok(registry) => registry,
+            Err(iwads::RegistryError::Io(e)) if e.kind() == io::ErrorKind::NotFound => {
+                Registry::new()
+            }
+            Err(e) => return Err(logged(Problem::State, e)),
+        };
         Ok(Self {
             env,
             catalog,
@@ -314,8 +320,13 @@ impl Services {
             engine,
             iwads: self.registry.entries().to_vec(),
             folders: self.state.folders.clone(),
-            config_notice: config.as_ref().is_some_and(|s| !s.conflicts.is_empty()),
-            config_usable: self.config.active_path().is_file(),
+            config_notice: config.as_ref().is_none_or(|s| {
+                !s.conflicts.is_empty()
+                    || s.template_version != self.config.template().template_version
+                    || !self.config.base_path(&s.template_version).is_file()
+            }),
+            config_usable: config.is_some()
+                && fs::read_to_string(self.config.active_path()).is_ok(),
             config_version: config.map_or_else(String::new, |s| s.template_version),
             logs: self.env.paths.state.join("logs"),
         })
@@ -328,12 +339,14 @@ impl Services {
     ) -> Result<(), Problem> {
         match command {
             Command::Startup => {
-                self.config
+                if let Err(error) = self
+                    .config
                     .provision()
-                    .map_err(|e| logged(Problem::Config, e))?;
-                self.config
-                    .ensure_ready()
-                    .map_err(|e| logged(Problem::Config, e))?;
+                    .and_then(|_| self.config.ensure_ready().map(|_| ()))
+                {
+                    logged(Problem::Config, error);
+                }
+
                 self.scan(None, cancel, emit)?;
             }
             Command::InstallEngine(version) => {
@@ -386,6 +399,9 @@ impl Services {
             Command::Install(id) => {
                 let recipe = self.recipe(&id)?;
                 let p = self.profile(&recipe)?;
+                self.profiles
+                    .save(&p)
+                    .map_err(|e| logged(Problem::Storage, e))?;
                 self.installer
                     .install_with_progress(
                         &recipe,
@@ -442,7 +458,7 @@ impl Services {
                     Box::new(dsda::RealEngineRunner::for_state(&self.env.paths));
                 #[cfg(test)]
                 let runner: &dyn EngineRunner = match &self.env.test {
-                    Some(t) => &t.runner,
+                    Some(t) => t.runner.as_ref(),
                     None => runner.as_ref(),
                 };
                 let outcome = runner
@@ -544,6 +560,9 @@ impl Services {
                 return Err(Problem::Cancelled);
             }
             emit(Event::Working);
+            if self.registry.get(&path).is_some() {
+                continue;
+            }
             if let Ok(id) = iwads::Identifier::embedded().identify(&path) {
                 self.registry.record(&path, &id, source);
             }

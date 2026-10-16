@@ -322,7 +322,9 @@ impl Installer {
                         .iter()
                         .map(|member| member_request(member))
                         .collect::<Result<Vec<_>, _>>()?;
-                    self.extractor
+                    Extractor::new(self.data_dir.join("staging"))
+                        .with_limits(self.extractor.limits())
+                        .with_cancellation(cancel.clone())
                         .extract_into(&cached, &requests, &dest)
                         .map_err(InstallError::Download)?;
                 }
