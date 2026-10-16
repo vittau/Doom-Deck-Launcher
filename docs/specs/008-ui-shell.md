@@ -1,6 +1,6 @@
 # 008 — UI shell: design system, navigation, gamepad input, screens on fixture data
 
-**Status:** Ready  ·  **Milestone:** M1  ·  **Depends on:** 001; design in `docs/design/ui.md`,
+**Status:** Done (A6 needs Deck)  ·  **Milestone:** M1  ·  **Depends on:** 001; design in `docs/design/ui.md`,
 `docs/design/visual/*.png`; decisions D-008, D-009, D-018
 
 ## Goal

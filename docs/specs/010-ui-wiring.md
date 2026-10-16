@@ -1,6 +1,6 @@
 # 010 — Wire the UI to the core: first run, install, play, settings
 
-**Status:** Draft — becomes Ready when 008 and 009 merge  ·  **Milestone:** M1/M2 exit
+**Status:** Ready  ·  **Milestone:** M1/M2 exit
 **Depends on:** 004, 005, 007, 008, 009
 
 ## Goal
@@ -39,6 +39,14 @@ plays — controller only (OVERVIEW §3, Milestone 1–2 exit criteria).
 - **R8** — **Headless tests** drive the real services with fakes (fake HTTP server, fake engine
   runner, temp dirs) through first-run → install → play → return, asserting UI state.
   **Never open windows or capture the screen.**
+
+- **R9** — **Polish carried over from 008** (`docs/reports/008-ui-shell.md`): the hint bar shows
+  button badges (A/B/X/Y circles, L1/R1 and Start pills) as in `docs/design/visual/`, not plain
+  text; a scrolled options column keeps the focused row fully visible (no clipped rows at the
+  bottom edge, e.g. Load order on the blocked setup screen); replace fixture-only copy such as
+  "Changes apply to this fixture profile" with real wording.
+- **R10** — **Replace fixtures, keep them for tests:** the views read real services; the 008
+  fixture provider stays available to the headless tests only.
 
 ## Acceptance criteria
 

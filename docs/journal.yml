@@ -175,3 +175,11 @@
     Modern + Gyro layouts mapped to DSDA defaults, double-input and sensitivity guidance,
     strict-demo keyboard+mouse alternative, unverified items listed.
   refs: [README.md, docs/reports/011-readme-steam-input.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 008 merged — Slint fixture UI shell: design tokens, embedded Inter 4.1 + OFL in the
+    release tarball, spatial focus, gilrs 0.11.2 controller mapper (deadzone 0.35, repeat
+    350/100 ms, centralized), all screens on fixtures, headless PNGs + side-by-side comparisons,
+    @tr lint test. Spec 010 is Ready with 008's polish items (hint badges, clipped scroll rows).
+  refs: [docs/reports/008-ui-shell.md, docs/specs/010-ui-wiring.md]
