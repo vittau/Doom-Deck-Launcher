@@ -1,0 +1,17 @@
+# Decisions in force
+
+Complements the decision table in `OVERVIEW.md` §2; entries here win where they differ.
+Status: **Accepted** (decided) or **Proposed** (default until evidence or the owner says otherwise).
+
+| ID | Decision | Status |
+| --- | --- | --- |
+| D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
+| D-002 | **Build and release on GitHub Actions.** Release binaries are built inside a pinned Steam Linux Runtime SDK container image. The owner tests on a physical **Steam Deck LCD** by downloading GitHub Release assets; there is no device access from development machines. | Accepted |
+| D-003 | **Maximize work that needs no hardware.** Hardware-dependent behaviour sits behind traits with fakes; Deck checks are collected in `docs/deck-testing.md`. | Accepted |
+| D-004 | **Docs in-repo only** (`docs/`, Markdown + `journal.yml`), spec-driven, no external trackers. | Accepted |
+| D-005 | **Cargo workspace:** `crates/ddl-core` (logic, no UI deps) and `crates/ddl` (binary, Slint UI). | Accepted |
+| D-006 | **Data formats:** TOML for hand-authored data (recipes, catalog, config templates), JSON for machine-written state. `serde_yaml` is unmaintained and not used. | Accepted |
+| D-007 | **Engine versions:** by default DDL offers only DSDA-Doom releases whose SHA-256 is in DDL's reviewed list. Installing a newer unlisted release is an advanced action with a visible "not validated" warning. GitHub's asset digest proves transfer integrity, not independent trust. | Proposed |
+| D-008 | **UI language:** English for the MVP, with every user-facing string translatable (Slint `@tr`). | Proposed |
+| D-009 | **Pointer input inside DDL:** Steam Input layouts apply per shortcut, so a gyro/trackpad-as-mouse layout also drives DDL's own UI. DDL hides the cursor and ignores pointer motion without a click; navigation is gamepad-first. | Proposed — Needs Deck Validation |
+| D-010 | **Community-contributable catalog.** Each mapset is one self-contained, human-readable TOML recipe under `catalog/` in this repository: sources (one or more packages from allowlisted hosts, with SHA-256), files to load and their explicit order, IWAD, complevel, DEH/BEX, credits and verification evidence. Adding a mapset is a pull request touching only that file (plus optional images with stated permission). CI validates every recipe with a `ddl` lint command (schema, hosts, hashes, order, references) and a `CONTRIBUTING.md` + PR template guide authors. End users see only the curated result: Install & Play. | Accepted |

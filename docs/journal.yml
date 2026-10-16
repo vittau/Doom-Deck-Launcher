@@ -1,0 +1,29 @@
+# Append-only log. Newest entry last.
+# type: decision | finding | change
+- date: 2026-10-14
+  type: change
+  summary: Initial project proposal (OVERVIEW.md rev 1.0).
+- date: 2026-10-14
+  type: decision
+  summary: >-
+    OVERVIEW.md rev 1.1 — product renamed DoomDeckLauncher; DDL-managed DSDA config baseline
+    (DsdaConfigManager); Steam Input is README-only by decision.
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    Recorded D-001..D-009: GPL-3.0-or-later, GitHub Actions + Steam Linux Runtime builds,
+    owner tests on Steam Deck LCD via GitHub Releases, docs-only tracking, workspace layout,
+    TOML/JSON formats; proposed engine-version trust, UI language and pointer-input defaults.
+  refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Repo foundation — LICENSE, AGENTS.md (CLAUDE.md imports it), docs/ structure, spec 001
+    (workspace, CI, release). OVERVIEW.md rev 1.2 aligns docs paths and repo slug.
+  refs: [AGENTS.md, docs/README.md, docs/specs/001-workspace-ci-release.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    D-010 — catalog is one TOML recipe per mapset under catalog/, contributed by pull request,
+    validated in CI; multi-file composition with explicit load order and complevel is core.
+  refs: [docs/decisions.md]
