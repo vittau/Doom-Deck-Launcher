@@ -750,6 +750,25 @@ mod tests {
         assert!(!temp.path().join("home/.dsda-doom").exists());
     }
     #[test]
+    fn explicit_exclusive_choices_are_generic_idempotent_and_clearable() {
+        let mut recipe = Catalog::embedded().recipe("auger-zenith").unwrap().clone();
+        recipe.id = "another-mapset".into();
+        for (n, c) in recipe.components.iter_mut().enumerate().skip(1) {
+            c.id = format!("choice-{n}");
+            c.exclusive_group = Some("another-group".into());
+        }
+        let mut profile = Profile::new("test", "Default", &recipe.id);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("choice-1"));
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("choice-1"));
+        assert_eq!(profile.components, ["choice-1"]);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("choice-2"));
+        assert_eq!(profile.components, ["choice-2"]);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("not-a-member"));
+        assert_eq!(profile.components, ["choice-2"]);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", None);
+        assert!(profile.components.is_empty());
+    }
+    #[test]
     fn additive_choices_are_exclusive_and_replacements_remove_the_main() {
         let catalog = Catalog::embedded();
         let r = catalog.recipe("auger-zenith").unwrap();
@@ -870,4 +889,30 @@ mod steam_wiring_tests {
 pub(crate) fn hidden_path(path: &Path) -> bool {
     path.file_name()
         .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+}
+
+/// Explicit None / one-member selection, independent of recipe or component names.
+pub fn choose_exclusive_component(
+    recipe: &Recipe,
+    profile: &mut Profile,
+    group: &str,
+    choice: Option<&str>,
+) {
+    if choice.is_some_and(|id| {
+        !recipe
+            .components
+            .iter()
+            .any(|c| c.id == id && c.exclusive_group.as_deref() == Some(group))
+    }) {
+        return;
+    }
+    profile.components.retain(|id| {
+        !recipe
+            .components
+            .iter()
+            .any(|c| c.id == *id && c.exclusive_group.as_deref() == Some(group))
+    });
+    if let Some(id) = choice {
+        profile.set_component(id, true);
+    }
 }

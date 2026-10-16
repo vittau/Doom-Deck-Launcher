@@ -3,6 +3,8 @@ use crate::{AppWindow, WiringStrings};
 use slint::ComponentHandle;
 #[derive(Clone, Copy)]
 pub enum Text {
+    AddonChoice,
+    None,
     FirstSub,
     DownloadHelp,
     VerifyHelp,
@@ -163,6 +165,8 @@ pub enum Text {
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
     match key {
+        Text::AddonChoice => s.get_addon_choice(),
+        Text::None => s.get_none(),
         Text::FirstSub => s.get_first_sub(),
         Text::DownloadHelp => s.get_download_help(),
         Text::VerifyHelp => s.get_verify_help(),

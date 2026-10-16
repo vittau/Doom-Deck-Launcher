@@ -535,7 +535,25 @@ impl Runtime {
                     .and_then(|i| i.recipe.components.get((self.focus - 100) as usize))
                     .cloned()
                 {
-                    if c.user_supplied {
+                    if let Some(group) = c
+                        .exclusive_group
+                        .as_ref()
+                        .filter(|_| c.optional && c.replaces.is_none() && !c.user_supplied)
+                    {
+                        if let Some(item) = self.item() {
+                            if item.profile.components.contains(&c.id) {
+                                return;
+                            }
+                            let mut profile = item.profile.clone();
+                            services::choose_exclusive_component(
+                                &item.recipe,
+                                &mut profile,
+                                group,
+                                Some(&c.id),
+                            );
+                            self.start(ui, Command::Save(profile));
+                        }
+                    } else if c.user_supplied {
                         self.browse(ui, Some(c.id));
                     } else if c.replaces.is_some()
                         && self
@@ -546,6 +564,19 @@ impl Runtime {
                     } else {
                         self.toggle(ui, &c.id);
                     }
+                }
+            }
+            (Screen::Setup, 300..=399) => {
+                if let Some(item) = self.item()
+                    && let Some(group) = item
+                        .recipe
+                        .components
+                        .get((self.focus - 300) as usize)
+                        .and_then(|c| c.exclusive_group.as_deref())
+                {
+                    let mut profile = item.profile.clone();
+                    services::choose_exclusive_component(&item.recipe, &mut profile, group, None);
+                    self.start(ui, Command::Save(profile));
                 }
             }
             (Screen::Setup, 50) => {
@@ -900,16 +931,14 @@ impl Runtime {
                             b.label(x + 72., 436., 270., 30., text(ui, T::Profile), 20.);
                         }
                         b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
-                        b.label(
+                        b.check(
                             852.,
-                            104.,
-                            336.,
-                            54.,
+                            100.,
                             s.engine.as_ref().map_or_else(
                                 || text(ui, T::NoEngine),
                                 |e| value(ui, T::EngineVersion, &e.version),
                             ),
-                            22.,
+                            if s.engine.is_some() { 2 } else { 4 },
                         );
                         for (n, g) in [
                             ddl_core::catalog::Game::Doom,
@@ -922,22 +951,20 @@ impl Runtime {
                                 .items
                                 .iter()
                                 .any(|i| i.recipe.base_game.game == g && base_ready(s, &i.recipe));
-                            b.label(
+                            b.check(
                                 852.,
-                                174. + n as f32 * 44.,
-                                336.,
-                                40.,
+                                172. + n as f32 * 72.,
                                 value(
                                     ui,
                                     if found { T::FoundGame } else { T::MissingGame },
                                     game(ui, g),
                                 ),
-                                22.,
+                                if found { 2 } else { 4 },
                             );
                         }
-                        b.label(852., 274., 336., 68., text(ui, T::Verification), 20.);
+                        b.check(852., 316., text(ui, T::Verification), 3);
                     }
-                    b.button(2, 852., 386., 336., text(ui, T::DiscoverAction), false);
+                    b.button(2, 852., 402., 336., text(ui, T::DiscoverAction), false);
                 }
                 Screen::Discover | Screen::Library => {
                     if let Some(s) = &self.snapshot {
@@ -1101,9 +1128,77 @@ impl Runtime {
                             text(ui, T::ProfileHelp),
                             false,
                         );
-                        let mut y = 132.;
+                        let mut y = 128.;
                         for (index, c) in item.recipe.components.iter().enumerate() {
                             if c.replaces.is_some() && !c.user_supplied && !self.advanced {
+                                continue;
+                            }
+                            if let Some(group) = c
+                                .exclusive_group
+                                .as_ref()
+                                .filter(|_| c.optional && c.replaces.is_none() && !c.user_supplied)
+                            {
+                                if item.recipe.components[..index]
+                                    .iter()
+                                    .any(|prior| prior.exclusive_group.as_ref() == Some(group))
+                                {
+                                    continue;
+                                }
+                                let members: Vec<_> = item
+                                    .recipe
+                                    .components
+                                    .iter()
+                                    .enumerate()
+                                    .filter(|(_, c)| {
+                                        c.exclusive_group.as_ref() == Some(group)
+                                            && c.optional
+                                            && c.replaces.is_none()
+                                            && !c.user_supplied
+                                    })
+                                    .collect();
+                                let rows = (members.len() + 1).div_ceil(3);
+                                b.push(
+                                    -999,
+                                    36.,
+                                    y,
+                                    632.,
+                                    36. + rows as f32 * 60.,
+                                    9,
+                                    text(ui, T::AddonChoice),
+                                    Default::default(),
+                                    false,
+                                    false,
+                                );
+                                let none = !members
+                                    .iter()
+                                    .any(|(_, c)| item.profile.components.contains(&c.id));
+                                b.choice(
+                                    300 + index as i32,
+                                    44.,
+                                    y + 36.,
+                                    96.,
+                                    text(ui, T::None),
+                                    none,
+                                );
+                                for (slot, (member_index, member)) in members.iter().enumerate() {
+                                    let cell = slot + 1;
+                                    let row = cell / 3;
+                                    let col = cell % 3;
+                                    let (x, width) = match col {
+                                        0 => (44., 96.),
+                                        1 => (148., 248.),
+                                        _ => (404., 256.),
+                                    };
+                                    b.choice(
+                                        100 + *member_index as i32,
+                                        x,
+                                        y + 36. + row as f32 * 60.,
+                                        width,
+                                        member.label.clone().into(),
+                                        item.profile.components.contains(&member.id),
+                                    );
+                                }
+                                y += 36. + rows as f32 * 60. + 12.;
                                 continue;
                             }
                             let detail = if !c.optional {
@@ -1140,6 +1235,7 @@ impl Runtime {
                             text(ui, T::AdvancedHelp),
                             true,
                         );
+                        b.nodes.last_mut().unwrap().h = 64.;
                         y += b.nodes.last().unwrap().h + 16.;
                         b.button(
                             40,
@@ -1174,7 +1270,7 @@ impl Runtime {
                             text(ui, T::OrderHelp),
                             true,
                         );
-                        b.label(740., 28., 448., 40., text(ui, T::WillLaunch), 26.);
+                        b.label(740., 36., 448., 40., text(ui, T::WillLaunch), 26.);
                         b.label(
                             740.,
                             82.,
@@ -1340,7 +1436,7 @@ impl Runtime {
                     ui.global::<crate::WiringStrings>()
                         .set_other(subject.clone());
                     ui.set_heading(text(ui, T::ContextTitle));
-                    b.label(36., 40., 1100., 60., subject, 36.);
+                    b.label(36., 36., 1100., 60., subject, 36.);
                     let stage = self.progress.map_or(T::Working, |p| match p.stage {
                         InstallStage::Download => T::Download,
                         InstallStage::Verify => T::Verify,
@@ -1449,7 +1545,7 @@ impl Runtime {
                     b.panel(12., 12., 1200., 478.);
                     if let Some(s) = &self.snapshot {
                         if let Some(entry) = s.iwads.iter().find(|e| !e.candidates.is_empty()) {
-                            b.label(36., 24., 1152., 54., text(ui, T::Ambiguous), 30.);
+                            b.label(36., 36., 1152., 54., text(ui, T::Ambiguous), 30.);
                             b.label(
                                 36.,
                                 88.,
@@ -1471,7 +1567,7 @@ impl Runtime {
                         } else {
                             b.label(
                                 36.,
-                                24.,
+                                36.,
                                 1152.,
                                 54.,
                                 text(
@@ -1503,7 +1599,7 @@ impl Runtime {
                     if let Some(d) = &self.directory {
                         ui.set_subtitle(elide_path_start(&d.path.display().to_string(), 88).into());
                         b.panel(12., 12., 360., 478.);
-                        b.label(36., 28., 312., 38., text(ui, T::Shortcuts), 26.);
+                        b.label(36., 36., 312., 38., text(ui, T::Shortcuts), 26.);
                         for (i, p) in d.shortcuts.iter().enumerate() {
                             b.row(
                                 10 + i as i32,
@@ -1900,6 +1996,37 @@ impl Nodes {
             true,
             primary,
         );
+    }
+    fn check(&mut self, x: f32, y: f32, label: SharedString, tone: i32) {
+        self.push(
+            -999,
+            x,
+            y,
+            336.,
+            64.,
+            7,
+            label,
+            Default::default(),
+            false,
+            false,
+        );
+        self.nodes.last_mut().unwrap().tone = tone;
+        self.nodes.last_mut().unwrap().size = 22.;
+    }
+    fn choice(&mut self, id: i32, x: f32, y: f32, w: f32, label: SharedString, selected: bool) {
+        self.push(
+            id,
+            x,
+            y,
+            w,
+            52.,
+            8,
+            label,
+            Default::default(),
+            true,
+            selected,
+        );
+        self.nodes.last_mut().unwrap().size = 20.;
     }
     #[allow(clippy::too_many_arguments)]
     fn row(
