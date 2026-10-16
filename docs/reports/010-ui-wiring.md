@@ -1,6 +1,6 @@
 # Spec 010 — UI wiring
 
-Status: implementation complete; final full-workspace checks in progress.
+Status: implementation and local validation complete.
 Physical Deck and Linux CI validation remain pending. No visible window was opened and no
 screen was captured: every PNG comes from the off-screen Slint software renderer.
 
@@ -141,8 +141,54 @@ Owner checks map to [deck-testing.md](../deck-testing.md):
 Linux release build and CI green cannot be established from this macOS arm64 host. No release
 build, push, tag or release was performed. Spec A3 remains open for the owner's Deck validation.
 
-## Local verification (checkpoint)
+## Final local verification
 
-At `ea5088e`, `cargo check -p ddl --tests` passed. The full headless fixture + production journey
-passed in 28.25 seconds; six targeted library tests and four service tests passed. Final full
-workspace fmt/clippy/test results are pending below; these checkpoint results do not claim CI.
+All required checks passed on macOS arm64 after the final code change. There are **307 passing
+tests** across binary/core unit tests, integration tests and doctests. Tests use no external
+network, display backend or physical controller. The headless fixture + production journey
+passed as part of the full suite and regenerated every production PNG.
+
+`cargo fmt --all --check` — exit 0, no output.
+
+`cargo clippy --workspace --all-targets -- -D warnings` — exit 0:
+
+```text
+Checking ddl v0.1.0 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-010-wiring/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.73s
+```
+
+`cargo test --workspace` — exit 0, result lines:
+
+```text
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.23s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 263 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.92s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Final tail:
+
+```text
+Doc-tests ddl_core
+
+running 3 tests
+test crates/ddl-core/src/downloads/mod.rs - downloads (line 22) - compile ... ok
+test crates/ddl-core/src/library/mod.rs - library (line 10) - compile ... ok
+test crates/ddl-core/src/profiles/mod.rs - profiles (line 10) - compile ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.84s; merged doctests compilation took 0.63s
+```
+
+## Remaining acceptance gates
+
+No local implementation/test item remains open. A1 is checked in spec 010. A2's local
+fmt/clippy/tests passed, but its **CI green** clause remains coordinator-owned and unclaimed;
+A3 remains **Needs Deck Validation**. The owner/coordinator must run the Linux pre-release and
+physical checklist above. Unknown paid soundtrack identities remain deliberately unenabled
+until reviewed evidence exists; this is existing D-014 behavior, not an invented compatibility
+claim. No new dependency, scope or product decision is awaiting an answer.
