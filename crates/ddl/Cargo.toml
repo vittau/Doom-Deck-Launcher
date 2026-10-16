@@ -17,6 +17,7 @@ path = "src/main.rs"
 [dependencies]
 ddl-core = { path = "../ddl-core" }
 slint = { workspace = true }
+gilrs = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
