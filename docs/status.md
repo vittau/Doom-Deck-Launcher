@@ -12,7 +12,7 @@
 | Prior art: UZDeck / GZDeck (incl. UI critique) | `research/prior-art.md` | Done |
 | Recipe schema, catalog, lint, reference recipes | `specs/002-recipe-catalog.md` | Done — 3 reference recipes lint clean with real fetch |
 | Launch plan and engine process runner | `specs/003-launch-plan.md` | Done (A6 needs Deck) |
-| Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | In progress |
+| Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | Done (A5 needs Deck) |
 | Mapset install, profiles, launch resolution (core) | `specs/009-install-resolve.md` | In progress |
 | Downloads and safe ZIP extraction (nested) | `specs/006-downloads-extraction.md` | Done |
 | DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Done (A6 needs Deck) |

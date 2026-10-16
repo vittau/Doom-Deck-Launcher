@@ -152,3 +152,11 @@
     26-variant table, content identifier, Steam VDF discovery, registry, canonical symlinks.
     Unified hashing crates on digest 0.11. 228 tests green.
   refs: [docs/specs/002-recipe-catalog.md, docs/specs/006-downloads-extraction.md, docs/specs/007-iwad-library.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 004 merged — reviewed engine list (v0.30.1, validated=false until Deck), cached
+    GitHub discovery (ETag, 24 h throttle, offline fallback), staged install with size/SHA-256
+    checks, -v smoke test, FUSE → --appimage-extract fallback, JSON state, select/rollback/
+    remove/manual path. Unreviewed releases without an API digest are refused.
+  refs: [docs/specs/004-engine-manager.md, docs/reports/004-engine-manager.md]
