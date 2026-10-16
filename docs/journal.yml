@@ -108,3 +108,10 @@
     Merged UI contract v1 (docs/design/ui.md, Inter under OFL, wireframe mockups); requested a
     high-fidelity visual pass using image generation, plus B=Back legend fix.
   refs: [docs/design/ui.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Merged UI visual pass — DDL logotype, original furnace/steel concept art, six hi-fi
+    1280x800 mockups (docs/design/visual/), B=Back / Start=Menu legends. Implementation note:
+    required components render as locked rows, not toggles.
+  refs: [docs/design/ui.md, docs/design/visual-report.md]

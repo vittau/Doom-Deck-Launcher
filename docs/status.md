@@ -16,7 +16,7 @@
 | Downloads and safe ZIP extraction (nested) | `specs/006-downloads-extraction.md` | Ready — waits for 001 |
 | DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Ready — waits for 001 |
 | UI contract v1 + wireframes (Codex) | `design/ui.md`, `design/mockups/` | Done |
-| UI visual pass: hi-fi generated mockups, identity (Codex) | `design/visual/` | In progress |
+| UI visual pass: hi-fi generated mockups, identity (Codex) | `design/visual/` | Done — note: required components must render as locked, not as a toggle |
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |
 | IWAD table, identifier, Steam discovery, canonical links | `specs/007-iwad-library.md` | Ready — waits for 001 |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
