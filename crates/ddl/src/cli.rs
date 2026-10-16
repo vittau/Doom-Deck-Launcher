@@ -549,7 +549,9 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
                 .parse()
                 .map_err(|_| ParseError::message("`--skill` must be a number from 1 to 5"))?;
             if !(1..=5).contains(&parsed) {
-                return Err(ParseError::message("`--skill` must be a number from 1 to 5"));
+                return Err(ParseError::message(
+                    "`--skill` must be a number from 1 to 5",
+                ));
             }
             skill = Some(parsed);
             index += 1;
@@ -729,14 +731,23 @@ mod tests {
             })
         );
         assert_eq!(
-            parse_str(&["engine", "install", "--version", "0.30.1", "--force-extract"]),
+            parse_str(&[
+                "engine",
+                "install",
+                "--version",
+                "0.30.1",
+                "--force-extract"
+            ]),
             Ok(Command::EngineInstall {
                 version: Some("0.30.1".into()),
                 force_extract: true
             })
         );
         // `--version` here is the engine's, not DDL's.
-        assert_ne!(parse_str(&["engine", "install", "--version", "0.30.1"]), Ok(Command::Version));
+        assert_ne!(
+            parse_str(&["engine", "install", "--version", "0.30.1"]),
+            Ok(Command::Version)
+        );
         assert!(parse_str(&["engine", "install", "--version"]).is_err());
         assert!(parse_str(&["engine", "frobnicate"]).is_err());
         assert!(parse_str(&["engine"]).is_err());

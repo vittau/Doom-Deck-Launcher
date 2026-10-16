@@ -1,0 +1,338 @@
+# Manual, real-network end-to-end run for DoomDeckLauncher (spec 014, R3).
+#
+# `workflow_dispatch` only: there is no schedule, because every run downloads
+# the real DSDA-Doom AppImage and the real mapset packages from upstream. It is
+# triggered by hand when someone wants to exercise the download, verification,
+# extraction, AppImage and launch-planning paths on a real Linux machine before
+# a Deck test.
+#
+# Two jobs, deliberately:
+#   * `steamrt` runs inside the same pinned Steam Linux Runtime SDK container
+#     the release uses, so what it proves is what ships;
+#   * `ubuntu` runs the same steps on the plain GitHub runner and records
+#     whether the AppImage mounts directly there (FUSE). That result is
+#     informative, never a failure: DDL falls back to extraction either way.
+#
+# Both build with `--features test-support` so the `DDL_TEST_IWAD_SEAM` IWAD
+# injection exists. Release builds never enable that feature
+# (`.github/workflows/release.yml`), so the seam is compiled out of anything
+# users download.
+name: Linux e2e
+
+on:
+  workflow_dispatch:
+
+# Read-only: this workflow never writes to the repository.
+permissions:
+  contents: read
+
+# A newer manual trigger supersedes a running one.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+# Container jobs default to `sh` (dash in the Steam Runtime image), which has no
+# `set -o pipefail`; every step here is written for bash.
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  steamrt:
+    name: Real-network e2e (Steam Runtime SDK)
+    runs-on: ubuntu-latest
+    # A scratch XDG root so the run never touches the runner's real state. DDL
+    # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`.
+    env:
+      E2E_ROOT: ${{ runner.temp }}/ddl-e2e
+      XDG_CONFIG_HOME: ${{ runner.temp }}/ddl-e2e/config
+      XDG_DATA_HOME: ${{ runner.temp }}/ddl-e2e/data
+      XDG_CACHE_HOME: ${{ runner.temp }}/ddl-e2e/cache
+      XDG_STATE_HOME: ${{ runner.temp }}/ddl-e2e/state
+    # Steam Linux Runtime 3.0 "sniper" SDK, pinned by the digest of tag
+    # 3.0.20261007.263965; the same digest is used by `ci.yml` and
+    # `release.yml` (see docs/research/steam-runtime-build.md).
+    container:
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same toolchain install as the other workflows: rustup only, channel
+      # read back from `rust-toolchain.toml` so it can never drift.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: e2e-steamrt-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            e2e-steamrt-${{ runner.os }}-
+
+      - name: Build ddl with the e2e IWAD seam
+        run: cargo build --release --locked -p ddl --features test-support
+
+      - name: Run the real-network end-to-end steps
+        run: |
+          set -euo pipefail
+          ddl=./target/release/ddl
+          mkdir -p "$E2E_ROOT"
+
+          echo "== $ddl --version =="
+          "$ddl" --version
+
+          # 1. The reviewed install, AppImage first, then its `-v` smoke test.
+          echo "== engine install (AppImage path) =="
+          "$ddl" engine install
+          "$ddl" engine status | tee "$E2E_ROOT/engine-status.txt"
+
+          # 1b. `--force-extract` in a fresh data dir must take the D-013
+          # fallback and pass the extracted `AppRun -v` smoke test.
+          echo "== engine install --force-extract (fresh data dir) =="
+          XDG_CONFIG_HOME="$E2E_ROOT/config-force" XDG_DATA_HOME="$E2E_ROOT/data-force" \
+            "$ddl" engine install --force-extract
+          XDG_CONFIG_HOME="$E2E_ROOT/config-force" XDG_DATA_HOME="$E2E_ROOT/data-force" \
+            "$ddl" engine status | tee "$E2E_ROOT/engine-status-force.txt"
+          grep -q 'extracted' "$E2E_ROOT/engine-status-force.txt" \
+            || { echo "::error::--force-extract did not install the extracted engine"; exit 1; }
+
+          # 2. Every catalog recipe, then every free optional component.
+          echo "== mapset list =="
+          ids="$("$ddl" mapset list | tee "$E2E_ROOT/mapset-list.txt" | awk 'NF {print $1}')"
+          echo "recipes: $ids"
+          for id in $ids; do
+            echo "== mapset install $id =="
+            "$ddl" mapset install "$id"
+          done
+          echo "== free optional components =="
+          "$ddl" mapset install sigil --with compat
+          "$ddl" mapset install auger-zenith --with alternate-blaster
+          "$ddl" mapset install auger-zenith --with deckard-blaster
+          "$ddl" mapset list | tee "$E2E_ROOT/mapset-list-after.txt"
+
+          # 3a. No IWADs exist (DDL never downloads them), so every dry-run must
+          # report the typed MissingIwad blocker.
+          echo "== dry-run: every recipe reports the MissingIwad blocker =="
+          for id in $ids; do
+            if "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-missing-$id.txt" 2>&1; then
+              echo "::error::$id dry-run unexpectedly succeeded without an IWAD"
+              cat "$E2E_ROOT/dry-missing-$id.txt"
+              exit 1
+            fi
+            grep -q 'is missing' "$E2E_ROOT/dry-missing-$id.txt" \
+              || { echo "::error::$id did not report a missing IWAD"; cat "$E2E_ROOT/dry-missing-$id.txt"; exit 1; }
+            echo "$id: MissingIwad blocker as expected"
+          done
+
+          # 3b. With the test-only seam, the dry-run argv must match D-011.
+          echo "== dry-run with the test-only IWAD seam =="
+          seam="$E2E_ROOT/seam-iwads"
+          mkdir -p "$seam"
+          count() { grep -c -x -- "$1" "$2" || true; }
+          for id in $ids; do
+            DDL_TEST_IWAD_SEAM="$seam" "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-argv-$id.txt"
+            for flag in -file -iwad -complevel -skill -noautoload -config -save -data -shotdir; do
+              [ "$(count "$flag" "$E2E_ROOT/dry-argv-$id.txt")" = "1" ] \
+                || { echo "::error::$id: expected exactly one $flag"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
+            done
+            awk '/^-complevel$/{getline; if ($0 !~ /^[0-9]+$/) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
+              || { echo "::error::$id: -complevel is not numeric"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
+            awk '/^-iwad$/{getline; if ($0 !~ /^\//) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
+              || { echo "::error::$id: -iwad is not an absolute path"; exit 1; }
+            echo "$id: argv matches D-011"
+          done
+
+          echo "== iwad scan =="
+          "$ddl" iwad scan | tee "$E2E_ROOT/iwad-scan.txt"
+
+      # 4. Always collect the doctor report and the logs, even on failure.
+      - name: Collect ddl doctor and logs
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$E2E_ROOT/artifacts"
+          ./target/release/ddl doctor > "$E2E_ROOT/artifacts/doctor.txt" 2>&1 || true
+          cp "$E2E_ROOT"/*.txt "$E2E_ROOT/artifacts/" 2>/dev/null || true
+          mkdir -p "$E2E_ROOT/artifacts/logs"
+          cp "$E2E_ROOT/state/ddl/logs/"* "$E2E_ROOT/artifacts/logs/" 2>/dev/null || true
+          echo "--- doctor ---"
+          cat "$E2E_ROOT/artifacts/doctor.txt"
+
+      - name: Upload the doctor report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ddl-e2e-steamrt
+          path: ${{ env.E2E_ROOT }}/artifacts
+          if-no-files-found: warn
+
+  ubuntu:
+    name: Real-network e2e (plain Ubuntu, FUSE result recorded)
+    runs-on: ubuntu-latest
+    env:
+      E2E_ROOT: ${{ runner.temp }}/ddl-e2e
+      XDG_CONFIG_HOME: ${{ runner.temp }}/ddl-e2e/config
+      XDG_DATA_HOME: ${{ runner.temp }}/ddl-e2e/data
+      XDG_CACHE_HOME: ${{ runner.temp }}/ddl-e2e/cache
+      XDG_STATE_HOME: ${{ runner.temp }}/ddl-e2e/state
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: e2e-ubuntu-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            e2e-ubuntu-${{ runner.os }}-
+
+      # Slint's text stack probes fontconfig with pkg-config, and gilrs links
+      # libudev; the plain runner needs both development packages.
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
+
+      - name: Build ddl with the e2e IWAD seam
+        run: cargo build --release --locked -p ddl --features test-support
+
+      # The same steps as the container job. The AppImage-direct result is
+      # recorded, not asserted: FUSE may or may not be available here, and DDL
+      # falls back to extraction when it is not.
+      - name: Run the real-network end-to-end steps
+        run: |
+          set -euo pipefail
+          ddl=./target/release/ddl
+          mkdir -p "$E2E_ROOT"
+
+          echo "== $ddl --version =="
+          "$ddl" --version
+
+          echo "== engine install (AppImage path) =="
+          "$ddl" engine install
+          "$ddl" engine status | tee "$E2E_ROOT/engine-status.txt"
+
+          echo "== engine install --force-extract (fresh data dir) =="
+          XDG_CONFIG_HOME="$E2E_ROOT/config-force" XDG_DATA_HOME="$E2E_ROOT/data-force" \
+            "$ddl" engine install --force-extract
+          XDG_CONFIG_HOME="$E2E_ROOT/config-force" XDG_DATA_HOME="$E2E_ROOT/data-force" \
+            "$ddl" engine status | tee "$E2E_ROOT/engine-status-force.txt"
+          grep -q 'extracted' "$E2E_ROOT/engine-status-force.txt" \
+            || { echo "::error::--force-extract did not install the extracted engine"; exit 1; }
+
+          echo "== mapset list =="
+          ids="$("$ddl" mapset list | tee "$E2E_ROOT/mapset-list.txt" | awk 'NF {print $1}')"
+          echo "recipes: $ids"
+          for id in $ids; do
+            echo "== mapset install $id =="
+            "$ddl" mapset install "$id"
+          done
+          echo "== free optional components =="
+          "$ddl" mapset install sigil --with compat
+          "$ddl" mapset install auger-zenith --with alternate-blaster
+          "$ddl" mapset install auger-zenith --with deckard-blaster
+          "$ddl" mapset list | tee "$E2E_ROOT/mapset-list-after.txt"
+
+          echo "== dry-run: every recipe reports the MissingIwad blocker =="
+          for id in $ids; do
+            if "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-missing-$id.txt" 2>&1; then
+              echo "::error::$id dry-run unexpectedly succeeded without an IWAD"
+              cat "$E2E_ROOT/dry-missing-$id.txt"
+              exit 1
+            fi
+            grep -q 'is missing' "$E2E_ROOT/dry-missing-$id.txt" \
+              || { echo "::error::$id did not report a missing IWAD"; cat "$E2E_ROOT/dry-missing-$id.txt"; exit 1; }
+            echo "$id: MissingIwad blocker as expected"
+          done
+
+          echo "== dry-run with the test-only IWAD seam =="
+          seam="$E2E_ROOT/seam-iwads"
+          mkdir -p "$seam"
+          count() { grep -c -x -- "$1" "$2" || true; }
+          for id in $ids; do
+            DDL_TEST_IWAD_SEAM="$seam" "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-argv-$id.txt"
+            for flag in -file -iwad -complevel -skill -noautoload -config -save -data -shotdir; do
+              [ "$(count "$flag" "$E2E_ROOT/dry-argv-$id.txt")" = "1" ] \
+                || { echo "::error::$id: expected exactly one $flag"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
+            done
+            awk '/^-complevel$/{getline; if ($0 !~ /^[0-9]+$/) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
+              || { echo "::error::$id: -complevel is not numeric"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
+            awk '/^-iwad$/{getline; if ($0 !~ /^\//) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
+              || { echo "::error::$id: -iwad is not an absolute path"; exit 1; }
+            echo "$id: argv matches D-011"
+          done
+
+          echo "== iwad scan =="
+          "$ddl" iwad scan | tee "$E2E_ROOT/iwad-scan.txt"
+
+      # The point of this job: record, do not judge, the AppImage-direct result.
+      - name: Record the AppImage-direct result
+        if: always()
+        run: |
+          mode="$(grep -o -m1 'appimage\|extracted' "$E2E_ROOT/engine-status.txt" 2>/dev/null || true)"
+          {
+            echo "### AppImage-direct result on plain Ubuntu"
+            echo ""
+            echo "The reviewed install ended in mode: **${mode:-unknown}**."
+            echo ""
+            echo "\`appimage\` means FUSE mounted the AppImage directly; \`extracted\` means DDL took the D-013 fallback."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Collect ddl doctor and logs
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$E2E_ROOT/artifacts"
+          ./target/release/ddl doctor > "$E2E_ROOT/artifacts/doctor.txt" 2>&1 || true
+          cp "$E2E_ROOT"/*.txt "$E2E_ROOT/artifacts/" 2>/dev/null || true
+          mkdir -p "$E2E_ROOT/artifacts/logs"
+          cp "$E2E_ROOT/state/ddl/logs/"* "$E2E_ROOT/artifacts/logs/" 2>/dev/null || true
+          echo "--- doctor ---"
+          cat "$E2E_ROOT/artifacts/doctor.txt"
+
+      - name: Upload the doctor report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ddl-e2e-ubuntu
+          path: ${{ env.E2E_ROOT }}/artifacts
+          if-no-files-found: warn

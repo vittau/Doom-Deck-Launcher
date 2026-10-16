@@ -16,8 +16,7 @@ use ddl_core::{
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
-    fmt,
-    fs,
+    fmt, fs,
     io::{self, Write},
     path::{Path, PathBuf},
 };
@@ -631,7 +630,10 @@ impl Services {
     }
 
     /// Prepares, validates and runs an already-resolved launch.
-    fn run_resolution(&self, resolution: &resolver::Resolution) -> Result<dsda::LaunchOutcome, Problem> {
+    fn run_resolution(
+        &self,
+        resolution: &resolver::Resolution,
+    ) -> Result<dsda::LaunchOutcome, Problem> {
         resolution
             .prepare()
             .map_err(|e| logged(Problem::Storage, e))?;
@@ -648,7 +650,9 @@ impl Services {
         runner
             .launch(
                 resolution.plan(),
-                &dsda::AssignAllowlist::with_keys(ddl_core::dsda_config::ALLOWED_KEYS.iter().copied()),
+                &dsda::AssignAllowlist::with_keys(
+                    ddl_core::dsda_config::ALLOWED_KEYS.iter().copied(),
+                ),
             )
             .map_err(|e| logged(Problem::Launch, e))
     }
@@ -1014,29 +1018,23 @@ impl Services {
                 if let Some(group) = &held.exclusive_group {
                     profile.components.retain(|enabled| {
                         !recipe.components.iter().any(|other| {
-                            &other.id == enabled
-                                && other.exclusive_group.as_ref() == Some(group)
+                            &other.id == enabled && other.exclusive_group.as_ref() == Some(group)
                         })
                     });
                 }
                 profile.set_component(component, true);
             }
         }
-        profile
-            .validate(&recipe)
-            .map_err(|error| CliFailure::message(format!("invalid component selection: {error}")))?;
+        profile.validate(&recipe).map_err(|error| {
+            CliFailure::message(format!("invalid component selection: {error}"))
+        })?;
         self.profiles
             .save(&profile)
             .map_err(|error| CliFailure::message(error.to_string()))?;
         let enabled: Vec<&str> = profile.components.iter().map(String::as_str).collect();
         let manifest = self
             .installer
-            .install_with_progress(
-                &recipe,
-                &enabled,
-                &CancellationToken::new(),
-                progress,
-            )
+            .install_with_progress(&recipe, &enabled, &CancellationToken::new(), progress)
             .map_err(|error| CliFailure::message(error.to_string()))?;
         self.state.recipes.insert(id.to_owned(), recipe);
         self.save()
@@ -1072,8 +1070,7 @@ impl Services {
                 if let Some(group) = &held.exclusive_group {
                     profile.components.retain(|enabled| {
                         !recipe.components.iter().any(|other| {
-                            &other.id == enabled
-                                && other.exclusive_group.as_ref() == Some(group)
+                            &other.id == enabled && other.exclusive_group.as_ref() == Some(group)
                         })
                     });
                 }
@@ -1133,7 +1130,9 @@ impl Services {
             .config
             .run_guard()
             .map_err(|error| CliFailure::message(error.to_string()))?;
-        let resolution = self.resolve_launch(&recipe, &profile).map_err(CliFailure::from)?;
+        let resolution = self
+            .resolve_launch(&recipe, &profile)
+            .map_err(CliFailure::from)?;
         let outcome = self
             .run_resolution(&resolution)
             .map_err(|problem| CliFailure::message(problem.to_string()))?;
@@ -1216,18 +1215,14 @@ impl Services {
             file.set_len(variant.size)
                 .map_err(|error| logged(Problem::Storage, error))?;
             drop(file);
-            let metadata =
-                fs::metadata(&path).map_err(|error| logged(Problem::Storage, error))?;
+            let metadata = fs::metadata(&path).map_err(|error| logged(Problem::Storage, error))?;
             let mtime = iwads::FileTime::from_metadata(&metadata).ok_or(Problem::Storage)?;
             self.registry.insert(RegistryEntry {
                 path,
                 variant: Some(variant.id.clone()),
                 candidates: Vec::new(),
                 game: Some(variant.game),
-                sha256: variant
-                    .sha256
-                    .clone()
-                    .unwrap_or_else(|| "0".repeat(64)),
+                sha256: variant.sha256.clone().unwrap_or_else(|| "0".repeat(64)),
                 size: variant.size,
                 mtime,
                 source: iwads::Source::Manual,

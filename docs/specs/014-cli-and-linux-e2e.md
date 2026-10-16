@@ -59,9 +59,9 @@ Any change to the UI flows. Downloading IWADs (never). Scheduled e2e runs.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2) — unit/integration tests for each subcommand with the existing fakes
+- [x] **A1** (R1, R2) — unit/integration tests for each subcommand with the existing fakes
   (loopback HTTP, fake engine, temp XDG), including `--force-extract` and the dry-run argv.
 - [ ] **A2** (R3) — the e2e workflow ran once on `main` (coordinator triggers it) and passed;
   the report links the run and summarises the AppImage-direct result on plain Ubuntu.
-- [ ] **A3** (R4) — README and `deck-testing.md` updated; fmt, clippy `-D warnings`, tests green.
+- [x] **A3** (R4) — README and `deck-testing.md` updated; fmt, clippy `-D warnings`, tests green.
 - [ ] **A4** — *Needs Deck Validation:* `ddl doctor` and `ddl launch` work from Konsole.
