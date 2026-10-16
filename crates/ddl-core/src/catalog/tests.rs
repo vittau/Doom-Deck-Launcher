@@ -563,51 +563,70 @@ fn deh_order_is_separate_and_members_are_never_implicitly_loaded() {
 }
 
 #[test]
-fn injected_fetch_tries_mirrors_and_reports_all_failures() {
+fn injected_fetch_verifies_declared_bytes_and_reports_failures() {
     struct Fake {
         bytes: Vec<u8>,
         calls: usize,
-        fail_first: bool,
     }
     impl Fetch for Fake {
-        fn get(&mut self, _: &str, _: u64, _: &Hosts) -> Result<Vec<u8>, String> {
+        fn download(&mut self, _package: &Package, _hosts: &Hosts) -> Result<Vec<u8>, String> {
             self.calls += 1;
-            if self.fail_first && self.calls == 1 {
-                Err("offline fixture failure".into())
-            } else {
-                Ok(self.bytes.clone())
-            }
+            Ok(self.bytes.clone())
         }
     }
+
     let bytes = zip_bytes(&[("main.wad", b"good")]);
-    let mut p = package(&bytes, "main.wad", b"good");
-    p.urls.push("https://romero.com/two.zip".into());
+    let package = package(&bytes, "main.wad", b"good");
     let mut fake = Fake {
         bytes: bytes.clone(),
         calls: 0,
-        fail_first: true,
     };
-    assert!(fetch::fetch_package(&p, &hosts(), &mut fake).is_ok());
-    assert_eq!(fake.calls, 2);
+    assert!(fetch::fetch_package(&package, &hosts(), &mut fake).is_ok());
+    assert_eq!(fake.calls, 1);
+
+    // A fetch that returns the wrong bytes is reported with the package id.
     fake.bytes = vec![];
     fake.calls = 0;
-    assert!(
-        fetch::fetch_package(&p, &hosts(), &mut fake)
-            .unwrap_err()
-            .contains("size mismatch")
-    );
-    assert_eq!(fake.calls, 2);
-    // Full lint invokes the injected boundary only when explicitly requested.
+    let error = fetch::fetch_package(&package, &hosts(), &mut fake).unwrap_err();
+    assert!(error.contains("size mismatch"), "{error}");
+    assert!(error.contains("package `fixture`"), "{error}");
+    assert_eq!(fake.calls, 1);
+}
+
+#[test]
+fn lint_fetch_calls_the_injected_boundary_only_when_requested() {
+    struct Fake {
+        bytes: Vec<u8>,
+        calls: usize,
+    }
+    impl Fetch for Fake {
+        fn download(&mut self, _package: &Package, _hosts: &Hosts) -> Result<Vec<u8>, String> {
+            self.calls += 1;
+            Ok(self.bytes.clone())
+        }
+    }
+
+    let bytes = zip_bytes(&[("main.wad", b"good")]);
     let temp = Temp::new();
-    let mut r = recipe("sigil");
-    r.packages = vec![p];
-    r.packages[0].id = "free".into();
-    r.packages[0].members[0].id = "maps".into();
-    r.components.truncate(1);
-    fs::write(temp.0.join("sigil.toml"), toml::to_string(&r).unwrap()).unwrap();
-    fake.bytes = bytes;
-    fake.calls = 0;
-    fake.fail_first = false;
+    let mut recipe = recipe("sigil");
+    recipe.packages = vec![package(&bytes, "main.wad", b"good")];
+    recipe.packages[0].id = "free".into();
+    recipe.packages[0].members[0].id = "maps".into();
+    recipe.components.truncate(1);
+    fs::write(temp.0.join("sigil.toml"), toml::to_string(&recipe).unwrap()).unwrap();
+
+    let mut fake = Fake { bytes, calls: 0 };
+    // Offline lint (None) never touches the boundary.
+    assert!(
+        lint_paths(
+            std::slice::from_ref(&temp.0),
+            &Path::new(CATALOG).join("hosts.toml"),
+            None
+        )
+        .is_empty()
+    );
+    assert_eq!(fake.calls, 0);
+    // --fetch invokes it once per package.
     assert!(
         lint_paths(
             std::slice::from_ref(&temp.0),
@@ -617,6 +636,109 @@ fn injected_fetch_tries_mirrors_and_reports_all_failures() {
         .is_empty()
     );
     assert_eq!(fake.calls, 1);
+}
+
+#[test]
+fn https_fetch_downloads_through_the_shared_006_pipeline() {
+    use crate::downloads::test_http::{Response, Server, TestDir};
+
+    let body = zip_bytes(&[("main.wad", b"good")]);
+    let served = body.clone();
+    let server = Server::start(move |_req| Response::ok(served.clone()));
+    let dir = TestDir::new("catalog-fetch");
+
+    let mut package = package(&body, "main.wad", b"good");
+    package.urls = vec![server.url("/pkg.zip")];
+    let hosts = Hosts {
+        schema_version: 1,
+        pages: vec!["127.0.0.1".into()],
+        downloads: vec!["127.0.0.1".into()],
+    };
+
+    let mut fetch = HttpsFetch::new(dir.path()).allow_http_for_tests();
+    fetch
+        .download(&package, &hosts)
+        .expect("the shared fetcher downloads and verifies the package");
+
+    // A wrong declared hash is a typed fetcher failure, not a silent success.
+    package.sha256 = "0".repeat(64);
+    let error = fetch.download(&package, &hosts).unwrap_err();
+    assert!(error.contains("SHA-256"), "{error}");
+}
+
+#[test]
+fn embedded_catalog_loads_the_reference_recipes_without_skips() {
+    let catalog = Catalog::embedded();
+    assert!(
+        catalog.skipped.is_empty(),
+        "the shipped catalog must be clean: {:?}",
+        catalog.skipped
+    );
+    let mut ids: Vec<&str> = catalog.ids().collect();
+    ids.sort_unstable();
+    assert_eq!(ids, ["auger-zenith", "sigil", "sigil-ii"]);
+    for id in ["auger-zenith", "sigil", "sigil-ii"] {
+        let loaded = catalog.get(id).expect("recipe present");
+        assert!(loaded.file.ends_with(&format!("{id}.toml")));
+        assert_eq!(loaded.sha256.len(), 64);
+        assert_eq!(
+            loaded.sha256,
+            sha(fs::read_to_string(format!("{CATALOG}/{}", loaded.file))
+                .unwrap()
+                .as_bytes())
+        );
+    }
+    assert!(!catalog.hosts.downloads.is_empty());
+}
+
+#[test]
+fn invalid_recipes_are_skipped_with_a_logged_reason_never_crashing() {
+    let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
+    let good = fs::read_to_string(format!("{CATALOG}/sigil.toml")).unwrap();
+    // A recipe whose package hash is malformed must be skipped, not accepted.
+    let broken = good.replace(
+        "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105",
+        "not-a-hash",
+    );
+    // A file that is not even TOML.
+    let garbage = "this is not toml".to_owned();
+
+    let catalog = Catalog::from_sources(
+        &hosts_text,
+        &[
+            ("sigil.toml", good.as_str()),
+            ("broken.toml", broken.as_str()),
+            ("garbage.toml", garbage.as_str()),
+        ],
+    );
+    assert_eq!(catalog.ids().collect::<Vec<_>>(), ["sigil"]);
+    assert_eq!(catalog.skipped.len(), 2, "{:?}", catalog.skipped);
+    let broken = catalog
+        .skipped
+        .iter()
+        .find(|entry| entry.file == "broken.toml")
+        .expect("broken recipe reported");
+    assert!(broken.reason.contains("SHA-256"), "{broken:?}");
+    let garbage = catalog
+        .skipped
+        .iter()
+        .find(|entry| entry.file == "garbage.toml")
+        .expect("garbage recipe reported");
+    assert!(!garbage.reason.is_empty());
+}
+
+#[test]
+fn duplicate_recipe_ids_keep_the_first_file() {
+    let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
+    let good = fs::read_to_string(format!("{CATALOG}/sigil.toml")).unwrap();
+    let catalog = Catalog::from_sources(
+        &hosts_text,
+        &[("sigil.toml", good.as_str()), ("sigil.toml", good.as_str())],
+    );
+    assert_eq!(catalog.recipes.len(), 1);
+    assert_eq!(catalog.recipes[0].file, "sigil.toml");
+    assert_eq!(catalog.skipped.len(), 1);
+    assert!(catalog.skipped[0].reason.contains("duplicate recipe id"));
 }
 
 #[test]

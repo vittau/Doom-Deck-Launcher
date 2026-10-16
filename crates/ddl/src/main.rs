@@ -31,7 +31,10 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Ok(cli::Command::CatalogLint { paths, fetch }) => {
-            let mut network = ddl_core::catalog::HttpsFetch;
+            let cache = ddl_core::platform::paths::resolve(&|key: &str| std::env::var(key).ok())
+                .map(|paths| paths.cache)
+                .unwrap_or_else(|_| std::env::temp_dir().join("ddl-catalog-fetch"));
+            let mut network = ddl_core::catalog::HttpsFetch::new(cache);
             let errors = ddl_core::catalog::lint_paths(
                 &paths,
                 std::path::Path::new("catalog/hosts.toml"),

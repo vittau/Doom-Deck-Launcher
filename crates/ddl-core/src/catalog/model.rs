@@ -222,9 +222,21 @@ pub struct LoadOrder<'a> {
 }
 
 impl Recipe {
-    /// Checks one selection; validation proves the invariants for every selection.
-    /// `enabled` contains optional component ids; main is implicitly required.
-    pub fn load_order<'a>(&'a self, enabled: &[&str]) -> Result<LoadOrder<'a>, String> {
+    /// The ordered components for one selection, honouring replacement and
+    /// exclusive groups. `enabled` contains optional component ids; main is
+    /// implicitly required and is dropped when exactly one enabled component
+    /// replaces it.
+    ///
+    /// `catalog::validate` proves these invariants for every allowed selection,
+    /// but this method still checks them, so a hand-built or stale recipe can
+    /// only fail with a message rather than produce an ambiguous launch.
+    ///
+    /// # Errors
+    ///
+    /// Returns a human-readable reason for a missing main, an unknown or
+    /// duplicated optional component, two replacements, two components of one
+    /// exclusive group, or two co-enabled components at the same position.
+    pub fn active_components<'a>(&'a self, enabled: &[&str]) -> Result<Vec<&'a Component>, String> {
         let main = self
             .components
             .iter()
@@ -261,9 +273,15 @@ impl Recipe {
         if active.windows(2).any(|cs| cs[0].position == cs[1].position) {
             return Err("give co-enabled components distinct load positions".into());
         }
+        Ok(active)
+    }
+
+    /// Checks one selection; validation proves the invariants for every selection.
+    /// `enabled` contains optional component ids; main is implicitly required.
+    pub fn load_order<'a>(&'a self, enabled: &[&str]) -> Result<LoadOrder<'a>, String> {
         let mut order = LoadOrder::default();
-        for c in active {
-            for member in &c.members {
+        for component in self.active_components(enabled)? {
+            for member in &component.members {
                 if member.role == Role::Dehacked {
                     order.deh.push(member);
                 } else {

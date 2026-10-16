@@ -53,22 +53,22 @@ fake runner).
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2) — end-to-end test with a local HTTP server serving a generated ZIP
+- [x] **A1** (R1, R2) — end-to-end test with a local HTTP server serving a generated ZIP
   (nested add-on zip inside), a test recipe pointing at it, install of main only, then adding the
   add-on without re-downloading.
-- [ ] **A2** (R3) — import with known and unknown hash.
-- [ ] **A3** (R4, R5) — resolver tests: AUGER;ZENITH main only and with each add-on (order:
+- [x] **A2** (R3) — import with known and unknown hash.
+- [x] **A3** (R4, R5) — resolver tests: AUGER;ZENITH main only and with each add-on (order:
   main then add-on; exclusive group enforced), SIGIL with the compat variant replacing main,
   user-supplied soundtrack missing → `ComponentNotProvided` only when enabled, missing IWAD →
   `MissingIwad` naming the game, `vanilla` resolved per family.
-- [ ] **A4** (R6) — summary snapshot for the three reference recipes.
-- [ ] **A5** (R7, R8) — catalog loads the three reference recipes; lint `--fetch` tests pass on
+- [x] **A4** (R6) — summary snapshot for the three reference recipes.
+- [x] **A5** (R7, R8) — catalog loads the three reference recipes; lint `--fetch` tests pass on
   the shared fetcher.
-- [ ] **A6** — fmt, clippy `-D warnings`, tests green; no network in tests.
+- [x] **A6** — fmt, clippy `-D warnings`, tests green; no network in tests.
 
 ## Tasks
 
-- [ ] Installer + manifest + import
-- [ ] Profiles
-- [ ] Resolver + summary
-- [ ] Catalog loading + lint fetch refactor
+- [x] Installer + manifest + import
+- [x] Profiles
+- [x] Resolver + summary
+- [x] Catalog loading + lint fetch refactor
