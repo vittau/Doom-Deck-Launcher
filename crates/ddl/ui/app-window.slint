@@ -39,7 +39,7 @@ component Node inherits Rectangle {
         if root.item.kind != 1: Rectangle { x: 8px; y: 8px; width: parent.width - 16px; height: parent.height - 16px; background: root.item.primary ? Tokens.focus : Tokens.raised; border-radius: Tokens.row-radius; }
     }
     if item.kind == 1: Frame { x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px; }
-    if item.kind == 2 || item.kind == 3: Rectangle {
+    if item.kind == 2 || item.kind == 3 || item.kind == 8: Rectangle {
         x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
         background: transparent; border-width: 1px; border-color: root.item.primary ? Tokens.text : Tokens.line; border-radius: Tokens.row-radius;
     }
