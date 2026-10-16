@@ -271,6 +271,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         test: Some(test),
     };
     let state = crate::runtime::attach_environment(ui, env.clone());
+    assert!(ui.get_nodes().iter().any(|n| n.kind == 11));
     capture(window, "010-loading.png");
     idle(&state);
     assert_eq!(state.borrow().screen, Screen::FirstRun);
@@ -387,6 +388,18 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .collect();
         r.sync(ui);
         capture(window, "010-discover.png");
+        // Render-only community entry: no catalog or install-state mutation.
+        let item = &mut r.snapshot.as_mut().unwrap().items[0];
+        item.recipe.id = "community-without-art".into();
+        item.recipe.title = "Community map (render fixture)".into();
+        r.sync(ui);
+        assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 4));
+        capture(window, "013-discover-fallback.png");
+        r.snapshot.as_mut().unwrap().items[0].recipe.id = "eviternity".into();
+        r.snapshot.as_mut().unwrap().items[0].recipe.title = "Eviternity (render fixture)".into();
+        r.sync(ui);
+        assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 3));
+        capture(window, "013-discover-eviternity.png");
         r.snapshot = saved;
         r.sync(ui);
     }
@@ -652,6 +665,10 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         state.borrow_mut().focus = focus;
         state.borrow_mut().sync(ui);
         capture(window, name);
+        if focus == 4 {
+            assert!(ui.get_nodes().iter().any(|n| n.kind == 10));
+            capture(window, "013-about.png");
+        }
     }
     state.borrow_mut().focus = 1;
     state.borrow_mut().sync(ui);

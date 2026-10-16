@@ -39,7 +39,7 @@ def lettering(text, size, color=BONE):
     return body,x
 name,nw=lettering('DoomDeckLauncher',38)
 save('emblem.svg',256,256,mark)
-save('horizontal.svg',440,128,group(mark,0,0,.5)+group(ddl,152,22,1))
+save('horizontal.svg',330,128,group(mark,0,0,.5)+group(ddl,152,22,1))
 save('stacked.svg',480,400,group(mark,112,0,1)+group(ddl,161.5,269,1)+group(name,(480-nw)/2,354))
 save('full-name.svg',700,160,group(mark,0,0,.625)+group(name,184,54,1.45))
 # Original geometric woodcut scenery: repeated carved buttresses, stars, chasm,
@@ -83,8 +83,8 @@ for title,ivory in [('eviternity',True),('fallback',False)]:
     save(title+'-band.svg',400,88,body)
 # Dedicated Steam compositions retain an open central hero safe area.
 art=scene()
-save('library-capsule.svg',600,900,group(art,-300,0)+group(mark,172,100,1)+group(ddl,143,398,2)+group(name,(600-nw)/2,620))
-save('wide-capsule.svg',920,430,group(art,0,-240,.767)+path('M40 50H570V370H40Z',DARK)+group(mark,64,90,.9)+group(ddl,320,130,1.3)+group(name,320,268,.8))
+save('library-capsule.svg',600,900,group(art,-300,0)+path('M90 370H510V680H90Z',DARK)+group(mark,172,100,1)+group(ddl,143,398,2)+group(name,(600-nw)/2,620))
+save('wide-capsule.svg',920,430,group(art,0,-240,.767)+path('M40 50H650V370H40Z',DARK)+group(mark,64,90,.9)+group(ddl,320,130,1.3)+group(name,320,268,.8))
 save('hero.svg',3840,1240,group(art,0,-800,3.2))
 save('steam-logo.svg',1280,720,group(mark,465,30,1.37)+group(ddl,443.75,404,2.5)+group(name,(1280-nw*2)/2,641,2))
 save('social-preview.svg',1280,640,group(art,0,-245,1.067)+path('M70 90H1210V550H70Z',DARK)+group(mark,108,156,1.25)+group(ddl,500,180,2.8)+group(name,500,460,1.55))

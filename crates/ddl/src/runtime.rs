@@ -794,7 +794,7 @@ impl Runtime {
         } else {
             self.item()
         };
-        ui.set_band_art(band_item.map_or(0, |i| art(&i.recipe.id)));
+        ui.set_band_art(band_item.map_or(4, |i| art(&i.recipe.id)));
         ui.set_subtitle(text(
             ui,
             if self.playing {
@@ -835,7 +835,7 @@ impl Runtime {
             match self.screen {
                 Screen::Loading => {
                     b.panel(12., 12., 1200., 240.);
-                    b.label(40., 60., 1100., 100., text(ui, T::Loading), 30.);
+                    b.logo(412., 24., 400., 210., true);
                 }
                 Screen::FirstRun => {
                     b.panel(12., 12., 584., 478.);
@@ -1798,8 +1798,9 @@ impl Runtime {
                                     s.logs.display().to_string().into(),
                                     22.,
                                 );
-                                b.label(372., 252., 816., 44., text(ui, T::AppVersion), 26.);
-                                b.label(372., 314., 816., 44., crate::cli::VERSION.into(), 22.);
+                                b.logo(372., 220., 560., 128., false);
+                                b.label(960., 252., 228., 44., text(ui, T::AppVersion), 26.);
+                                b.label(960., 314., 228., 44., crate::cli::VERSION.into(), 22.);
                             }
                         }
                     }
@@ -1868,7 +1869,8 @@ fn art(id: &str) -> i32 {
         "sigil" => 0,
         "auger-zenith" => 2,
         "sigil-ii" => 1,
-        _ => 0,
+        "eviternity" => 3,
+        _ => 4,
     }
 }
 fn game(ui: &AppWindow, game: ddl_core::catalog::Game) -> SharedString {
@@ -1966,6 +1968,10 @@ impl Nodes {
             false,
             false,
         );
+    }
+    fn logo(&mut self, x: f32, y: f32, w: f32, h: f32, stacked: bool) {
+        self.art(x, y, w, h, 0);
+        self.nodes.last_mut().unwrap().kind = if stacked { 11 } else { 10 };
     }
     fn art(&mut self, x: f32, y: f32, w: f32, h: f32, art: i32) {
         self.push(
@@ -2146,6 +2152,16 @@ fn elide_path_start(path: &str, limit: usize) -> String {
 #[cfg(test)]
 mod visual_copy_tests {
     use super::*;
+    #[test]
+    fn recipe_art_selects_bundled_covers_and_generic_fallback() {
+        assert_eq!(art("sigil"), 0);
+        assert_eq!(art("sigil-ii"), 1);
+        assert_eq!(art("auger-zenith"), 2);
+        assert_eq!(art("eviternity"), 3);
+        for id in ["community-without-art", "", "SIGIL"] {
+            assert_eq!(art(id), 4);
+        }
+    }
     #[test]
     fn byte_units_and_unicode_breadcrumbs_are_human_readable() {
         assert_eq!(human_bytes(0), "0 B");

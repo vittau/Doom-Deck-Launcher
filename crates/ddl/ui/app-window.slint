@@ -19,7 +19,7 @@ component Frame inherits Rectangle {
 }
 component Cover inherits Image {
     in property <int> art;
-    source: art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : @image-url("assets/ember/sigil.png");
+    source: art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : art == 3 ? @image-url("assets/ember/eviternity.png") : art == 0 ? @image-url("assets/ember/sigil.png") : @image-url("assets/ember/fallback.png");
     image-fit: cover;
 }
 component Node inherits Rectangle {
@@ -57,11 +57,16 @@ component Node inherits Rectangle {
             Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
         }
     }
+    if item.kind == 10 || item.kind == 11: Image {
+        width: parent.width; height: parent.height;
+        source: root.item.kind == 10 ? @image-url("assets/logo/full-name.svg") : @image-url("assets/logo/stacked.svg");
+        image-fit: contain;
+    }
     if item.kind == 7: Image {
         x: 0px; y: 2px; width: 24px; height: 24px;
         source: root.item.tone == 2 ? @image-url("assets/ember/check.svg") : root.item.tone == 4 ? @image-url("assets/ember/cross.svg") : @image-url("assets/ember/pending.svg");
     }
-    if item.kind != 1 && item.kind != 4 && item.kind != 6: Text {
+    if item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 10 && item.kind != 11: Text {
         x: item.kind == 7 ? 32px : item.kind == 8 ? 8px : item.kind == 0 ? 0px : 16px;
         y: item.kind == 7 || item.kind == 0 ? 0px : item.kind == 9 ? 4px : 8px;
         width: parent.width - (item.kind == 0 ? 0px : item.kind == 8 ? 16px : 32px);
@@ -100,6 +105,8 @@ component Hint inherits HorizontalLayout {
 }
 export component AppWindow inherits Window {
     title: @tr("DoomDeckLauncher");
+    out property <image> app-icon: @image-url("assets/logo/icon.png");
+    icon: app-icon;
     width: 1280px; height: 800px;
     default-font-family: "Barlow"; default-font-size: Tokens.body;
     background: Tokens.canvas;
@@ -133,8 +140,7 @@ export component AppWindow inherits Window {
     Image { x: 0px; y: 104px; width: parent.width; height: parent.height - 168px; source: @image-url("assets/ember/wall.png"); image-fit: fill; }
     Rectangle {
         x: 0px; y: 0px; width: parent.width; height: 104px; background: Tokens.deep;
-        Image { x: 40px; y: 24px; width: 40px; height: 56px; source: @image-url("assets/ember/emblem.png"); image-fit: contain; }
-        Image { x: 88px; y: 25px; width: 106px; height: 52px; source: @image-url("assets/ember/logotype.png"); image-fit: contain; }
+        Image { x: 40px; y: 24px; width: 154px; height: 56px; source: @image-url("assets/logo/horizontal.svg"); image-fit: contain; }
         for label[index] in [@tr("Home"), @tr("Discover"), @tr("Library"), @tr("Settings")]: Rectangle {
             x: (214 + index * 180) * 1px; y: 24px; width: 148px; height: 52px;
             background: root.active-tab == index ? Tokens.raised : transparent; border-radius: 8px;
@@ -150,7 +156,7 @@ export component AppWindow inherits Window {
     if root.art-band: Rectangle {
         x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
         clip: true;
-        Image { width: parent.width; height: parent.height; source: root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : @image-url("assets/ember/sigil-band.png"); image-fit: cover; }
+        Image { width: parent.width; height: parent.height; source: root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; }
         Rectangle { x: 168px; y: 60px; width: 232px; height: 28px; background: Tokens.deep;
             Text { x: 8px; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
         }
