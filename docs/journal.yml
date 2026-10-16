@@ -199,3 +199,10 @@
     tasteful. Spec 012 becomes visual identity v2: phase A three mockup directions for the owner
     to pick, phase B implementation plus the 010 review polish.
   refs: [docs/decisions.md, docs/specs/012-visual-identity-v2.md]
+- date: 2026-10-16
+  type: release
+  summary: >-
+    Pre-release v0.0.2-playable (crate version 0.0.2): first playable build for the owner's
+    Deck validation (deck-testing.md F1–F8, then E/C/M/I). ddl-linux-x86_64.tar.gz is
+    13,960,296 bytes (spec 008 A5 size follow-up); SLR smoke test prints "ddl 0.0.2".
+  refs: [docs/deck-testing.md, "https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.2-playable"]

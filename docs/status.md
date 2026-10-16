@@ -5,7 +5,7 @@
 | Item | Spec / output | State |
 | --- | --- | --- |
 | Repo foundation (license, AGENTS.md, docs) | `docs/` | Done |
-| Workspace, CI, release pipeline | `specs/001-workspace-ci-release.md` | Done — CI green; `v0.0.1-skeleton` for Deck checks S1–S6 |
+| Workspace, CI, release pipeline | `specs/001-workspace-ci-release.md` | Done — CI green; `v0.0.1-skeleton` (S1–S6); **`v0.0.2-playable`** pre-release (tarball 13.96 MB) for Deck checks F1–F8 |
 | DSDA-Doom v0.30.x CLI, config, pistol start, strict mode (desk research) | `research/dsda-engine.md` | Done |
 | Upstream sources: DSDA releases/AppImage, `/idgames` API, AUGER;ZENITH | `research/upstream-sources.md` | Done |
 | Reference mapsets SIGIL / SIGIL II | `research/reference-sigil.md` | Done |
