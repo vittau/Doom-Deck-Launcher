@@ -1,0 +1,33 @@
+# Reviewed DSDA-Doom engine versions (spec 004, D-007).
+#
+# This file is hand-authored and review-controlled: DDL offers only these
+# releases by default, and installing anything else needs an explicit opt-in
+# and becomes an "unreviewed" installation. Every value here was read from the
+# tagged upstream release and confirmed against the workspace research.
+#
+# Fields:
+#   tag         upstream git tag, also used to build the download/source URLs.
+#   asset       exact Linux x86-64 AppImage asset name for that tag.
+#   size        asset size in bytes.
+#   sha256      SHA-256 of the asset; for v0.30.1 it equals the GitHub API
+#               `digest` (docs/research/upstream-sources.md §2.1).
+#   validated   whether this version has passed the Deck validation in spec 004
+#               A5. All entries stay false until that hardware test is recorded
+#               in docs/deck-testing.md; DDL shows "not validated" in the UI.
+#   license     upstream licence of the engine payload (research §4.1).
+#   release_url upstream GitHub release page (attribution, spec 004 R9).
+#   source_url  upstream tagged source tree (attribution, spec 004 R9).
+#
+# Source of the v0.30.1 values: docs/research/upstream-sources.md §1.1/§2.1 and
+# docs/research/dsda-engine.md; research date 2026-10-16, tag v0.30.1.
+schema_version = 1
+
+[[version]]
+tag = "v0.30.1"
+asset = "dsda-doom-0.30.1-linux-x86_64.appimage"
+size = 14608888
+sha256 = "b06adf3f0c7d4e82dc1870baf97e67e4dc4e663e37f69070ddc02fa3e97608b0"
+validated = false
+license = "GPL-2.0-or-later"
+release_url = "https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.1"
+source_url = "https://github.com/dsda-org/dsda-doom/tree/v0.30.1"

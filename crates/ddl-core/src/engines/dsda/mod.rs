@@ -12,13 +12,27 @@
 //! pinned to upstream tag `v0.30.1`. Every value DDL emits is confirmed there
 //! or marked there as needing Deck validation.
 
+pub mod clock;
+pub mod discovery;
 pub mod plan;
+pub mod reviewed;
 pub mod runner;
 pub mod smoke;
 
+pub use clock::{Clock, SystemClock, format_unix_utc};
+pub use discovery::{
+    ApiError, ApiResponse, AssetInfo, Availability, CACHE_DIR, CACHE_FILE, CachedReleases,
+    CannedApi, DiscoveredRelease, DiscoveryError, DiscoveryOutcome, DiscoveryStatus, GhAsset,
+    GhRelease, GithubApi, RELEASES_URL, ReleaseApi, THROTTLE, classify_release, parse_digest,
+    refresh, select_linux_appimage, version_from_tag,
+};
 pub use plan::{
     AssignAllowlist, AssignOverride, Complevel, LaunchPlan, PathField, Skill, ValidationError,
     ValueRangeError, Warp,
+};
+pub use reviewed::{
+    EMBEDDED_LIST, ListError, RELEASE_DOWNLOAD_BASE, RELEASE_TAG_BASE, ReviewedList,
+    ReviewedVersion, SOURCE_TREE_BASE,
 };
 pub use runner::{
     EngineRunner, FakeEngineRunner, LaunchError, LaunchExit, LaunchOutcome, RealEngineRunner,
