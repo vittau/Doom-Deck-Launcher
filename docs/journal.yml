@@ -27,3 +27,9 @@
     D-010 — catalog is one TOML recipe per mapset under catalog/, contributed by pull request,
     validated in CI; multi-file composition with explicit load order and complevel is core.
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    D-010 extended — recipes support optional components toggled per profile; AUGER;ZENITH
+    (DBP37) with its optional add-on is a required reference recipe.
+  refs: [docs/decisions.md]
