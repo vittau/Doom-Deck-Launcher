@@ -73,3 +73,15 @@
   type: decision
   summary: D-014 — user-supplied components (paid soundtracks) are imported by the user, never downloaded.
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: finding
+  summary: >-
+    Upstream research merged — DSDA AppImage names changed twice; digests in the API only from
+    v0.29.1, no upstream checksums or signatures; /idgames API is Cloudflare-blocked for
+    automated clients; AUGER;ZENITH = /idgames 19987, doom2, MAP01–MAP22, no COMPLVL, with
+    nested DBP37_Addons.zip holding the optional add-ons.
+  refs: [docs/research/upstream-sources.md]
+- date: 2026-10-16
+  type: decision
+  summary: D-015 direct-URL downloads with mirror allowlist; D-016 AUGER;ZENITH recipe shape and add-on choice.
+  refs: [docs/decisions.md]
