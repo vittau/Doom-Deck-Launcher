@@ -273,3 +273,10 @@
     Eviternity and generic fallback covers/bands repainted in the painted Ember style (prompts
     recorded); the obsolete SVG cover export path was removed from docs/design/logo.
   refs: [docs/reports/013-logo-and-icons.md, crates/ddl/ui/assets/ember/]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    Owner asked the doom_widehud author for licence/permission in
+    https://github.com/NightFright2k19/doom_widehud/issues/6; widescreen status bars stay
+    deferred until that is answered.
+  refs: ["https://github.com/NightFright2k19/doom_widehud/issues/6", docs/status.md]

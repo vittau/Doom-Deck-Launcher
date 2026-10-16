@@ -34,7 +34,7 @@
 
 | Item | Notes |
 | --- | --- |
-| **Widescreen status bars** (owner request 2026-10-16) | Research done (`research/widescreen-statusbars.md`): DSDA v0.30.1 draws a wide `STBAR` automatically; the collection has **no licence** (blocker for auto-download); covers only Eviternity of our 4 mapsets (+ IWAD bars). Proposed path: `user_supplied` component matched by SHA-256 (D-014), or written permission from the author. **Deferred by the owner (2026-10-16)**: the owner will contact the author first. |
+| **Widescreen status bars** (owner request 2026-10-16) | Research done (`research/widescreen-statusbars.md`): DSDA v0.30.1 draws a wide `STBAR` automatically; the collection has **no licence** (blocker for auto-download); covers only Eviternity of our 4 mapsets (+ IWAD bars). Proposed path: `user_supplied` component matched by SHA-256 (D-014), or written permission from the author. **Deferred by the owner (2026-10-16)**: permission asked in https://github.com/NightFright2k19/doom_widehud/issues/6 — follow up there before any spec. |
 | Favorites and categories in Discover | Needs a `tags` field in recipes (spec 010 scope decision). |
 | Multiple profiles per mapset | UI shows one Default profile today (spec 010); `deck-testing.md` C4. |
 | Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |
