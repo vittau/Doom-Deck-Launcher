@@ -206,3 +206,10 @@
     Deck validation (deck-testing.md F1–F8, then E/C/M/I). ddl-linux-x86_64.tar.gz is
     13,960,296 bytes (spec 008 A5 size follow-up); SLR smoke test prints "ddl 0.0.2".
   refs: [docs/deck-testing.md, "https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.2-playable"]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    Spec 012 phase A merged (three directions in design/visual-v2/). Owner picked Ember
+    Cathedral; D-021 records it, intensified (visible wall texture, thicker frames, top art
+    band, legible logotype). Phase B dispatched.
+  refs: [docs/decisions.md, docs/design/visual-v2/README.md]

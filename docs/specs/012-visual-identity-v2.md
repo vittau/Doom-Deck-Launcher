@@ -1,6 +1,6 @@
 # 012 — Visual identity v2 (DOOM-flavoured) and production UI polish
 
-**Status:** Ready (phase A)  ·  **Milestone:** M2  ·  **Depends on:** 010
+**Status:** Phase B in progress  ·  **Milestone:** M2  ·  **Depends on:** 010
 **Evidence:** D-020; `docs/design/ui.md` (interaction contract stays), `docs/research/prior-art.md`
 (UZDeck critique), spec 008 fixture PNGs and `docs/reports/010-ui-wiring.md` (current screens).
 
@@ -52,9 +52,9 @@ navigation or focus rules.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R5) — `docs/design/visual-v2/` holds, per direction, Home + Play setup mockups,
+- [x] **A1** (R1–R5) — `docs/design/visual-v2/` holds, per direction, Home + Play setup mockups,
   a style sheet and a `README.md` with rationale, fonts + licences + links and contrast ratios.
-- [ ] **A2** — owner picks a direction (coordinator records it in `decisions.md`).
+- [x] **A2** — owner picks a direction (coordinator records it in `decisions.md`): Ember Cathedral, intensified (D-021).
 - [ ] **A3** (R6–R7) — headless PNGs of every production state with side-by-side comparisons
   against the chosen mockups; headless tests assert the R7 titles, plural, sort order and
   pre-check copy; fmt, clippy `-D warnings`, tests green.
