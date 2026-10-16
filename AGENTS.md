@@ -68,6 +68,9 @@ test on both: put Linux-only behaviour behind `cfg` or traits, and test it with 
   plugin frameworks.
 - New dependencies: maintained crates only; name and justify each one in your report.
 - Tests: unit tests beside the code, fixtures in `tests/fixtures/`, no network access.
+- **Never open visible windows or capture the screen** on the dev machine; the owner works on it.
+  Verify UI headlessly: render off-screen with Slint's software renderer to a PNG, and drive
+  focus/keys from tests.
 - Repository text is in English.
 - Do not edit `OVERVIEW.md`, `docs/decisions.md`, `docs/status.md` or `docs/journal.yml` unless
   your task says so; propose the change in your report instead.

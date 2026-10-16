@@ -85,3 +85,9 @@
   type: decision
   summary: D-015 direct-URL downloads with mirror allowlist; D-016 AUGER;ZENITH recipe shape and add-on choice.
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    Agents never open visible GUI windows or capture the screen on the owner's machine; UI is
+    verified headlessly (Slint software renderer to PNG, key events in tests). Rule in AGENTS.md.
+  refs: [AGENTS.md]
