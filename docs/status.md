@@ -24,6 +24,7 @@
 | Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Done (A3 needs Deck) |
 | Visual identity v2 (DOOM-flavoured, D-020) + production polish | `specs/012-visual-identity-v2.md` | Done (A4 needs Deck) — Ember Cathedral in the production UI |
 | Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | Done (A4 needs Deck) — Ember Gate SVG logo; owner uploads `docs/design/logo/social-preview.png` in GitHub settings |
+| Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | In progress (opencode) |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
@@ -33,10 +34,10 @@
 
 | Item | Notes |
 | --- | --- |
-| **Widescreen status bars** (owner request 2026-10-16) | Detect the installed PWAD and offer the matching widescreen status bar from NightFright's collection (https://github.com/NightFright2k19/doom_widehud), downloaded and applied automatically as an optional component loaded after the mapset. Research first: licence/permission per file, how the collection maps to PWAD releases (names/hashes), DSDA-Doom's support for wide STBAR graphics and its interaction with complevels, and how to pin downloads (tagged release + SHA-256, D-015). |
+| **Widescreen status bars** (owner request 2026-10-16) — research in progress (opencode) | Detect the installed PWAD and offer the matching widescreen status bar from NightFright's collection (https://github.com/NightFright2k19/doom_widehud), downloaded and applied automatically as an optional component loaded after the mapset. Research first: licence/permission per file, how the collection maps to PWAD releases (names/hashes), DSDA-Doom's support for wide STBAR graphics and its interaction with complevels, and how to pin downloads (tagged release + SHA-256, D-015). |
 | Favorites and categories in Discover | Needs a `tags` field in recipes (spec 010 scope decision). |
 | Multiple profiles per mapset | UI shows one Default profile today (spec 010); `deck-testing.md` C4. |
 | Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |
 | Catalog updates without a DDL release | D-019 embeds the catalog; fetching updates is a separate decision. |
 | GOG IWAD paths | After the Steam paths are validated on the Deck (spec 007). |
-| Repaint Eviternity + fallback covers | Spec 013 made them flat vector art; the other covers are painted. Regenerate both in the painted Ember style (Codex). |
+| Repaint Eviternity + fallback covers | In progress (Codex). |
