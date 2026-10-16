@@ -5,6 +5,8 @@
 //! real screens arrive with later specs.
 
 mod cli;
+#[cfg(test)]
+mod headless;
 mod logging;
 
 use std::process::ExitCode;

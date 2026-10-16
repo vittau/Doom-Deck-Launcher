@@ -26,6 +26,10 @@ slint = { version = "=1.18.1", default-features = false, features = [
     "std",
     "backend-winit",
     "renderer-femtovg",
+    # Also compile the CPU renderer: it is the fallback on machines without a
+    # usable GL/EGL stack (SLINT_BACKEND=winit-software) and the renderer the
+    # headless UI test uses. See docs/research/steam-runtime-build.md.
+    "renderer-software",
 ] }
 # Build-time .slint -> Rust compiler, invoked from `crates/ddl/build.rs`.
 slint-build = "=1.18.1"

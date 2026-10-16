@@ -22,3 +22,10 @@ tracing-subscriber = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }
+
+# Test-only. `png` is used by the headless UI test (`src/headless.rs`) to write
+# the off-screen frames the software renderer produces, so a human can look at
+# exactly what the menu draws without opening a window. It is maintained by the
+# image-rs project and adds no system library requirements.
+[dev-dependencies]
+png = "=0.18.1"
