@@ -94,6 +94,8 @@ jobs:
           install -m 0644 crates/ddl/ui/assets/Barlow-OFL.txt "$staging/ddl/Barlow-OFL.txt"
           install -m 0644 crates/ddl/ui/assets/PirataOne-OFL.txt "$staging/ddl/PirataOne-OFL.txt"
           install -m 0644 README.md "$staging/ddl/README.md"
+          mkdir -p "$staging/ddl/art"
+          install -m 0644 docs/design/logo/steam/*.png "$staging/ddl/art/"
           tar --owner=0 --group=0 --numeric-owner -C "$staging" -czf ddl-linux-x86_64.tar.gz ddl
           sha256sum ddl-linux-x86_64.tar.gz > ddl-linux-x86_64.tar.gz.sha256
           echo "--- archive contents ---"
