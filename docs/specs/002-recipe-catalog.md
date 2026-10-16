@@ -21,7 +21,7 @@ maintainers can review with confidence. End users only ever see the curated resu
 - **R3** — **Base game:** the required game id (`doom`, `doom2`, `tnt`, `plutonia`) and, when
   the content needs it, the accepted IWAD variants (e.g. SIGIL requires Ultimate DOOM 1.9 and
   refuses shareware). Variant ids refer to DDL's known-IWAD table (separate spec); until that
-  table exists, the lint accepts any variant id matching `[a-z0-9-]+`. Shown to the user; Play is
+  table exists, the lint accepts any variant id matching `^[a-z0-9][a-z0-9.-]*$` (the research ids contain dots, e.g. `doom2-1.9`). Shown to the user; Play is
   blocked without a matching IWAD (D-010).
 - **R4** — **Packages:** one or more downloads, each with id, canonical page (e.g. the /idgames
   entry), direct URLs on allowlisted hosts (primary plus mirrors, D-015), exact size and SHA-256,
