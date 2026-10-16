@@ -28,16 +28,16 @@ Accent button: `#101418` on `#FFCA70` = 12.27:1.
 
 | File | Dimensions | Bytes |
 | --- | --- | ---: |
-| [discover.png](mockups/discover.png) | 1280×800 | 54,002 |
-| [download-install.png](mockups/download-install.png) | 1280×800 | 64,190 |
-| [first-run.png](mockups/first-run.png) | 1280×800 | 71,941 |
-| [home.png](mockups/home.png) | 1280×800 | 70,547 |
-| [library.png](mockups/library.png) | 1280×800 | 53,826 |
-| [mapset-detail.png](mockups/mapset-detail.png) | 1280×800 | 73,115 |
-| [play-blocked-iwad.png](mockups/play-blocked-iwad.png) | 1280×800 | 93,580 |
-| [play-setup-auger.png](mockups/play-setup-auger.png) | 1280×800 | 81,363 |
-| [play-setup-sigil.png](mockups/play-setup-sigil.png) | 1280×800 | 89,885 |
-| [settings.png](mockups/settings.png) | 1280×800 | 72,048 |
+| [discover.png](mockups/discover.png) | 1280×800 | 52,397 |
+| [download-install.png](mockups/download-install.png) | 1280×800 | 60,627 |
+| [first-run.png](mockups/first-run.png) | 1280×800 | 69,581 |
+| [home.png](mockups/home.png) | 1280×800 | 68,909 |
+| [library.png](mockups/library.png) | 1280×800 | 52,182 |
+| [mapset-detail.png](mockups/mapset-detail.png) | 1280×800 | 70,809 |
+| [play-blocked-iwad.png](mockups/play-blocked-iwad.png) | 1280×800 | 91,312 |
+| [play-setup-auger.png](mockups/play-setup-auger.png) | 1280×800 | 79,133 |
+| [play-setup-sigil.png](mockups/play-setup-sigil.png) | 1280×800 | 87,646 |
+| [settings.png](mockups/settings.png) | 1280×800 | 69,792 |
 
 ### Required sips output
 
@@ -87,3 +87,5 @@ Typeface: Inter 4.1, SIL Open Font License 1.1; source https://github.com/rsms/i
 ## Reproduce
 
 Install Pillow in an isolated environment, then run `python3 docs/design/render_mockups.py`. Renderer uses only assets beside it and writes the ten PNGs; no network access is needed. The temporary Pillow install used for this delivery is removed from the worktree.
+
+Visual follow-up: the wireframes have been re-rendered with B = Back, Start = Menu and the unclear header removed; see [visual-report.md](visual-report.md) for six high-fidelity concepts and updated visual guidance.
