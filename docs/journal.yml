@@ -267,3 +267,9 @@
     Widescreen status bars deferred by the owner; they will contact the doom_widehud author
     about permission before any implementation.
   refs: [docs/research/widescreen-statusbars.md, docs/status.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Eviternity and generic fallback covers/bands repainted in the painted Ember style (prompts
+    recorded); the obsolete SVG cover export path was removed from docs/design/logo.
+  refs: [docs/reports/013-logo-and-icons.md, crates/ddl/ui/assets/ember/]

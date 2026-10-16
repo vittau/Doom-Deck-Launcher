@@ -40,4 +40,3 @@
 | Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |
 | Catalog updates without a DDL release | D-019 embeds the catalog; fetching updates is a separate decision. |
 | GOG IWAD paths | After the Steam paths are validated on the Deck (spec 007). |
-| Repaint Eviternity + fallback covers | In progress (Codex). |
