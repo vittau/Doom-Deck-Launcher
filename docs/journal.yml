@@ -33,3 +33,7 @@
     D-010 extended — recipes support optional components toggled per profile; AUGER;ZENITH
     (DBP37) with its optional add-on is a required reference recipe.
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: decision
+  summary: SIGIL and SIGIL II (John Romero) added as required reference recipes (D-010).
+  refs: [docs/decisions.md]
