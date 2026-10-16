@@ -37,3 +37,9 @@
   type: decision
   summary: SIGIL and SIGIL II (John Romero) added as required reference recipes (D-010).
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    D-010 refined — DDL unpacks archives and arranges load order itself; recipes declare the
+    base game (IWAD + accepted versions), shown in the UI; Play is blocked without it.
+  refs: [docs/decisions.md]
