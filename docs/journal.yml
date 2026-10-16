@@ -280,3 +280,12 @@
     https://github.com/NightFright2k19/doom_widehud/issues/6; widescreen status bars stay
     deferred until that is answered.
   refs: ["https://github.com/NightFright2k19/doom_widehud/issues/6", docs/status.md]
+- date: 2026-10-16
+  type: research
+  summary: >-
+    First real-network e2e (CI run 38980417407): on plain Ubuntu the DSDA-Doom v0.30.1
+    AppImage mounts directly via FUSE (runner lacked libOpenGL.so.0); inside the Steam Runtime
+    sniper container DDL correctly fell back to extraction but AppRun needs glibc >= 2.34 and
+    GLIBCXX_3.4.29 (sniper has 2.31). Consequence: DDL's shortcut must not use a Steam
+    Compatibility tool; e2e now builds in sniper and runs on the host. Fix in progress.
+  refs: ["https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407", docs/specs/014-cli-and-linux-e2e.md]
