@@ -45,6 +45,7 @@ impl Gate {
 struct GatedRunner {
     gate: Arc<Gate>,
     fake: Arc<dsda::FakeEngineRunner>,
+    exit: Arc<std::sync::atomic::AtomicI32>,
 }
 impl EngineRunner for GatedRunner {
     fn launch(
@@ -53,7 +54,16 @@ impl EngineRunner for GatedRunner {
         a: &dsda::AssignAllowlist,
     ) -> Result<dsda::LaunchOutcome, dsda::LaunchError> {
         self.gate.wait();
-        self.fake.launch(p, a)
+        let mut outcome = self.fake.launch(p, a)?;
+        let exit = self.exit.load(std::sync::atomic::Ordering::SeqCst);
+        outcome.exit_status = if exit < 0 {
+            dsda::LaunchExit::Signalled { signal: -exit }
+        } else if exit == 0 {
+            dsda::LaunchExit::Clean
+        } else {
+            dsda::LaunchExit::Failed { code: exit }
+        };
+        Ok(outcome)
     }
 }
 fn wait(state: &Rc<RefCell<Runtime>>, test: impl Fn(&Runtime) -> bool) {
@@ -83,7 +93,18 @@ fn idle(state: &Rc<RefCell<Runtime>>) {
 fn capture(window: &MinimalSoftwareWindow, name: &str) {
     let buffer = render(window);
     write_png(name, &buffer);
-    comparison(name, &buffer);
+    let reference = match name {
+        "010-first-run.png" => "first-run.png",
+        "010-first-run-engine-install.png"
+        | "010-install-progress.png"
+        | "010-install-error.png" => "download-install.png",
+        "010-mapset-detail.png" => "mapset-detail.png",
+        "010-play-setup-ready.png" | "010-engine-failed-toast.png" => "play-setup-sigil.png",
+        "010-play-setup-blocked.png" => "play-blocked-iwad.png",
+        "010-settings.png" => "settings.png",
+        _ => name,
+    };
+    comparison(reference, &buffer);
 }
 fn wad() -> Vec<u8> {
     let mut bytes = b"IWAD".to_vec();
@@ -126,6 +147,13 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         zip.write_all(&bytes).unwrap();
     }
     let package = zip.finish().unwrap().into_inner();
+    let mut broken = catalog.recipes[0].clone();
+    broken.recipe.id = "zz-test-error".into();
+    broken.recipe.title = "Checksum error test".into();
+    broken.recipe.packages[0].sha256 = "0".repeat(64);
+    catalog.recipes.push(broken);
+    let package_gate = Arc::new(Gate::new());
+    let pg = package_gate.clone();
     let engine_gate = Arc::new(Gate::new());
     let g = engine_gate.clone();
     let engine_body = engine_bytes.clone();
@@ -135,6 +163,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             g.wait();
             Response::ok(engine_body.clone())
         } else {
+            pg.wait();
             Response::ok(package_body.clone())
         }
     });
@@ -143,12 +172,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     catalog.recipes[0].recipe.packages[0].size = package.len() as u64;
     catalog.recipes[0].recipe.packages[0].sha256 = Sha256::of(&package).to_hex();
     catalog.hosts.downloads.push("127.0.0.1".into());
+    catalog.recipes[1].recipe.packages[0].urls = vec![server.url("/bad.zip")];
+    catalog.recipes[1].recipe.packages[0].size = package.len() as u64;
     let reviewed=dsda::ReviewedList::parse(&format!("schema_version = 1\n[[version]]\ntag = 'v0.30.1'\nasset = 'test-linux.AppImage'\nsize = {}\nsha256 = '{}'\nlicense = 'GPL-2.0-or-later'\nrelease_url = 'https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.1'\nsource_url = 'https://github.com/dsda-org/dsda-doom/tree/v0.30.1'\n",engine_bytes.len(),Sha256::of(&engine_bytes).to_hex())).unwrap();
     let play_gate = Arc::new(Gate::new());
     let fake = Arc::new(
         dsda::FakeEngineRunner::new(dsda::LaunchExit::Failed { code: 255 })
             .with_log_path(paths.state.join("logs/fake-engine.log")),
     );
+    let exit = Arc::new(std::sync::atomic::AtomicI32::new(255));
     let test = Arc::new(TestEnvironment {
         catalog,
         reviewed,
@@ -156,6 +188,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         runner: Arc::new(GatedRunner {
             gate: play_gate.clone(),
             fake: fake.clone(),
+            exit: exit.clone(),
         }),
     });
     let env = Environment {
@@ -233,7 +266,9 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     capture(window, "010-mapset-detail.png");
     ui.invoke_clicked(1);
     wait(&state, |r| r.progress.is_some() || !r.busy);
+    assert_eq!(state.borrow().screen, Screen::Progress);
     capture(window, "010-install-progress.png");
+    package_gate.release();
     idle(&state);
     assert_eq!(state.borrow().screen, Screen::Setup);
     assert!(
@@ -268,6 +303,75 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .components
             .is_empty()
     );
+    ui.invoke_clicked(101);
+    press(window, Key::RightArrow);
+    press(window, Key::Return);
+    idle(&state);
+    assert_eq!(
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .profile
+            .components,
+        vec!["compat"]
+    );
+    ui.invoke_clicked(2);
+    idle(&state);
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .launch
+            .as_ref()
+            .unwrap()
+            .content[0]
+            .path
+            .ends_with("SIGIL_COMPAT_V1_23.wad")
+    );
+    ui.invoke_clicked(101);
+    idle(&state);
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .profile
+            .components
+            .is_empty()
+    );
+    // The directory browser exposes local WAD imports, and an unknown paid combination stays off.
+    std::fs::write(
+        home.join("purchased.wad"),
+        b"Unrecognized synthetic soundtrack",
+    )
+    .unwrap();
+    ui.invoke_clicked(102);
+    idle(&state);
+    let row = state
+        .borrow()
+        .directory
+        .as_ref()
+        .unwrap()
+        .entries
+        .iter()
+        .position(|(p, _)| p == &home.join("purchased.wad"))
+        .unwrap();
+    ui.invoke_clicked(100 + row as i32);
+    wait(&state, |r| !r.busy);
+    assert_eq!(state.borrow().problem, Some(Problem::UnknownFile));
+    assert!(
+        Services::open(env.clone())
+            .unwrap()
+            .snapshot()
+            .unwrap()
+            .items[0]
+            .profile
+            .components
+            .is_empty()
+    );
+    press(window, Key::Escape);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    // The full focused load-order row is visible, including its ring, while the summary stays fixed.
+    ui.invoke_clicked(43);
+    let nodes = ui.get_nodes();
+    let focused = nodes.iter().find(|n| n.id == 43).unwrap();
+    let offset = ui.get_scroll_offset();
+    assert!(focused.y - offset >= 12.);
+    assert!(focused.y + focused.h - offset <= 494.);
+    capture(window, "010-play-setup-options-scroll.png");
     // Playing ignores controller and pointer actions, retains run guard and restores Play.
     ui.invoke_clicked(50);
     wait(&state, |r| r.playing);
@@ -294,6 +398,29 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     capture(window, "010-engine-failed-toast.png");
     assert!(!ddl_core::dsda_config::RunGuard::is_active(&paths.config.join("dsda")).unwrap());
     state.borrow_mut().neutral_poll(true);
+    for status in [-6, 0] {
+        exit.store(status, std::sync::atomic::Ordering::SeqCst);
+        ui.invoke_clicked(50);
+        idle(&state);
+        assert_eq!(ui.get_focused(), 50);
+        assert_eq!(ui.get_toast().is_empty(), status == 0);
+        state.borrow_mut().neutral_poll(true);
+    }
+    assert_eq!(fake.launch_count(), 3);
+    press(window, Key::Escape);
+    assert_eq!(state.borrow().screen, Screen::Detail);
+    press(window, Key::Escape);
+    assert_eq!(state.borrow().screen, Screen::Discover);
+    press(window, Key::Tab);
+    assert_eq!(state.borrow().screen, Screen::Library);
+    assert!(ui.get_nodes().iter().any(|n| n.id == 10));
+    assert!(!ui.get_nodes().iter().any(|n| n.id == 11));
+    capture(window, "010-library.png");
+    press(window, Key::F1);
+    assert_eq!(state.borrow().screen, Screen::Home);
+    capture(window, "010-home-continue.png");
+    ui.invoke_clicked(1);
+    assert_eq!(state.borrow().screen, Screen::Setup);
     // Missing IWAD rechecks and gates the real resolver without changing the install.
     std::fs::remove_file(owned.join("renamed.wad")).unwrap();
     state.borrow_mut().start(ui, Command::Scan(None));
@@ -308,7 +435,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     );
     capture(window, "010-play-setup-blocked.png");
     ui.invoke_clicked(50);
-    assert_eq!(fake.launch_count(), 1);
+    assert_eq!(fake.launch_count(), 3);
     // Reset is confirmed and preserves a backup. Folder remove never deletes user data.
     state.borrow_mut().screen = Screen::Settings;
     state.borrow_mut().focus = 1;
@@ -328,15 +455,35 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .next()
             .is_some()
     );
-    // Error is typed, retryable and never replaces the existing usable install.
-    state.borrow_mut().screen = Screen::Progress;
-    state.borrow_mut().problem = Some(Problem::Checksum);
+    ui.invoke_clicked(2);
+    ui.invoke_clicked(100);
+    assert!(ui.get_sheet_open());
+    press(window, Key::Escape);
+    assert!(!state.borrow().snapshot.as_ref().unwrap().folders.is_empty());
+    ui.invoke_clicked(100);
+    press(window, Key::RightArrow);
+    press(window, Key::Return);
+    idle(&state);
+    assert!(state.borrow().snapshot.as_ref().unwrap().folders.is_empty());
+    assert!(home.join("purchased.wad").is_file());
+    // Error is generated by a real checksum rejection, with the prior install retained.
+    state.borrow_mut().screen = Screen::Detail;
+    state.borrow_mut().selected = 1;
+    state.borrow_mut().focus = 1;
     state.borrow_mut().sync(ui);
+    ui.invoke_clicked(1);
+    wait(&state, |r| !r.busy);
+    assert_eq!(state.borrow().problem, Some(Problem::Checksum));
     capture(window, "010-install-error.png");
     assert!(
         ui.get_nodes()
             .iter()
             .any(|node| node.label.contains("checksum"))
+    );
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .manifest
+            .is_some()
     );
     // Restart uses stored manifest/recipe and profile, with no discovery download.
     let restarted = Services::open(env).unwrap().snapshot().unwrap();

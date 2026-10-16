@@ -23,6 +23,7 @@ pub enum Problem {
     Storage,
     State,
     Network,
+    Update,
     Checksum,
     UnsafeArchive,
     Cancelled,
@@ -140,7 +141,7 @@ pub enum Event {
     Playing,
     Directory(Directory),
     Updates(Vec<String>),
-    Finished(Result<Snapshot, Problem>),
+    Finished(Result<Box<Snapshot>, Problem>),
     EngineExit(dsda::LaunchOutcome),
 }
 /// Test overrides are inert unless explicitly provided by the headless tests.
@@ -337,6 +338,10 @@ impl Services {
         cancel: &CancellationToken,
         emit: &mut dyn FnMut(Event),
     ) -> Result<(), Problem> {
+        if cancel.is_cancelled() {
+            return Err(Problem::Cancelled);
+        }
+        emit(Event::Working);
         match command {
             Command::Startup => {
                 if let Err(error) = self
@@ -483,7 +488,13 @@ impl Services {
                 let result = self
                     .engine
                     .discover(true)
-                    .map_err(|e| logged(Problem::Network, e))?;
+                    .map_err(|e| logged(Problem::Update, e))?;
+                if result.is_offline() {
+                    return Err(Problem::Update);
+                }
+                if cancel.is_cancelled() {
+                    return Err(Problem::Cancelled);
+                }
                 emit(Event::Updates(
                     result
                         .releases
@@ -507,9 +518,10 @@ impl Services {
                 let recipe = self.recipe(&id)?;
                 let outcome = self
                     .installer
-                    .import_user_component(&recipe, &component, &path)
+                    .import_user_component_with_cancel(&recipe, &component, &path, cancel)
                     .map_err(install_error)?;
                 if !outcome.matched {
+                    tracing::warn!(sha256=%outcome.sha256,component,"unrecognized imported component was stored but not enabled");
                     return Err(Problem::UnknownFile);
                 }
                 let mut profile = self.profile(&recipe)?;
@@ -555,6 +567,9 @@ impl Services {
             );
         }
         self.registry.refresh(&iwads::IwadTable::embedded());
+        if cancel.is_cancelled() {
+            return Err(Problem::Cancelled);
+        }
         for (path, source) in paths {
             if cancel.is_cancelled() {
                 return Err(Problem::Cancelled);
@@ -626,15 +641,126 @@ pub fn select_component(recipe: &Recipe, profile: &mut Profile, id: &str) {
         return;
     };
     let enabled = !profile.components.iter().any(|held| held == id);
-    if enabled {
-        if let Some(group) = &c.exclusive_group {
-            profile.components.retain(|id| {
-                !recipe
-                    .components
-                    .iter()
-                    .any(|other| other.id == *id && other.exclusive_group.as_ref() == Some(group))
-            });
-        }
+    if enabled && let Some(group) = &c.exclusive_group {
+        profile.components.retain(|id| {
+            !recipe
+                .components
+                .iter()
+                .any(|other| other.id == *id && other.exclusive_group.as_ref() == Some(group))
+        });
     }
     profile.set_component(id, enabled);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn env(root: &Path) -> Environment {
+        let home = root.join("home");
+        fs::create_dir_all(&home).unwrap();
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .unwrap();
+        Environment {
+            paths,
+            home,
+            test: None,
+        }
+    }
+    #[test]
+    fn startup_provisions_owned_paths_and_restores_the_default_profile() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        s.execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        let snapshot = s.snapshot().unwrap();
+        assert_eq!(snapshot.items.len(), 3);
+        assert!(snapshot.engine.is_none());
+        assert!(snapshot.config_usable);
+        assert!(snapshot.iwads.is_empty());
+        let mut profile = snapshot
+            .items
+            .iter()
+            .find(|i| i.recipe.id == "sigil")
+            .unwrap()
+            .profile
+            .clone();
+        profile.skill = 5;
+        profile.pistol_start = true;
+        s.execute(
+            Command::Save(profile.clone()),
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+        .unwrap();
+        let restored = Services::open(env).unwrap().snapshot().unwrap();
+        assert_eq!(
+            restored
+                .items
+                .iter()
+                .find(|i| i.recipe.id == "sigil")
+                .unwrap()
+                .profile,
+            profile
+        );
+        assert!(!temp.path().join("home/.dsda-doom").exists());
+    }
+    #[test]
+    fn additive_choices_are_exclusive_and_replacements_remove_the_main() {
+        let catalog = Catalog::embedded();
+        let r = catalog.recipe("auger-zenith").unwrap();
+        let mut profile = Profile::new("test", "Default", &r.id);
+        let choices: Vec<_> = r
+            .components
+            .iter()
+            .filter(|c| c.optional && !c.user_supplied)
+            .collect();
+        select_component(r, &mut profile, &choices[0].id);
+        select_component(r, &mut profile, &choices[1].id);
+        assert_eq!(profile.components, vec![choices[1].id.clone()]);
+        select_component(r, &mut profile, &choices[1].id);
+        assert!(profile.components.is_empty());
+        let sigil = catalog.recipe("sigil").unwrap();
+        let mut profile = Profile::new("test", "Default", &sigil.id);
+        select_component(sigil, &mut profile, "compat");
+        let active = sigil.active_components(&["compat"]).unwrap();
+        assert!(active.iter().all(|c| c.id != "main"));
+    }
+    #[test]
+    fn state_rejects_unknown_schema_and_cancelled_work_does_not_change_user_state() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+        assert_eq!(
+            s.execute(Command::Startup, &cancel, &mut |_| {}),
+            Err(Problem::Cancelled)
+        );
+        assert!(!env.paths.config.join("app.json").exists());
+        fs::write(
+            env.paths.config.join("app.json"),
+            br#"{"schema_version":2,"folders":[],"recipes":{}}"#,
+        )
+        .unwrap();
+        assert!(matches!(Services::open(env), Err(Problem::State)));
+    }
+    #[test]
+    fn unreadable_config_is_a_reset_notice_without_losing_the_catalog() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        s.execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        fs::write(env.paths.config.join("dsda/state.json"), b"broken").unwrap();
+        let mut s = Services::open(env).unwrap();
+        s.execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        let view = s.snapshot().unwrap();
+        assert!(!view.config_usable);
+        assert!(view.config_notice);
+        assert_eq!(view.items.len(), 3);
+    }
 }

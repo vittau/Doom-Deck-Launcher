@@ -3,6 +3,7 @@ use crate::{AppWindow, WiringStrings};
 use slint::ComponentHandle;
 #[derive(Clone, Copy)]
 pub enum Text {
+    UpdateError,
     Connected,
     Disconnected,
     Loading,
@@ -133,6 +134,7 @@ pub enum Text {
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
     match key {
+        Text::UpdateError => s.get_update_error(),
         Text::Connected => s.get_connected(),
         Text::Disconnected => s.get_disconnected(),
         Text::Loading => s.get_loading(),

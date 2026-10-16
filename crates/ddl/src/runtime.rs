@@ -46,6 +46,7 @@ pub struct Runtime {
     pub snapshot: Option<Snapshot>,
     pub selected: usize,
     history: Vec<(Screen, i32)>,
+    remembered: [i32; 4],
     pub busy: bool,
     pub playing: bool,
     neutral: bool,
@@ -76,6 +77,7 @@ impl Runtime {
             snapshot: None,
             selected: 0,
             history: vec![],
+            remembered: [1, 10, 10, 1],
             busy: false,
             playing: false,
             neutral: false,
@@ -114,13 +116,16 @@ impl Runtime {
     }
     fn tab(&mut self, tab: usize) {
         if self.root() {
+            if self.focus >= 0 {
+                self.remembered[self.tab_index()] = self.focus;
+            }
             self.screen = [
                 Screen::Home,
                 Screen::Discover,
                 Screen::Library,
                 Screen::Settings,
             ][tab.min(3)];
-            self.focus = 1;
+            self.focus = self.remembered[tab.min(3)];
             self.history.clear();
         }
     }
@@ -147,10 +152,10 @@ impl Runtime {
         }
         self.pending = Some(command.clone());
         self.retry = Some(command.clone());
-        if matches!(command, Command::InstallEngine(_) | Command::Install(_)) {
-            if self.screen != Screen::Progress {
-                self.enter(Screen::Progress, 1);
-            }
+        if matches!(command, Command::InstallEngine(_) | Command::Install(_))
+            && self.screen != Screen::Progress
+        {
+            self.enter(Screen::Progress, 1);
         }
         let env = self.env.clone();
         let cancel = self.cancel.clone();
@@ -165,7 +170,7 @@ impl Runtime {
             };
             let result = Services::open(env).and_then(|mut services| {
                 services.execute(command, &cancel, &mut emit)?;
-                services.snapshot()
+                services.snapshot().map(Box::new)
             });
             emit(Event::Finished(result));
         });
@@ -203,7 +208,7 @@ impl Runtime {
                     let command = self.pending.take();
                     match result {
                         Ok(snapshot) => {
-                            self.snapshot = Some(snapshot);
+                            self.snapshot = Some(*snapshot);
                             self.problem = None;
                             match command {
                                 Some(Command::Startup) => {
@@ -244,7 +249,9 @@ impl Runtime {
                                 Some(Command::Install(_)) => {
                                     self.screen = Screen::Setup;
                                     self.focus = 50;
-                                    self.history.pop();
+                                    if self.return_to.0 == Screen::Setup {
+                                        self.history.pop();
+                                    }
                                 }
                                 Some(Command::Play(_)) => {
                                     self.screen = Screen::Setup;
@@ -324,6 +331,7 @@ impl Runtime {
         match action {
             Action::Confirm => self.activate(ui),
             Action::Back => {
+                self.problem = None;
                 if self.screen == Screen::Progress {
                     (self.screen, self.focus) = self.return_to;
                 } else if self.screen == Screen::Browser {
@@ -394,6 +402,10 @@ impl Runtime {
         }
     }
     fn activate(&mut self, ui: &AppWindow) {
+        if self.focus < 0 && self.root() {
+            self.tab((-self.focus - 1) as usize);
+            return;
+        }
         if self.focus == 800 {
             if let Some(command) = self.retry.clone() {
                 self.start(ui, command);
@@ -511,6 +523,7 @@ impl Runtime {
                 }
             }
             (Screen::Setup, 42) => self.advanced = !self.advanced,
+            (Screen::Setup, 43) => ui.set_toast(text(ui, T::OrderHelp)),
             (Screen::Setup, 100..=199) => {
                 if let Some(c) = self
                     .item()
@@ -519,7 +532,11 @@ impl Runtime {
                 {
                     if c.user_supplied {
                         self.browse(ui, Some(c.id));
-                    } else if c.replaces.is_some() {
+                    } else if c.replaces.is_some()
+                        && self
+                            .item()
+                            .is_some_and(|i| !i.profile.components.contains(&c.id))
+                    {
                         self.show_sheet(Sheet::Component(c.id));
                     } else {
                         self.toggle(ui, &c.id);
@@ -527,12 +544,11 @@ impl Runtime {
                 }
             }
             (Screen::Setup, 50) => {
-                if let Some(item) = self.item() {
-                    if item.launch.is_ok()
-                        && self.snapshot.as_ref().is_some_and(|s| s.config_usable)
-                    {
-                        self.start(ui, Command::Play(item.recipe.id.clone()));
-                    }
+                if let Some(item) = self.item()
+                    && item.launch.is_ok()
+                    && self.snapshot.as_ref().is_some_and(|s| s.config_usable)
+                {
+                    self.start(ui, Command::Play(item.recipe.id.clone()));
                 }
             }
             (Screen::Review, 1) => {
@@ -543,17 +559,16 @@ impl Runtime {
                     .snapshot
                     .as_ref()
                     .and_then(|s| s.iwads.iter().find(|e| !e.candidates.is_empty()))
+                    && let Some(variant) = entry.candidates.get((self.focus - 10) as usize)
                 {
-                    if let Some(variant) = entry.candidates.get((self.focus - 10) as usize) {
-                        self.start(ui, Command::Choose(entry.path.clone(), variant.clone()));
-                    }
+                    self.start(ui, Command::Choose(entry.path.clone(), variant.clone()));
                 }
             }
             (Screen::Browser, 1) => {
-                if self.import_component.is_none() {
-                    if let Some(d) = &self.directory {
-                        self.start(ui, Command::Scan(Some(d.path.clone())));
-                    }
+                if self.import_component.is_none()
+                    && let Some(d) = &self.directory
+                {
+                    self.start(ui, Command::Scan(Some(d.path.clone())));
                 }
             }
             (Screen::Browser, 2) => {
@@ -620,15 +635,14 @@ impl Runtime {
                 }
             }
             (Screen::Settings, 100..) => {
-                if self.settings_section == 1 {
-                    if let Some(path) = self
+                if self.settings_section == 1
+                    && let Some(path) = self
                         .snapshot
                         .as_ref()
                         .and_then(|s| s.folders.get((self.focus - 100) as usize))
                         .cloned()
-                    {
-                        self.show_sheet(Sheet::Remove(path));
-                    }
+                {
+                    self.show_sheet(Sheet::Remove(path));
                 }
             }
             _ => {}
@@ -643,6 +657,19 @@ impl Runtime {
         }
     }
     fn move_focus(&mut self, direction: Action) {
+        if self.focus < 0 && self.root() {
+            match direction {
+                Action::Left if self.focus < -1 => self.focus += 1,
+                Action::Right if self.focus > -4 => self.focus -= 1,
+                Action::Down => {
+                    let tab = (-self.focus - 1) as usize;
+                    self.tab(tab);
+                    self.focus = self.remembered[tab];
+                }
+                _ => {}
+            }
+            return;
+        }
         let Some(current) = self
             .nodes
             .iter()
@@ -669,9 +696,15 @@ impl Runtime {
             .min_by(|a, b| a.1.total_cmp(&b.1))
         {
             self.focus = next.0;
+        } else if direction == Action::Up && self.root() {
+            self.remembered[self.tab_index()] = self.focus;
+            self.focus = -(self.tab_index() as i32) - 1;
         }
     }
     pub fn sync(&mut self, ui: &AppWindow) {
+        if self.screen == Screen::Settings && (1..=4).contains(&self.focus) {
+            self.settings_section = (self.focus - 1) as usize;
+        }
         let heading = if self.playing {
             T::Playing
         } else {
@@ -738,7 +771,9 @@ impl Runtime {
                         text(ui, if ready { T::EngineReady } else { T::FirstHelp }),
                         22.,
                     );
-                    b.button(1, 36., 220., 536., text(ui, T::InstallEngine), !ready);
+                    if !ready {
+                        b.button(1, 36., 220., 536., text(ui, T::InstallEngine), true);
+                    }
                     b.label(652., 36., 536., 44., text(ui, T::BaseGames), 30.);
                     b.label(652., 96., 536., 84., text(ui, T::ScanHelp), 22.);
                     b.button(2, 652., 208., 536., text(ui, T::AddFolder), ready);
@@ -1002,13 +1037,13 @@ impl Runtime {
                         );
                         y += 80.;
                         b.row(
-                            -2,
+                            43,
                             36.,
                             y,
                             632.,
                             text(ui, T::LoadOrder),
                             text(ui, T::OrderHelp),
-                            false,
+                            true,
                         );
                         b.label(740., 28., 448., 40., text(ui, T::WillLaunch), 26.);
                         b.label(
@@ -1093,7 +1128,11 @@ impl Runtime {
                                 usable && !self.busy,
                             );
                             if !usable {
+                                b.nodes.last_mut().unwrap().actionable = false;
                                 b.button(1, 740., 402., 448., text(ui, T::Reset), true);
+                                if self.focus == 50 {
+                                    self.focus = 1;
+                                }
                                 ui.set_subtitle(text(ui, T::ErrorConfig));
                             }
                         } else if let Err(blocker) = &item.launch {
@@ -1428,6 +1467,7 @@ impl Runtime {
         }
         self.nodes = b.nodes;
         if !self.playing
+            && self.focus >= 0
             && self.sheet.is_none()
             && !self
                 .nodes
@@ -1449,7 +1489,12 @@ impl Runtime {
         ui.set_active_tab(self.tab_index() as i32);
         ui.set_root_screen(self.root() && !self.playing);
         ui.set_setup_screen(setup && !self.playing);
-        ui.set_a_hint(text(ui, T::Open));
+        ui.set_a_hint(
+            self.nodes
+                .iter()
+                .find(|n| n.id == self.focus && !n.label.is_empty())
+                .map_or_else(|| text(ui, T::Open), |n| n.label.clone()),
+        );
         ui.set_favorite_hint(false);
         ui.set_detail_hint(false);
         ui.set_import_hint(false);
@@ -1513,6 +1558,7 @@ fn problem_copy(p: Problem) -> T {
         Problem::Storage => T::ErrorStorage,
         Problem::State => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
+        Problem::Update => T::UpdateError,
         Problem::Checksum => T::ErrorChecksum,
         Problem::UnsafeArchive => T::ErrorArchive,
         Problem::Cancelled => T::ErrorCancelled,
