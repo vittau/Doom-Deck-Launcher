@@ -67,13 +67,14 @@ jobs:
 
       # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
       # probes fontconfig with pkg-config at build time on Linux. Everything
-      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`, so no
-      # other -dev package is needed here.
+      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`. gilrs
+      # (D-018) links libudev for controller hotplug, so it needs libudev-dev;
+      # the Steam Runtime SDK image already ships it.
       - name: Install system build dependencies
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
 
       # The three commands from AGENTS.md. `--locked` makes CI fail if
       # `Cargo.lock` is out of date instead of silently updating it.
@@ -121,13 +122,14 @@ jobs:
 
       # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
       # probes fontconfig with pkg-config at build time on Linux. Everything
-      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`, so no
-      # other -dev package is needed here.
+      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`. gilrs
+      # (D-018) links libudev for controller hotplug, so it needs libudev-dev;
+      # the Steam Runtime SDK image already ships it.
       - name: Install system build dependencies
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
 
       - name: Validate all recipes
         run: cargo run --locked -p ddl -- catalog lint catalog/
