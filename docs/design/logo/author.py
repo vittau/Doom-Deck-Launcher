@@ -72,15 +72,6 @@ def scene(ivory=False):
         s+=path(f'M{600-half} {y}H{600+half}V{y+9}H{600-half}Z','#B7A58A' if ivory else '#80533B')
     s+=path('M0 875 240 834 414 900H0Z M1200 875 960 834 786 900H1200Z',DARK)
     return s
-save('eviternity-cover.svg',512,586,group(scene(True),-134,0,.6512))
-save('fallback-cover.svg',512,586,group(scene(),-134,0,.6512))
-# Art band has an opaque feathered entry represented by narrow vector strips.
-for title,ivory in [('eviternity',True),('fallback',False)]:
-    body=group(scene(ivory),0,-85,1/3)
-    for x in range(144):
-        t=x/144; a=1-t*t*(3-2*t)
-        body+=f'<path fill="{DARK}" fill-opacity="{a:.6f}" d="M{x} 0H{x+1}V88H{x}Z"/>'
-    save(title+'-band.svg',400,88,body)
 # Dedicated Steam compositions retain an open central hero safe area.
 art=scene()
 save('library-capsule.svg',600,900,group(art,-300,0)+path('M90 370H510V680H90Z',DARK)+group(mark,172,100,1)+group(ddl,143,398,2)+group(name,(600-nw)/2,620))
