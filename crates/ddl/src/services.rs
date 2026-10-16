@@ -610,7 +610,24 @@ impl Services {
                 entries.push((p, metadata.is_dir()));
             }
         }
-        entries.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        entries.sort_by(|a, b| {
+            hidden_path(&a.0)
+                .cmp(&hidden_path(&b.0))
+                .then(b.1.cmp(&a.1))
+                .then_with(|| {
+                    a.0.file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .cmp(
+                            &b.0.file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_lowercase(),
+                        )
+                })
+                .then(a.0.cmp(&b.0))
+        });
         let mut shortcuts = vec![self.env.home.clone()];
         shortcuts.extend(
             iwads::libraries(&self.env.home)
@@ -670,6 +687,30 @@ mod tests {
         }
     }
     #[test]
+    fn browser_sorts_without_case_and_places_hidden_entries_last() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let services = Services::open(env.clone()).unwrap();
+        let dir = env.home.join("browse");
+        fs::create_dir_all(&dir).unwrap();
+        for name in ["Zebra", "alpha", ".Hidden", "Beta", ".alpha"] {
+            fs::create_dir(dir.join(name)).unwrap();
+        }
+        fs::write(dir.join("a.wad"), b"fixture").unwrap();
+        let directory = services
+            .browse(&dir, true, &CancellationToken::new())
+            .unwrap();
+        let names: Vec<_> = directory
+            .entries
+            .iter()
+            .map(|(p, _)| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            names,
+            ["alpha", "Beta", "Zebra", "a.wad", ".alpha", ".Hidden"]
+        );
+    }
+    #[test]
     fn startup_provisions_owned_paths_and_restores_the_default_profile() {
         let temp = tempfile::tempdir().unwrap();
         let env = env(temp.path());
@@ -707,6 +748,25 @@ mod tests {
             profile
         );
         assert!(!temp.path().join("home/.dsda-doom").exists());
+    }
+    #[test]
+    fn explicit_exclusive_choices_are_generic_idempotent_and_clearable() {
+        let mut recipe = Catalog::embedded().recipe("auger-zenith").unwrap().clone();
+        recipe.id = "another-mapset".into();
+        for (n, c) in recipe.components.iter_mut().enumerate().skip(1) {
+            c.id = format!("choice-{n}");
+            c.exclusive_group = Some("another-group".into());
+        }
+        let mut profile = Profile::new("test", "Default", &recipe.id);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("choice-1"));
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("choice-1"));
+        assert_eq!(profile.components, ["choice-1"]);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("choice-2"));
+        assert_eq!(profile.components, ["choice-2"]);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", Some("not-a-member"));
+        assert_eq!(profile.components, ["choice-2"]);
+        choose_exclusive_component(&recipe, &mut profile, "another-group", None);
+        assert!(profile.components.is_empty());
     }
     #[test]
     fn additive_choices_are_exclusive_and_replacements_remove_the_main() {
@@ -822,5 +882,37 @@ mod steam_wiring_tests {
             .unwrap();
         assert!(browser.shortcuts.contains(&home));
         assert!(browser.shortcuts.contains(&common));
+    }
+}
+
+/// Dot-prefixed names are presented after visible entries, retaining controller access.
+pub(crate) fn hidden_path(path: &Path) -> bool {
+    path.file_name()
+        .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+}
+
+/// Explicit None / one-member selection, independent of recipe or component names.
+pub fn choose_exclusive_component(
+    recipe: &Recipe,
+    profile: &mut Profile,
+    group: &str,
+    choice: Option<&str>,
+) {
+    if choice.is_some_and(|id| {
+        !recipe
+            .components
+            .iter()
+            .any(|c| c.id == id && c.exclusive_group.as_deref() == Some(group))
+    }) {
+        return;
+    }
+    profile.components.retain(|id| {
+        !recipe
+            .components
+            .iter()
+            .any(|c| c.id == *id && c.exclusive_group.as_deref() == Some(group))
+    });
+    if let Some(id) = choice {
+        profile.set_component(id, true);
     }
 }

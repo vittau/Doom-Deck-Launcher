@@ -1,4 +1,29 @@
 export global WiringStrings {
+    out property <string> addon-choice: @tr("Add-on — choose one");
+    out property <string> none: @tr("None");
+    out property <string> first-sub: @tr("Prepare the engine and bring your own base games.");
+    out property <string> download-help: @tr("Receiving the archive; checks follow before installation.");
+    out property <string> verify-help: @tr("Checking integrity before these files can be used.");
+    out property <string> extract-help: @tr("Unpacking content into a safe staging directory.");
+    out property <string> commit-help: @tr("Saving the completed install; cancellation is temporarily unavailable.");
+
+    out property <string> ready-checks: @tr("Readiness checks");
+    out property <string> no-recent: @tr("No sessions recorded yet.");
+    out property <string> home-intro: @tr("Build your library and begin a new session.");
+    out property <string> recent: @tr("Recently played");
+    out property <string> found-game: @tr("{} found", root.value);
+    out property <string> missing-game: @tr("{} missing", root.value);
+    out property <string> discover-sub: @tr("Curated worlds. Choose your next descent.");
+    out property <string> library-sub: @tr("Installed worlds, ready for your next session.");
+    out property <string> detail-sub: @tr("Requirements, content and source.");
+    out property <string> setup-sub: @tr("Review components and gameplay before launching.");
+    out property <string> settings-sub: @tr("Manage your engine, base games and settings.");
+    out property <string> pre-check: @tr("Check when you are ready. No update check has run.");
+    out property <string> content-single: @tr("1 content file");
+    out property <string> stage-sequence: @tr("Download → Extract → Verify → Install");
+    out property <string> engine-stage-sequence: @tr("Download → Verify → Extract → Install");
+    out property <string> no-folders: @tr("No folders added. Add a folder or rescan your Steam libraries.");
+    out property <string> context-title: @tr("{} / {}", root.value, root.other);
     out property <string> connected: @tr("Controller connected");
     out property <string> disconnected: @tr("Connect a controller to continue");
     in property <string> value;
@@ -34,6 +59,7 @@ export global WiringStrings {
     out property <string> installed: @tr("Installed");
     out property <string> not-installed: @tr("Not installed");
     out property <string> base-ready: @tr("Matching base game present");
+    out property <string> base-missing-short: @tr("Base game missing");
     out property <string> base-missing: @tr("Base game missing · add your own IWAD folder");
     out property <string> doom: @tr("Ultimate DOOM");
     out property <string> doom2: @tr("DOOM II");
@@ -61,7 +87,11 @@ export global WiringStrings {
     out property <string> play: @tr("Play");
     out property <string> unavailable: @tr("Play unavailable");
     out property <string> playing: @tr("Playing…");
+    out property <string> playing-sub: @tr("DDL will be ready when your session ends.");
+    out property <string> config-schema: @tr("Baseline schema {}", root.value);
     out property <string> playing-help: @tr("Game running — return here when you exit");
+    out property <string> install-stopped: @tr("Install stopped");
+    out property <string> install-error-sub: @tr("Review the error and choose your next step.");
     out property <string> install-title: @tr("Download / install");
     out property <string> download: @tr("Downloading…");
     out property <string> verify: @tr("Verifying…");
@@ -102,8 +132,8 @@ export global WiringStrings {
     out property <string> reviewed-update: @tr("Install reviewed update");
     out property <string> trust: @tr("Reviewed transfer digest · gameplay needs Deck validation");
     out property <string> verification: @tr("Verification pending · Needs Deck Validation");
-    out property <string> bytes: @tr("{} / {} bytes", root.value, root.other);
-    out property <string> bytes-unknown: @tr("{} bytes received", root.value);
+    out property <string> bytes: @tr("{} / {}", root.value, root.other);
+    out property <string> bytes-unknown: @tr("{} received", root.value);
     out property <string> content-count: @tr("{} content files", root.value);
     out property <string> complevel: @tr("Complevel {} · recipe recommendation (not yet verified)", root.value);
     out property <string> engine-version: @tr("DSDA-Doom {}", root.value);

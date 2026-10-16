@@ -114,7 +114,10 @@ fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
 /// Exact reference and software frame side by side; no desktop screenshot involved.
 fn comparison(name: &str, actual: &SharedPixelBuffer<Rgb8Pixel>) {
     let design = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/design");
-    let visual = design.join("visual").join(name);
+    let ember = name
+        .strip_prefix("ember-")
+        .map(|name| design.join("visual-v2/ember-cathedral").join(name));
+    let visual = ember.unwrap_or_else(|| design.join("visual").join(name));
     let reference = if visual.exists() {
         visual
     } else {
@@ -193,11 +196,12 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
                         },
                 )
             };
+            let ring_offset = if node.kind == 1 { 14. } else { 6. };
             for (px, py) in [
-                (x + node.w / 2., y - 6.),
-                (x + node.w / 2., y + node.h + 6.),
-                (x - 6., y + node.h / 2.),
-                (x + node.w + 6., y + node.h / 2.),
+                (x + node.w / 2., y - ring_offset),
+                (x + node.w / 2., y + node.h + ring_offset),
+                (x - ring_offset, y + node.h / 2.),
+                (x + node.w + ring_offset, y + node.h / 2.),
             ] {
                 assert!(
                     px >= 0. && px < WIDTH as f32 && py >= 0. && py < HEIGHT as f32,
@@ -207,7 +211,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
                 let pixel = frame.as_slice()[py as usize * WIDTH as usize + px as usize];
                 assert_eq!(
                     (pixel.r, pixel.g, pixel.b),
-                    (0xff, 0xca, 0x70),
+                    (0xff, 0xd0, 0x78),
                     "ring edge {name} target {} at {px},{py}",
                     node.id
                 );
@@ -221,7 +225,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
         }
         let frame = render(&window);
         assert!(
-            count_color(&frame, (0xff, 0xca, 0x70)) > 500,
+            count_color(&frame, (0xff, 0xd0, 0x78)) > 500,
             "amber focus pixels in {name}"
         );
         write_png(name, &frame);
@@ -347,7 +351,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     let pixel = header.as_slice()[18 * WIDTH as usize + 468];
     assert_eq!(
         (pixel.r, pixel.g, pixel.b),
-        (0xff, 0xca, 0x70),
+        (0xff, 0xd0, 0x78),
         "top tab focus ring"
     );
     press(&window, Key::DownArrow);

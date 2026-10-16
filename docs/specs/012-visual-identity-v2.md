@@ -55,7 +55,7 @@ navigation or focus rules.
 - [x] **A1** (R1–R5) — `docs/design/visual-v2/` holds, per direction, Home + Play setup mockups,
   a style sheet and a `README.md` with rationale, fonts + licences + links and contrast ratios.
 - [x] **A2** — owner picks a direction (coordinator records it in `decisions.md`): Ember Cathedral, intensified (D-021).
-- [ ] **A3** (R6–R7) — headless PNGs of every production state with side-by-side comparisons
+- [x] **A3** (R6–R7) — headless PNGs of every production state with side-by-side comparisons
   against the chosen mockups; headless tests assert the R7 titles, plural, sort order and
   pre-check copy; fmt, clippy `-D warnings`, tests green.
 - [ ] **A4** — *Needs Deck Validation:* readability and rendering speed on the LCD

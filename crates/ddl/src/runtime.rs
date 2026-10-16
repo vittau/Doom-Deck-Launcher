@@ -535,7 +535,25 @@ impl Runtime {
                     .and_then(|i| i.recipe.components.get((self.focus - 100) as usize))
                     .cloned()
                 {
-                    if c.user_supplied {
+                    if let Some(group) = c
+                        .exclusive_group
+                        .as_ref()
+                        .filter(|_| c.optional && c.replaces.is_none() && !c.user_supplied)
+                    {
+                        if let Some(item) = self.item() {
+                            if item.profile.components.contains(&c.id) {
+                                return;
+                            }
+                            let mut profile = item.profile.clone();
+                            services::choose_exclusive_component(
+                                &item.recipe,
+                                &mut profile,
+                                group,
+                                Some(&c.id),
+                            );
+                            self.start(ui, Command::Save(profile));
+                        }
+                    } else if c.user_supplied {
                         self.browse(ui, Some(c.id));
                     } else if c.replaces.is_some()
                         && self
@@ -546,6 +564,19 @@ impl Runtime {
                     } else {
                         self.toggle(ui, &c.id);
                     }
+                }
+            }
+            (Screen::Setup, 300..=399) => {
+                if let Some(item) = self.item()
+                    && let Some(group) = item
+                        .recipe
+                        .components
+                        .get((self.focus - 300) as usize)
+                        .and_then(|c| c.exclusive_group.as_deref())
+                {
+                    let mut profile = item.profile.clone();
+                    services::choose_exclusive_component(&item.recipe, &mut profile, group, None);
+                    self.start(ui, Command::Save(profile));
                 }
             }
             (Screen::Setup, 50) => {
@@ -733,24 +764,64 @@ impl Runtime {
                 }
             }
         };
-        ui.set_heading(text(ui, heading));
+        let named = matches!(self.screen, Screen::Detail | Screen::Setup)
+            .then(|| self.item())
+            .flatten();
+        ui.set_heading(if let Some(item) = named {
+            ui.global::<crate::WiringStrings>()
+                .set_value(text(ui, heading));
+            ui.global::<crate::WiringStrings>()
+                .set_other(display_title(&item.recipe).into());
+            text(ui, T::ContextTitle)
+        } else {
+            text(ui, heading)
+        });
+        ui.set_art_band(
+            matches!(
+                self.screen,
+                Screen::Home
+                    | Screen::Discover
+                    | Screen::Library
+                    | Screen::Detail
+                    | Screen::Setup
+                    | Screen::Progress
+            ) && !self.playing,
+        );
+        let band_item = if self.screen == Screen::Home {
+            self.snapshot
+                .as_ref()
+                .and_then(|s| s.items.iter().max_by_key(|i| i.profile.last_played))
+        } else {
+            self.item()
+        };
+        ui.set_band_art(band_item.map_or(0, |i| art(&i.recipe.id)));
         ui.set_subtitle(text(
             ui,
             if self.playing {
-                T::PlayingHelp
+                T::PlayingSub
             } else if self.screen == Screen::FirstRun {
-                T::FirstHelp
+                T::FirstSub
             } else if self.busy {
                 T::Working
             } else {
                 match self.screen {
                     Screen::FirstRun => T::FirstHelp,
-                    Screen::Home => T::HomeSub,
+                    Screen::Home => {
+                        if self.snapshot.as_ref().is_some_and(|s| {
+                            s.items.iter().any(|i| i.profile.last_played.is_some())
+                        }) {
+                            T::HomeSub
+                        } else {
+                            T::HomeIntro
+                        }
+                    }
                     Screen::Review | Screen::Browser => T::ScanHelp,
-                    Screen::Setup => T::ProfileHelp,
-                    Screen::Detail | Screen::Discover | Screen::Library => T::Verification,
+                    Screen::Setup => T::SetupSub,
+                    Screen::Detail => T::DetailSub,
+                    Screen::Discover => T::DiscoverSub,
+                    Screen::Library => T::LibrarySub,
                     Screen::Progress => T::InstallTitle,
-                    Screen::Settings => T::ConfigReady,
+                    Screen::Settings => T::SettingsSub,
                     Screen::Loading => T::Loading,
                 }
             },
@@ -759,10 +830,13 @@ impl Runtime {
         if self.playing {
             b.panel(12., 12., 1200., 478.);
             b.label(40., 60., 1100., 100., text(ui, T::Playing), 40.);
-            b.label(40., 186., 1100., 90., text(ui, T::PlayingHelp), 26.);
+            b.label(40., 186., 1100., 90., text(ui, T::PlayingHelp), 22.);
         } else {
             match self.screen {
-                Screen::Loading => b.label(40., 100., 1100., 100., text(ui, T::Loading), 30.),
+                Screen::Loading => {
+                    b.panel(12., 12., 1200., 240.);
+                    b.label(40., 60., 1100., 100., text(ui, T::Loading), 30.);
+                }
                 Screen::FirstRun => {
                     b.panel(12., 12., 584., 478.);
                     b.panel(628., 12., 584., 478.);
@@ -805,16 +879,92 @@ impl Runtime {
                             display_title(&item.recipe).into(),
                             36.,
                         );
-                        b.label(308., 132., 448., 80., text(ui, T::HomeSub), 22.);
+                        b.label(
+                            308.,
+                            132.,
+                            448.,
+                            36.,
+                            item.recipe.authors.join(", ").into(),
+                            22.,
+                        );
+                        b.label(
+                            308.,
+                            176.,
+                            448.,
+                            64.,
+                            format!(
+                                "{} · {}",
+                                game(ui, item.recipe.base_game.game),
+                                text(ui, T::Profile)
+                            )
+                            .into(),
+                            22.,
+                        );
                         b.button(1, 308., 252., 448., text(ui, T::Continue), true);
                     } else {
-                        b.label(36., 60., 720., 100., text(ui, T::HomeEmpty), 36.);
-                        b.label(36., 180., 720., 80., text(ui, T::NoHistory), 22.);
-                        b.button(1, 36., 320., 720., text(ui, T::DiscoverAction), true);
+                        b.label(36., 42., 720., 100., text(ui, T::HomeEmpty), 36.);
+                        b.label(36., 160., 720., 80., text(ui, T::NoHistory), 22.);
+                        b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), true);
                     }
-                    b.label(852., 36., 336., 48., text(ui, T::BaseGames), 30.);
-                    b.label(852., 108., 336., 160., text(ui, T::ScanHelp), 22.);
-                    b.button(2, 852., 320., 336., text(ui, T::DiscoverAction), false);
+                    b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
+                    if let Some(s) = &self.snapshot {
+                        let mut recent: Vec<_> = s
+                            .items
+                            .iter()
+                            .filter(|i| i.profile.last_played.is_some())
+                            .collect();
+                        recent.sort_by_key(|i| std::cmp::Reverse(i.profile.last_played));
+                        if recent.is_empty() {
+                            b.label(36., 402., 720., 54., text(ui, T::NoRecent), 22.);
+                        }
+                        for (n, i) in recent.into_iter().take(2).enumerate() {
+                            let x = 36. + n as f32 * 360.;
+                            b.art(x, 400., 56., 66., art(&i.recipe.id));
+                            b.label(
+                                x + 72.,
+                                400.,
+                                270.,
+                                32.,
+                                display_title(&i.recipe).into(),
+                                26.,
+                            );
+                            b.label(x + 72., 436., 270., 30., text(ui, T::Profile), 20.);
+                        }
+                        b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
+                        b.check(
+                            852.,
+                            100.,
+                            s.engine.as_ref().map_or_else(
+                                || text(ui, T::NoEngine),
+                                |e| value(ui, T::EngineVersion, &e.version),
+                            ),
+                            if s.engine.is_some() { 2 } else { 4 },
+                        );
+                        for (n, g) in [
+                            ddl_core::catalog::Game::Doom,
+                            ddl_core::catalog::Game::Doom2,
+                        ]
+                        .into_iter()
+                        .enumerate()
+                        {
+                            let found = s
+                                .items
+                                .iter()
+                                .any(|i| i.recipe.base_game.game == g && base_ready(s, &i.recipe));
+                            b.check(
+                                852.,
+                                172. + n as f32 * 72.,
+                                value(
+                                    ui,
+                                    if found { T::FoundGame } else { T::MissingGame },
+                                    game(ui, g),
+                                ),
+                                if found { 2 } else { 4 },
+                            );
+                        }
+                        b.check(852., 316., text(ui, T::Verification), 3);
+                    }
+                    b.button(2, 852., 402., 336., text(ui, T::DiscoverAction), false);
                 }
                 Screen::Discover | Screen::Library => {
                     if let Some(s) = &self.snapshot {
@@ -861,7 +1011,7 @@ impl Runtime {
                                     if base_ready(s, &item.recipe) {
                                         T::BaseReady
                                     } else {
-                                        T::BaseMissing
+                                        T::BaseMissingShort
                                     },
                                 ),
                                 20.,
@@ -884,6 +1034,7 @@ impl Runtime {
                             visible += 1;
                         }
                         if visible == 0 {
+                            b.panel(12., 12., 1200., 300.);
                             b.label(36., 60., 1100., 70., text(ui, T::NoInstalled), 30.);
                             b.button(10, 36., 180., 400., text(ui, T::DiscoverAction), true);
                         }
@@ -966,6 +1117,7 @@ impl Runtime {
                 }
                 Screen::Setup => {
                     if let Some(item) = self.item() {
+                        let options_panel = b.nodes.len();
                         b.panel(12., 12., 680., 478.);
                         b.panel(716., 12., 496., 478.);
                         b.row(
@@ -977,9 +1129,77 @@ impl Runtime {
                             text(ui, T::ProfileHelp),
                             false,
                         );
-                        let mut y = 132.;
+                        let mut y = 128.;
                         for (index, c) in item.recipe.components.iter().enumerate() {
                             if c.replaces.is_some() && !c.user_supplied && !self.advanced {
+                                continue;
+                            }
+                            if let Some(group) = c
+                                .exclusive_group
+                                .as_ref()
+                                .filter(|_| c.optional && c.replaces.is_none() && !c.user_supplied)
+                            {
+                                if item.recipe.components[..index]
+                                    .iter()
+                                    .any(|prior| prior.exclusive_group.as_ref() == Some(group))
+                                {
+                                    continue;
+                                }
+                                let members: Vec<_> = item
+                                    .recipe
+                                    .components
+                                    .iter()
+                                    .enumerate()
+                                    .filter(|(_, c)| {
+                                        c.exclusive_group.as_ref() == Some(group)
+                                            && c.optional
+                                            && c.replaces.is_none()
+                                            && !c.user_supplied
+                                    })
+                                    .collect();
+                                let rows = (members.len() + 1).div_ceil(3);
+                                b.push(
+                                    -999,
+                                    36.,
+                                    y,
+                                    632.,
+                                    36. + rows as f32 * 60.,
+                                    9,
+                                    text(ui, T::AddonChoice),
+                                    Default::default(),
+                                    false,
+                                    false,
+                                );
+                                let none = !members
+                                    .iter()
+                                    .any(|(_, c)| item.profile.components.contains(&c.id));
+                                b.choice(
+                                    300 + index as i32,
+                                    44.,
+                                    y + 36.,
+                                    96.,
+                                    text(ui, T::None),
+                                    none,
+                                );
+                                for (slot, (member_index, member)) in members.iter().enumerate() {
+                                    let cell = slot + 1;
+                                    let row = cell / 3;
+                                    let col = cell % 3;
+                                    let (x, width) = match col {
+                                        0 => (44., 96.),
+                                        1 => (148., 248.),
+                                        _ => (404., 256.),
+                                    };
+                                    b.choice(
+                                        100 + *member_index as i32,
+                                        x,
+                                        y + 36. + row as f32 * 60.,
+                                        width,
+                                        member.label.clone().into(),
+                                        item.profile.components.contains(&member.id),
+                                    );
+                                }
+                                y += 36. + rows as f32 * 60. + 12.;
                                 continue;
                             }
                             let detail = if !c.optional {
@@ -1016,6 +1236,7 @@ impl Runtime {
                             text(ui, T::AdvancedHelp),
                             true,
                         );
+                        b.nodes.last_mut().unwrap().h = 64.;
                         y += b.nodes.last().unwrap().h + 16.;
                         b.button(
                             40,
@@ -1050,13 +1271,23 @@ impl Runtime {
                             text(ui, T::OrderHelp),
                             true,
                         );
-                        b.label(740., 28., 448., 40., text(ui, T::WillLaunch), 26.);
+                        let last_row = b.nodes.last().unwrap();
+                        b.nodes[options_panel].h = (last_row.y + last_row.h + 24. - 12.).max(478.);
+                        b.label(740., 36., 448., 40., text(ui, T::WillLaunch), 26.);
                         b.label(
                             740.,
                             82.,
                             448.,
                             36.,
-                            game(ui, item.recipe.base_game.game),
+                            if self
+                                .snapshot
+                                .as_ref()
+                                .is_some_and(|s| base_ready(s, &item.recipe))
+                            {
+                                value(ui, T::FoundGame, game(ui, item.recipe.base_game.game))
+                            } else {
+                                value(ui, T::MissingGame, game(ui, item.recipe.base_game.game))
+                            },
                             22.,
                         );
                         let usable = self.snapshot.as_ref().is_some_and(|s| s.config_usable);
@@ -1066,7 +1297,11 @@ impl Runtime {
                                 130.,
                                 448.,
                                 28.,
-                                value(ui, T::ContentCount, summary.content.len()),
+                                if summary.content.len() == 1 {
+                                    text(ui, T::ContentSingle)
+                                } else {
+                                    value(ui, T::ContentCount, summary.content.len())
+                                },
                                 22.,
                             );
                             for (i, entry) in summary.content.iter().enumerate() {
@@ -1090,15 +1325,15 @@ impl Runtime {
                             }
                             b.label(
                                 740.,
-                                264.,
+                                186. + summary.content.len() as f32 * 38.,
                                 448.,
-                                48.,
+                                56.,
                                 value(ui, T::Complevel, summary.complevel),
                                 20.,
                             );
                             b.label(
                                 740.,
-                                316.,
+                                250. + summary.content.len() as f32 * 38.,
                                 448.,
                                 30.,
                                 value(ui, T::EngineVersion, &summary.engine_version),
@@ -1106,7 +1341,7 @@ impl Runtime {
                             );
                             b.label(
                                 740.,
-                                354.,
+                                288. + summary.content.len() as f32 * 38.,
                                 448.,
                                 32.,
                                 format!(
@@ -1199,21 +1434,63 @@ impl Runtime {
                             ),
                         _ => text(ui, T::InstallTitle),
                     };
-                    b.label(36., 40., 1100., 60., subject, 36.);
+                    ui.global::<crate::WiringStrings>()
+                        .set_value(text(ui, T::InstallTitle));
+                    ui.global::<crate::WiringStrings>()
+                        .set_other(subject.clone());
+                    ui.set_heading(text(ui, T::ContextTitle));
+                    b.label(36., 36., 1100., 60., subject, 36.);
                     let stage = self.progress.map_or(T::Working, |p| match p.stage {
                         InstallStage::Download => T::Download,
                         InstallStage::Verify => T::Verify,
                         InstallStage::Extract => T::Extract,
                         InstallStage::Commit => T::Commit,
                     });
+                    let stage_help = match self.progress.map(|p| p.stage) {
+                        Some(InstallStage::Download) => T::DownloadHelp,
+                        Some(InstallStage::Verify) => T::VerifyHelp,
+                        Some(InstallStage::Extract) => T::ExtractHelp,
+                        Some(InstallStage::Commit) => T::CommitHelp,
+                        None => T::Working,
+                    };
+                    ui.set_subtitle(text(
+                        ui,
+                        if self.problem.is_some() {
+                            T::InstallErrorSub
+                        } else if self.cancel.is_cancelled() {
+                            T::CancelPending
+                        } else {
+                            stage_help
+                        },
+                    ));
                     b.label(
                         36.,
-                        132.,
+                        112.,
+                        1100.,
+                        36.,
+                        text(
+                            ui,
+                            if matches!(
+                                self.pending.as_ref().or(self.retry.as_ref()),
+                                Some(Command::InstallEngine(_))
+                            ) {
+                                T::EngineStageSequence
+                            } else {
+                                T::StageSequence
+                            },
+                        ),
+                        22.,
+                    );
+                    b.label(
+                        36.,
+                        160.,
                         1100.,
                         60.,
                         text(
                             ui,
-                            if self.cancel.is_cancelled() {
+                            if self.problem.is_some() {
+                                T::InstallStopped
+                            } else if self.cancel.is_cancelled() {
                                 T::CancelPending
                             } else {
                                 stage
@@ -1246,14 +1523,14 @@ impl Runtime {
                     if let Some(p) = self.progress.and_then(|p| p.transfer) {
                         let label = if let Some(total) = p.total {
                             ui.global::<crate::WiringStrings>()
-                                .set_value(p.downloaded.to_string().into());
+                                .set_value(human_bytes(p.downloaded).into());
                             ui.global::<crate::WiringStrings>()
-                                .set_other(total.to_string().into());
+                                .set_other(human_bytes(total).into());
                             text(ui, T::Bytes)
                         } else {
-                            value(ui, T::BytesUnknown, p.downloaded)
+                            value(ui, T::BytesUnknown, human_bytes(p.downloaded))
                         };
-                        b.label(36., 252., 1100., 42., label, 26.);
+                        b.label(36., 252., 1100., 42., label, 22.);
                     }
                     if self.busy {
                         b.button(1, 36., 320., 400., text(ui, T::Cancel), false);
@@ -1268,9 +1545,10 @@ impl Runtime {
                     }
                 }
                 Screen::Review => {
+                    b.panel(12., 12., 1200., 478.);
                     if let Some(s) = &self.snapshot {
                         if let Some(entry) = s.iwads.iter().find(|e| !e.candidates.is_empty()) {
-                            b.label(36., 24., 1152., 54., text(ui, T::Ambiguous), 30.);
+                            b.label(36., 36., 1152., 54., text(ui, T::Ambiguous), 30.);
                             b.label(
                                 36.,
                                 88.,
@@ -1292,7 +1570,7 @@ impl Runtime {
                         } else {
                             b.label(
                                 36.,
-                                24.,
+                                36.,
                                 1152.,
                                 54.,
                                 text(
@@ -1322,9 +1600,9 @@ impl Runtime {
                 }
                 Screen::Browser => {
                     if let Some(d) = &self.directory {
-                        ui.set_subtitle(d.path.display().to_string().into());
+                        ui.set_subtitle(elide_path_start(&d.path.display().to_string(), 88).into());
                         b.panel(12., 12., 360., 478.);
-                        b.label(36., 28., 312., 38., text(ui, T::Shortcuts), 26.);
+                        b.label(36., 36., 312., 38., text(ui, T::Shortcuts), 26.);
                         for (i, p) in d.shortcuts.iter().enumerate() {
                             b.row(
                                 10 + i as i32,
@@ -1363,12 +1641,23 @@ impl Runtime {
                                 SharedString::default(),
                                 true,
                             );
+                            if services::hidden_path(p) {
+                                b.nodes.last_mut().unwrap().tone = 1;
+                            }
                         }
                     }
                 }
                 Screen::Settings => {
-                    b.panel(12., 12., 312., 478.);
-                    b.panel(348., 12., 864., 478.);
+                    b.panel(12., 12., 312., 360.);
+                    let height = match self.settings_section {
+                        1 => self.snapshot.as_ref().map_or(240., |s| {
+                            (144. + s.folders.len().max(1) as f32 * 112.).max(240.)
+                        }),
+                        2 => 280.,
+                        3 => 382.,
+                        _ => 478.,
+                    };
+                    b.panel(348., 12., 864., height);
                     for (i, label) in [T::Engine, T::Folders, T::Config, T::Diagnostics]
                         .iter()
                         .enumerate()
@@ -1448,7 +1737,7 @@ impl Runtime {
                                             if self.updates_checked {
                                                 T::NoUpdates
                                             } else {
-                                                T::Verification
+                                                T::PreCheck
                                             },
                                         ),
                                         20.,
@@ -1458,6 +1747,9 @@ impl Runtime {
                             1 => {
                                 b.button(70, 372., 36., 380., text(ui, T::AddFolder), true);
                                 b.button(71, 776., 36., 412., text(ui, T::Rescan), false);
+                                if s.folders.is_empty() {
+                                    b.label(372., 128., 816., 84., text(ui, T::NoFolders), 22.);
+                                }
                                 for (i, p) in s.folders.iter().enumerate() {
                                     b.row(
                                         100 + i as i32,
@@ -1488,13 +1780,13 @@ impl Runtime {
                                 );
                                 b.label(
                                     372.,
-                                    162.,
+                                    136.,
                                     816.,
                                     50.,
-                                    s.config_version.clone().into(),
+                                    value(ui, T::ConfigSchema, &s.config_version),
                                     22.,
                                 );
-                                b.button(70, 372., 252., 816., text(ui, T::Reset), true);
+                                b.button(70, 372., 200., 816., text(ui, T::Reset), true);
                             }
                             _ => {
                                 b.label(372., 36., 816., 44., text(ui, T::Logs), 30.);
@@ -1574,8 +1866,8 @@ impl Runtime {
 fn art(id: &str) -> i32 {
     match id {
         "sigil" => 0,
-        "auger-zenith" => 1,
-        "sigil-ii" => 2,
+        "auger-zenith" => 2,
+        "sigil-ii" => 1,
         _ => 0,
     }
 }
@@ -1708,6 +2000,37 @@ impl Nodes {
             primary,
         );
     }
+    fn check(&mut self, x: f32, y: f32, label: SharedString, tone: i32) {
+        self.push(
+            -999,
+            x,
+            y,
+            336.,
+            64.,
+            7,
+            label,
+            Default::default(),
+            false,
+            false,
+        );
+        self.nodes.last_mut().unwrap().tone = tone;
+        self.nodes.last_mut().unwrap().size = 22.;
+    }
+    fn choice(&mut self, id: i32, x: f32, y: f32, w: f32, label: SharedString, selected: bool) {
+        self.push(
+            id,
+            x,
+            y,
+            w,
+            52.,
+            8,
+            label,
+            Default::default(),
+            true,
+            selected,
+        );
+        self.nodes.last_mut().unwrap().size = 20.;
+    }
     #[allow(clippy::too_many_arguments)]
     fn row(
         &mut self,
@@ -1788,4 +2111,49 @@ pub fn attach_environment(ui: &AppWindow, env: Environment) -> Rc<RefCell<Runtim
 
 fn display_title(recipe: &ddl_core::catalog::Recipe) -> &str {
     recipe.title.split(" (").next().unwrap_or(&recipe.title)
+}
+
+/// IEC byte units preserve useful transfer precision without invented speed estimates.
+fn human_bytes(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut amount = bytes as f64;
+    let mut unit = 0;
+    while amount >= 1024. && unit < UNITS.len() - 1 {
+        amount /= 1024.;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{amount:.1} {}", UNITS[unit])
+    }
+}
+
+/// Keep the destination end of a long breadcrumb. Character-based to preserve UTF-8.
+fn elide_path_start(path: &str, limit: usize) -> String {
+    let count = path.chars().count();
+    if count <= limit {
+        return path.into();
+    }
+    format!(
+        "…{}",
+        path.chars()
+            .skip(count - limit.saturating_sub(1))
+            .collect::<String>()
+    )
+}
+
+#[cfg(test)]
+mod visual_copy_tests {
+    use super::*;
+    #[test]
+    fn byte_units_and_unicode_breadcrumbs_are_human_readable() {
+        assert_eq!(human_bytes(0), "0 B");
+        assert_eq!(human_bytes(1023), "1023 B");
+        assert_eq!(human_bytes(1536), "1.5 KiB");
+        assert_eq!(human_bytes(2 * 1024 * 1024), "2.0 MiB");
+        assert_eq!(human_bytes(3 * 1024 * 1024 * 1024), "3.0 GiB");
+        assert_eq!(elide_path_start("/short", 10), "/short");
+        assert_eq!(elide_path_start("/long/日本語/maps", 9), "…日本語/maps");
+    }
 }
