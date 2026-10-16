@@ -206,7 +206,7 @@ hellscape. These are original mood illustrations, not official title artwork,
 map screenshots or claims about map content (D-020 / D-021). The existing UI's
 **Original concept art** plaques and art-selection code remain unchanged.
 
-The exact two generation prompts are retained as `COVER_PROMPTS` in
+The exact generation prompts (including the rejected initial fallback) are retained as `COVER_PROMPTS` in
 `crates/ddl/ui/assets/ember/build_assets.py`. Generated 1172×1342 RGB originals
 were fitted centrally with Pillow 12.3.0 / Lanczos to the existing **512×586**
 portrait contract. The committed cover PNGs are now raster masters; generation
@@ -224,8 +224,8 @@ python3 -m venv /tmp/ddl-cover-venv
 | --- | --- | ---: |
 | `eviternity.png` | 512×586 | 567,388 |
 | `eviternity-band.png` | 400×88 | 63,556 |
-| `fallback.png` | 512×586 | 581,596 |
-| `fallback-band.png` | 400×88 | 58,505 |
+| `fallback.png` | 512×586 | 566,351 |
+| `fallback-band.png` | 400×88 | 64,159 |
 
 `sips` confirmed dimensions; the compositor asserts the 600,000-byte budget
 for each painted cover and band and the existing 6 MB overall budget. No new
@@ -289,3 +289,71 @@ all doctests ran in 0.76s; merged doctests compilation took 0.56s
 
 `git diff --check` passed. No repaint task item or open question remains;
 physical Steam Deck appearance remains **Needs Deck Validation**, as before.
+
+
+### Fallback review correction
+
+Coordinator review found the initial fallback's tall gate slabs read as hard
+vertical collage seams in the Discover card and band. The built-in `image_gen`
+tool regenerated the entire fallback as **one continuous 1172×1342 painting**,
+using SIGIL only as a style reference. The replacement shows a complete small
+carved arch on a diagonal causeway in a continuous smoky basalt landscape;
+short tapered supports replace the tall dividing slabs. The current prompt is
+`COVER_PROMPTS['fallback']`; the rejected one is retained as
+`COVER_PROMPTS['fallback-initial-rejected']`. Eviternity is unchanged.
+
+The cover is a single central Lanczos fit to 512×586, and the 400×88 band is one
+continuous crop from it with the existing title fade. No tiling, stitching or
+side-by-side composition was used for either fallback asset. Inspected the
+cover and band at full size: clouds, terrain and lighting continue across the
+width without panel divisions. The table above records the replacement sizes,
+both below 600,000 bytes. The UI's Original concept art plaques remain in place.
+
+`cargo test -p ddl` passed again (28 unit tests + 5 integration tests; headless
+journey 73.19 s). Inspected the regenerated `013-discover-fallback.png` at
+1280×800: the Community map crop reads as one continuous landscape, with no
+hard vertical panel divisions, and the top band has matching continuous depth.
+The Original concept art plaques remain readable beside the unchanged Eviternity
+and SIGIL II art. Full-size cover/band inspection and deterministic rebuild
+checks passed; all 20 Ember PNGs reproduced byte-for-byte.
+
+Review-fix formatting and Clippy both exited 0; formatting produced no output.
+Clippy tail:
+
+```text
+   Compiling ddl v0.0.3 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/art-covers/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.66s
+```
+
+Review-fix `cargo test --workspace` — exit 0, **313 tests passed, zero failures**:
+
+```text
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 84.40s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 263 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.88s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Final tail:
+
+```text
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+   Doc-tests ddl_core
+
+running 3 tests
+test crates/ddl-core/src/downloads/mod.rs - downloads (line 22) - compile ... ok
+test crates/ddl-core/src/library/mod.rs - library (line 10) - compile ... ok
+test crates/ddl-core/src/profiles/mod.rs - profiles (line 10) - compile ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.07s; merged doctests compilation took 0.86s
+```
+
+`git diff --check` also passed. No review-fix task items remain open; actual
+Steam Deck appearance remains **Needs Deck Validation**.
