@@ -21,6 +21,12 @@ on:
 permissions:
   contents: read
 
+# Container jobs otherwise default to `sh` (dash in the Steam Runtime image), which has no
+# `set -o pipefail`; every step here is written for bash.
+defaults:
+  run:
+    shell: bash
+
 env:
   CARGO_TERM_COLOR: always
   # Keep the failure output useful when a test panics.
