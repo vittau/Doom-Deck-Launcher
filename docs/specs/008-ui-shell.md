@@ -52,20 +52,20 @@ them in. On-screen keyboard. Localization files beyond the `@tr` markup.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2, R5, R7) — headless PNGs for every screen; compare them side by side with
+- [x] **A1** (R1, R2, R5, R7) — headless PNGs for every screen; compare them side by side with
   `docs/design/visual/*.png` and list deviations in the report.
-- [ ] **A2** (R3, R8) — navigation tests: tab cycle, spatial focus on a grid and a list, back
+- [x] **A2** (R3, R8) — navigation tests: tab cycle, spatial focus on a grid and a list, back
   restores focus, ring always present on the focused element.
-- [ ] **A3** (R4) — unit tests of the gilrs-to-action mapper (deadzone, repeat timing) using
+- [x] **A3** (R4) — unit tests of the gilrs-to-action mapper (deadzone, repeat timing) using
   synthetic events; no physical device needed.
-- [ ] **A4** (R6) — no user-visible string literal outside `@tr` (a test or lint script).
-- [ ] **A5** — `cargo fmt`, `clippy -D warnings`, `cargo test` green; release build size noted.
+- [x] **A4** (R6) — no user-visible string literal outside `@tr` (a test or lint script).
+- [x] **A5** — `cargo fmt`, `clippy -D warnings`, `cargo test` green; release build size noted.
 - [ ] **A6** — *Needs Deck Validation:* the controller navigates every screen in Gaming Mode, no
   double input with the default Steam layout; text readable (`docs/deck-testing.md`).
 
 ## Tasks
 
-- [ ] Tokens, fonts, logo, shell and hint bar
-- [ ] Focus system and gilrs input
-- [ ] Screens on fixtures
-- [ ] Headless renders and navigation tests
+- [x] Tokens, fonts, logo, shell and hint bar
+- [x] Focus system and gilrs input
+- [x] Screens on fixtures
+- [x] Headless renders and navigation tests
