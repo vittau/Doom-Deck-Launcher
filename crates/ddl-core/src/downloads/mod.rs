@@ -1,10 +1,12 @@
-//! Downloads (spec 006).
+//! Downloads and safe archive extraction (spec 006).
 //!
-//! The hardened pipeline that fetches every remote file DDL uses — engine
-//! AppImages and mapset packages — verifies it against a pinned SHA-256 and
-//! caches it by hash. All remote input is untrusted (`OVERVIEW.md` §9, §12), so
-//! the pipeline refuses plain HTTP, keeps an explicit host allowlist, and
-//! bounds every transfer.
+//! This module holds the hardened pipeline that fetches every remote file DDL
+//! uses — engine AppImages and mapset packages — verifies it against a pinned
+//! SHA-256, caches it by hash, and extracts **only the files a recipe names**
+//! from ZIP archives, including archives nested inside archives. All remote
+//! input is untrusted (`OVERVIEW.md` §9, §12), so the pipeline refuses plain
+//! HTTP, keeps an explicit host allowlist, bounds every transfer and
+//! extraction, and never executes anything it downloads.
 //!
 //! # Choosing blocking IO
 //!
@@ -12,8 +14,8 @@
 //! ([`std::thread::spawn`]) rather than on the Slint event loop. That keeps
 //! `ddl-core` free of an async runtime and avoids a second executor next to
 //! Slint's; the [`CancellationToken`] is the only cross-thread channel needed
-//! for cancel, and [`Fetcher`] is `Send + Sync`, so it can be shared. Spec 006
-//! R2 allows either model and requires a justification.
+//! for cancel, and [`Fetcher`] and [`Extractor`] are `Send + Sync`, so they can
+//! be shared. Spec 006 R2 allows either model and requires a justification.
 //!
 //! # Example
 //!
@@ -38,6 +40,7 @@
 
 pub mod cancel;
 pub mod error;
+pub mod extract;
 pub mod fetch;
 pub mod hash;
 pub mod host;
@@ -47,6 +50,7 @@ mod test_http;
 
 pub use cancel::CancellationToken;
 pub use error::{Error, LimitKind};
+pub use extract::{ExtractLimits, ExtractedMember, Extraction, Extractor, MemberRequest};
 pub use fetch::{DEFAULT_REDIRECT_EXCEPTIONS, DownloadRequest, Fetcher, MAX_REDIRECTS, Progress};
 pub use hash::Sha256;
 pub use host::HostAllowlist;
