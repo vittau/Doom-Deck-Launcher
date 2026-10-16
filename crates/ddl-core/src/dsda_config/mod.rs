@@ -17,6 +17,8 @@
 mod backups;
 pub mod format;
 mod guard;
+mod manager;
+mod merge;
 mod overrides;
 mod state;
 mod template;
@@ -24,6 +26,8 @@ mod template;
 use std::io;
 
 pub use guard::{GuardError, LOCK_FILE, PidLiveness, RunGuard, SystemLiveness};
+pub use manager::{Clock, DsdaConfigManager, Migration, Provision, Reset, SystemClock};
+pub use merge::{MergeResult, merge};
 pub use overrides::{ALLOWED_KEYS, OverrideError, Overrides};
 pub use state::{Conflict, State, shorten_home};
 pub use template::{Template, TemplateError, VersionRange};
