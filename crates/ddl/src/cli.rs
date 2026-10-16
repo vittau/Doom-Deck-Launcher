@@ -1,12 +1,11 @@
 //! Command-line parsing for the `ddl` binary (spec 001, R3).
 //!
-//! DDL's surface is three flags wide, so this is a hand-written parser instead
-//! of a general argument-parsing dependency: fewer dependencies to audit, and
-//! the exact required behaviour (`--version`, `--help`, `--windowed`, unknown
-//! options fail) is directly unit-tested in this module.
+//! Small hand-written parser for launcher flags and headless catalog lint.
+//! Unknown options fail; lint never initializes a window.
 
 use std::ffi::OsString;
 use std::fmt;
+use std::path::PathBuf;
 
 /// Executable name as it appears in `--version` and usage text.
 pub const BIN: &str = env!("CARGO_PKG_NAME");
@@ -22,10 +21,12 @@ pub struct Options {
 }
 
 /// What the user asked `ddl` to do.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     /// Start the launcher with the given options.
     Run(Options),
+    /// Offline by default; --fetch explicitly verifies upstream package bytes.
+    CatalogLint { paths: Vec<PathBuf>, fetch: bool },
     /// Print [`version_line`] and exit successfully.
     Version,
     /// Print [`help_text`] and exit successfully.
@@ -70,6 +71,7 @@ pub fn help_text() -> String {
 {BIN}: DoomDeckLauncher, a native DOOM mapset launcher for Steam Deck
 
 Usage: {BIN} [OPTIONS]
+       {BIN} catalog lint [--fetch] [PATHS...]
 
 Options:
       --windowed  Run in a 1280x800 window instead of fullscreen
@@ -105,6 +107,31 @@ where
         return Ok(Command::Version);
     }
 
+    if args.first().is_some_and(|a| a == "catalog") {
+        if !args.get(1).is_some_and(|a| a == "lint") {
+            return Err(ParseError {
+                message: "expected `catalog lint [--fetch] [paths]`".into(),
+            });
+        }
+        let mut paths = Vec::new();
+        let mut fetch = false;
+        let mut positional = false;
+        for arg in &args[2..] {
+            if !positional && arg == "--" {
+                positional = true;
+            } else if !positional && arg == "--fetch" {
+                fetch = true;
+            } else if !positional && arg.to_string_lossy().starts_with('-') {
+                return Err(ParseError::unknown(&arg.to_string_lossy()));
+            } else {
+                paths.push(PathBuf::from(arg));
+            }
+        }
+        if paths.is_empty() {
+            paths.push(PathBuf::from("catalog"));
+        }
+        return Ok(Command::CatalogLint { paths, fetch });
+    }
     let mut options = Options::default();
     for arg in &args {
         if is_one_of(arg, &["--windowed"]) {
@@ -127,6 +154,38 @@ mod tests {
 
     fn parse_str(args: &[&str]) -> Result<Command, ParseError> {
         parse(args.iter().map(OsString::from))
+    }
+
+    #[test]
+    fn catalog_lint_parses_defaults_fetch_paths_and_separator() {
+        assert_eq!(
+            parse_str(&["catalog", "lint"]),
+            Ok(Command::CatalogLint {
+                paths: vec!["catalog".into()],
+                fetch: false
+            })
+        );
+        assert_eq!(
+            parse_str(&["catalog", "lint", "a.toml", "--fetch", "b.toml"]),
+            Ok(Command::CatalogLint {
+                paths: vec!["a.toml".into(), "b.toml".into()],
+                fetch: true
+            })
+        );
+        assert_eq!(
+            parse_str(&["catalog", "lint", "--", "-literal.toml"]),
+            Ok(Command::CatalogLint {
+                paths: vec!["-literal.toml".into()],
+                fetch: false
+            })
+        );
+        for args in [
+            &["catalog"][..],
+            &["catalog", "fetch"],
+            &["catalog", "lint", "--unknown"],
+        ] {
+            assert!(parse_str(args).is_err());
+        }
     }
 
     #[test]
@@ -217,5 +276,6 @@ mod tests {
         assert!(help.contains("--help"));
         assert!(help.contains("--version"));
         assert!(help.contains("DDL_LOG"));
+        assert!(help.contains("catalog lint [--fetch]"));
     }
 }
