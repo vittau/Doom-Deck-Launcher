@@ -50,7 +50,7 @@ the controller now work (gilrs).
 | --- | --- | --- | --- | --- |
 | E1 | DDL installs DSDA-Doom v0.30.1; `-v` smoke test passes | Gaming | ⏳ | |
 | E2 | Official AppImage runs directly (FUSE available?) | Gaming | ⏳ | |
-| E3 | Extraction fallback runs: in Konsole `mkdir -p /tmp/ddl-e3 && cd /tmp/ddl-e3 && ~/.local/share/ddl/engines/dsda-doom/0.30.1/dsda-doom.AppImage --appimage-extract && ./squashfs-root/AppRun -v` prints 0.30.1 | Desktop | ⏳ | no force flag exists; DDL extracts automatically only when `-v` fails with a FUSE error |
+| E3 | Extraction fallback runs on purpose: in Konsole `./ddl engine install --force-extract` finishes and `./ddl engine status` shows `extracted`; a launch from that install works | Desktop | ⏳ | covers the D-013 fallback (spec 014 R1); `--force-extract` takes the fallback even when the AppImage would run |
 | E4 | A launch from DDL starts DSDA fullscreen; quitting DSDA returns focus to DDL | Gaming | ⏳ | |
 | E5 | Controller works in DSDA with the DDL config (`use_game_controller 1`) | Gaming | ⏳ | |
 

@@ -1,0 +1,306 @@
+# 014 — Headless CLI and the real-network Linux e2e job
+
+## Result and rationale
+
+**Confirmed:** R1–R4 are implemented. `ddl` gained `engine status`,
+`engine install [--version <V>] [--force-extract]`, `iwad scan [PATH...]`,
+`mapset list`, `mapset install <id> [--with <component>...]`,
+`launch <id> [--dry-run] [--with …] [--skill N] [--pistol-start]` and `doctor`.
+Every subcommand drives the **same** `crates/ddl/src/services.rs` `Services` the UI's
+worker thread uses — same XDG paths, same `app.json`, engine state, IWAD registry,
+library manifests and profiles — so a UI started afterwards sees what the CLI
+installed, and vice versa. Each subcommand has `--help` and exits 0; failures exit
+non-zero with one actionable line. Nothing here ever creates a window.
+
+Two small, additive `ddl-core` changes back the CLI:
+
+- `install::InstallRequest` gained `force_extract`, and `stage()` takes the D-013
+  extraction fallback before the AppImage's `-v` probe when it is set. The reviewed
+  download, size and SHA-256 checks are unchanged.
+- `platform::lock::StateLock` is a new advisory-OS-lock guard for DDL's mutable state
+  (see **The state lock** below).
+
+## R1 — Subcommands
+
+`crates/ddl/src/cli.rs` is still a small hand-written parser, now with one parser per
+subcommand. `--version` is only DDL's at the top level, so `ddl engine install
+--version 0.30.1` means the engine's version. `crates/ddl/src/cli_exec.rs` executes a
+parsed command against an explicit `Environment` and writer pair, which is what lets
+the tests drive the real services against the loopback fakes without capturing a
+process's stdout. `main.rs` routes every non-UI command through `cli_exec` after
+initialising logging (so the e2e artifact gets the logs).
+
+`ddl launch --dry-run` prints `program:`, then every argv token on its own line, then
+`working directory:` — one argument per line, as R1 asks. It resolves through the
+same private `resolve_launch` that the UI's `Command::Play` now uses, so the dry-run
+argv and the launched argv cannot drift. Without `--dry-run` it launches through the
+same run guard; the CLI does not persist the `--with`/`--skill`/`--pistol-start`
+overrides (they are a one-off), which the UI's Play does for `last_played`.
+
+### `--help` samples
+
+```text
+$ ddl --help
+ddl: DoomDeckLauncher, a native DOOM mapset launcher for Steam Deck
+
+Usage: ddl [OPTIONS]
+       ddl catalog lint [--fetch] [PATHS...]
+       ddl engine status
+       ddl engine install [--version <V>] [--force-extract]
+       ddl iwad scan [PATH...]
+       ddl mapset list
+       ddl mapset install <id> [--with <component>...]
+       ddl launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+       ddl doctor
+...
+```
+
+```text
+$ ddl engine install --help
+ddl engine install [--version <V>] [--force-extract]
+
+Download a reviewed DSDA-Doom AppImage, verify its size and SHA-256,
+smoke-test it with `-v` and install it. Progress goes to stderr.
+
+Usage: ddl engine install [--version <V>] [--force-extract]
+
+Options:
+      --version <V>     Reviewed version (0.30.1) or tag (v0.30.1);
+                        default: the newest reviewed release
+      --force-extract   Extract the AppImage even when it would run, so the
+                        D-013 fallback can be validated on purpose
+```
+
+```text
+$ ddl launch --help
+ddl launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+
+Resolve a mapset exactly as the UI's Play does. With --dry-run it prints the
+argv (one argument per line) and the working directory, or the typed blocker
+with its explanation. Without --dry-run it starts DSDA-Doom through the same
+run guard as the UI.
+...
+```
+
+`ddl iwad scan --help`, `ddl mapset list --help`, `ddl mapset install --help`,
+`ddl engine status --help`, `ddl engine --help`, `ddl iwad --help`,
+`ddl mapset --help` and `ddl doctor --help` are covered by the `cli_help`
+integration test and by `cli::tests::per_topic_help_mentions_its_own_command`.
+
+### Sample runs against the test fakes
+
+From `cli_exec::tests::sample_output_show` (a temporary run; the assertions live in
+the permanent tests) against a loopback HTTP server, a fake engine script and a
+scratch XDG root — paths elided to `…` for readability:
+
+```text
+$ ddl engine status
+engine: not installed
+
+$ ddl engine install
+Installed DSDA-Doom 0.30.1 at …/engines/dsda-doom/0.30.1/dsda-doom.AppImage (appimage)
+download
+  0% (0 / 248 bytes)
+  100% (248 / 248 bytes)
+verify
+commit
+
+$ ddl engine status
+installed:
+  0.30.1  appimage  reviewed  active
+active: 0.30.1
+
+$ ddl engine install --force-extract   # fresh data dir
+Installed DSDA-Doom 0.30.1 at …/engines/dsda-doom/0.30.1/squashfs-root/AppRun (extracted)
+download
+  0% (0 / 248 bytes)
+  100% (248 / 248 bytes)
+verify
+extract
+commit
+
+$ ddl mapset list
+sigil              doom     not installed  SIGIL
+
+$ ddl mapset install sigil
+Installed sigil 1.23
+  …/library/sigil/1.23/free/SIGIL_V1_23.wad
+  …/library/sigil/1.23/free/SIGIL_V1_23.txt
+  …/library/sigil/1.23/free/SIGIL_README_V1_23.txt
+...
+
+$ ddl iwad scan <dir>
+…/iwads/maybe.wad (ambiguous: doom2-1.9, doom2-1.8, …, tnt-1.9, plutonia-1.9) sha256=3284b061…
+unrecognized: …/iwads/junk.wad
+
+$ ddl launch sigil --dry-run
+(error) cannot launch: doom is missing; add a folder containing your own copy (accepted: doom-1.9ud)
+
+$ ddl launch sigil --dry-run --skill 4 --pistol-start   # with the IWAD seam
+program: …/engines/dsda-doom/0.30.1/dsda-doom.AppImage
+-iwad
+…/iwads/doom-1.9ud/doomu.wad
+-file
+…/library/sigil/1.23/free/SIGIL_COMPAT_V1_23.wad
+-complevel
+3
+-skill
+4
+-pistolstart
+-noautoload
+-config
+…/config/ddl/dsda/active.cfg
+-save
+…/profiles/sigil-default/save
+-data
+…/profiles/sigil-default/data
+-shotdir
+…/profiles/sigil-default/shots
+working directory: …/profiles/sigil-default/run
+
+$ ddl doctor
+DoomDeckLauncher 0.0.3 doctor
+paths:
+  config: …/config/ddl
+  data:   …/data/ddl
+  cache:  …/cache/ddl
+  state:  …/state/ddl
+  logs:   …/state/ddl/logs
+engine:
+  state file: …/data/ddl/engines/dsda-doom/installed.json
+  0.30.1  appimage  …/engines/dsda-doom/0.30.1/dsda-doom.AppImage
+  active: 0.30.1
+  previous good: none
+iwads:
+  …/iwads/maybe.wad (ambiguous)
+  …/seam-iwads/doom-1.9ud.wad (doom-1.9ud)
+mapsets:
+  sigil              doom     installed
+dsda config:
+  active: …/config/ddl/dsda/active.cfg
+  usable: no
+  template: 1
+  conflicts: 0
+```
+
+## R2 — Same state as the UI, and concurrent mutation
+
+The subcommands call `Services::open`, so they read and write exactly the UI's files.
+The dry-run is read-only; `mapset install` saves the default profile before installing
+(mirroring the UI's `Command::Install`) and writes the install manifest and `app.json`.
+
+### The state lock
+
+Spec 005's `RunGuard` covers *an engine run*, and the engine/config managers already
+refuse to change the engine set or the config while it is held. It deliberately does
+**not** cover installs, profile edits or registry refreshes, so nothing stopped a UI
+and a CLI process from racing on the same files. A small lock was therefore missing,
+and `crates/ddl-core/src/platform/lock.rs` adds one:
+
+- one advisory OS lock at `<config>/ddl/state.lock`, acquired non-blocking;
+- the OS releases it when the process dies, so no stale-PID recovery is needed;
+- `Services::execute` takes it for every mutating `Command` (a `mutates_state`
+  predicate), and the CLI's `engine install`, `mapset install`, `iwad scan` and the
+  test seam take it too;
+- `Command::Play`, `Browse` and `Updates` deliberately do not: Play holds the run
+  guard for the whole game, and a two-hour game must not block a CLI install;
+- a refused mutation is a clear message (`another DDL process is changing DDL's
+  state; close it and try again`), surfaced as the new `Problem::Busy` in the UI and
+  as a one-line error in the CLI.
+
+The UI needed one new translated string (`error-busy`) and one `Problem` arm; no UI
+flow changed.
+
+## R3 — The Linux e2e workflow
+
+`.github/workflows/e2e.yml` is `workflow_dispatch` only. It has two jobs:
+
+- `steamrt` builds `ddl` **inside the same pinned sniper SDK container digest** used
+  by `ci.yml`/`release.yml`, mirroring their toolchain install and cargo cache;
+- `ubuntu` runs the same steps on the plain runner and records the AppImage-direct
+  result (FUSE) in the step summary and the artifact — informative, never a failure,
+  because DDL falls back to extraction either way.
+
+Both build with `--features test-support`, which is the only thing that compiles the
+IWAD seam (release builds never enable it). The run, against real upstream hosts and a
+scratch XDG root, is:
+
+1. `ddl engine install` (AppImage first, then the `-v` smoke test) and, in a fresh
+   data dir, `ddl engine install --force-extract`; the second must report `extracted`.
+2. `ddl mapset install` for every id from `ddl mapset list`, then every free optional
+   component (`sigil --with compat`, `auger-zenith --with alternate-blaster`, then
+   `--with deckard-blaster` one at a time).
+3. `ddl launch <id> --dry-run` for every recipe must exit non-zero with the typed
+   `MissingIwad` blocker; then, with `DDL_TEST_IWAD_SEAM` set, the dry-run argv is
+   asserted against D-011: exactly one `-file`, `-iwad`, `-noautoload`, `-config`,
+   `-save`, `-data` and `-shotdir`; a numeric `-complevel`; an absolute `-iwad`.
+4. `ddl doctor` and the logs are uploaded as a workflow artifact, with `if: always()`.
+
+**The IWAD seam.** `ddl`'s `test-support` feature (off by default; `release.yml`
+builds without features) exposes `Services::register_fake_iwads`, which writes a
+**sparse** file of each needed variant's exact size and records it in the IWAD
+registry. It never downloads anything, and the resolver's dry-run path only reads the
+file's size. It is only reachable when `DDL_TEST_IWAD_SEAM` names a directory, and the
+same function is exercised offline by `launch_dry_run_prints_the_d011_argv_with_a_registered_iwad`.
+
+I cannot run this workflow from this worktree: it must exist on `main` before the
+coordinator can dispatch it, and it downloads real upstream bytes. It is correct by
+construction (validated with a YAML parse and by mirroring the existing jobs exactly);
+the coordinator will trigger it after merge and send any failure to fix.
+
+## R4 — Docs
+
+- README gained a **Troubleshooting from Konsole** section listing every subcommand, a
+  few examples and common fixes, and its command-line-options block now mirrors
+  `ddl --help`.
+- `docs/deck-testing.md` E3 now uses `ddl engine install --force-extract`.
+
+## Verification
+
+macOS arm64, pinned repository toolchain. **334 tests passed, zero failures** across
+the workspace (ddl 44, cli_help 2, catalog_cli 2, logo_assets 2, ui_strings 1,
+ddl-core 266, dsda_launch 14, doctests 3, plus the 0-test probe bin).
+
+`cargo fmt --all --check` — exit 0, no output.
+
+`cargo clippy --workspace --all-targets -- -D warnings` — exit 0, tail:
+
+```text
+   Compiling ddl-core v0.0.3 (.../crates/ddl-core)
+   Compiling ddl v0.0.3 (.../crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.99s
+```
+
+`cargo clippy -p ddl --features test-support --all-targets -- -D warnings` — exit 0,
+so the e2e seam also compiles clean under the feature the workflow builds with.
+
+`cargo test --workspace` — exit 0, result lines:
+
+```text
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 49.82s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 266 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Tests added: `cli::tests` (per-subcommand parsing and per-topic help), `cli_exec::tests`
+(nine offline runs against the loopback server, fake engine, scratch XDG: engine
+install and status, `--force-extract`, mapset list/install, component validation, IWAD
+scan with ambiguous and unrecognized files, the MissingIwad blocker, the dry-run argv
+against D-011, doctor, and the busy state lock), `platform::lock::tests`, the manager's
+`force_extract` test, and the `cli_help` integration test. No test touches the network,
+opens a window or captures the screen.
+
+## Open questions and items left open
+
+- **A2** stays unchecked: the e2e workflow has not run on `main` yet; the coordinator
+  triggers it and will forward any failure. The report should then link the run and the
+  AppImage-direct result.
+- **A4** stays unchecked: `ddl doctor` and `ddl launch` from Konsole on the Deck are a
+  hardware check.
+- New dependencies: **none**. The parser stays hand-written; the lock uses `std::fs`.

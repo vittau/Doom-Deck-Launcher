@@ -315,6 +315,14 @@ against the libraries SteamOS actually provides. See
 
 ```text
 Usage: ddl [OPTIONS]
+       ddl catalog lint [--fetch] [PATHS...]
+       ddl engine status
+       ddl engine install [--version <V>] [--force-extract]
+       ddl iwad scan [PATH...]
+       ddl mapset list
+       ddl mapset install <id> [--with <component>...]
+       ddl launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+       ddl doctor
 
 Options:
       --windowed  Run in a 1280x800 window instead of fullscreen
@@ -325,6 +333,47 @@ Environment:
   DDL_LOG  Log level for stderr diagnostics: error, warn, info, debug or trace
            (default: info)
 ```
+
+## Troubleshooting from Konsole
+
+The same binary that opens the launcher also has headless subcommands, so you can
+diagnose and repair DDL from a terminal on the Deck without starting the UI. Every
+subcommand uses the same files the UI uses, so what you do here shows up in the app
+(and vice versa). Only one DDL process may change DDL's state at a time: if the UI
+is open and busy, a subcommand refuses with a message telling you to close it.
+
+Start with the one report that answers most questions:
+
+```sh
+./ddl doctor
+```
+
+It prints DDL's config/data/cache/state paths, the log location, the installed
+DSDA-Doom versions and the active one, the identified IWADs, every mapset and
+whether it is installed, and the DSDA config state. Paste it when asking for help.
+
+| Subcommand | What it does |
+| --- | --- |
+| `ddl doctor` | One paste-friendly report of paths, engine, IWADs, mapsets and DSDA config. |
+| `ddl engine status` | Installed DSDA-Doom versions, the active one and how it runs (`appimage`, `extracted` or `manual`). |
+| `ddl engine install [--version <V>] [--force-extract]` | Download, verify and smoke-test a reviewed DSDA-Doom release. `--force-extract` takes the extraction fallback on purpose. |
+| `ddl iwad scan [PATH...]` | Find and identify IWADs in your Steam libraries and in each `PATH`; ambiguous files are listed, never auto-chosen. |
+| `ddl mapset list` | List every catalog mapset and whether it is installed. |
+| `ddl mapset install <id> [--with <component>...]` | Install a mapset, optionally enabling a component (e.g. `--with compat`). |
+| `ddl launch <id> --dry-run` | Print exactly what DDL would run (argv and working directory), or why it cannot. |
+| `ddl launch <id>` | Start DSDA-Doom, exactly as the UI's **Play** does. |
+
+Common fixes:
+
+- **"is missing; add a folder containing your own copy"** — DDL found no usable
+  IWAD. Run `ddl iwad scan /path/to/your/wads` (or add the folder in the UI).
+  DDL never downloads IWADs.
+- **`ddl engine status` shows nothing** — install the engine with `ddl engine
+  install`, or use **Install DSDA-Doom** on the first-run screen.
+- **A mapset will not play** — `ddl launch <id> --dry-run` prints the blocker
+  (missing IWAD, not installed, a component you must import, …).
+- **An install failed** — the logs are in `~/.local/state/ddl/logs/ddl.log`
+  (the exact path is in `ddl doctor`); attach that file.
 
 ## License
 

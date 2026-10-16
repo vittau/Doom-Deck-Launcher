@@ -202,15 +202,22 @@ impl EngineManager {
     pub fn install_reviewed(&self, version: &str) -> Result<InstalledEngine, Error> {
         self.install_reviewed_with_progress(
             version,
+            false,
             &crate::downloads::CancellationToken::new(),
             &mut |_| {},
         )
     }
 
     /// Reviewed install with UI cancellation and progress callbacks.
+    ///
+    /// `force_extract` takes the D-013 extraction fallback even when the
+    /// AppImage would run (spec 014, R1): the reviewed install path is unchanged
+    /// apart from skipping the AppImage's own `-v` probe in favour of the
+    /// extracted `AppRun`.
     pub fn install_reviewed_with_progress(
         &self,
         version: &str,
+        force_extract: bool,
         cancel: &crate::downloads::CancellationToken,
         progress: &mut dyn FnMut(crate::downloads::InstallProgress),
     ) -> Result<InstalledEngine, Error> {
@@ -227,6 +234,7 @@ impl EngineManager {
             expected_size: entry.size,
             expected_sha256: entry.sha256(),
             reviewed: true,
+            force_extract,
         };
         self.perform_install_with_progress(request, &url, cancel, progress)
     }
@@ -269,6 +277,7 @@ impl EngineManager {
             expected_size: asset.size,
             expected_sha256: digest,
             reviewed: false,
+            force_extract: false,
         };
         self.perform_install(request, &asset.url)
     }
@@ -745,6 +754,7 @@ exit 1
             expected_size: length,
             expected_sha256: hash,
             reviewed: true,
+            force_extract: false,
         };
         let engine = manager
             .perform_install(request, &server.url("/x"))
@@ -827,6 +837,7 @@ source_url = "https://example.invalid/s"
             expected_size: length + 1,
             expected_sha256: hash,
             reviewed: true,
+            force_extract: false,
         };
         assert!(manager.perform_install(request, &server.url("/f")).is_err());
 
@@ -838,6 +849,7 @@ source_url = "https://example.invalid/s"
             expected_size: length,
             expected_sha256: Sha256::of(b"different"),
             reviewed: true,
+            force_extract: false,
         };
         assert!(manager.perform_install(request, &server.url("/f")).is_err());
 
@@ -873,6 +885,7 @@ exit 1
             expected_size: length,
             expected_sha256: hash,
             reviewed: false,
+            force_extract: false,
         };
         let engine = manager
             .perform_install(request, &server.url("/f"))
@@ -896,6 +909,32 @@ exit 1
     }
 
     #[test]
+    fn force_extract_takes_the_fallback_even_when_the_appimage_runs() {
+        let temp = TestDir::new("install-force-extract");
+        let (server, hash, length) = serve(HAPPY_APPIMAGE);
+        let manager = manager(temp.path());
+        let request = InstallRequest {
+            version: "0.30.1".to_owned(),
+            tag: None,
+            source_url: server.url("/f"),
+            expected_size: length,
+            expected_sha256: hash,
+            reviewed: true,
+            force_extract: true,
+        };
+        let engine = manager
+            .perform_install(request, &server.url("/f"))
+            .expect("forced extraction");
+
+        // HAPPY_APPIMAGE answers `-v` with the right version, so the AppImage
+        // path would have succeeded; `--force-extract` must still extract.
+        assert_eq!(engine.mode, Mode::Extracted);
+        assert!(engine.path.ends_with("squashfs-root/AppRun"));
+        assert!(engine.path.is_file());
+        assert_no_staging(temp.path());
+    }
+
+    #[test]
     fn a_non_fuse_smoke_failure_is_reported_and_leaves_nothing() {
         const BROKEN: &str = r#"#!/bin/sh
 echo "I_Error: boom" 1>&2
@@ -911,6 +950,7 @@ exit 255
             expected_size: length,
             expected_sha256: hash,
             reviewed: true,
+            force_extract: false,
         };
         let error = manager
             .perform_install(request, &server.url("/f"))

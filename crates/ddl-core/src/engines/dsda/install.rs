@@ -57,6 +57,11 @@ pub struct InstallRequest {
     pub expected_sha256: Sha256,
     /// Whether the version was on the reviewed list.
     pub reviewed: bool,
+    /// Take the extraction fallback even when the AppImage would run
+    /// (`ddl engine install --force-extract`, spec 014 R1). This is how the
+    /// D-013 fallback is validated on purpose; it never changes what DDL
+    /// downloads or verifies.
+    pub force_extract: bool,
 }
 
 /// Downloads, verifies, smoke-tests and atomically installs one engine.
@@ -189,6 +194,18 @@ fn stage(
         });
     }
     set_executable(&appimage).map_err(|error| io_error("make the engine executable", error))?;
+
+    // `--force-extract` (spec 014, R1) deliberately takes the D-013 fallback
+    // even when the AppImage would run, so `docs/deck-testing.md` E3 can
+    // validate the extracted path on purpose. The AppImage is not smoke-tested
+    // first: the fallback's own `AppRun -v` test below is what must pass.
+    if request.force_extract {
+        if cancel.is_cancelled() {
+            return Err(crate::downloads::Error::Cancelled.into());
+        }
+        progress(InstallProgress::stage(InstallStage::Extract));
+        return extract_and_stage_apprun(staging, &appimage, request, cancel);
+    }
 
     match smoke_test_with_timeout(&appimage, super::smoke::SMOKE_TIMEOUT) {
         Ok(version) if version == request.version => {

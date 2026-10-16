@@ -1916,6 +1916,7 @@ fn problem_copy(p: Problem) -> T {
         Problem::Config => T::ErrorConfig,
         Problem::UnknownFile => T::UnknownFile,
         Problem::Launch => T::ErrorLaunch,
+        Problem::Busy => T::ErrorBusy,
     }
 }
 struct Nodes {
