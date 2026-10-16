@@ -58,6 +58,13 @@ task may reuse that task's terminal. After settlement: release the worker, close
 8. **Release for the Deck** when a build is worth testing: push a `v0.0.N-<label>` tag (release
    workflow, spec 001) and add the checks to `docs/deck-testing.md`.
 
+## Machine load
+
+All workers share the owner's Mac. Cold Rust/Slint builds are heavy: five in parallel pushed the
+load average to ~170. Keep at most **four** code workers at once, and tell workers to iterate
+with `cargo test -p ddl-core` / `cargo clippy -p ddl-core` (no Slint) and run the full workspace
+checks once before `worker_done`.
+
 ## Launching opencode
 
 `worker-start --agent opencode` can lose the first prompt, and the opencode TUI takes no
