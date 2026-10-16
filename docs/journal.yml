@@ -62,3 +62,14 @@
   type: decision
   summary: D-011 launch contract, D-012 config ownership, D-013 engine acquisition.
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: finding
+  summary: >-
+    SIGIL v1.23 (E5 + E3-compat WAD) and SIGIL II v1.0 (E6) researched: Ultimate DOOM IWAD,
+    limit-removing (complevel 3 proposed), episodes via UMAPINFO in DSDA v0.30.1, free with
+    redistribution permitted if the bundled txt stays intact; soundtracks are paid and gated.
+  refs: [docs/research/reference-sigil.md]
+- date: 2026-10-16
+  type: decision
+  summary: D-014 — user-supplied components (paid soundtracks) are imported by the user, never downloaded.
+  refs: [docs/decisions.md]

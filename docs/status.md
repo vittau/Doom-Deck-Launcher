@@ -8,7 +8,7 @@
 | Workspace, CI, release pipeline | `specs/001-workspace-ci-release.md` | In progress |
 | DSDA-Doom v0.30.x CLI, config, pistol start, strict mode (desk research) | `research/dsda-engine.md` | Done |
 | Upstream sources: DSDA releases/AppImage, `/idgames` API, AUGER;ZENITH | `research/upstream-sources.md` | In progress |
-| Reference mapsets SIGIL / SIGIL II | `research/reference-sigil.md` | In progress |
+| Reference mapsets SIGIL / SIGIL II | `research/reference-sigil.md` | Done |
 | Prior art: UZDeck / GZDeck (incl. UI critique) | `research/prior-art.md` | Done |
 | Recipe schema, catalog, lint | `specs/002-recipe-catalog.md` | Draft — waiting on research |
 | Launch plan and engine process runner | `specs/003-launch-plan.md` | Ready — waits for 001 |
