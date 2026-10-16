@@ -46,6 +46,8 @@ task may reuse that task's terminal. After settlement: release the worker, close
      (ack each delivery with `--ack <delivery_id>`, then re-arm);
    - health every 5 minutes: `scripts/orchestration/worker_health.py NAME=HANDLE …` — screen
      state, stalls, prompts, context and token usage.
+   - GUI guard: `scripts/orchestration/gui_guard.sh` kills any worker-launched `ddl` window or
+     `screencapture` (the owner works on this machine; see AGENTS.md).
    Heartbeats need no action.
 6. **Review** the branch: scope limited to its ownership, tests and lint pass, claims cited,
    acceptance criteria met. Send fixes back to the same terminal if needed.
@@ -71,6 +73,10 @@ orca orchestration worker-start --run <run> --spec "$(cat brief.md)" --task-titl
 Close the fallback shell that a bare `worktree create` opens, after confirming it is idle.
 
 ## Known stalls
+
+- A worker mid-turn may not read an `orchestration send` until its next checkpoint. For urgent
+  corrections, type the instruction straight into its terminal (`terminal send --text … --enter`;
+  opencode queues it).
 
 - opencode **"Allow OpenCode to search the web?"** prompt: send Enter (option 1, allow).
 - opencode ends a turn without `worker_done`: a plain `terminal send --text "continue" --enter`.
