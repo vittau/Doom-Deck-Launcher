@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M0 → M1 — spikes done on the desk; core modules in progress  ·  **Updated:** 2026-10-16
+**Milestone:** M1/M2 exit — first playable build; awaiting Deck validation  ·  **Updated:** 2026-10-16
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -20,7 +20,8 @@
 | UI visual pass: hi-fi generated mockups, identity (Codex) | `design/visual/` | Done — note: required components must render as locked, not as a toggle |
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |
 | IWAD table, identifier, Steam discovery, canonical links | `specs/007-iwad-library.md` | Done (A6 needs Deck) |
-| Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Ready |
+| Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Done (A3 needs Deck) |
+| Production UI polish (back to 008 fidelity) | `specs/012-ui-polish.md` | Ready |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |

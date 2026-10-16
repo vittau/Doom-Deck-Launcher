@@ -1,6 +1,6 @@
 # 010 — Wire the UI to the core: first run, install, play, settings
 
-**Status:** Ready  ·  **Milestone:** M1/M2 exit
+**Status:** Done (A3 needs Deck)  ·  **Milestone:** M1/M2 exit
 **Depends on:** 004, 005, 007, 008, 009
 
 ## Goal

@@ -183,3 +183,12 @@
     350/100 ms, centralized), all screens on fixtures, headless PNGs + side-by-side comparisons,
     @tr lint test. Spec 010 is Ready with 008's polish items (hint badges, clipped scroll rows).
   refs: [docs/reports/008-ui-shell.md, docs/specs/010-ui-wiring.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 010 merged — first playable build: async core services, first run (engine install,
+    Steam + folder IWAD discovery, controller directory browser), real catalog install with
+    progress/cancel, persisted play setup, guarded launch/return, Home/Library/Settings.
+    Fixed a spec 009 bug: install() kept forgetting prior member records on component
+    replacement. CI now installs libudev-dev (gilrs). Spec 012 opened for production UI polish.
+  refs: [docs/reports/010-ui-wiring.md, docs/specs/012-ui-polish.md]
