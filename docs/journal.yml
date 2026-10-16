@@ -102,3 +102,9 @@
   type: decision
   summary: D-017 — content-based IWAD identity, canonical-name symlink at launch, numeric complevels only.
   refs: [docs/decisions.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Merged UI contract v1 (docs/design/ui.md, Inter under OFL, wireframe mockups); requested a
+    high-fidelity visual pass using image generation, plus B=Back legend fix.
+  refs: [docs/design/ui.md]
