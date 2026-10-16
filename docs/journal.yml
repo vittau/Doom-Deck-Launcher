@@ -115,3 +115,11 @@
     1280x800 mockups (docs/design/visual/), B=Back / Start=Menu legends. Implementation note:
     required components render as locked rows, not toggles.
   refs: [docs/design/ui.md, docs/design/visual-report.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 001 merged — Rust 1.99.1 workspace, ddl placeholder menu (verified headlessly),
+    CI and release in the Steam Linux Runtime 3.0 sniper SDK (pinned digest). Fixed dash vs
+    bash in container jobs. First pre-release tag v0.0.1-skeleton. Wave 2 started: specs 002,
+    003, 005, 006, 007 in parallel.
+  refs: [docs/specs/001-workspace-ci-release.md, docs/research/steam-runtime-build.md]
