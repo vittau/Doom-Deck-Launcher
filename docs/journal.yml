@@ -261,3 +261,9 @@
     automatic download), covers Eviternity and the IWADs but not SIGIL, SIGIL II or AUGER;ZENITH,
     and the Eviternity bar derives from CC BY-NC-ND art. Owner decision pending.
   refs: [docs/research/widescreen-statusbars.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    Widescreen status bars deferred by the owner; they will contact the doom_widehud author
+    about permission before any implementation.
+  refs: [docs/research/widescreen-statusbars.md, docs/status.md]
