@@ -26,9 +26,7 @@ use super::discovery::{
     self, CACHE_DIR, CACHE_FILE, DiscoveredRelease, DiscoveryError, DiscoveryOutcome, ReleaseApi,
 };
 use super::install::{self, InstallError, InstallRequest};
-use super::reviewed::{
-    ListError, RELEASE_DOWNLOAD_BASE, RELEASE_TAG_BASE, ReviewedList, SOURCE_TREE_BASE,
-};
+use super::reviewed::{RELEASE_DOWNLOAD_BASE, RELEASE_TAG_BASE, ReviewedList, SOURCE_TREE_BASE};
 use super::smoke::{SmokeError, smoke_test};
 use super::state::{InstalledEngine, InstalledState, Mode, Origin, STATE_FILE, StateError};
 use crate::downloads::{Fetcher, HostAllowlist, Sha256};
@@ -496,8 +494,6 @@ pub enum Error {
     Io(io::Error),
     /// Installed state could not be read or written.
     State(StateError),
-    /// The reviewed list could not be loaded.
-    Reviewed(ListError),
     /// Release discovery failed.
     Discovery(DiscoveryError),
     /// The install pipeline failed.
@@ -547,7 +543,6 @@ impl fmt::Display for Error {
         match self {
             Self::Io(error) => write!(f, "{error}"),
             Self::State(error) => write!(f, "{error}"),
-            Self::Reviewed(error) => write!(f, "{error}"),
             Self::Discovery(error) => write!(f, "{error}"),
             Self::Install(error) => write!(f, "{error}"),
             Self::RunActive { pid: Some(pid) } => {
@@ -610,7 +605,6 @@ impl std::error::Error for Error {
         match self {
             Self::Io(error) => Some(error),
             Self::State(error) => Some(error),
-            Self::Reviewed(error) => Some(error),
             Self::Discovery(error) => Some(error),
             Self::Install(error) => Some(error),
             Self::Smoke(error) => Some(error),
