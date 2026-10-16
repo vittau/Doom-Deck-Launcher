@@ -12,9 +12,10 @@ an unsafe or ambiguous command line through it.
 ## Requirements
 
 - **R1** — `ddl_core::engines::dsda::LaunchPlan`, a typed value holding: engine executable
-  (absolute path), IWAD (absolute path), ordered PWAD/ZIP files, ordered DEH/BEX patches,
-  complevel (a `Complevel` type accepting only reviewed values: `vanilla`, the numbers 0–17
-  and 21, the aliases `boom`/`mbf`/`mbf21`; never the placeholders 18–20 and never "omit"),
+  (absolute path), IWAD (absolute path; in practice DDL's canonical-name symlink, D-017), ordered PWAD/ZIP files, ordered DEH/BEX patches,
+  complevel (a `Complevel` type accepting only the reviewed numbers 0–17 and 21; never the
+  placeholders 18–20, never a word such as `vanilla`, never "omit" — words are resolved
+  earlier from the identified IWAD, D-017),
   skill (1–5), optional warp (episode/map), pistol start flag, optional demo recording path,
   config file path, per-profile save/data/screenshot directories, working directory, and a
   typed list of extra `-assign key=value` overrides.

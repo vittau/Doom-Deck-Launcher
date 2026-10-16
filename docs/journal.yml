@@ -91,3 +91,14 @@
     Agents never open visible GUI windows or capture the screen on the owner's machine; UI is
     verified headlessly (Slint software renderer to PNG, key events in tests). Rule in AGENTS.md.
   refs: [AGENTS.md]
+- date: 2026-10-16
+  type: finding
+  summary: >-
+    IWAD research merged — DSDA derives game mode from content but mission from the filename;
+    published IWAD tables carry MD5/SHA-1 (SHA-256 for only 2 versions); KEX 2024 IWADs live
+    under rerelease/ in the Steam install.
+  refs: [docs/research/iwad-identification.md]
+- date: 2026-10-16
+  type: decision
+  summary: D-017 — content-based IWAD identity, canonical-name symlink at launch, numeric complevels only.
+  refs: [docs/decisions.md]
