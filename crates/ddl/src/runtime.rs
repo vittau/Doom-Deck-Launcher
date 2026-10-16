@@ -769,7 +769,7 @@ impl Runtime {
             if self.playing {
                 T::PlayingHelp
             } else if self.screen == Screen::FirstRun {
-                T::FirstHelp
+                T::FirstSub
             } else if self.busy {
                 T::Working
             } else {
@@ -794,7 +794,10 @@ impl Runtime {
             b.label(40., 186., 1100., 90., text(ui, T::PlayingHelp), 26.);
         } else {
             match self.screen {
-                Screen::Loading => b.label(40., 100., 1100., 100., text(ui, T::Loading), 30.),
+                Screen::Loading => {
+                    b.panel(12., 12., 1200., 240.);
+                    b.label(40., 60., 1100., 100., text(ui, T::Loading), 30.);
+                }
                 Screen::FirstRun => {
                     b.panel(12., 12., 584., 478.);
                     b.panel(628., 12., 584., 478.);
@@ -973,7 +976,7 @@ impl Runtime {
                                     if base_ready(s, &item.recipe) {
                                         T::BaseReady
                                     } else {
-                                        T::BaseMissing
+                                        T::BaseMissingShort
                                     },
                                 ),
                                 20.,
@@ -1214,7 +1217,7 @@ impl Runtime {
                             }
                             b.label(
                                 740.,
-                                260.,
+                                186. + summary.content.len() as f32 * 38.,
                                 448.,
                                 56.,
                                 value(ui, T::Complevel, summary.complevel),
@@ -1222,7 +1225,7 @@ impl Runtime {
                             );
                             b.label(
                                 740.,
-                                316.,
+                                250. + summary.content.len() as f32 * 38.,
                                 448.,
                                 30.,
                                 value(ui, T::EngineVersion, &summary.engine_version),
@@ -1230,7 +1233,7 @@ impl Runtime {
                             );
                             b.label(
                                 740.,
-                                354.,
+                                288. + summary.content.len() as f32 * 38.,
                                 448.,
                                 32.,
                                 format!(
@@ -1323,6 +1326,11 @@ impl Runtime {
                             ),
                         _ => text(ui, T::InstallTitle),
                     };
+                    ui.global::<crate::WiringStrings>()
+                        .set_value(text(ui, T::InstallTitle));
+                    ui.global::<crate::WiringStrings>()
+                        .set_other(subject.clone());
+                    ui.set_heading(text(ui, T::ContextTitle));
                     b.label(36., 40., 1100., 60., subject, 36.);
                     let stage = self.progress.map_or(T::Working, |p| match p.stage {
                         InstallStage::Download => T::Download,
@@ -1330,15 +1338,39 @@ impl Runtime {
                         InstallStage::Extract => T::Extract,
                         InstallStage::Commit => T::Commit,
                     });
+                    let stage_help = match self.progress.map(|p| p.stage) {
+                        Some(InstallStage::Download) => T::DownloadHelp,
+                        Some(InstallStage::Verify) => T::VerifyHelp,
+                        Some(InstallStage::Extract) => T::ExtractHelp,
+                        Some(InstallStage::Commit) => T::CommitHelp,
+                        None => T::Working,
+                    };
                     ui.set_subtitle(text(
                         ui,
                         if self.cancel.is_cancelled() {
                             T::CancelPending
                         } else {
-                            stage
+                            stage_help
                         },
                     ));
-                    b.label(36., 112., 1100., 36., text(ui, T::StageSequence), 22.);
+                    b.label(
+                        36.,
+                        112.,
+                        1100.,
+                        36.,
+                        text(
+                            ui,
+                            if matches!(
+                                self.pending.as_ref().or(self.retry.as_ref()),
+                                Some(Command::InstallEngine(_))
+                            ) {
+                                T::EngineStageSequence
+                            } else {
+                                T::StageSequence
+                            },
+                        ),
+                        22.,
+                    );
                     b.label(
                         36.,
                         160.,
@@ -1386,7 +1418,7 @@ impl Runtime {
                         } else {
                             value(ui, T::BytesUnknown, human_bytes(p.downloaded))
                         };
-                        b.label(36., 252., 1100., 42., label, 26.);
+                        b.label(36., 252., 1100., 42., label, 22.);
                     }
                     if self.busy {
                         b.button(1, 36., 320., 400., text(ui, T::Cancel), false);
@@ -1966,4 +1998,19 @@ fn elide_path_start(path: &str, limit: usize) -> String {
             .skip(count - limit.saturating_sub(1))
             .collect::<String>()
     )
+}
+
+#[cfg(test)]
+mod visual_copy_tests {
+    use super::*;
+    #[test]
+    fn byte_units_and_unicode_breadcrumbs_are_human_readable() {
+        assert_eq!(human_bytes(0), "0 B");
+        assert_eq!(human_bytes(1023), "1023 B");
+        assert_eq!(human_bytes(1536), "1.5 KiB");
+        assert_eq!(human_bytes(2 * 1024 * 1024), "2.0 MiB");
+        assert_eq!(human_bytes(3 * 1024 * 1024 * 1024), "3.0 GiB");
+        assert_eq!(elide_path_start("/short", 10), "/short");
+        assert_eq!(elide_path_start("/long/日本語/maps", 9), "…日本語/maps");
+    }
 }

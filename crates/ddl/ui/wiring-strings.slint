@@ -1,4 +1,10 @@
 export global WiringStrings {
+    out property <string> first-sub: @tr("Prepare the engine and bring your own base games.");
+    out property <string> download-help: @tr("Receiving the archive; checks follow before installation.");
+    out property <string> verify-help: @tr("Checking integrity before these files can be used.");
+    out property <string> extract-help: @tr("Unpacking content into a safe staging directory.");
+    out property <string> commit-help: @tr("Saving the completed install; cancellation is temporarily unavailable.");
+
     out property <string> ready-checks: @tr("Ready to play");
     out property <string> recent: @tr("Recently played");
     out property <string> found-game: @tr("{} found", root.value);
@@ -10,7 +16,8 @@ export global WiringStrings {
     out property <string> settings-sub: @tr("Manage your engine, base games and settings.");
     out property <string> pre-check: @tr("Check when you are ready. No update check has run.");
     out property <string> content-single: @tr("1 content file");
-    out property <string> stage-sequence: @tr("Download → Verify → Extract → Install");
+    out property <string> stage-sequence: @tr("Download → Extract → Verify → Install");
+    out property <string> engine-stage-sequence: @tr("Download → Verify → Extract → Install");
     out property <string> no-folders: @tr("No folders added. Add a folder or rescan your Steam libraries.");
     out property <string> context-title: @tr("{} / {}", root.value, root.other);
     out property <string> connected: @tr("Controller connected");
@@ -48,6 +55,7 @@ export global WiringStrings {
     out property <string> installed: @tr("Installed");
     out property <string> not-installed: @tr("Not installed");
     out property <string> base-ready: @tr("Matching base game present");
+    out property <string> base-missing-short: @tr("Base game missing");
     out property <string> base-missing: @tr("Base game missing · add your own IWAD folder");
     out property <string> doom: @tr("Ultimate DOOM");
     out property <string> doom2: @tr("DOOM II");

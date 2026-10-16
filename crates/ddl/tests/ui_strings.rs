@@ -43,7 +43,7 @@ fn visible_slint_literals_are_translatable() {
             let before = source[..offset].trim_end();
             let resource = before.ends_with("@tr(");
             let noncopy = value.is_empty()
-                || value == "Inter Variable"
+                || matches!(value.as_str(), "Inter Variable" | "Barlow" | "Pirata One")
                 || before.ends_with("import")
                 || before.ends_with("from")
                 || before.ends_with("@image-url(")

@@ -35,9 +35,9 @@ relative-luminance ratios below use the brightest normal surface (`raised`).
 | canvas / deep / on-accent | `#120C0D` | Chrome, separation, primary-button text |
 | surface | `#211719` | Opaque information panels |
 | raised | `#352527` | Rows, controls, sheets |
-| text | `#F8EAD5` | Bone foreground, 12.25:1 on raised |
+| text | `#F8EAD5` | Bone foreground, 12.26:1 on raised |
 | muted | `#D0BCA7` | Secondary / hidden-folder text, 7.91:1 on raised |
-| focus / warning | `#FFD078` | Amber ring and primary action, 10.43:1 on raised |
+| focus / warning | `#FFD078` | Amber ring and primary action, 10.06:1 on raised |
 | success | `#88D9B0` | Positive checks with explicit text |
 | danger | `#FFA69C` | Error with explicit text |
 | line / steel-edge | `#80533B` | Decorative bronze separators |

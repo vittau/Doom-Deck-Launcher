@@ -182,7 +182,7 @@ export component AppWindow inherits Window {
             x: (parent.width - 720px) / 2; y: (parent.height - 300px) / 2; width: 720px; height: 300px;
             background: Tokens.raised; border-width: 1px; border-color: Tokens.line; border-radius: 12px;
             Frame { width: parent.width; height: parent.height; }
-            Text { x: 32px; y: 32px; width: parent.width - 64px; height: 96px; text: root.sheet-title; color: Tokens.text; font-size: Tokens.section; wrap: word-wrap; }
+            Text { x: 32px; y: 32px; width: parent.width - 64px; height: 96px; text: root.sheet-title; font-family: "Pirata One"; color: Tokens.text; font-size: Tokens.section; wrap: word-wrap; }
             for item in root.sheet-nodes: Node { item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
         }
     }

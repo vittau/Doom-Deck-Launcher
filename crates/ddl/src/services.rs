@@ -687,6 +687,30 @@ mod tests {
         }
     }
     #[test]
+    fn browser_sorts_without_case_and_places_hidden_entries_last() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let services = Services::open(env.clone()).unwrap();
+        let dir = env.home.join("browse");
+        fs::create_dir_all(&dir).unwrap();
+        for name in ["Zebra", "alpha", ".Hidden", "Beta", ".alpha"] {
+            fs::create_dir(dir.join(name)).unwrap();
+        }
+        fs::write(dir.join("a.wad"), b"fixture").unwrap();
+        let directory = services
+            .browse(&dir, true, &CancellationToken::new())
+            .unwrap();
+        let names: Vec<_> = directory
+            .entries
+            .iter()
+            .map(|(p, _)| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            names,
+            ["alpha", "Beta", "Zebra", "a.wad", ".alpha", ".Hidden"]
+        );
+    }
+    #[test]
     fn startup_provisions_owned_paths_and_restores_the_default_profile() {
         let temp = tempfile::tempdir().unwrap();
         let env = env(temp.path());

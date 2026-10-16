@@ -3,6 +3,12 @@ use crate::{AppWindow, WiringStrings};
 use slint::ComponentHandle;
 #[derive(Clone, Copy)]
 pub enum Text {
+    FirstSub,
+    DownloadHelp,
+    VerifyHelp,
+    ExtractHelp,
+    CommitHelp,
+
     ReadyChecks,
     Recent,
     FoundGame,
@@ -15,6 +21,7 @@ pub enum Text {
     PreCheck,
     ContentSingle,
     StageSequence,
+    EngineStageSequence,
     NoFolders,
     ContextTitle,
 
@@ -53,6 +60,7 @@ pub enum Text {
     NotInstalled,
     BaseReady,
     BaseMissing,
+    BaseMissingShort,
     Doom,
     Doom2,
     Tnt,
@@ -149,6 +157,12 @@ pub enum Text {
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
     match key {
+        Text::FirstSub => s.get_first_sub(),
+        Text::DownloadHelp => s.get_download_help(),
+        Text::VerifyHelp => s.get_verify_help(),
+        Text::ExtractHelp => s.get_extract_help(),
+        Text::CommitHelp => s.get_commit_help(),
+
         Text::ReadyChecks => s.get_ready_checks(),
         Text::Recent => s.get_recent(),
         Text::FoundGame => s.get_found_game(),
@@ -160,6 +174,7 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::SettingsSub => s.get_settings_sub(),
         Text::PreCheck => s.get_pre_check(),
         Text::ContentSingle => s.get_content_single(),
+        Text::EngineStageSequence => s.get_engine_stage_sequence(),
         Text::StageSequence => s.get_stage_sequence(),
         Text::NoFolders => s.get_no_folders(),
         Text::ContextTitle => s.get_context_title(),
@@ -198,6 +213,7 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::Installed => s.get_installed(),
         Text::NotInstalled => s.get_not_installed(),
         Text::BaseReady => s.get_base_ready(),
+        Text::BaseMissingShort => s.get_base_missing_short(),
         Text::BaseMissing => s.get_base_missing(),
         Text::Doom => s.get_doom(),
         Text::Doom2 => s.get_doom2(),

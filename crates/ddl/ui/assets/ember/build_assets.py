@@ -40,5 +40,5 @@ d.line((2,52,94,52),fill='#B8583F',width=2)
 save(logo,'logotype.png')
 for p in sorted(OUT.glob('*.png')): print(p.name, p.stat().st_size)
 assert sum(p.stat().st_size for p in OUT.glob('*.png')) < 6_000_000
-assert list(tile.crop((0,0,1,438)).getdata()) == list(tile.crop((511,0,512,438)).getdata())
-assert list(tile.crop((0,0,512,1)).getdata()) == list(tile.crop((0,437,512,438)).getdata())
+assert list(tile.crop((0,0,1,438)).get_flattened_data()) == list(tile.crop((511,0,512,438)).get_flattened_data())
+assert list(tile.crop((0,0,512,1)).get_flattened_data()) == list(tile.crop((0,437,512,438)).get_flattened_data())

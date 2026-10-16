@@ -114,7 +114,10 @@ fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
 /// Exact reference and software frame side by side; no desktop screenshot involved.
 fn comparison(name: &str, actual: &SharedPixelBuffer<Rgb8Pixel>) {
     let design = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/design");
-    let visual = design.join("visual").join(name);
+    let ember = name
+        .strip_prefix("ember-")
+        .map(|name| design.join("visual-v2/ember-cathedral").join(name));
+    let visual = ember.unwrap_or_else(|| design.join("visual").join(name));
     let reference = if visual.exists() {
         visual
     } else {
