@@ -74,8 +74,10 @@ Close the fallback shell that a bare `worktree create` opens, after confirming i
 
 - opencode **"Allow OpenCode to search the web?"** prompt: send Enter (option 1, allow).
 - opencode ends a turn without `worker_done`: a plain `terminal send --text "continue" --enter`.
-- Codex **"Update available"** menu blocks `worker-start` at agent readiness; update Codex, then
-  retry the same task.
+- Codex **"Update available"** menu fails `worker-start` at `agent_readiness`, but the terminal
+  survives. Send `3` ("Skip until next version"), wait for `› Ask Codex`, then retry on that
+  terminal with `worker-start --task <id> --retry-of <failed dispatch> --terminal <handle>
+  --worktree path:<wt>`. Tell the owner an update is pending.
 - An Orca or Codex restart can orphan workers; recover per the Orca `orchestration` skill.
 
 ## Push and release policy

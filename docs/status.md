@@ -14,6 +14,8 @@
 | Launch plan and engine process runner | `specs/003-launch-plan.md` | Ready — waits for 001 |
 | Engine manager (discover, download, verify, install, rollback) | `specs/004-…` | Not written — waits for upstream research |
 | DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Ready — waits for 001 |
+| UI design system and mockups (Codex) | `design/ui.md`, `design/mockups/` | In progress |
+| IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | In progress |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
 | Slint + controller backend on Deck (SDL3 vs gilrs) | — | Not started (needs a release build) |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
