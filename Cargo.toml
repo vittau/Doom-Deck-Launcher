@@ -37,14 +37,22 @@ slint-build = "=1.18.1"
 tracing = "=0.1.44"
 tracing-subscriber = "=0.3.23"
 
-# Catalog schema, URL/range validation and opt-in fetch lint (spec 002).
+# Catalog schema, URL/range validation and opt-in fetch lint (spec 002), downloads and
+# safe archive extraction (spec 006).
 serde = { version = "=1.0.229", features = ["derive"] }
 toml = "=1.1.8"
 url = "=2.5.8"
 semver = "=1.0.28"
-sha2 = "=0.11.1"
+# `ureq`: small **blocking** HTTP client with no async runtime; the UI runs downloads on a
+# worker thread (spec 006 R1/R2). Only `rustls` is enabled (pure-Rust TLS with bundled
+# webpki roots, no OpenSSL on the Deck). The fetcher follows redirects itself so it can
+# re-check every target against the host allowlist.
 ureq = { version = "=3.4.2", default-features = false, features = ["rustls"] }
-zip = { version = "=9.0.4", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# SHA-256 verification and content-addressed caching (specs 002, 006).
+sha2 = "=0.11.1"
+# ZIP reading: deflate only; stored entries always work and other methods are rejected
+# by the extractor (spec 006 R4).
+zip = { version = "=9.0.4", default-features = false, features = ["deflate", "deflate-flate2-zlib-rs"] }
 
 # Release binaries are built for Steam Deck; stripping debug info keeps the
 # downloadable tarball small. Debug/release logs are unaffected.

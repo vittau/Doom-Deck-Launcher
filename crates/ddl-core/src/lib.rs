@@ -7,6 +7,7 @@
 //! (`catalog`, `recipes`, `resolver`, ...) arrives with later specs.
 #![forbid(unsafe_code)]
 
+pub mod downloads;
 pub mod dsda_config;
 pub mod engines;
 pub mod platform;
