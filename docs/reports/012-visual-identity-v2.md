@@ -33,7 +33,7 @@ actual map screenshots or compatibility evidence. Dedicated cover/band regions d
 
 `build_assets.py` is the deterministic offline production compositor (Pillow 12.3.0, design-time
 only). It crops the approved source, mirrors wall quarters to make matching opposite edges,
-pre-darkens the wall by 38%, tiles the wallpaper, makes an opaque frame center and renders the
+pre-darkens the wall by 38%, tiles the wallpaper, builds plain nine-slice rails with separate fixed-size ornaments, fades each continuous art band into the title, and renders the
 legible DDL lettering from Barlow. It asserts both tile seams and the PNG budget. Regenerate:
 
 ```sh
@@ -42,21 +42,25 @@ legible DDL lettering from Barlow. It asserts both tile seams and the PNG budget
 
 | PNG | Dimensions | Bytes | Composition |
 | --- | --- | ---: | --- |
-| `auger-band.png` | 400×88 | 64,315 | Offline composite from original art / bundled Barlow |
+| `auger-band.png` | 400×88 | 58,129 | Offline composite from original art / bundled Barlow |
 | `auger.png` | 512×586 | 436,684 | Original atlas crop |
 | `emblem.png` | 64×64 | 8,837 | Original atlas crop |
-| `frame.png` | 256×220 | 44,341 | Offline composite from original art / bundled Barlow |
+| `frame.png` | 128×128 | 7,028 | Offline composite from original art / bundled Barlow |
 | `logotype.png` | 116×56 | 1,051 | Offline composite from original art / bundled Barlow |
-| `sigil-band.png` | 400×88 | 60,920 | Offline composite from original art / bundled Barlow |
-| `sigil-ii-band.png` | 400×88 | 53,244 | Offline composite from original art / bundled Barlow |
+| `ornament-bottom.png` | 96×28 | 5,159 | Offline composite from original art / bundled Barlow |
+| `ornament-left.png` | 28×48 | 2,834 | Offline composite from original art / bundled Barlow |
+| `ornament-right.png` | 28×48 | 2,894 | Offline composite from original art / bundled Barlow |
+| `ornament-top.png` | 96×28 | 5,730 | Offline composite from original art / bundled Barlow |
+| `sigil-band.png` | 400×88 | 55,329 | Offline composite from original art / bundled Barlow |
+| `sigil-ii-band.png` | 400×88 | 47,847 | Offline composite from original art / bundled Barlow |
 | `sigil-ii.png` | 512×586 | 366,197 | Original atlas crop |
 | `sigil.png` | 512×586 | 370,823 | Original atlas crop |
 | `wall-tile.png` | 512×438 | 378,362 | Offline composite from original art / bundled Barlow |
 | `wall.png` | 1280×632 | 568,501 | Offline composite from original art / bundled Barlow |
 
-**PNG total: 2,353,275 bytes (2.35 MB)**, below the 6 MB target. The precomposited wallpaper
+**PNG total: 2,315,405 bytes (2.32 MB)**, below the 6 MB target. The precomposited wallpaper
 avoids tiling many runtime elements; the reusable seam-safe source tile is also retained.
-Fonts plus notices add 169,188 bytes, for 2,522,463 added asset bytes excluding the compositor.
+Fonts plus notices add 169,188 bytes, for 2,484,593 PNG/font/notice bytes excluding the compositor and three original SVG marks (591 bytes in total).
 Existing Inter/furnace assets are retained for the earlier fixture history.
 
 **Barlow Regular** (104,068 bytes) and **Pirata One Regular** (56,316 bytes) are unmodified copies
@@ -120,11 +124,13 @@ The two Ember comparisons put production on the left and the approved Home / AUG
 on the right at 2560×800. Production state names are listed in the final evidence below.
 
 The service journey uses scratch XDG roots, generated ZIP members, loopback HTTP and a fake
-engine runner. Discover's three genuine catalog entries and AUGER's ready comparison use clearly
-marked render-only snapshots; AUGER borrows the fake SIGIL summary and synthetic base readiness
-only for visual review, restores live state immediately, and never runs or claims to verify
-AUGER gameplay. Fast Verify/Extract/Commit frames similarly inject stage notifications while
-the test transfer is gated. Other service assertions continue exercising real adapters.
+engine runner. Discover's three genuine catalog entries use a marked render-only snapshot.
+AUGER now uses the production installer/resolver with a generated nested add-on ZIP, synthetic
+commercial IWAD markers and explicit variant review; its ready summary is no longer borrowed
+from SIGIL. None → Alternate → Deckard → None goes through actual profile persistence,
+missing-component installation and resolution, and checks exact numbered filenames / exclusivity.
+These synthetic bytes exercise the app, not actual AUGER gameplay. Fast Verify/Extract/Commit
+frames inject stage notifications while the test transfer is gated.
 
 ## Differences from the mockup
 
@@ -136,9 +142,10 @@ the test transfer is gated. Other service assertions continue exercising real ad
 - Home uses actual history and prerequisite state, so the test has one recent SIGIL session and
   correctly says DOOM II is missing; the mockup's illustrative extra library items are not
   invented. “Readiness checks” avoids claiming an incomplete machine is ready.
-- AUGER add-ons remain existing separate controller rows, preserving recipe-driven interaction
-  and exclusivity. Advanced/gameplay rows scroll instead of replacing these with the mockup's
-  compact segmented selector. Will launch stays fixed while options scroll.
+- Optional additive exclusive groups now use one compact None / member choice row, matching the
+  approved AUGER mockup. Group membership and labels come from the recipe; compatibility
+  replacements and user-supplied imports retain their existing confirmation/import journeys.
+  Will launch stays fixed while options scroll.
 - No illustrative transfer speed, completion estimate or gameplay-verification badge was added.
   Bytes and install stages derive from the existing events, including their distinct order.
 
@@ -156,7 +163,7 @@ research evidence in [SIGIL reference](../research/reference-sigil.md),
 [DSDA research](../research/dsda-engine.md). No engine flags, IWAD data, compatibility facts or
 content hashes were introduced. No new open product question or dependency remains.
 
-## Final local checks
+## Initial phase-B local checks (before review fixes)
 
 Final macOS arm64 checks passed after the last code change: **309 tests**, zero failures.
 
@@ -207,3 +214,89 @@ Inspected production artifacts (all 1280×800):
 Inspected Ember comparisons (2560×800): `comparison-ember-home.png` and `comparison-ember-play-setup-auger.png`.
 
 A3 is complete. A4 remains open for owner Deck checks; no local implementation item remains open.
+
+## Coordinator review fixes
+
+All six review defects are addressed on the same branch, with no core or dependency changes:
+
+1. **Frame detail:** the nine-slice image now contains only fixed corners and plain rail
+   cross-sections. Top/bottom ornaments are separate **96×28** PNGs; side ornaments are **28×48**.
+   Every image renders at those native dimensions on every panel width. No emblem stretches
+   along a wide edge. Headless comparisons check every top-ornament pixel against the source
+   on the 1200 px install panel and 784 px Home panel.
+2. **Art band:** one source crop per band, explicit image geometry and clipping, with a
+   precomposited 144 px smoothstep fade to `#120C0D`. The title surface meets the band directly,
+   without a wall gutter / hard seam. No additional runtime gradient or layered image is used.
+3. **Panel padding:** Will launch starts 24 px below its panel origin (32 px below the outer
+   carved frame), matching the other panel headings. Browser/review headings and the install
+   heading follow the same inset; the headless journey checks the setup heading coordinate.
+   The scrolling options frame now encloses the full list, keeping its bottom rail below the
+   last row instead of crossing Advanced help when the pane scrolls; this has a regression assertion.
+4. **Add-on choice:** recipe-driven optional additive `exclusive_group` members occupy one
+   labelled row with None and the member choices. Each target is at least 52 px tall; focus
+   gutters clear the title and neighbouring choices. A on an already selected member keeps it
+   selected; another member replaces it; None clears the group. Existing SIGIL compatibility
+   confirmation and user-supplied imports are unchanged. The generic helper is tested with
+   renamed recipe, group and component IDs, including invalid-member rejection.
+5. **Discover focus:** carved frames paint after the dark focus backing. The amber ring sits
+   outside the complete frame with a dark gap; the viewport reserves its wider gutter without
+   shifting content. Pixel assertions compare the focused and unfocused cards' carved top rails,
+   and the existing fixture journey tests all four ring edges at the new outer position.
+6. **Home readiness:** four 64 px list entries begin at y=100/172/244/316, an even 72 px rhythm.
+   Original vector check/cross marks use success, danger and warning colours; body text remains
+   on the opaque panel. The Discover action stays bottom-aligned at y=402. Headless assertions
+   check row positions, status tones and button alignment. SVG marks avoid missing font glyphs.
+
+The updated body palette retains all measured contrast ratios above. Original `check.svg`,
+`cross.svg` and `pending.svg` paths are authored for DDL and need no third-party licence; their
+colours are the existing theme tokens. All new raster pieces derive from the approved atlas;
+there was no new model generation and the original prompt remains retained. The asset budget
+continues to be below 6 MB.
+
+### Review verification
+
+Final review checks passed on macOS arm64 after the last padding correction: **310 tests**, zero failures.
+
+`cargo fmt --all --check` — exit 0, no output.
+
+`cargo clippy --workspace --all-targets -- -D warnings` — exit 0:
+
+```text
+Checking ddl v0.0.2 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-012-ember/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.34s
+```
+
+`cargo test --workspace` — exit 0:
+
+```text
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 67.24s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.51s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 263 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Final tail:
+
+```text
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+   Doc-tests ddl_core
+
+running 3 tests
+test crates/ddl-core/src/downloads/mod.rs - downloads (line 22) - compile ... ok
+test crates/ddl-core/src/library/mod.rs - library (line 10) - compile ... ok
+test crates/ddl-core/src/profiles/mod.rs - profiles (line 10) - compile ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.60s; merged doctests compilation took 1.38s
+```
+
+Regenerated **35 production states** and both Ember comparisons. All states were inspected in contact sheets, with the reviewed Home, Discover, install, setup/add-on and scrolling states additionally inspected at full resolution; both 2560×800 comparisons were inspected. The new captures are `010-play-setup-auger-alternate.png` and `010-play-setup-auger-deckard.png`. All 35 idle-repaint assertions passed.
+
+Host render sample: minimum 65.80 ms, median 92.59 ms, mean 97.63 ms, maximum 142.63 ms per unoptimized fresh software frame. Host load affects these measurements; no Deck rendering-speed claim is made.
+
+A3 remains complete. No review defect remains open; A4 still needs physical Deck readability and rendering-speed validation.

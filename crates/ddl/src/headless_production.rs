@@ -543,6 +543,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     let offset = ui.get_scroll_offset();
     assert!(focused.y - offset >= 12.);
     assert!(focused.y + focused.h - offset <= 494.);
+    let panel = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.kind == 1 && n.x == 12.)
+        .unwrap();
+    assert!(
+        panel.y + panel.h >= focused.y + focused.h + 24.,
+        "the carved bottom rail stays below the complete options list"
+    );
     capture(window, "010-play-setup-options-scroll.png");
     // Playing ignores controller and pointer actions, retains run guard and restores Play.
     ui.invoke_clicked(50);

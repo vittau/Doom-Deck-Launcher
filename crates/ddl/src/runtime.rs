@@ -1117,6 +1117,7 @@ impl Runtime {
                 }
                 Screen::Setup => {
                     if let Some(item) = self.item() {
+                        let options_panel = b.nodes.len();
                         b.panel(12., 12., 680., 478.);
                         b.panel(716., 12., 496., 478.);
                         b.row(
@@ -1270,6 +1271,8 @@ impl Runtime {
                             text(ui, T::OrderHelp),
                             true,
                         );
+                        let last_row = b.nodes.last().unwrap();
+                        b.nodes[options_panel].h = (last_row.y + last_row.h + 24. - 12.).max(478.);
                         b.label(740., 36., 448., 40., text(ui, T::WillLaunch), 26.);
                         b.label(
                             740.,
