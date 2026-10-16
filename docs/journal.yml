@@ -191,4 +191,11 @@
     progress/cancel, persisted play setup, guarded launch/return, Home/Library/Settings.
     Fixed a spec 009 bug: install() kept forgetting prior member records on component
     replacement. CI now installs libudev-dev (gilrs). Spec 012 opened for production UI polish.
-  refs: [docs/reports/010-ui-wiring.md, docs/specs/012-ui-polish.md]
+  refs: [docs/reports/010-ui-wiring.md, docs/specs/012-visual-identity-v2.md]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    D-020 — owner asked for a DOOM look like UZDeck's, but prettier, more detailed and
+    tasteful. Spec 012 becomes visual identity v2: phase A three mockup directions for the owner
+    to pick, phase B implementation plus the 010 review polish.
+  refs: [docs/decisions.md, docs/specs/012-visual-identity-v2.md]

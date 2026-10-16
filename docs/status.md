@@ -21,7 +21,7 @@
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |
 | IWAD table, identifier, Steam discovery, canonical links | `specs/007-iwad-library.md` | Done (A6 needs Deck) |
 | Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Done (A3 needs Deck) |
-| Production UI polish (back to 008 fidelity) | `specs/012-ui-polish.md` | Ready |
+| Visual identity v2 (DOOM-flavoured, D-020) + production polish | `specs/012-visual-identity-v2.md` | Phase A (mockups) in progress (Codex) |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
