@@ -5,11 +5,10 @@
 while true; do
   ps -axo pid=,command= | while read -r pid cmd; do
     case "$cmd" in
-      *target/debug/ddl*|*target/release/ddl*)
-        case "$cmd" in
-          *--version*|*--help*|*--screenshot*|*cargo*|*rustc*|*ddl-*|*/deps/*) ;;
-          *) kill "$pid" 2>/dev/null && echo "$(date +%H:%M:%S) killed GUI ddl pid=$pid: $cmd" ;;
-        esac ;;
+      # Only the GUI entry points open a window: `ddl` with no arguments, or `--windowed`.
+      # Subcommands (`ddl catalog lint ...`) and flags like --version/--help are headless.
+      *target/debug/ddl|*target/release/ddl|*target/debug/ddl\ --windowed*|*target/release/ddl\ --windowed*)
+        kill "$pid" 2>/dev/null && echo "$(date +%H:%M:%S) killed GUI ddl pid=$pid: $cmd" ;;
       screencapture*|*/screencapture*)
         kill "$pid" 2>/dev/null && echo "$(date +%H:%M:%S) killed screencapture pid=$pid: $cmd" ;;
     esac
