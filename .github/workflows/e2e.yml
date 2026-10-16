@@ -45,14 +45,6 @@ jobs:
   steamrt:
     name: Real-network e2e (Steam Runtime SDK)
     runs-on: ubuntu-latest
-    # A scratch XDG root so the run never touches the runner's real state. DDL
-    # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`.
-    env:
-      E2E_ROOT: ${{ runner.temp }}/ddl-e2e
-      XDG_CONFIG_HOME: ${{ runner.temp }}/ddl-e2e/config
-      XDG_DATA_HOME: ${{ runner.temp }}/ddl-e2e/data
-      XDG_CACHE_HOME: ${{ runner.temp }}/ddl-e2e/cache
-      XDG_STATE_HOME: ${{ runner.temp }}/ddl-e2e/state
     # Steam Linux Runtime 3.0 "sniper" SDK, pinned by the digest of tag
     # 3.0.20261007.263965; the same digest is used by `ci.yml` and
     # `release.yml` (see docs/research/steam-runtime-build.md).
@@ -60,6 +52,21 @@ jobs:
       image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
     steps:
       - uses: actions/checkout@v4
+
+      # A scratch XDG root so the run never touches the runner's real state. DDL
+      # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`. Set
+      # here because the `runner` context is not available in a job-level `env`.
+      - name: Point XDG directories at a scratch root
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/ddl-e2e"
+          {
+            echo "E2E_ROOT=$root"
+            echo "XDG_CONFIG_HOME=$root/config"
+            echo "XDG_DATA_HOME=$root/data"
+            echo "XDG_CACHE_HOME=$root/cache"
+            echo "XDG_STATE_HOME=$root/state"
+          } >> "$GITHUB_ENV"
 
       # Same toolchain install as the other workflows: rustup only, channel
       # read back from `rust-toolchain.toml` so it can never drift.
@@ -189,14 +196,23 @@ jobs:
   ubuntu:
     name: Real-network e2e (plain Ubuntu, FUSE result recorded)
     runs-on: ubuntu-latest
-    env:
-      E2E_ROOT: ${{ runner.temp }}/ddl-e2e
-      XDG_CONFIG_HOME: ${{ runner.temp }}/ddl-e2e/config
-      XDG_DATA_HOME: ${{ runner.temp }}/ddl-e2e/data
-      XDG_CACHE_HOME: ${{ runner.temp }}/ddl-e2e/cache
-      XDG_STATE_HOME: ${{ runner.temp }}/ddl-e2e/state
     steps:
       - uses: actions/checkout@v4
+
+      # A scratch XDG root so the run never touches the runner's real state. DDL
+      # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`. Set
+      # here because the `runner` context is not available in a job-level `env`.
+      - name: Point XDG directories at a scratch root
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/ddl-e2e"
+          {
+            echo "E2E_ROOT=$root"
+            echo "XDG_CONFIG_HOME=$root/config"
+            echo "XDG_DATA_HOME=$root/data"
+            echo "XDG_CACHE_HOME=$root/cache"
+            echo "XDG_STATE_HOME=$root/state"
+          } >> "$GITHUB_ENV"
 
       - name: Install the pinned Rust toolchain
         run: |
