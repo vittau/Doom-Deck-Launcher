@@ -11,6 +11,12 @@ learned here flow back into `research/` and `decisions.md`.
 4. Steam → *Add a Non-Steam Game* → browse to `ddl/ddl` → add.
 5. Return to Gaming Mode and launch **ddl** from the library.
 
+> **Do not set a Compatibility tool on the DDL shortcut.** DDL and the DSDA-Doom
+> AppImage it launches run on the host system. Forcing a Steam Linux Runtime makes
+> the engine run on an older glibc and it fails to start with `GLIBC_2.34 not found`
+> (confirmed in CI). Leave **Compatibility → Force the use of a specific Steam
+> Play compatibility tool** off.
+
 Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run yet
 
 ## Release 0.0.x — skeleton (spec 001)

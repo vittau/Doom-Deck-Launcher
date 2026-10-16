@@ -55,7 +55,10 @@ pub use runner::{
     EngineRunner, FakeEngineRunner, LaunchError, LaunchExit, LaunchOutcome, RealEngineRunner,
     RecordedLaunch, SCRUBBED_ENV,
 };
-pub use smoke::{SMOKE_TIMEOUT, SmokeError, VERSION_PREFIX, smoke_test, smoke_test_with_timeout};
+pub use smoke::{
+    RuntimeError, SMOKE_TIMEOUT, SmokeError, VERSION_PREFIX, classify_runtime, smoke_test,
+    smoke_test_with_timeout,
+};
 pub use state::{
     InstalledEngine, InstalledState, Mode, Origin, SCHEMA_VERSION as STATE_SCHEMA_VERSION,
     STATE_FILE, StateError,

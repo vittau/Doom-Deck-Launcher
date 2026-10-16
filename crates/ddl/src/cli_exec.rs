@@ -476,6 +476,12 @@ exit 1
     }
 
     fn fixture() -> Fixture {
+        fixture_with_engine(APPIMAGE)
+    }
+
+    /// A fixture whose engine script is `engine` (its reviewed-list entry is
+    /// derived from those bytes).
+    fn fixture_with_engine(engine: &str) -> Fixture {
         let temp = tempfile::tempdir().unwrap();
         let home = temp.path().join("home");
         std::fs::create_dir_all(&home).unwrap();
@@ -488,9 +494,10 @@ exit 1
         catalog.recipes.retain(|loaded| loaded.recipe.id == "sigil");
         let package = synthetic_package(&mut catalog.recipes[0].recipe);
         let package_for_server = package.clone();
+        let engine_for_server = engine.as_bytes().to_vec();
         let server = Server::start(move |request| {
             if request.target.contains("AppImage") {
-                Response::ok(APPIMAGE.as_bytes().to_vec())
+                Response::ok(engine_for_server.clone())
             } else {
                 Response::ok(package_for_server.clone())
             }
@@ -500,8 +507,8 @@ exit 1
 
         let reviewed = dsda::ReviewedList::parse(&format!(
             "schema_version = 1\n[[version]]\ntag = 'v0.30.1'\nasset = 'test-linux.AppImage'\nsize = {}\nsha256 = '{}'\nlicense = 'GPL-2.0-or-later'\nrelease_url = 'https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.1'\nsource_url = 'https://github.com/dsda-org/dsda-doom/tree/v0.30.1'\n",
-            APPIMAGE.len(),
-            Sha256::of(APPIMAGE.as_bytes()).to_hex()
+            engine.len(),
+            Sha256::of(engine.as_bytes()).to_hex()
         ))
         .unwrap();
         let api = Arc::new(dsda::CannedApi::new());
@@ -596,6 +603,41 @@ exit 1
         // The script's `-v` would pass, so `(appimage)` would be the default.
         assert!(out.contains("(extracted)"), "{out}");
         assert!(err.contains("extract"), "{err}");
+    }
+
+    #[test]
+    fn engine_install_reports_a_host_runtime_failure_actionably() {
+        // Real stderr from CI run 38980417407: the extracted AppRun in the
+        // Steam Runtime SDK container needs glibc >= 2.34.
+        const OLD_GLIBC: &str = "#!/bin/sh\necho \"/lib/x86_64-linux-gnu/libc.so.6: version 'GLIBC_2.34' not found\" >&2\nexit 1\n";
+        let fx = fixture_with_engine(OLD_GLIBC);
+        let error = run(
+            &fx,
+            cli::Command::EngineInstall {
+                version: None,
+                force_extract: false,
+            },
+        )
+        .unwrap_err();
+        let message = error.to_string();
+        assert!(message.contains("GLIBC_2.34"), "{message}");
+        assert!(message.contains("Compatibility tool"), "{message}");
+    }
+
+    #[test]
+    fn engine_install_reports_a_missing_library_by_name() {
+        const MISSING_OPENGL: &str = "#!/bin/sh\necho 'dsda-doom.AppImage: error while loading shared libraries: libOpenGL.so.0: cannot open shared object file: No such file or directory' >&2\nexit 127\n";
+        let fx = fixture_with_engine(MISSING_OPENGL);
+        let error = run(
+            &fx,
+            cli::Command::EngineInstall {
+                version: None,
+                force_extract: false,
+            },
+        )
+        .unwrap_err();
+        let message = error.to_string();
+        assert!(message.contains("libOpenGL.so.0"), "{message}");
     }
 
     #[test]

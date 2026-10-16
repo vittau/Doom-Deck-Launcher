@@ -7,14 +7,16 @@
 # a Deck test.
 #
 # Two jobs, deliberately:
-#   * `steamrt` runs inside the same pinned Steam Linux Runtime SDK container
-#     the release uses, so what it proves is what ships;
-#   * `ubuntu` runs the same steps on the plain GitHub runner and records
-#     whether the AppImage mounts directly there (FUSE). That result is
-#     informative, never a failure: DDL falls back to extraction either way.
+#   * `build` builds `ddl` (with the e2e IWAD seam) inside the same pinned
+#     Steam Linux Runtime SDK container the release uses, and uploads the
+#     binary. It also records, without failing, what the extracted engine
+#     `AppRun -v` does inside that container (Debian 11 / glibc 2.31);
+#   * `e2e` (`needs: build`) runs the binary on a plain Ubuntu runner — a
+#     normal host like SteamOS — after installing the runtime libraries the
+#     binary and the engine need, and runs every real-network step.
 #
-# Both build with `--features test-support` so the `DDL_TEST_IWAD_SEAM` IWAD
-# injection exists. Release builds never enable that feature
+# The binary is built with `--features test-support` so the `DDL_TEST_IWAD_SEAM`
+# IWAD injection exists. Release builds never enable that feature
 # (`.github/workflows/release.yml`), so the seam is compiled out of anything
 # users download.
 name: Linux e2e
@@ -42,8 +44,8 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  steamrt:
-    name: Real-network e2e (Steam Runtime SDK)
+  build:
+    name: Build the e2e binary (Steam Runtime SDK)
     runs-on: ubuntu-latest
     # Steam Linux Runtime 3.0 "sniper" SDK, pinned by the digest of tag
     # 3.0.20261007.263965; the same digest is used by `ci.yml` and
@@ -52,21 +54,6 @@ jobs:
       image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
     steps:
       - uses: actions/checkout@v4
-
-      # A scratch XDG root so the run never touches the runner's real state. DDL
-      # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`. Set
-      # here because the `runner` context is not available in a job-level `env`.
-      - name: Point XDG directories at a scratch root
-        run: |
-          set -euo pipefail
-          root="$RUNNER_TEMP/ddl-e2e"
-          {
-            echo "E2E_ROOT=$root"
-            echo "XDG_CONFIG_HOME=$root/config"
-            echo "XDG_DATA_HOME=$root/data"
-            echo "XDG_CACHE_HOME=$root/cache"
-            echo "XDG_STATE_HOME=$root/state"
-          } >> "$GITHUB_ENV"
 
       # Same toolchain install as the other workflows: rustup only, channel
       # read back from `rust-toolchain.toml` so it can never drift.
@@ -92,17 +79,97 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             target
-          key: e2e-steamrt-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          key: e2e-build-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
           restore-keys: |
-            e2e-steamrt-${{ runner.os }}-
+            e2e-build-${{ runner.os }}-
 
       - name: Build ddl with the e2e IWAD seam
         run: cargo build --release --locked -p ddl --features test-support
 
+      - name: Upload the e2e binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ddl-e2e-binary
+          path: target/release/ddl
+          if-no-files-found: error
+
+      # Informative, never failing: the official AppImage does not bundle glibc,
+      # and the sniper runtime is glibc 2.31. This records the exact failure so
+      # the report and `docs/research/dsda-engine.md` §7 can cite it. The real
+      # engine test runs in the `e2e` job on a normal host.
+      - name: Record the engine runtime on the Steam Runtime SDK (informative)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          tag="$(sed -n 's/^tag *= *"\([^"]*\)"/\1/p' crates/ddl-core/data/engines.toml | head -1)"
+          asset="$(sed -n 's/^asset *= *"\([^"]*\)"/\1/p' crates/ddl-core/data/engines.toml | head -1)"
+          url="https://github.com/dsda-org/dsda-doom/releases/download/${tag}/${asset}"
+          work="$(mktemp -d)"
+          echo "downloading $url"
+          curl -fL --retry 3 -o "$work/dsda-doom.AppImage" "$url" || true
+          chmod +x "$work/dsda-doom.AppImage" 2>/dev/null || true
+          ( cd "$work" && ./dsda-doom.AppImage --appimage-extract >/dev/null 2>&1 ) || true
+          output="$(cd "$work" && ./squashfs-root/AppRun -v 2>&1)"
+          status=$?
+          {
+            echo "### Engine runtime on the Steam Runtime SDK container"
+            echo ""
+            echo '```'
+            echo "$output"
+            echo "exit status: $status"
+            echo '```'
+            echo ""
+            echo "The official AppImage does not bundle glibc. A \`GLIBC_2.34 not found\` here is expected: the engine needs a host with glibc >= 2.34 (SteamOS), so it cannot run inside the sniper runtime. On the Deck this only happens if a Steam Compatibility tool is forced on DDL's shortcut."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "recorded (exit $status)"
+
+  e2e:
+    name: Real-network e2e (plain Ubuntu host)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # A scratch XDG root so the run never touches the runner's real state. DDL
+      # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`. Set
+      # here because the `runner` context is not available in a job-level `env`.
+      - name: Point XDG directories at a scratch root
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/ddl-e2e"
+          {
+            echo "E2E_ROOT=$root"
+            echo "XDG_CONFIG_HOME=$root/config"
+            echo "XDG_DATA_HOME=$root/data"
+            echo "XDG_CACHE_HOME=$root/cache"
+            echo "XDG_STATE_HOME=$root/state"
+          } >> "$GITHUB_ENV"
+
+      # Runtime libraries, not build dependencies: this job only runs the
+      # pre-built binary. `libfontconfig1` is the one non-glibc library `ddl` is
+      # hard-linked to (docs/research/steam-runtime-build.md §6). The official
+      # DSDA-Doom AppImage does not bundle the GL driver, and the first e2e run
+      # (38980417407) failed with `libOpenGL.so.0: cannot open shared object
+      # file`; `libgl1` also pulls libglvnd0/libglx0. Keep this list minimal:
+      # any further missing library the smoke test names belongs here.
+      - name: Install runtime libraries
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libfontconfig1 libgl1 libopengl0
+
+      - name: Download the e2e binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ddl-e2e-binary
+          path: bin
+
+      # `actions/upload-artifact` does not preserve the executable bit.
+      - name: Make the binary executable
+        run: chmod +x bin/ddl && bin/ddl --version
+
       - name: Run the real-network end-to-end steps
         run: |
           set -euo pipefail
-          ddl=./target/release/ddl
+          ddl=./bin/ddl
           mkdir -p "$E2E_ROOT"
 
           echo "== $ddl --version =="
@@ -172,155 +239,8 @@ jobs:
           echo "== iwad scan =="
           "$ddl" iwad scan | tee "$E2E_ROOT/iwad-scan.txt"
 
-      # 4. Always collect the doctor report and the logs, even on failure.
-      - name: Collect ddl doctor and logs
-        if: always()
-        run: |
-          set -euo pipefail
-          mkdir -p "$E2E_ROOT/artifacts"
-          ./target/release/ddl doctor > "$E2E_ROOT/artifacts/doctor.txt" 2>&1 || true
-          cp "$E2E_ROOT"/*.txt "$E2E_ROOT/artifacts/" 2>/dev/null || true
-          mkdir -p "$E2E_ROOT/artifacts/logs"
-          cp "$E2E_ROOT/state/ddl/logs/"* "$E2E_ROOT/artifacts/logs/" 2>/dev/null || true
-          echo "--- doctor ---"
-          cat "$E2E_ROOT/artifacts/doctor.txt"
-
-      - name: Upload the doctor report and logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ddl-e2e-steamrt
-          path: ${{ env.E2E_ROOT }}/artifacts
-          if-no-files-found: warn
-
-  ubuntu:
-    name: Real-network e2e (plain Ubuntu, FUSE result recorded)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # A scratch XDG root so the run never touches the runner's real state. DDL
-      # appends `ddl` to each variable, so its dirs are `<root>/<kind>/ddl`. Set
-      # here because the `runner` context is not available in a job-level `env`.
-      - name: Point XDG directories at a scratch root
-        run: |
-          set -euo pipefail
-          root="$RUNNER_TEMP/ddl-e2e"
-          {
-            echo "E2E_ROOT=$root"
-            echo "XDG_CONFIG_HOME=$root/config"
-            echo "XDG_DATA_HOME=$root/data"
-            echo "XDG_CACHE_HOME=$root/cache"
-            echo "XDG_STATE_HOME=$root/state"
-          } >> "$GITHUB_ENV"
-
-      - name: Install the pinned Rust toolchain
-        run: |
-          set -euo pipefail
-          export PATH="$HOME/.cargo/bin:$PATH"
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
-          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
-          test -n "$channel"
-          echo "Pinned toolchain: $channel"
-          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
-          rustup default "$channel"
-          cargo --version
-
-      - name: Cache cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: e2e-ubuntu-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
-          restore-keys: |
-            e2e-ubuntu-${{ runner.os }}-
-
-      # Slint's text stack probes fontconfig with pkg-config, and gilrs links
-      # libudev; the plain runner needs both development packages.
-      - name: Install system build dependencies
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
-
-      - name: Build ddl with the e2e IWAD seam
-        run: cargo build --release --locked -p ddl --features test-support
-
-      # The same steps as the container job. The AppImage-direct result is
-      # recorded, not asserted: FUSE may or may not be available here, and DDL
-      # falls back to extraction when it is not.
-      - name: Run the real-network end-to-end steps
-        run: |
-          set -euo pipefail
-          ddl=./target/release/ddl
-          mkdir -p "$E2E_ROOT"
-
-          echo "== $ddl --version =="
-          "$ddl" --version
-
-          echo "== engine install (AppImage path) =="
-          "$ddl" engine install
-          "$ddl" engine status | tee "$E2E_ROOT/engine-status.txt"
-
-          echo "== engine install --force-extract (fresh data dir) =="
-          XDG_CONFIG_HOME="$E2E_ROOT/config-force" XDG_DATA_HOME="$E2E_ROOT/data-force" \
-            "$ddl" engine install --force-extract
-          XDG_CONFIG_HOME="$E2E_ROOT/config-force" XDG_DATA_HOME="$E2E_ROOT/data-force" \
-            "$ddl" engine status | tee "$E2E_ROOT/engine-status-force.txt"
-          grep -q 'extracted' "$E2E_ROOT/engine-status-force.txt" \
-            || { echo "::error::--force-extract did not install the extracted engine"; exit 1; }
-
-          echo "== mapset list =="
-          ids="$("$ddl" mapset list | tee "$E2E_ROOT/mapset-list.txt" | awk 'NF {print $1}')"
-          echo "recipes: $ids"
-          for id in $ids; do
-            echo "== mapset install $id =="
-            "$ddl" mapset install "$id"
-          done
-          echo "== free optional components =="
-          "$ddl" mapset install sigil --with compat
-          "$ddl" mapset install auger-zenith --with alternate-blaster
-          "$ddl" mapset install auger-zenith --with deckard-blaster
-          "$ddl" mapset list | tee "$E2E_ROOT/mapset-list-after.txt"
-
-          echo "== dry-run: every recipe reports the MissingIwad blocker =="
-          for id in $ids; do
-            if "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-missing-$id.txt" 2>&1; then
-              echo "::error::$id dry-run unexpectedly succeeded without an IWAD"
-              cat "$E2E_ROOT/dry-missing-$id.txt"
-              exit 1
-            fi
-            grep -q 'is missing' "$E2E_ROOT/dry-missing-$id.txt" \
-              || { echo "::error::$id did not report a missing IWAD"; cat "$E2E_ROOT/dry-missing-$id.txt"; exit 1; }
-            echo "$id: MissingIwad blocker as expected"
-          done
-
-          echo "== dry-run with the test-only IWAD seam =="
-          seam="$E2E_ROOT/seam-iwads"
-          mkdir -p "$seam"
-          count() { grep -c -x -- "$1" "$2" || true; }
-          for id in $ids; do
-            DDL_TEST_IWAD_SEAM="$seam" "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-argv-$id.txt"
-            for flag in -file -iwad -complevel -skill -noautoload -config -save -data -shotdir; do
-              [ "$(count "$flag" "$E2E_ROOT/dry-argv-$id.txt")" = "1" ] \
-                || { echo "::error::$id: expected exactly one $flag"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
-            done
-            awk '/^-complevel$/{getline; if ($0 !~ /^[0-9]+$/) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
-              || { echo "::error::$id: -complevel is not numeric"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
-            awk '/^-iwad$/{getline; if ($0 !~ /^\//) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
-              || { echo "::error::$id: -iwad is not an absolute path"; exit 1; }
-            echo "$id: argv matches D-011"
-          done
-
-          echo "== iwad scan =="
-          "$ddl" iwad scan | tee "$E2E_ROOT/iwad-scan.txt"
-
-      # The point of this job: record, do not judge, the AppImage-direct result.
+      # The point of running on a plain host: record, do not judge, the
+      # AppImage-direct (FUSE) result.
       - name: Record the AppImage-direct result
         if: always()
         run: |
@@ -338,7 +258,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$E2E_ROOT/artifacts"
-          ./target/release/ddl doctor > "$E2E_ROOT/artifacts/doctor.txt" 2>&1 || true
+          ./bin/ddl doctor > "$E2E_ROOT/artifacts/doctor.txt" 2>&1 || true
           cp "$E2E_ROOT"/*.txt "$E2E_ROOT/artifacts/" 2>/dev/null || true
           mkdir -p "$E2E_ROOT/artifacts/logs"
           cp "$E2E_ROOT/state/ddl/logs/"* "$E2E_ROOT/artifacts/logs/" 2>/dev/null || true

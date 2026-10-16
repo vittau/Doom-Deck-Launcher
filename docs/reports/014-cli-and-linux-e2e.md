@@ -208,22 +208,32 @@ and `crates/ddl-core/src/platform/lock.rs` adds one:
   state; close it and try again`), surfaced as the new `Problem::Busy` in the UI and
   as a one-line error in the CLI.
 
-The UI needed one new translated string (`error-busy`) and one `Problem` arm; no UI
-flow changed.
+The UI needed two new translated strings (`error-busy` and `error-engine-runtime`)
+and their `Problem` arms; no UI flow changed.
 
 ## R3 — The Linux e2e workflow
 
-`.github/workflows/e2e.yml` is `workflow_dispatch` only. It has two jobs:
+`.github/workflows/e2e.yml` is `workflow_dispatch` only. After the first run
+([38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407))
+failed in the engine step in both jobs, it was restructured to prove what matters:
 
-- `steamrt` builds `ddl` **inside the same pinned sniper SDK container digest** used
-  by `ci.yml`/`release.yml`, mirroring their toolchain install and cargo cache;
-- `ubuntu` runs the same steps on the plain runner and records the AppImage-direct
-  result (FUSE) in the step summary and the artifact — informative, never a failure,
-  because DDL falls back to extraction either way.
+- `build` builds `ddl` with `--features test-support` **inside the same pinned sniper
+  SDK container digest** used by `ci.yml`/`release.yml` (mirroring their toolchain
+  install and cargo cache) and uploads `target/release/ddl` as an artifact. It also
+  runs one informative `continue-on-error` step that downloads the official AppImage,
+  extracts it, runs `AppRun -v` inside the container and writes the exact output to
+  `$GITHUB_STEP_SUMMARY` — the glibc evidence below.
+- `e2e` (`needs: build`) runs the pre-built binary on a plain `ubuntu-latest` host — a
+  normal host like SteamOS — after installing the runtime libraries the binary and the
+  engine need, and runs every real-network step.
 
-Both build with `--features test-support`, which is the only thing that compiles the
-IWAD seam (release builds never enable it). The run, against real upstream hosts and a
-scratch XDG root, is:
+The runtime library list is deliberately minimal and commented: `libfontconfig1` is
+the one non-glibc library `ddl` hard-links (`docs/research/steam-runtime-build.md` §6),
+and `libgl1 libopengl0` supply the GL entry points the official AppImage does not
+bundle (the first run's `libOpenGL.so.0` failure). Any further missing library the
+smoke test names belongs there.
+
+The `e2e` run, against real upstream hosts and a scratch XDG root, is:
 
 1. `ddl engine install` (AppImage first, then the `-v` smoke test) and, in a fresh
    data dir, `ddl engine install --force-extract`; the second must report `extracted`.
@@ -232,9 +242,11 @@ scratch XDG root, is:
    `--with deckard-blaster` one at a time).
 3. `ddl launch <id> --dry-run` for every recipe must exit non-zero with the typed
    `MissingIwad` blocker; then, with `DDL_TEST_IWAD_SEAM` set, the dry-run argv is
-   asserted against D-011: exactly one `-file`, `-iwad`, `-noautoload`, `-config`,
-   `-save`, `-data` and `-shotdir`; a numeric `-complevel`; an absolute `-iwad`.
+   asserted against D-011: exactly one `-file`, `-iwad`, `-complevel`, `-skill`,
+   `-noautoload`, `-config`, `-save`, `-data` and `-shotdir`; a numeric `-complevel`;
+   an absolute `-iwad`.
 4. `ddl doctor` and the logs are uploaded as a workflow artifact, with `if: always()`.
+   The AppImage-direct (FUSE) result is recorded in the step summary, not asserted.
 
 **The IWAD seam.** `ddl`'s `test-support` feature (off by default; `release.yml`
 builds without features) exposes `Services::register_fake_iwads`, which writes a
@@ -244,22 +256,60 @@ file's size. It is only reachable when `DDL_TEST_IWAD_SEAM` names a directory, a
 same function is exercised offline by `launch_dry_run_prints_the_d011_argv_with_a_registered_iwad`.
 
 I cannot run this workflow from this worktree: it must exist on `main` before the
-coordinator can dispatch it, and it downloads real upstream bytes. It is correct by
-construction (validated with a YAML parse and by mirroring the existing jobs exactly);
-the coordinator will trigger it after merge and send any failure to fix.
+coordinator can dispatch it, and it downloads real upstream bytes. The YAML is
+validated locally with PyYAML in a venv, and every `run:` block with `bash -n`.
+
+## First e2e run: findings and the runtime diagnosis
+
+The first real run
+([38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407))
+failed at `ddl engine install` in both jobs, and both failures are host facts, not DDL
+bugs:
+
+- **Plain Ubuntu runner:** the AppImage mounted directly via FUSE, then the `-v`
+  smoke test exited 127 with `libOpenGL.so.0: cannot open shared object file`. The
+  runner lacks `libopengl0`; SteamOS ships libglvnd. **FUSE itself works on plain
+  Ubuntu.**
+- **Steam Runtime SDK container (sniper, Debian 11, glibc 2.31):** no FUSE, so DDL
+  correctly extracted the AppImage, then `AppRun -v` failed with `GLIBC_2.34 not
+  found`, `GLIBC_2.33 not found` and `GLIBCXX_3.4.29 not found`. The official
+  AppImage does not bundle glibc and needs **≥ 2.34**. On the Deck a non-Steam
+  shortcut runs on the host by default; it only breaks if a Steam "Compatibility
+  tool" is forced on DDL's shortcut.
+
+**Product fix.** `crates/ddl-core/src/engines/dsda/smoke.rs` now classifies engine
+startup stderr into a typed `RuntimeError`:
+
+- `GLIBC_… not found` / `GLIBCXX_… not found` → `RuntimeError::Glibc`, whose message
+  names the missing symbols and says to remove any Compatibility tool from DDL's
+  Steam shortcut so DSDA-Doom runs on SteamOS directly;
+- `error while loading shared libraries: <lib>` → `RuntimeError::MissingLibrary`,
+  whose message names the library and says to install it, or run on a system that
+  provides it (SteamOS does).
+
+`smoke_test_with_timeout` returns `SmokeError::Runtime` for these, leaving the FUSE
+`Exited` path intact so the extraction fallback still runs. `InstallError` prints the
+message directly instead of wrapping it as a generic smoke-test failure; `Services`
+maps it to the new `Problem::EngineRuntime`, which the UI renders through the new
+`error-engine-runtime` string and the CLI prints as-is. Unit tests use the exact
+captured stderr lines, plus a manager install test and two CLI tests.
 
 ## R4 — Docs
 
 - README gained a **Troubleshooting from Konsole** section listing every subcommand, a
   few examples and common fixes, and its command-line-options block now mirrors
-  `ddl --help`.
-- `docs/deck-testing.md` E3 now uses `ddl engine install --force-extract`.
+  `ddl --help`. Its install steps now warn **not** to set a Steam Compatibility tool on
+  the DDL shortcut, with the glibc reason.
+- `docs/deck-testing.md` E3 now uses `ddl engine install --force-extract`, and its
+  **How to install a build** step warns against the Compatibility tool.
+- `docs/research/dsda-engine.md` §7 records the e2e findings as **Confirmed (CI run
+  38980417407)**.
 
 ## Verification
 
-macOS arm64, pinned repository toolchain. **334 tests passed, zero failures** across
-the workspace (ddl 44, cli_help 2, catalog_cli 2, logo_assets 2, ui_strings 1,
-ddl-core 266, dsda_launch 14, doctests 3, plus the 0-test probe bin).
+macOS arm64, pinned repository toolchain. **344 tests passed, zero failures** across
+the workspace (ddl 47, cli_help 2, catalog_cli 2, logo_assets 2, ui_strings 1,
+ddl-core 271, dsda_launch 16, doctests 3, plus the 0-test probe bin).
 
 `cargo fmt --all --check` — exit 0, no output.
 
@@ -268,7 +318,7 @@ ddl-core 266, dsda_launch 14, doctests 3, plus the 0-test probe bin).
 ```text
    Compiling ddl-core v0.0.3 (.../crates/ddl-core)
    Compiling ddl v0.0.3 (.../crates/ddl)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.99s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.03s
 ```
 
 `cargo clippy -p ddl --features test-support --all-targets -- -D warnings` — exit 0,
@@ -277,30 +327,36 @@ so the e2e seam also compiles clean under the feature the workflow builds with.
 `cargo test --workspace` — exit 0, result lines:
 
 ```text
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 49.82s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 48.94s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 266 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 271 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
 Tests added: `cli::tests` (per-subcommand parsing and per-topic help), `cli_exec::tests`
-(nine offline runs against the loopback server, fake engine, scratch XDG: engine
-install and status, `--force-extract`, mapset list/install, component validation, IWAD
-scan with ambiguous and unrecognized files, the MissingIwad blocker, the dry-run argv
-against D-011, doctor, and the busy state lock), `platform::lock::tests`, the manager's
-`force_extract` test, and the `cli_help` integration test. No test touches the network,
-opens a window or captures the screen.
+(eleven offline runs against the loopback server, fake engine, scratch XDG: engine
+install and status, `--force-extract`, the two runtime-failure diagnoses, mapset
+list/install, component validation, IWAD scan with ambiguous and unrecognized files,
+the MissingIwad blocker, the dry-run argv against D-011, doctor, and the busy state
+lock), `platform::lock::tests`, the manager's `force_extract` and
+`a_runtime_smoke_failure_is_reported_actionably` tests, the smoke classifier unit
+tests, the two `dsda_launch` runtime-classification tests, the `runtime` UI-detail
+test, and the `cli_help` integration test. No test touches the network, opens a window
+or captures the screen.
 
 ## Open questions and items left open
 
-- **A2** stays unchecked: the e2e workflow has not run on `main` yet; the coordinator
-  triggers it and will forward any failure. The report should then link the run and the
-  AppImage-direct result.
+- **A2** stays unchecked: the first e2e run
+  ([38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407))
+  failed in both jobs at the engine step for the host reasons above. The workflow is
+  restructured; the coordinator re-triggers it after merge and will forward any
+  failure. The report should then link the passing run and the AppImage-direct result.
 - **A4** stays unchecked: `ddl doctor` and `ddl launch` from Konsole on the Deck are a
-  hardware check.
+  hardware check, as is confirming the engine runs on the host without a forced
+  Compatibility tool.
 - New dependencies: **none**. The parser stays hand-written; the lock uses `std::fs`.

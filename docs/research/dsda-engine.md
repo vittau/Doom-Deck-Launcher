@@ -607,13 +607,31 @@ on the research date. `file` reported x86-64 ELF static PIE; bytes 8–10 were
 This supports an extraction fallback design, but the payload was not executed or
 extracted on this macOS host; it is not an end-to-end compatibility test.
 
+**Confirmed (CI run 38980417407).** The official AppImage was downloaded and executed
+on two Linux hosts by the spec 014 e2e workflow. On a plain Ubuntu runner the type-2
+runtime mounted the AppImage directly (FUSE available), and the bundled DSDA
+executable failed only because the runner lacked `libOpenGL.so.0`
+(`error while loading shared libraries: libOpenGL.so.0: cannot open shared object
+file`) — a missing GL driver, not a FUSE problem. Inside the pinned
+`steamrt/sniper/sdk` container (Debian 11, glibc 2.31) there is no FUSE, DDL
+extracted the AppImage as designed, and the extracted `squashfs-root/AppRun -v`
+failed with `GLIBC_2.34 not found`, `GLIBC_2.33 not found` and `GLIBCXX_3.4.29 not
+found`. The payload therefore needs a host with **glibc ≥ 2.34** and a GL driver;
+Ubuntu 22.04 is a build environment, not the runtime baseline. On SteamOS a
+non-Steam shortcut runs on the host by default, so this only bites when a Steam
+"Compatibility tool" (a Steam Linux Runtime) is forced on DDL's shortcut. DDL now
+classifies both stderr shapes into actionable errors
+(`crates/ddl-core/src/engines/dsda/smoke.rs`).
+[Run 38980417407](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38980417407).
+
 **Needs Deck Validation.** Actual `--appimage-extract`/`AppRun` operation, the
 runtime's exact FUSE library/helper requirement (FUSE2 versus FUSE3), mount policy,
 and SteamOS Gaming Mode launch remain unverified. A statically linked outer
 runtime is not evidence that the bundled DSDA executable has no glibc dependency.
-Ubuntu 22.04 is the build environment, **not a proven minimum glibc version**.
-The exact payload ELF version requirements and GL driver behavior must be measured
-on Linux; source CI dependencies establish GL involvement, not Deck driver support.
+Ubuntu 22.04 is the build environment, **not a proven minimum glibc version** — the
+CI evidence above now measures the requirement at ≥ 2.34 and a GL driver. The exact
+payload ELF version requirements and GL driver behavior must still be measured on
+Deck; source CI dependencies establish GL involvement, not Deck driver support.
 
 Implications for DDL:
 

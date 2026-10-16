@@ -62,6 +62,13 @@ real screens are still ahead. Follow the repository's specs and journal for prog
    starts, then switch to Gaming Mode and launch it from your library like any
    other game.
 
+> **Leave the shortcut's Compatibility tool unset.** DDL runs on the host system,
+> and so does the official DSDA-Doom AppImage it launches. Forcing a Steam Linux
+> Runtime ("Compatibility tool" in the shortcut's Properties) makes the engine run
+> on an older runtime whose glibc is too old for it: DSDA-Doom then fails to start
+> with `GLIBC_2.34 not found` (confirmed in CI). Set the Compatibility tool to
+> **None** / leave it unset. DDL cannot change this for you.
+
 There is no installer, no background service and no root access involved: everything
 DDL needs lives in the extracted directory and in your user's XDG directories.
 

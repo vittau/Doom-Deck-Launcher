@@ -426,7 +426,12 @@ impl std::fmt::Display for InstallError {
                 f,
                 "the downloaded engine is the wrong size (expected {expected} bytes, got {actual})"
             ),
-            Self::Smoke(error) => write!(f, "the engine smoke test failed: {error}"),
+            Self::Smoke(error) => match error.as_ref() {
+                // A host-runtime failure is not a "smoke test" quirk: print the
+                // actionable message directly (spec 014 follow-up).
+                SmokeError::Runtime(runtime) => write!(f, "{runtime}"),
+                other => write!(f, "the engine smoke test failed: {other}"),
+            },
             Self::VersionMismatch { expected, reported } => write!(
                 f,
                 "the engine reports version {reported} but {expected} was expected"
