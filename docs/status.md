@@ -12,8 +12,8 @@
 | Prior art: UZDeck / GZDeck (incl. UI critique) | `research/prior-art.md` | Done |
 | Recipe schema, catalog, lint, reference recipes | `specs/002-recipe-catalog.md` | Done — 3 reference recipes lint clean with real fetch |
 | Launch plan and engine process runner | `specs/003-launch-plan.md` | Done (A6 needs Deck) |
-| Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | Ready — next |
-| Follow-up: catalog `--fetch` should reuse the `downloads` module (spec 002 has its own fetch) | — | To do |
+| Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | In progress |
+| Mapset install, profiles, launch resolution (core) | `specs/009-install-resolve.md` | In progress |
 | Downloads and safe ZIP extraction (nested) | `specs/006-downloads-extraction.md` | Done |
 | DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Done (A6 needs Deck) |
 | UI contract v1 + wireframes (Codex) | `design/ui.md`, `design/mockups/` | Done |
@@ -21,5 +21,5 @@
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |
 | IWAD table, identifier, Steam discovery, canonical links | `specs/007-iwad-library.md` | Done (A6 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
-| UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Ready — next Codex slot |
+| UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | In progress (Codex) |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
