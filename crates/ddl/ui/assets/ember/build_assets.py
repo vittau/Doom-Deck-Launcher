@@ -20,14 +20,35 @@ wall = Image.new('RGB', (1280,632))
 for y in range(0,632,438):
     for x in range(0,1280,512): wall.paste(tile, (x,y))
 save(wall, 'wall.png')
-frame = a.crop((512,0,1024,438)).resize((256,220))
-# 28 px carved perimeter; center is completely opaque, independent of scaling.
-ImageDraw.Draw(frame).rectangle((28,28,227,191), fill='#211719')
-save(frame,'frame.png')
+source_frame = a.crop((512,0,1024,438))
+f = source_frame.resize((256,220), Image.Resampling.LANCZOS)
+# Only plain rail cross-sections stretch. Corners and ornaments never scale up.
+frame = Image.new('RGB', (128,128), '#211719')
+for x,y,sx,sy in [(0,0,0,0),(100,0,228,0),(0,100,0,192),(100,100,228,192)]:
+    frame.paste(f.crop((sx,sy,sx+28,sy+28)), (x,y))
+frame.paste(f.crop((60,0,61,28)).resize((72,28)), (28,0))
+frame.paste(f.crop((60,192,61,220)).resize((72,28)), (28,100))
+frame.paste(f.crop((0,60,28,61)).resize((28,72)), (0,28))
+frame.paste(f.crop((228,60,256,61)).resize((28,72)), (100,28))
+save(frame, 'frame.png')
+for name, box, size in [
+    ('ornament-top.png', (208,0,304,56), (96,28)),
+    ('ornament-bottom.png', (208,382,304,438), (96,28)),
+    ('ornament-left.png', (0,190,56,248), (28,48)),
+    ('ornament-right.png', (456,190,512,248), (28,48)),
+]:
+    save(source_frame.crop(box).resize(size, Image.Resampling.LANCZOS), name)
 for i, name in enumerate(['sigil','sigil-ii','auger']):
     cover=a.crop((i*512,438,(i+1)*512,1024))
     save(cover,name+'.png')
+    # One continuous source crop, with the transition into the title baked in.
     band=ImageOps.fit(cover,(400,88),centering=(.5,.35))
+    fade=Image.new('L',band.size)
+    for x in range(400):
+        t=min(1., x/144.)
+        alpha=round(255 * t*t*(3-2*t))
+        ImageDraw.Draw(fade).line((x,0,x,87),fill=alpha)
+    band=Image.composite(band,Image.new('RGB',band.size,'#120C0D'),fade)
     save(band,name+'-band.png')
 emblem = a.crop((1024,0,1536,438))
 save(ImageOps.fit(emblem,(64,64)), 'emblem.png')

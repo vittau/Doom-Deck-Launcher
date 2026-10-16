@@ -196,11 +196,12 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
                         },
                 )
             };
+            let ring_offset = if node.kind == 1 { 14. } else { 6. };
             for (px, py) in [
-                (x + node.w / 2., y - 6.),
-                (x + node.w / 2., y + node.h + 6.),
-                (x - 6., y + node.h / 2.),
-                (x + node.w + 6., y + node.h / 2.),
+                (x + node.w / 2., y - ring_offset),
+                (x + node.w / 2., y + node.h + ring_offset),
+                (x - ring_offset, y + node.h / 2.),
+                (x + node.w + ring_offset, y + node.h / 2.),
             ] {
                 assert!(
                     px >= 0. && px < WIDTH as f32 && py >= 0. && py < HEIGHT as f32,
