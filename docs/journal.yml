@@ -131,3 +131,7 @@
     rotating backups, reset, -assign overrides, state.json. Accepted the worker's spec-silent
     choices (missing baseline → typed error; reset touches only template keys).
   refs: [docs/specs/005-dsda-config-manager.md]
+- date: 2026-10-16
+  type: decision
+  summary: D-018 — gilrs for DDL's gamepad input (Proposed, Deck validation). Spec 008 (UI shell) written.
+  refs: [docs/decisions.md, docs/specs/008-ui-shell.md]

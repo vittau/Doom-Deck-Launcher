@@ -20,5 +20,5 @@
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |
 | IWAD table, identifier, Steam discovery, canonical links | `specs/007-iwad-library.md` | In progress |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md` | Needs Deck Validation |
-| Slint + controller backend on Deck (SDL3 vs gilrs) | — | Not started (needs a release build) |
+| UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Ready — next Codex slot |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
