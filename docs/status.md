@@ -14,7 +14,7 @@
 | Launch plan and engine process runner | `specs/003-launch-plan.md` | In progress |
 | Engine manager (discover, download, verify, install, rollback) | `specs/004-engine-manager.md` | Ready — waits for 001, 006 |
 | Downloads and safe ZIP extraction (nested) | `specs/006-downloads-extraction.md` | In progress |
-| DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | In progress |
+| DsdaConfigManager v1 | `specs/005-dsda-config-manager.md` | Done (A6 needs Deck) |
 | UI contract v1 + wireframes (Codex) | `design/ui.md`, `design/mockups/` | Done |
 | UI visual pass: hi-fi generated mockups, identity (Codex) | `design/visual/` | Done — note: required components must render as locked, not as a toggle |
 | IWAD identification (hashes, lumps, Steam paths) | `research/iwad-identification.md` | Done |

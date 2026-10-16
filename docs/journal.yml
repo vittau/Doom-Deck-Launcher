@@ -123,3 +123,11 @@
     bash in container jobs. First pre-release tag v0.0.1-skeleton. Wave 2 started: specs 002,
     003, 005, 006, 007 in parallel.
   refs: [docs/specs/001-workspace-ci-release.md, docs/research/steam-runtime-build.md]
+- date: 2026-10-16
+  type: change
+  summary: >-
+    Spec 005 merged — DSDA config parser/serializer, steam-deck-default template
+    (use_game_controller 1), provisioning, run guard (OS lock + PID), three-way merge with
+    rotating backups, reset, -assign overrides, state.json. Accepted the worker's spec-silent
+    choices (missing baseline → typed error; reset touches only template keys).
+  refs: [docs/specs/005-dsda-config-manager.md]
