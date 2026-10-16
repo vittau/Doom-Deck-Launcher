@@ -6,6 +6,12 @@
 //! downloads or executes IWADs; discovery is read-only and bounded, and every
 //! remote or on-disk input is treated as untrusted.
 
+pub mod folders;
+pub mod identify;
+pub mod steam;
 pub mod table;
 
+pub use folders::{FolderError, FolderScan, scan_folder};
+pub use identify::{Family, Identification, IdentifyError, Identifier, Outcome, identify};
+pub use steam::{SteamLibrary, candidate_iwads, discover_paths, libraries, steam_roots};
 pub use table::{Game, HashKind, IwadTable, IwadVariant, TableError};
