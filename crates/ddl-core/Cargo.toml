@@ -27,3 +27,11 @@ toml = "=1.1.8"
 # Test-only. Creates unique temporary directories for provisioning/guard/merge
 # tests without touching the developer's real config (spec 005, A2–A5).
 tempfile = "=3.27.0"
+
+# Test helper for the engine runner tests (spec 003, A3): the tests must not run
+# DSDA-Doom and must not use a shell string, so they start this tiny program and
+# observe exit status, signal death, log capture and environment scrubbing.
+# Only `crates/ddl` is released, so this target never ships.
+[[bin]]
+name = "ddl-launch-probe"
+path = "src/bin/ddl-launch-probe.rs"
