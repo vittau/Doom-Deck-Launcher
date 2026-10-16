@@ -10,8 +10,8 @@ ROOT=Path(__file__).resolve().parent
 F=ROOT/'fonts'
 STYLES={
  'ember-cathedral':dict(name='Ember Cathedral',tag='CARVED STONE / OXBLOOD / BONE',canvas='#120C0D',panel='#211719',raised='#352527',text='#F8EAD5',muted='#D0BCA7',focus='#FFD078',accent='#B8583F',edge='#80533B',display='pirataone-PirataOne-Regular.ttf',body='barlow-Barlow-Regular.ttf',seam=438),
- 'bastion-terminal':dict(name='Bastion Terminal',tag='OLIVE ENAMEL / BRASS / SIGNAL RED',canvas='#10130F',panel='#1D241D',raised='#303A2C',text='#F4F1DA',muted='#C6CBB5',focus='#FFD078',accent='#C36446',edge='#74754B',display='russoone-RussoOne-Regular.ttf',body='InterVariable.ttf',seam=512),
- 'cinder-1993':dict(name='Cinder 1993',tag='UMBER STONE / COPPER / BEVELLED RED',canvas='#17100B',panel='#2A2016',raised='#403221',text='#FFF0CC',muted='#D5C3A1',focus='#FFD078',accent='#E18A63',edge='#98734C',display='teko-Teko[wght].ttf',body='barlow-Barlow-Regular.ttf',seam=512),
+ 'bastion-terminal':dict(name='Bastion Terminal',tag='OLIVE ENAMEL / BRASS / SIGNAL RED',canvas='#10130F',panel='#1D241D',raised='#303A2C',text='#F4F1DA',muted='#C6CBB5',focus='#FFD078',accent='#C36446',edge='#74754B',display='russoone-RussoOne-Regular.ttf',body='InterVariable.ttf',seam=480),
+ 'cinder-1993':dict(name='Cinder 1993',tag='UMBER STONE / COPPER / BEVELLED RED',canvas='#17100B',panel='#2A2016',raised='#403221',text='#FFF0CC',muted='#D5C3A1',focus='#FFD078',accent='#E18A63',edge='#98734C',display='teko-Teko[wght].ttf',body='barlow-Barlow-Regular.ttf',seam=450),
 }
 def lum(c):
  a=[int(c[i:i+2],16)/255 for i in (1,3,5)]
