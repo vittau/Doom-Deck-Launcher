@@ -1,0 +1,23 @@
+"libraryfolders"
+{
+	"0"
+	{
+		"path"		"/home/deck/.local/share/Steam"
+		"label"		""
+		"contentid"		"2032713869307492763"
+		"totalsize"		"0"
+		"apps"
+		{
+			"2280"		"17759640"
+		}
+	}
+	"1"
+	{
+		"path"		"/run/media/deck/extsd/SteamLibrary"
+		"label"		"extsd"
+		"contentid"		"6383262498372648247"
+		"apps"
+		{
+		}
+	}
+}

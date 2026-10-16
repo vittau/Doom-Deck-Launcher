@@ -53,6 +53,14 @@ sha2 = "=0.11.1"
 # ZIP reading: deflate only; stored entries always work and other methods are rejected
 # by the extractor (spec 006 R4).
 zip = { version = "=9.0.4", default-features = false, features = ["deflate", "deflate-flate2-zlib-rs"] }
+# IWAD library (spec 007): JSON registry state, and SHA-1/MD5/CRC-32 to match the published
+# IWAD identification tables (D-017); SHA-256 is always computed too (sha2 above).
+serde_json = "=1.0.154"
+sha1 = "=0.11.0"
+md-5 = "=0.11.0"
+crc32fast = "=1.5.2"
+# Test-only temporary directories (specs 005, 007).
+tempfile = "=3.27.0"
 
 # Release binaries are built for Steam Deck; stripping debug info keeps the
 # downloadable tarball small. Debug/release logs are unaffected.

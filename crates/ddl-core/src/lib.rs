@@ -10,6 +10,7 @@
 pub mod downloads;
 pub mod dsda_config;
 pub mod engines;
+pub mod iwads;
 pub mod platform;
 
 pub mod catalog;

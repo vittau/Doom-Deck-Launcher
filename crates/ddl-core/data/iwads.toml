@@ -1,0 +1,359 @@
+# Known-IWAD table (spec 007, R1).
+#
+# Every value below is transcribed from docs/research/iwad-identification.md and
+# the sources it cites; nothing here is invented. Each hash-bearing entry cites
+# the page that publishes its hashes in `source`; where a single hash comes from
+# a different page (only the two SHA-256 rows) it is overridden in
+# `hash_sources`. Sizes are bytes.
+#
+# `game` is the stable key a recipe requires (`doom`, `doom2`, `tnt`,
+# `plutonia`, plus `nerve` for the No Rest for the Living expansion, which ships
+# as a PWAD). `filename` is the canonical basename DDL symlinks to so that
+# DSDA-Doom picks the right game mission (decision D-017).
+#
+# `default_complevel` follows research section 3 (doom 3, doom2 2, tnt/plutonia
+# 4, nerve 2). The shareware entry is marked `playable = false`: commercial
+# content refuses it.
+#
+# Deliberately NOT listed here yet, because the research marks them out of
+# scope until they can be validated on the Deck or are not DDL targets: the GOG
+# / id Anthology revisions of tnt.wad and plutonia.wad, the BFG Edition and
+# 2019 Unity "Enhanced" IWADs, and the remaining DOOM + DOOM II extra files
+# (extras.wad, id1*.wad, id24res.wad, iddm1.wad, masterlevels.wad, sigil*.wad)
+# for which no hashes are published. See research open questions 3, 4 and 8.
+
+schema_version = 1
+
+# --- DOOM (episode games) ---------------------------------------------------
+
+[[iwad]]
+id = "doom-shareware-1.9"
+game = "doom"
+title = "DOOM (shareware) v1.9"
+filename = "doom1.wad"
+size = 4196020
+md5 = "f0cefca49926d00903cf57551d901abe"
+sha1 = "5b2e249b9c5133ec987b3ea77596381dc0d6bc1d"
+crc32 = "162b696a"
+default_complevel = 3
+playable = false
+source = "https://doom.fandom.com/wiki/DOOM1.WAD"
+
+# 1.9, 1.8, 1.666, 1.1 and 1.2 share the classic `doom.wad` basename; only the
+# hashes tell them apart (research section 1.1). Only 1.9 / 1.9ud run v1.9-only
+# content such as SIGIL; recipes gate that through accepted variants.
+[[iwad]]
+id = "doom-1.9"
+game = "doom"
+title = "DOOM (registered) v1.9"
+filename = "doom.wad"
+size = 11159840
+md5 = "1cd63c5ddff1bf8ce844237f580e9cf3"
+sha1 = "7742089b4468a736cadb659a7deca3320fe6dcbd"
+crc32 = "723e60f9"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+[[iwad]]
+id = "doom-1.8"
+game = "doom"
+title = "DOOM (registered) v1.8"
+filename = "doom.wad"
+size = 11159840
+md5 = "11e1cd216801ea2657723abc86ecb01f"
+sha1 = "2c8212631b37f21ad06d18b5638c733a75e179ff"
+crc32 = "8d242df9"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+[[iwad]]
+id = "doom-1.666"
+game = "doom"
+title = "DOOM (registered) v1.666"
+filename = "doom.wad"
+size = 11159840
+md5 = "54978d12de87f162b9bcc011676cb3c0"
+sha1 = "2e89b86859acd9fc1e552f587b710751efcffa8e"
+crc32 = "f756aab5"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+[[iwad]]
+id = "doom-1.1"
+game = "doom"
+title = "DOOM (registered) v1.1"
+filename = "doom.wad"
+size = 10396254
+md5 = "981b03e6d1dc033301aa3095acc437ce"
+sha1 = "df0040ccb29cc1622e74ceb3b7793a2304cca2c8"
+crc32 = "66457ab9"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+[[iwad]]
+id = "doom-1.2"
+game = "doom"
+title = "DOOM (registered) v1.2"
+filename = "doom.wad"
+size = 10399316
+md5 = "792fd1fea023d61210857089a7c1e351"
+sha1 = "b5f86a559642a2b3bdfb8a75e91c8da97f057fe6"
+crc32 = "a5da8930"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+[[iwad]]
+id = "doom-1.9ud"
+game = "doom"
+title = "Ultimate DOOM v1.9ud"
+filename = "doomu.wad"
+size = 12408292
+md5 = "c4fe9fd920207691a9f493668e0a2083"
+sha1 = "9b07b02ab3c275a6a7570c3f73cc20d63a0e3833"
+crc32 = "bf0eaac0"
+sha256 = "6fdf361847b46228cfebd9f3af09cd844282ac75f3edbb61ca4cb27103ce2e7f"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+hash_sources = { sha256 = "https://lutris.net/games/install/35796/view" }
+
+# DOOM + DOOM II (2024, KEX) `rerelease/doom.wad`: Ultimate DOOM content with
+# map fixes and widescreen assets, no published SHA-256 (research section 1.1).
+[[iwad]]
+id = "doom-1.9ud-kex-2024-08-06"
+game = "doom"
+title = "Ultimate DOOM (DOOM + DOOM II rerelease, 2024-08-06)"
+filename = "doomu.wad"
+size = 12733492
+md5 = "4461d4511386518e784c647e3128e7bc"
+sha1 = "997bae5e5a190c5bb3b1fb9e7e3e75b2da88cb27"
+crc32 = "cff03d9f"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+[[iwad]]
+id = "doom-1.9ud-kex-2024-10-01"
+game = "doom"
+title = "Ultimate DOOM (DOOM + DOOM II rerelease, 2024-10-01)"
+filename = "doomu.wad"
+size = 12996515
+md5 = "3b37188f6337f15718b617c16e6e7a9c"
+sha1 = "87651324502044f9a6eed403e48853aa16c93e49"
+crc32 = "d5f8c089"
+default_complevel = 3
+source = "https://doomwiki.org/wiki/DOOM.WAD"
+
+# --- DOOM II ----------------------------------------------------------------
+
+[[iwad]]
+id = "doom2-1.9"
+game = "doom2"
+title = "Doom II: Hell on Earth v1.9"
+filename = "doom2.wad"
+size = 14604584
+md5 = "25e1459ca71d321525f84628f45ca8cd"
+sha1 = "7ec7652fcfce8ddc6e801839291f0e28ef1d5ae7"
+crc32 = "ec8725db"
+sha256 = "10d67824b11025ddd9198e8cfc87ca335ee6e2d3e63af4180fa9b8a471893255"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+hash_sources = { sha256 = "https://lutris.net/games/install/35797/view" }
+
+[[iwad]]
+id = "doom2-1.8"
+game = "doom2"
+title = "Doom II: Hell on Earth v1.8"
+filename = "doom2.wad"
+size = 14612688
+md5 = "c236745bb01d89bbb866c8fed81b6f8c"
+sha1 = "79c283b18e61b9a989cfd3e0f19a42ea98fda551"
+crc32 = "31bd3bc0"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.7a"
+game = "doom2"
+title = "Doom II: Hell on Earth v1.7a"
+filename = "doom2.wad"
+size = 14612688
+md5 = "d7a07e5d3f4625074312bc299d7ed33f"
+sha1 = "70192b8d5aba65c7e633a7c7bcfe7e3e90640c97"
+crc32 = "952f6baa"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.7"
+game = "doom2"
+title = "Doom II: Hell on Earth v1.7"
+filename = "doom2.wad"
+size = 14612688
+md5 = "ea74a47a791fdef2e9f2ea8b8a9da13b"
+sha1 = "78009057420b792eacff482021db6fe13b370dcc"
+crc32 = "47daeb2e"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.666"
+game = "doom2"
+title = "Doom II: Hell on Earth v1.666 (1994-08-29)"
+filename = "doom2.wad"
+size = 14943400
+md5 = "30e3c2d0350b67bfbf47271970b74b2f"
+sha1 = "6d559b7ceece4f5ad457415049711992370d520a"
+crc32 = "e2a683bd"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.666g"
+game = "doom2"
+title = "Doom II: Hell on Earth v1.666g"
+filename = "doom2.wad"
+size = 14824716
+md5 = "d9153ced9fd5b898b36cc5844e35b520"
+sha1 = "a4ce5128d57cb129fdd1441c12b58245be55c8ce"
+crc32 = "c08005f7"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.8f"
+game = "doom2"
+title = "Doom II (French release) v1.8f"
+filename = "doom2f.wad"
+size = 14607420
+md5 = "3cb02349b3df649c86290907eed64e7b"
+sha1 = "d510c877031bbd5f3d198581a2c8651e09b9861f"
+crc32 = "27eaae69"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.9-kex-2024-08-06"
+game = "doom2"
+title = "Doom II (DOOM + DOOM II rerelease, 2024-08-06)"
+filename = "doom2.wad"
+size = 14802506
+md5 = "9aa3cbf65b961d0bdac98ec403b832e1"
+sha1 = "c745f04a6abc2e6d2a2d52382f45500dd2a260be"
+crc32 = "09b8a6ae"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+[[iwad]]
+id = "doom2-1.9-kex-2024-10-01"
+game = "doom2"
+title = "Doom II (DOOM + DOOM II rerelease, 2024-10-01)"
+filename = "doom2.wad"
+size = 14951361
+md5 = "64a4c88a871da67492aaa2020a068cd8"
+sha1 = "2921cf667359fd3a80aba3c0cf62ab39297e7e9e"
+crc32 = "151b8a96"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/DOOM2.WAD"
+
+# --- Final Doom: TNT: Evilution --------------------------------------------
+
+[[iwad]]
+id = "tnt-1.9"
+game = "tnt"
+title = "Final DOOM: TNT: Evilution v1.9 (Steam package)"
+filename = "tnt.wad"
+size = 18195736
+md5 = "4e158d9953c79ccf97bd0663244cc6b6"
+sha1 = "9fbc66aedef7fe3bae0986cdb9323d2b8db4c9d3"
+crc32 = "903dcc27"
+default_complevel = 4
+source = "https://doomwiki.org/wiki/TNT.WAD"
+
+[[iwad]]
+id = "tnt-1.9-kex-2024-08-08"
+game = "tnt"
+title = "TNT: Evilution (DOOM + DOOM II rerelease, 2024-08-08)"
+filename = "tnt.wad"
+size = 18304630
+md5 = "8974e3117ed4a1839c752d5e11ab1b7b"
+sha1 = "9820e2a3035f0cdd87f69a7d57c59a7a267c9409"
+crc32 = "15f18ddb"
+default_complevel = 4
+source = "https://doomwiki.org/wiki/TNT.WAD"
+
+[[iwad]]
+id = "tnt-1.9-kex-2024-10-03"
+game = "tnt"
+title = "TNT: Evilution (DOOM + DOOM II rerelease, 2024-10-03)"
+filename = "tnt.wad"
+size = 18507237
+md5 = "ad7885c17a6b9b79b09d7a7634dd7e2c"
+sha1 = "ab4e71e360a1e64e262d77a53e4bb202450d0f6e"
+crc32 = "6d7a8eec"
+default_complevel = 4
+source = "https://doomwiki.org/wiki/TNT.WAD"
+
+# --- Final Doom: The Plutonia Experiment ------------------------------------
+
+[[iwad]]
+id = "plutonia-1.9"
+game = "plutonia"
+title = "Final DOOM: The Plutonia Experiment v1.9 (Steam package)"
+filename = "plutonia.wad"
+size = 17420824
+md5 = "75c8cf89566741fa9d22447604053bd7"
+sha1 = "90361e2a538d2388506657252ae41aceeb1ba360"
+crc32 = "48d1453c"
+default_complevel = 4
+source = "https://doomwiki.org/wiki/PLUTONIA.WAD"
+
+[[iwad]]
+id = "plutonia-1.9-kex-2024-08-08"
+game = "plutonia"
+title = "The Plutonia Experiment (DOOM + DOOM II rerelease, 2024-08-08)"
+filename = "plutonia.wad"
+size = 17531493
+md5 = "24037397056e919961005e08611623f4"
+sha1 = "816c7c6b0098f66c299c9253f62bd908456efb63"
+crc32 = "650b998d"
+default_complevel = 4
+source = "https://doomwiki.org/wiki/PLUTONIA.WAD"
+
+[[iwad]]
+id = "plutonia-1.9-kex-2024-10-03"
+game = "plutonia"
+title = "The Plutonia Experiment (DOOM + DOOM II rerelease, 2024-10-03)"
+filename = "plutonia.wad"
+size = 17704206
+md5 = "e47cf6d82a0ccedf8c1c16a284bb5937"
+sha1 = "fbcc140825b507ab88d844c6b1635c60c4b8bcd6"
+crc32 = "e82fbfd2"
+default_complevel = 4
+source = "https://doomwiki.org/wiki/PLUTONIA.WAD"
+
+# --- No Rest for the Living (expansion; ships as a PWAD) --------------------
+
+# NERVE.WAD is a PWAD (MAP01-MAP09), not an IWAD; it is listed so DDL can
+# identify and symlink it for DSDA-Doom's filename-driven mission choice.
+[[iwad]]
+id = "nerve-bfg"
+game = "nerve"
+title = "No Rest for the Living (BFG Edition / XBLA / PSN)"
+filename = "nerve.wad"
+size = 3819855
+md5 = "967d5ae23daf45196212ae1b605da3b0"
+sha1 = "3451288383fb16e196f273d9f85d58c1fda97bf4"
+crc32 = "ad7f9292"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/NERVE.WAD"
+
+[[iwad]]
+id = "nerve-kex"
+game = "nerve"
+title = "No Rest for the Living (DOOM + DOOM II rerelease)"
+filename = "nerve.wad"
+size = 4039441
+md5 = "23422eb42833ac7b0dd59c0c7ae18a6f"
+sha1 = "4522eaec7a13aac24b456e29520e99ac879e6989"
+crc32 = "07d9faab"
+default_complevel = 2
+source = "https://doomwiki.org/wiki/NERVE.WAD"
