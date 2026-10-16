@@ -56,19 +56,19 @@ on-device testing later).
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1) — parser/serializer tests with a fixture produced from DSDA's documented
+- [x] **A1** (R1) — parser/serializer tests with a fixture produced from DSDA's documented
   defaults (build it from the research inventory; do not copy a real user file), including
   bindings, strings, hex, comments and unknown keys.
-- [ ] **A2** (R2, R3) — provisioning test in a temp dir; asserts DSDA default paths untouched.
-- [ ] **A3** (R4) — guard tests, including stale-lock recovery.
-- [ ] **A4** (R5) — merge tests for all five cases (untouched, user-only change, template-only
+- [x] **A2** (R2, R3) — provisioning test in a temp dir; asserts DSDA default paths untouched.
+- [x] **A3** (R4) — guard tests, including stale-lock recovery.
+- [x] **A4** (R5) — merge tests for all five cases (untouched, user-only change, template-only
   change, conflict, removed key), backup creation and rotation, atomic write.
-- [ ] **A5** (R6, R7, R8) — reset with/without confirm; override allowlist; state snapshot.
+- [x] **A5** (R6, R7, R8) — reset with/without confirm; override allowlist; state snapshot.
 - [ ] **A6** — *Needs Deck Validation:* change a setting in DSDA's menu, quit, relaunch from
   DDL: the setting persists (tracked in `docs/deck-testing.md`).
 
 ## Tasks
 
-- [ ] Format parser/serializer
-- [ ] Template + provisioning + run guard
-- [ ] Merge, backups, reset, overrides, state
+- [x] Format parser/serializer
+- [x] Template + provisioning + run guard
+- [x] Merge, backups, reset, overrides, state
