@@ -638,6 +638,10 @@ exit 1
         .unwrap_err();
         let message = error.to_string();
         assert!(message.contains("libOpenGL.so.0"), "{message}");
+        assert!(
+            !message.contains("SteamOS"),
+            "the missing-library message must stay neutral: {message}"
+        );
     }
 
     #[test]

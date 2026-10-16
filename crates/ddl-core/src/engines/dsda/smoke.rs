@@ -147,8 +147,8 @@ impl fmt::Display for RuntimeError {
             ),
             Self::MissingLibrary { library } => write!(
                 f,
-                "DSDA-Doom could not start because the system library `{library}` is missing. Install \
-                 it, or run DDL on a system that provides it (SteamOS does)."
+                "DSDA-Doom could not start because the system library `{library}` is missing. \
+                 Install the package that provides it, or run DDL on a system that has it."
             ),
         }
     }
@@ -401,9 +401,11 @@ mod tests {
         });
         assert_eq!(
             error.to_string(),
-            "DSDA-Doom could not start because the system library \
-            `libOpenGL.so.0` is missing. Install it, or run DDL on a system that provides it \
-            (SteamOS does)."
+            "DSDA-Doom could not start because the system library `libOpenGL.so.0` is missing. \
+             Install the package that provides it, or run DDL on a system that has it."
         );
+        // The message must stay neutral: DDL cannot claim an arbitrary host
+        // provides an arbitrary library (spec 014 follow-up 2).
+        assert!(!error.to_string().contains("SteamOS"), "{error}");
     }
 }
