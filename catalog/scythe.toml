@@ -13,6 +13,13 @@ description = "DOOM II megawad: 32 vanilla-format maps in three ten-map runs plu
 permission = "Authors may not use the contents as a base for modification or reuse without agreement. Redistribution is permitted provided scythe.txt travels with the file, unmodified and intact, and no commercial use is made without the author's agreement. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["classics", "megawad"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/scythe/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "scythe/01.jpg"
+credit = "Erik Alm"
+
 [base_game]
 game = "doom2"
 variants = []

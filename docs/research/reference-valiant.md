@@ -178,3 +178,19 @@ music and sound credits (id Software, Raven Software, 3D Realms, and many commun
   the Deck (**Needs Deck Validation**).
 - **Alternate official builds not used:** the 2024 MBF21 update (Bethesda.net/Dropbox) and the
   Vaccinated Edition (`valve.zip`) are separate releases; the latter could be its own recipe.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/valiant/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+The screenshots are the author's own in the mapset's release thread (`doomworld.com/vb/thread/71704`); Doomworld blocks automation, so the thread was read from its Wayback Machine snapshot and the images fetched from their original `i.imgur.com` URLs.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://i.imgur.com/8bLhSJ5.png> | <https://www.doomworld.com/vb/thread/71704> | Paul "skillsaw" DeBruyne | 1920x1080 (`8bLhSJ5.png`) |
+
+**Why representative:** The shots are in-game views of Valiant's tech-base maps, not the title screen.

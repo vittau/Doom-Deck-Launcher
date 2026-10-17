@@ -156,3 +156,19 @@ ZIP from its canonical `/idgames` mirror and keeps `scythe.txt` (`keep = true`) 
   MAP28 voodoo-doll effect the readme calls out) needs a Deck run (**Needs Deck Validation**).
 - **Cover art.** Like every current recipe, this one carries no `[[images]]`; DDL's hardcoded cover
   map falls back to SIGIL's cell until a new cell and `art()` arm are added (outside this task).
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/scythe/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+Scythe has no surviving author site; the Doom Wiki map article is the accessible source. DoomWiki blocks automation, so the image was read from its Wayback Machine snapshot.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://doomwiki.org/w/images/thumb/5/5c/Scythe-map01-start.png/320px-Scythe-map01-start.png> | <https://doomwiki.org/wiki/MAP01:_Get_Going_(Scythe)> | Erik Alm | 320x240 (`Scythe-map01-start.png`) |
+
+**Why representative:** The Doom Wiki captured the MAP01 start view itself: a first-person in-game shot of the map, not an automap or title screen.

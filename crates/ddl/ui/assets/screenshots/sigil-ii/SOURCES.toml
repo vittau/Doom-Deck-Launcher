@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (640x360 JPEG).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://doomwiki.org/w/images/6/6d/SIGIL_II_E6M1_Start_screen.png"
+source_page = "https://doomwiki.org/wiki/E6M1:_Cursed_Darkness_(SIGIL_II)"
+credit = "John Romero"
+original_size = "1279x959"
+retrieved = "2026-10-17"
+permission = "Screenshot from the Doom Wiki (doomwiki.org); the wiki is Cloudflare-protected for automation, so the per-file licence page could not be read. Bundled as a representative in-game view under decision D-024; removed on the author's request."

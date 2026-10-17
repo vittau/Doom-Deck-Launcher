@@ -446,3 +446,19 @@ The romero.com page describes it as a free download (**Confirmed**).
    the bundled SIGIL/SIGIL II are available as files.
 9. **Compat variant exposure.** Whether DDL should ever surface `SIGIL_COMPAT_V1_23.wad` (DSDA-Doom
    does not need it) as an advanced option, or hide it entirely.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/sigil/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+Official in-game captures on the SIGIL page at `romero.com/sigil` (images served from `images.squarespace-cdn.com`), reachable directly.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://images.squarespace-cdn.com/content/v1/5fef3318f8ce9b562500206e/1609624640331-BWZPMGWOKUOLZP38QNHS/image-asset-5.png> | <https://romero.com/sigil> | John Romero | 1000x625 (`image-asset-5.png`) |
+
+**Why representative:** The shots are first-person views of SIGIL's hellish episode 5 maps (a cacodemon encounter and a pentagram hall), not the box mock-ups the same page also carries.

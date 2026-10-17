@@ -1,0 +1,24 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (640x360 JPEG).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://www.dfdoom.com/wp-content/uploads/2018/12/evi-post-04.jpg"
+source_page = "https://www.doomworld.com/vb/thread/103425"
+credit = "the Eviternity team"
+original_size = "1896x1042"
+retrieved = "2026-10-17"
+permission = "Published by the Eviternity team on the official page (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."
+
+[[screenshot]]
+file = "02.jpg"
+source_url = "https://www.dfdoom.com/wp-content/uploads/2018/12/evi-post-11.jpg"
+source_page = "https://www.doomworld.com/vb/thread/103425"
+credit = "the Eviternity team"
+original_size = "1908x1044"
+retrieved = "2026-10-17"
+permission = "Published by the Eviternity team on the official page (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."

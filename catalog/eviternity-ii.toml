@@ -27,6 +27,16 @@ description = "DOOM II: 37-map MBF21 megawad (MAP01–MAP37) with an updated OTE
 permission = "Without prior written consent the authors do not permit using this WAD or its assets as a base or resource for other projects. DDL downloads the unmodified archive from its canonical /idgames source; it does not modify, repackage or reuse the content, and keeps the bundled readme, credits and changelog members intact. See the kept text members for the full terms and resource credits."
 tags = ["cacowards", "community-projects", "megawad"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/eviternity-ii/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "eviternity-ii/01.jpg"
+credit = "Eviternity II team (Joshua \"Dragonfly\" O'Sullivan et al.)"
+[[screenshots]]
+asset = "eviternity-ii/02.jpg"
+credit = "Eviternity II team (Joshua \"Dragonfly\" O'Sullivan et al.)"
+
 [base_game]
 game = "doom2"
 variants = []

@@ -208,3 +208,19 @@ and makes no claim of a reuse licence.
 - **Memory during `--fetch`.** The lint reads the single 279.5 MiB member into memory (bounded by
   the 512 MiB budget); fine for a CLI check, to be kept in mind if lint ever runs under a tight
   memory cap.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/eviternity-ii/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+Official promotional screenshots on the mapset's own site `eviternity.dfdoom.com`, reachable directly.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://eviternity.dfdoom.com/wp-content/uploads/2023/12/promo-map04.jpg> | <https://eviternity.dfdoom.com/> | Eviternity II team | 1050x1050 (`promo-map04.jpg`) |
+
+**Why representative:** The `promo-map04` and `promo-map19` shots are in-game views of the mapset's chapters, published by the team as the representative screens.

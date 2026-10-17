@@ -62,7 +62,7 @@ are shown in the complete example. Optional fields and constraints:
 
 | Table | Optional fields / accepted values |
 | --- | --- |
-| Root | `images` (`[[images]]`: `path`, `permission`); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)) |
+| Root | `images` (`[[images]]`: `path`, `permission`); `screenshots` (`[[screenshots]]`: `asset`, `credit`; see [Screenshots](#screenshots)); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)) |
 | `base_game` | `game`: `doom`, `doom2`, `tnt`, `plutonia`; `variants` defaults empty (any variant of that game). IDs refer to the known-IWAD table; currently lowercase letters, digits, dots and hyphens. The runtime must block Play without a matching IWAD; that gate is outside catalog lint. |
 | `packages` | `kind`: `zip` or bare `wad`; optional canonical `idgames_path`; `urls`: primary followed by mirrors. Bare WADs name one member with identical package/member size/hash. |
 | `packages.members` | `keep` defaults false; unique `id` and `path` within a package. All members have exact positive `size` and `sha256`. |
@@ -101,6 +101,42 @@ Discover shows a category for each tag that at least one recipe uses, in `order`
 "All" and "Favorites". To propose a new tag, add its `[[tags]]` entry to `catalog/tags.toml` in
 the same pull request that first uses it; give it a unique lowercase `id`, a unique `order`,
 an English `label` and a one-sentence `description` of the rule a recipe must meet.
+
+### Screenshots
+
+Every mapset card, detail page and art band shows a **bundled screenshot** of the mapset
+(D-024); the painted concept art is only the fallback for a recipe that has none. Screenshots are
+the mapset authors' material: DDL commits them, credits them and removes one on the author's
+request. Add them in the same pull request as the recipe.
+
+1. Commit a representative **in-game** view (a recognisable map, not a title screen, logo or box
+   art) under `crates/ddl/ui/assets/screenshots/<id>/`, named `01.jpg`, `02.jpg`, …. Use a card
+   crop: **16:9, 640×360, JPEG, ≤ 250 KB** (any editor; keep the original colours, add no border
+   or text). One to three per recipe. Never commit the full-size original.
+2. Record where each file came from in `crates/ddl/ui/assets/screenshots/<id>/SOURCES.toml`
+   (schema 1), one `[[screenshot]]` entry per file: `file`, `source_url`, `source_page`,
+   `credit` (who made the mapset, or who took the shot), `original_size` (`WxH` before the
+   resize), `retrieved` (`YYYY-MM-DD`) and `permission` (any licence or permission text you
+   found, or that none was found). Never invent a URL, size or permission.
+3. Reference each file from the recipe's `[[screenshots]]` (put it before the first `[table]`):
+
+   ```toml
+   [[screenshots]]
+   asset = "<id>/01.jpg"
+   credit = "Author or team"
+   ```
+
+   `asset` is the path under `crates/ddl/ui/assets/screenshots/`; `credit` is the short caption
+   the UI shows next to the image. Omit the field for a mapset you could not source — the painted
+   fallback art stays.
+4. Run the lint (see step 6 above). It rejects a missing image, a duplicate or traversing
+   `asset`, a missing `credit`, a file over 256 KiB, an image smaller than 640×360, a file that
+   is not PNG/JPEG/WebP, and a file with no `SOURCES.toml` entry carrying a credit and source URL.
+
+Prefer the mapset's own site or release page, the project repository, an author page, or a
+community screenshot posted in the official release thread. Doomworld and DoomWiki block
+automated fetches; when a page is reachable only through the Wayback Machine, record the page you
+read and the exact image URL you downloaded.
 
 ### Copy-paste template and annotated example
 

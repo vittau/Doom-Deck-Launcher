@@ -13,6 +13,7 @@ mod headless;
 mod input;
 mod logging;
 mod runtime;
+mod screenshots;
 mod services;
 #[cfg(test)]
 mod shell;
