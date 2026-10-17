@@ -61,7 +61,7 @@ files.
 
 ## Make it look native in Steam
 
-The release includes original Ember Gate artwork in `ddl/art/`. In Desktop Mode,
+The release includes original Rose Compass artwork in `ddl/art/`. In Desktop Mode,
 add DDL as a non-Steam game, then apply the images manually:
 
 1. Open the shortcut's **Properties**, click its icon and select `art/icon-256.png`
@@ -378,7 +378,7 @@ adds stderr detail. Review reports for personal paths before sharing them.
 
 **Are the screenshots actual gameplay?** They are off-screen renders of the real launcher
 UI with deterministic sample state. Card artwork is original mood art, not map screenshots;
-see the [asset provenance](design/visual-report.md) and [Ember Gate notes](design/logo/README.md).
+see the [asset provenance](design/visual-report.md) and [Rose Compass notes](design/logo/README.md).
 Synthetic test IWADs and installs demonstrate the UI and do not prove game compatibility.
 
 ## Maintainer note: regenerate README screenshots
@@ -399,4 +399,4 @@ no image editor or new dependency is needed. `--check` renders again and compare
 committed bytes. Use the pinned Rust toolchain and bundled fonts for reproducibility.
 
 See [logo v2 concepts](design/logo-v2/README.md) for the separate vector concept exporter.
-The current Ember Gate remains in the app, Steam artwork and README until the owner chooses.
+The owner selected Rose Compass (D-023); it is used in the app, Steam artwork and README.

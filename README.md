@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/design/logo/full-name.svg" alt="DoomDeckLauncher — Ember Gate logo" width="700"></p>
+<p align="center"><img src="docs/design/logo/full-name.svg" alt="DoomDeckLauncher — Rose Compass logo" width="700"></p>
 
 # DoomDeckLauncher
 
