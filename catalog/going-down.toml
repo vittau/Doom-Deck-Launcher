@@ -32,7 +32,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-going-down.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; author's release text"]
-notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the inert ZDoom-style MAPINFO (removed from DSDA-Doom in v0.30.0); no COMPLVL or UMAPINFO lump. Complevel 9 is the author's own stated value; no gameplay test performed. Tags: classics = first complete release 2014-09-14, over five years before this review; megawad = 32 maps (gd.txt, docs/research/reference-going-down.md). DoomWiki links this release from its Cacowards 2014 page, but the award category could not be confirmed (doomworld.com blocks automated fetches), so it is not tagged cacowards."
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the inert ZDoom-style MAPINFO (removed from DSDA-Doom in v0.30.0); no COMPLVL or UMAPINFO lump. Complevel 9 is the author's own stated value; no gameplay test performed. Tags: classics = first complete release 2014-09-14, over five years before this review; megawad = 32 maps (gd.txt, docs/research/reference-going-down.md). DoomWiki links this release from its Cacowards 2014 page, but the award category could not be confirmed (doomworld.com blocks automated fetches), so it is not tagged cacowards. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; gd.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The embedded ZDoom MAPINFO (music/cluster names) is inert under DSDA-Doom v0.30.1; confirm the in-game music selection on the Deck."]
 
 [[packages]]
@@ -70,3 +70,32 @@ position = 1
 package = "free"
 member = "maps"
 role = "maps"
+
+# Widescreen status bar (IWAD bar): NightFright's doom_widehud at commit eb3773ce9e (GPL-3.0).
+[[packages]]
+id = "widehud"
+page = "https://github.com/NightFright2k19/doom_widehud"
+urls = ["https://raw.githubusercontent.com/NightFright2k19/doom_widehud/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/iwad/doom_uwide.wad"]
+size = 23652
+sha256 = "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5"
+kind = "wad"
+
+[[packages.members]]
+id = "statusbar"
+path = "doom_uwide.wad"
+size = 23652
+sha256 = "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5"
+keep = false
+
+[[components]]
+id = "wide-status-bar"
+label = "Widescreen status bar"
+description = "Optional widescreen (wide-aspect) base-game Doom/Doom II status bar from NightFright and contributors' doom_widehud (GPL-3.0); this mapset ships no status-bar graphics of its own. Loads after the mapset and any gameplay add-on."
+optional = true
+default = true
+position = 2
+
+[[components.members]]
+package = "widehud"
+member = "statusbar"
+role = "graphics"

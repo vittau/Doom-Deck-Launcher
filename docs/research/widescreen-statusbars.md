@@ -12,6 +12,8 @@ are dated evidence, not upstream guarantees.
 
 **Update 2026-10-16 (Confirmed):** in reply to [issue #6](https://github.com/NightFright2k19/doom_widehud/issues/6) the author added a [GPL-3.0 licence](https://github.com/NightFright2k19/doom_widehud/blob/eb3773ce9e/LICENSE) (commit `eb3773ce9e`) and wrote: "Do whatever you want with it, but giving credit where credit is due is always polite. I didn't make all of these by myself." The §2 blocker is resolved for the collection; DDL credits NightFright and the contributors. The note on derived mapset art (§4.3) stays a documented residual risk.
 
+**Implementation update 2026-10-17:** §4.1 records the pinned GPL-3.0 revision and all 13 current recipes: five mapset bars, four IWAD bars and four without a safe bar. The licence blockers and four-recipe counts below describe the original research snapshot.
+
 **Original bottom line (before the licence):** the licence is **not granted anywhere** — that is a blocker for automatic
 download (§2). DSDA-Doom v0.30.1 **does** support wide `STBAR` graphics out of the box with no
 flag (§3). The collection covers only **1 of DDL's 4 catalog mapsets** plus the IWADs (§4).
@@ -230,7 +232,7 @@ improvement. Source inspection cannot settle this.
 
 ---
 
-## 4. Coverage of DDL's current catalog
+## 4. Coverage of DDL's catalog (original 2026-10-16 snapshot)
 
 **Confirmed.** DDL's catalog contains four recipes: `auger-zenith.toml`, `sigil.toml`,
 `sigil-ii.toml`, `eviternity.toml` (`catalog/`). Searched the pinned tree **and the whole git
@@ -274,6 +276,67 @@ pinning to the released tag is safe for them:
    collection's Eviternity bar is credited to "others" and described in the Doomworld thread as a
    modification of the original art. Its exact provenance is **not verifiable from the
    repository** — an open question that compounds the §2 blocker.
+
+---
+
+### 4.1 Spec 017 implementation coverage (2026-10-17)
+
+**Confirmed.** The implementation pins every bar to
+[`eb3773ce9e4563c69a092386bf2e4f8d740dfd4d`](https://github.com/NightFright2k19/doom_widehud/tree/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d),
+the GPL-3.0 licence commit; the earlier snapshot above remains historical evidence.
+The catalog now has **13 recipes**: five mapset bars, four IWAD bars, four with no safe bar.
+Coverage and default choices below supersede the original four-recipe assessment.
+Only WAD directories were inspected; nothing downloaded was executed.
+
+| Recipe | Decision | Upstream path | Basis |
+| --- | --- | --- | --- |
+| alien-vendetta | **none** | — | Only `pwad/av_uwide_fix.wad` exists and it carries `DEHACKED`+`MAPINFO`+`STBAR`, so the cosmetic-only lint rejects it; `AV.WAD` replaces `STBAR` → no IWAD bar. |
+| ancient-aliens | mapset bar | `pwad/aaliens_uwide.wad` | `STBAR` only (23,570 B). |
+| auger-zenith | **none** | — | No DBP37 file in the collection; `DBP37_AUGZEN.wad` replaces `STBAR`+`STARMS`+`STTNUM*`. |
+| back-to-saturn-x-e1 | mapset bar | `pwad/btsx1_uwide.wad` | `STBAR` only (23,570 B). |
+| back-to-saturn-x-e2 | mapset bar | `pwad/btsx2_uwide.wad` | `STBAR` only (23,570 B). |
+| eviternity-ii | **none** | — | No Eviternity II file; `Eviternity II.wad` replaces the whole status bar. |
+| eviternity | mapset bar | `pwad/eviternity_wide.wad` | `STBAR` only (19,962 B). |
+| going-down | **IWAD bar** | `iwad/doom_uwide.wad` | No mapset bar; `gd.wad` defines no status-bar lump. |
+| scythe | **IWAD bar** | `iwad/doom_uwide.wad` | No Scythe 1 bar (only `scythe2_uwide.wad` = Scythe II); `SCYTHE.WAD` defines no status-bar lump. |
+| sigil | **IWAD bar** | `iwad/doom_uwide.wad` | No SIGIL bar; `SIGIL_V1_23.wad` defines no status-bar lump. |
+| sigil-ii | **IWAD bar** | `iwad/doom_uwide.wad` | No SIGIL II bar; `SIGIL_II_V1_0.WAD` defines no status-bar lump. |
+| sunlust | **none** | — | No Sunlust file; `sunlust.wad` replaces the whole status bar. |
+| valiant | mapset bar | `pwad/valiant_wide.wad` | `STBAR` only (19,962 B). |
+
+
+**Confirmed — matching base game.** The pinned upstream
+[`readme.txt`, line 50](https://github.com/NightFright2k19/doom_widehud/blob/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/readme.txt#L50)
+lists Doom/Doom II together with `doom_uwide.wad` and its v2 variant. Thus this one bar
+covers `doom` (SIGIL/SIGIL II) and `doom2` (Going Down/Scythe); no TNT/Plutonia inference
+is made. These four mapsets contain **none** of the R4 allowlist families, not merely
+no `STBAR`. Recipes with their own status-bar graphics receive no IWAD fallback.
+The allowlist is `STBAR`, `STARMS`, `STF*`, `STT*`, `STG*`, `STK*`, `STYS*`, `STC*`,
+`STDISK`, `STCDROM`, `BRDR_*`, grounded in the added files (each has only `STBAR`) and
+[DSDA v0.30.1 status-bar graphics](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/st_stuff.c#L978-L1080).
+`ddl catalog lint --fetch` rejects any other lump in the bar package; offline tests
+use synthetic WAD directories, with no network or copyrighted WAD fixture.
+
+**Confirmed — release-date evidence for default-on mapset bars.** Dates below are
+last-content-change dates from the pinned upstream git history, compared with the
+release declared by each recipe (release identities are documented in each mapset's
+`reference-*.md`). This establishes the coordinator's post-dates-release rule; it does
+not claim a gameplay or pixel-perfect compatibility test.
+
+| Recipe | Recipe release | Bar last changed (upstream commit) |
+| --- | --- | --- |
+| ancient-aliens | v1.2, 2023-03-16 | [2024-08-05, `c506280`](https://github.com/NightFright2k19/doom_widehud/commit/c506280) |
+| back-to-saturn-x-e1 | 1.1.6, 2020-08-13 | [2022-03-11, `f950372`](https://github.com/NightFright2k19/doom_widehud/commit/f950372) |
+| back-to-saturn-x-e2 | 1.0.1, 2020-08-13 | [2022-03-11, `f950372`](https://github.com/NightFright2k19/doom_widehud/commit/f950372) |
+| eviternity | final v1.0, 2019-02-10 | [2022-03-10, `884a9c2`](https://github.com/NightFright2k19/doom_widehud/commit/884a9c2) |
+| valiant | final 2015-05 build | [2022-03-11, `ff3d866`](https://github.com/NightFright2k19/doom_widehud/commit/ff3d866) |
+
+**Proposed / implemented policy.** All nine offered bars default on in fresh profiles;
+existing profile choices persist. IWAD defaults follow the matching-game/no-replaced-lump
+guard above. Users can disable the existing Play setup component toggle; the resolver
+loads an enabled bar last in the single `-file` list. Credit lives in component descriptions
+and verification notes (schema 1 has no separate credits field), About and README.
+**Needs Deck Validation:** actual DSDA appearance on the 16:10 panel (spec 017 A6).
 
 ---
 

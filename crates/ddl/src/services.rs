@@ -1487,10 +1487,6 @@ impl Services {
     }
 }
 
-/// The registry source for a GOG candidate's launcher (spec 021, R2).
-fn default_profile(recipe: &Recipe) -> Profile {
-    Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
-}
 fn selected_profile(profiles: &[Profile], remembered: Option<&String>) -> Profile {
     profiles
         .iter()
@@ -1515,6 +1511,7 @@ fn is_numbered_profile(name: &str) -> bool {
         .is_some_and(|n| n >= 2)
 }
 
+/// The registry source for a GOG candidate's launcher (spec 021, R2).
 fn store_source(launcher: iwads::GogLauncher) -> iwads::Source {
     match launcher {
         iwads::GogLauncher::Heroic => iwads::Source::GogHeroic,
@@ -1532,6 +1529,14 @@ fn iwad_game(game: Game) -> iwads::Game {
         Game::Tnt => iwads::Game::Tnt,
         Game::Plutonia => iwads::Game::Plutonia,
     }
+}
+
+/// A fresh profile for `recipe`, enabling the recipe's default-on optional
+/// components (spec 017, R5): the widescreen status bar starts on.
+fn default_profile(recipe: &Recipe) -> Profile {
+    let mut profile = Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id);
+    profile.components = recipe.default_components();
+    profile
 }
 
 pub fn select_component(recipe: &Recipe, profile: &mut Profile, id: &str) {
@@ -1598,6 +1603,8 @@ mod tests {
         let command = |s: &mut Services, c| s.execute(c, &CancellationToken::new(), &mut |_| {});
         let recipe = s.recipe("sigil").unwrap();
         let mut first = s.profile(&recipe).unwrap();
+        assert_eq!(first.components, ["wide-status-bar"]);
+        first.set_component("wide-status-bar", false);
         first.skill = 5;
         first.pistol_start = true;
         first.set_component("compat", true);
@@ -1620,6 +1627,7 @@ mod tests {
         assert_eq!(third.name, "Profile 3");
         assert_eq!(third.skill, 3);
         assert!(!third.pistol_start);
+        assert_eq!(third.components, ["wide-status-bar"]);
         command(
             &mut s,
             Command::RenameProfile(second.id.clone(), "Casual".into()),
@@ -1799,6 +1807,15 @@ mod tests {
         select_component(sigil, &mut profile, "compat");
         let active = sigil.active_components(&["compat"]).unwrap();
         assert!(active.iter().all(|c| c.id != "main"));
+    }
+    #[test]
+    fn a_new_profile_enables_default_on_components_like_the_widescreen_bar() {
+        let r = Catalog::embedded().recipe("eviternity").unwrap().clone();
+        let profile = default_profile(&r);
+        assert_eq!(profile.components, ["wide-status-bar"]);
+        assert!(r.active_components(&["wide-status-bar"]).is_ok());
+        let auger = Catalog::embedded().recipe("auger-zenith").unwrap().clone();
+        assert!(default_profile(&auger).components.is_empty());
     }
     #[test]
     fn state_rejects_unknown_schema_and_cancelled_work_does_not_change_user_state() {

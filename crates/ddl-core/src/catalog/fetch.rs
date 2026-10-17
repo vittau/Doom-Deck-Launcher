@@ -98,11 +98,24 @@ pub(crate) fn fetch_package(
     package: &Package,
     hosts: &Hosts,
     fetch: &mut dyn Fetch,
+    cosmetic: &[&str],
 ) -> Result<(), String> {
     let bytes = fetch
         .download(package, hosts)
         .map_err(|error| format!("package `{}`: {error}", package.id))?;
-    check_package(package, &bytes).map_err(|error| format!("package `{}`: {error}", package.id))
+    check_package(package, &bytes).map_err(|error| format!("package `{}`: {error}", package.id))?;
+    // Spec 017, R4: a "Widescreen status bar" component may only ship status-bar
+    // lumps, so a `*`-style file that smuggles `DEHACKED`/`MAPINFO`/music into a
+    // cosmetic toggle is rejected once its bytes are available.
+    for path in cosmetic {
+        let data = member_data(package, &bytes, path)
+            .map_err(|error| format!("package `{}`: {error}", package.id))?;
+        let names = super::lint::wad_lump_names(&data)
+            .map_err(|error| format!("package `{}` member `{path}`: {error}", package.id))?;
+        super::lint::check_status_bar_lumps(&names)
+            .map_err(|error| format!("package `{}` member `{path}`: {error}", package.id))?;
+    }
+    Ok(())
 }
 
 fn check_bytes(bytes: &[u8], size: u64, hash: &str, label: &str) -> Result<(), String> {
@@ -129,13 +142,29 @@ pub fn check_package(package: &Package, bytes: &[u8]) -> Result<(), String> {
         if !super::lint::safe_path(&member.path) {
             return Err(format!("unsafe member path `{}`", member.path));
         }
-        let data = match package.kind {
-            PackageKind::Zip => zip_member(bytes, &member.path, &mut budget)?,
-            PackageKind::Wad => bytes.to_vec(),
-        };
+        let data = member_data_with_budget(package, bytes, &member.path, &mut budget)?;
         check_bytes(&data, member.size, &member.sha256, &member.path)?;
     }
     Ok(())
+}
+
+/// The bytes of one named member: the whole payload for a bare WAD, or the
+/// (nested) ZIP entry. Shared by `check_package` and the cosmetic-only check.
+fn member_data(package: &Package, bytes: &[u8], path: &str) -> Result<Vec<u8>, String> {
+    let mut budget = MAX_BYTES;
+    member_data_with_budget(package, bytes, path, &mut budget)
+}
+
+fn member_data_with_budget(
+    package: &Package,
+    bytes: &[u8],
+    path: &str,
+    budget: &mut u64,
+) -> Result<Vec<u8>, String> {
+    match package.kind {
+        PackageKind::Zip => zip_member(bytes, path, budget),
+        PackageKind::Wad => Ok(bytes.to_vec()),
+    }
 }
 
 fn zip_member(bytes: &[u8], path: &str, budget: &mut u64) -> Result<Vec<u8>, String> {

@@ -1,5 +1,7 @@
 # Confirmed hosts: docs/research/upstream-sources.md §3.4 and reference-sigil.md §1.
 # Doomworld is pages-only. Squarespace is the exact Romero redirect host.
+# github.com (pages) and raw.githubusercontent.com (downloads) serve the pinned-commit
+# widescreen status bars from docs/research/widescreen-statusbars.md §5.2 (spec 017, R3).
 schema_version = 1
-pages = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "www.doomworld.com", "doomer.boards.net"]
-downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com"]
+pages = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "www.doomworld.com", "doomer.boards.net", "github.com"]
+downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com"]

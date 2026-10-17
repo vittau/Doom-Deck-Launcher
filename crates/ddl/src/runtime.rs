@@ -2113,7 +2113,10 @@ impl Runtime {
                             .as_ref()
                             .map_or(316., |s| (316. + s.folders.len() as f32 * 112.).max(316.)),
                         2 => 280.,
-                        3 => 382.,
+                        // 478 like the Engine section so the spec 017 R6 widescreen
+                        // status-bar credit under the version block stays inside
+                        // the panel instead of spilling past its lower border.
+                        3 => 478.,
                         _ => 478.,
                     };
                     b.panel(348., 12., 864., height);
@@ -2278,6 +2281,8 @@ impl Runtime {
                                 b.logo(372., 220., 560., 128., false);
                                 b.label(960., 252., 228., 44., text(ui, T::AppVersion), 26.);
                                 b.label(960., 314., 228., 44., crate::cli::VERSION.into(), 22.);
+                                // Spec 017, R6: credit the widescreen status bars.
+                                b.label(372., 372., 816., 60., text(ui, T::StatusBarCredit), 20.);
                             }
                         }
                     }

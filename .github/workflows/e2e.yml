@@ -277,6 +277,12 @@ jobs:
           "$ddl" mapset install sigil --with compat
           "$ddl" mapset install auger-zenith --with alternate-blaster
           "$ddl" mapset install auger-zenith --with deckard-blaster
+          # Spec 017, R7: install each widescreen status-bar component once.
+          for id in ancient-aliens back-to-saturn-x-e1 back-to-saturn-x-e2 \
+                    eviternity valiant going-down scythe sigil sigil-ii; do
+            echo "== mapset install $id --with wide-status-bar =="
+            "$ddl" mapset install "$id" --with wide-status-bar
+          done
           "$ddl" mapset list | tee "$E2E_ROOT/mapset-list-after.txt"
 
           # 3a. No IWADs exist (DDL never downloads them), so every dry-run must
@@ -309,6 +315,20 @@ jobs:
             awk '/^-iwad$/{getline; if ($0 !~ /^\//) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
               || { echo "::error::$id: -iwad is not an absolute path"; exit 1; }
             echo "$id: argv matches D-011"
+          done
+
+          # Spec 017, R1: the widescreen status bar is the last entry of the
+          # single `-file` list, after the mapset and any gameplay add-on.
+          echo "== the widescreen status bar is last in -file =="
+          for pair in "eviternity:eviternity_wide.wad" "sigil:doom_uwide.wad"; do
+            id="${pair%%:*}"
+            want="${pair##*:}"
+            file="$E2E_ROOT/dry-argv-$id.txt"
+            last="$(awk '/^-file$/{f=1;next} f&&/^-/{f=0} f{last=$0} END{print last}' "$file")"
+            case "$last" in
+              */"$want") echo "$id: $want is the last -file entry" ;;
+              *) echo "::error::$id: expected $want last in -file, got '$last'"; exit 1 ;;
+            esac
           done
 
           echo "== iwad scan =="
