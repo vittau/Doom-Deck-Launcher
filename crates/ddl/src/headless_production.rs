@@ -167,6 +167,19 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
     };
     comparison(reference, &buffer);
 }
+/// A minimal valid PWAD whose only lump is `STBAR` (spec 017): the synthetic
+/// widescreen status bar the journey installs, never the real collection file.
+fn status_bar_wad() -> Vec<u8> {
+    let mut bytes = b"PWAD".to_vec();
+    bytes.extend_from_slice(&1_i32.to_le_bytes()); // one lump
+    bytes.extend_from_slice(&12_i32.to_le_bytes()); // directory follows the header
+    bytes.extend_from_slice(&12_i32.to_le_bytes()); // lump offset (unused)
+    bytes.extend_from_slice(&0_i32.to_le_bytes()); // lump size
+    let mut name = [0_u8; 8];
+    name[..5].copy_from_slice(b"STBAR");
+    bytes.extend_from_slice(&name);
+    bytes
+}
 fn wad() -> Vec<u8> {
     let mut bytes = b"IWAD".to_vec();
     bytes.extend_from_slice(&36i32.to_le_bytes());
@@ -215,6 +228,21 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         zip.write_all(&bytes).unwrap();
     }
     let package = zip.finish().unwrap().into_inner();
+    // Spec 017: the SIGIL recipe now carries an optional widescreen status bar as
+    // a second, bare-WAD package, default-on. Serve a synthetic WAD so the
+    // journey stays offline while the toggle and the launch list render.
+    let wide_bytes = status_bar_wad();
+    if let Some(wide) = catalog.recipes[0]
+        .recipe
+        .packages
+        .iter_mut()
+        .find(|p| p.id == "widehud")
+    {
+        wide.size = wide_bytes.len() as u64;
+        wide.sha256 = Sha256::of(&wide_bytes).to_hex();
+        wide.members[0].size = wide_bytes.len() as u64;
+        wide.members[0].sha256 = Sha256::of(&wide_bytes).to_hex();
+    }
     let mut broken = catalog.recipes[0].clone();
     broken.recipe.id = "zz-test-error".into();
     broken.recipe.title = "Checksum error test".into();
@@ -232,6 +260,8 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             Response::ok(engine_body.clone())
         } else if request.target == "/auger.zip" {
             Response::ok(auger_package.clone())
+        } else if request.target == "/wide.wad" {
+            Response::ok(wide_bytes.clone())
         } else {
             pg.wait();
             Response::ok(package_body.clone())
@@ -241,6 +271,14 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     catalog.recipes[0].recipe.packages[0].urls = vec![url];
     catalog.recipes[0].recipe.packages[0].size = package.len() as u64;
     catalog.recipes[0].recipe.packages[0].sha256 = Sha256::of(&package).to_hex();
+    if let Some(wide) = catalog.recipes[0]
+        .recipe
+        .packages
+        .iter_mut()
+        .find(|p| p.id == "widehud")
+    {
+        wide.urls = vec![server.url("/wide.wad")];
+    }
     catalog.hosts.downloads.push("127.0.0.1".into());
     auger.recipe.packages[0].urls = vec![server.url("/auger.zip")];
     catalog.recipes.push(auger);
@@ -464,7 +502,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .is_ok()
     );
     assert_eq!(ui.get_heading(), "Play setup / SIGIL");
-    assert!(ui.get_nodes().iter().any(|n| n.label == "1 content file"));
+    // Spec 017: the widescreen status bar is default-on, so SIGIL launches two
+    // content files, the mapset then the bar.
+    assert!(ui.get_nodes().iter().any(|n| n.label == "2 content files"));
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label.starts_with("2  doom_uwide.wad")),
+        "the wide bar is the last -file entry"
+    );
     let title = ui
         .get_nodes()
         .iter()
@@ -493,11 +539,12 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert!(ui.get_sheet_open());
     capture(window, "010-compat-dialog.png");
     press(window, Key::Escape);
-    assert!(
+    // The default-on wide bar survives a cancelled compat confirmation.
+    assert_eq!(
         state.borrow().snapshot.as_ref().unwrap().items[1]
             .profile
-            .components
-            .is_empty()
+            .components,
+        vec!["wide-status-bar"]
     );
     ui.invoke_clicked(101);
     press(window, Key::RightArrow);
@@ -507,7 +554,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         state.borrow().snapshot.as_ref().unwrap().items[1]
             .profile
             .components,
-        vec!["compat"]
+        vec!["wide-status-bar", "compat"]
     );
     ui.invoke_clicked(2);
     idle(&state);
@@ -522,11 +569,11 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     );
     ui.invoke_clicked(101);
     idle(&state);
-    assert!(
+    assert_eq!(
         state.borrow().snapshot.as_ref().unwrap().items[1]
             .profile
-            .components
-            .is_empty()
+            .components,
+        vec!["wide-status-bar"]
     );
     // The directory browser exposes local WAD imports, and an unknown paid combination stays off.
     std::fs::write(
@@ -549,15 +596,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ui.invoke_clicked(100 + row as i32);
     wait(&state, |r| !r.busy);
     assert_eq!(state.borrow().problem, Some(Problem::UnknownFile));
-    assert!(
+    assert_eq!(
         Services::open(env.clone())
             .unwrap()
             .snapshot()
             .unwrap()
             .items[1]
             .profile
-            .components
-            .is_empty()
+            .components,
+        vec!["wide-status-bar"]
     );
     press(window, Key::Escape);
     assert_eq!(state.borrow().screen, Screen::Setup);

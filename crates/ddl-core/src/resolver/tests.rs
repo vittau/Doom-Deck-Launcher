@@ -229,6 +229,102 @@ fn auger_zenith_order_is_main_then_addon_and_exclusive_groups_are_enforced() {
 }
 
 #[test]
+fn widescreen_status_bar_loads_last_after_the_mapset() {
+    let dir = TempDir::new().unwrap();
+    let data = dir.path();
+    let recipe = embedded("eviternity");
+    let registry = iwad_registry(data, "doom2-1.9", IwadsGame::Doom2, b"doom2 bytes");
+    let (engine, _) = engine(data);
+    let config = config(data);
+
+    let mut manifest = empty_manifest(&recipe);
+    let maps = add_member(data, &mut manifest, &recipe, "free", "maps", b"eviternity maps");
+    let bar = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "widehud",
+        "statusbar",
+        b"widescreen bar",
+    );
+
+    let profile = Profile {
+        components: vec!["wide-status-bar".to_owned()],
+        ..Profile::new("p1", "Play", "eviternity")
+    };
+    let resolution = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve with the wide bar");
+    // The single `-file` list is main first, the wide bar last (spec 017, R1).
+    assert_eq!(resolution.plan().files, vec![maps, bar.clone()]);
+    let last = resolution.summary().content.last().expect("content");
+    assert_eq!(last.position, 2);
+    assert_eq!(last.label, "Widescreen status bar");
+    assert_eq!(last.path, bar);
+}
+
+#[test]
+fn iwad_status_bar_coexists_with_main_and_the_edition_replacement() {
+    let dir = TempDir::new().unwrap();
+    let data = dir.path();
+    let recipe = embedded("sigil");
+    let registry = iwad_registry(data, "doom-1.9ud", IwadsGame::Doom, b"doomu bytes");
+    let (engine, _) = engine(data);
+    let config = config(data);
+
+    let mut manifest = empty_manifest(&recipe);
+    let maps = add_member(data, &mut manifest, &recipe, "free", "maps", b"sigil main");
+    let compat = add_member(data, &mut manifest, &recipe, "free", "compat", b"sigil compat");
+    let bar = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "widehud",
+        "statusbar",
+        b"widescreen bar",
+    );
+
+    // Main then the base-game IWAD bar.
+    let profile = Profile {
+        components: vec!["wide-status-bar".to_owned()],
+        ..Profile::new("p1", "Play", "sigil")
+    };
+    let resolution = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve with the IWAD bar");
+    assert_eq!(resolution.plan().files, vec![maps.clone(), bar.clone()]);
+
+    // The compat edition replaces main; the IWAD bar still loads last.
+    let profile = Profile {
+        components: vec!["compat".to_owned(), "wide-status-bar".to_owned()],
+        ..Profile::new("p1", "Play", "sigil")
+    };
+    let resolution = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve compat + IWAD bar");
+    assert_eq!(resolution.plan().files, vec![compat, bar]);
+    assert!(!resolution.plan().files.contains(&maps));
+}
+
+#[test]
 fn sigil_compat_replaces_main_and_the_missing_soundtrack_blocks_only_when_enabled() {
     let dir = TempDir::new().unwrap();
     let data = dir.path();

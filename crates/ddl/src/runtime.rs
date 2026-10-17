@@ -2075,6 +2075,8 @@ impl Runtime {
                                 b.logo(372., 220., 560., 128., false);
                                 b.label(960., 252., 228., 44., text(ui, T::AppVersion), 26.);
                                 b.label(960., 314., 228., 44., crate::cli::VERSION.into(), 22.);
+                                // Spec 017, R6: credit the widescreen status bars.
+                                b.label(372., 372., 816., 60., text(ui, T::StatusBarCredit), 20.);
                             }
                         }
                     }

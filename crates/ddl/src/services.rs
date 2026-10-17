@@ -407,9 +407,7 @@ impl Services {
                 .iter()
                 .find(|p| p.recipe_id == recipe.id)
                 .cloned()
-                .unwrap_or_else(|| {
-                    Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
-                });
+                .unwrap_or_else(|| default_profile(&recipe));
             let launch = match &manifest {
                 Some(m) => resolver::resolve(
                     &recipe,
@@ -652,9 +650,7 @@ impl Services {
             .profiles
             .load_optional(&format!("{}-default", recipe.id))
             .map_err(|e| logged(Problem::State, e))?
-            .unwrap_or_else(|| {
-                Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
-            }))
+            .unwrap_or_else(|| default_profile(recipe)))
     }
 
     /// Acquires DDL's cross-process state lock for this process (spec 014, R2).
@@ -1348,6 +1344,14 @@ fn iwad_game(game: Game) -> iwads::Game {
     }
 }
 
+/// A fresh profile for `recipe`, enabling the recipe's default-on optional
+/// components (spec 017, R5): the widescreen status bar starts on.
+fn default_profile(recipe: &Recipe) -> Profile {
+    let mut profile = Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id);
+    profile.components = recipe.default_components();
+    profile
+}
+
 pub fn select_component(recipe: &Recipe, profile: &mut Profile, id: &str) {
     let Some(c) = recipe.components.iter().find(|c| c.id == id) else {
         return;
@@ -1482,6 +1486,15 @@ mod tests {
         select_component(sigil, &mut profile, "compat");
         let active = sigil.active_components(&["compat"]).unwrap();
         assert!(active.iter().all(|c| c.id != "main"));
+    }
+    #[test]
+    fn a_new_profile_enables_default_on_components_like_the_widescreen_bar() {
+        let r = Catalog::embedded().recipe("eviternity").unwrap().clone();
+        let profile = default_profile(&r);
+        assert_eq!(profile.components, ["wide-status-bar"]);
+        assert!(r.active_components(&["wide-status-bar"]).is_ok());
+        let auger = Catalog::embedded().recipe("auger-zenith").unwrap().clone();
+        assert!(default_profile(&auger).components.is_empty());
     }
     #[test]
     fn state_rejects_unknown_schema_and_cancelled_work_does_not_change_user_state() {

@@ -33,7 +33,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-valiant.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; author's release text", "Cacowards 2015 winner: https://www.doomworld.com/cacowards/2015/"]
-notes = "Confirmed archive/member identities, the embedded MBF DEHACKED lump and the ZDoom/Eternity-only lumps (MAPINFO, EMAPINFO, DECORATE, GLDEFS, SNDINFO, LANGUAGE) that DSDA-Doom v0.30.1 ignores; no COMPLVL or UMAPINFO lump. Complevel 11 is the author's stated value; no gameplay test performed. Tags: cacowards = 2015 winner per https://www.doomworld.com/cacowards/2015/ (secondary evidence only: DoomWiki Cacowards 2015 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first released 2015-02-07, over five years before this review; megawad = 32 maps in five episodes (docs/research/reference-valiant.md)."
+notes = "Confirmed archive/member identities, the embedded MBF DEHACKED lump and the ZDoom/Eternity-only lumps (MAPINFO, EMAPINFO, DECORATE, GLDEFS, SNDINFO, LANGUAGE) that DSDA-Doom v0.30.1 ignores; no COMPLVL or UMAPINFO lump. Complevel 11 is the author's stated value; no gameplay test performed. Tags: cacowards = 2015 winner per https://www.doomworld.com/cacowards/2015/ (secondary evidence only: DoomWiki Cacowards 2015 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first released 2015-02-07, over five years before this review; megawad = 32 maps in five episodes (docs/research/reference-valiant.md). Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "Episodes and splash screens rely on ZDoom MAPINFO, removed from DSDA-Doom in v0.30.0, so the mapset plays as one continuous 32-map run; confirm on the Deck.", "The 2024 MBF21 update and the Vaccinated Edition are separate releases and are not part of this package."]
 
 [[packages]]
@@ -71,3 +71,32 @@ position = 1
 package = "free"
 member = "maps"
 role = "maps"
+
+# Widescreen status bar: NightFright's doom_widehud at commit eb3773ce9e (GPL-3.0).
+[[packages]]
+id = "widehud"
+page = "https://github.com/NightFright2k19/doom_widehud"
+urls = ["https://raw.githubusercontent.com/NightFright2k19/doom_widehud/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/pwad/valiant_wide.wad"]
+size = 19962
+sha256 = "17beda76f63058efcaf852e9dd64edde7629c694e6cec5401aec2463a5a8c809"
+kind = "wad"
+
+[[packages.members]]
+id = "statusbar"
+path = "valiant_wide.wad"
+size = 19962
+sha256 = "17beda76f63058efcaf852e9dd64edde7629c694e6cec5401aec2463a5a8c809"
+keep = false
+
+[[components]]
+id = "wide-status-bar"
+label = "Widescreen status bar"
+description = "Optional widescreen (wide-aspect) status bar from NightFright and contributors' doom_widehud (GPL-3.0). Loads after the mapset and any gameplay add-on."
+optional = true
+default = true
+position = 2
+
+[[components.members]]
+package = "widehud"
+member = "statusbar"
+role = "graphics"

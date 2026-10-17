@@ -402,4 +402,6 @@ owners and are used here only to describe what DDL does.
 - **[DSDA-Doom](https://github.com/dsda-org/dsda-doom)** — the DOOM source port DDL
   targets, used unmodified as the official AppImage.
 - **[Slint](https://slint.dev)** — the native UI toolkit DDL is built with.
+- **[doom_widehud](https://github.com/NightFright2k19/doom_widehud)** — widescreen
+  status bars by NightFright and contributors (GPL-3.0).
 - The DOOM mapping community, whose mapsets DDL exists to make playable.
