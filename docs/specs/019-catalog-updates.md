@@ -48,14 +48,14 @@ the bundle. Recipe-change handling for installed mapsets (spec 020).
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R3) — tests with a loopback HTTP fake: valid bundle accepted; old serial,
+- [x] **A1** (R1, R3) — tests with a loopback HTTP fake: valid bundle accepted; old serial,
   unknown schema, too-new `min_ddl_version`, oversize, malformed JSON rejected; recipe with a
   non-allowlisted host dropped, others kept; lint failure drops the recipe.
-- [ ] **A2** (R4) — precedence and corrupt-cache tests; atomic write.
-- [ ] **A3** (R5) — 24 h throttle test with a fake clock; headless render of the Settings rows;
+- [x] **A2** (R4) — precedence and corrupt-cache tests; atomic write.
+- [x] **A3** (R5) — 24 h throttle test with a fake clock; headless render of the Settings rows;
   CLI tests.
 - [ ] **A4** (R2) — workflow change reviewed; first upload verified by the coordinator after merge.
-- [ ] **A5** — fmt, clippy `-D warnings`, tests green.
+- [x] **A5** — fmt, clippy `-D warnings`, tests green.
 
 ## Decisions (owner answers 2026-10-17 → D-025)
 

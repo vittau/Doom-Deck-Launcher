@@ -752,6 +752,30 @@ limitations = []
     }
 
     #[test]
+    fn store_cache_is_atomic_and_leaves_only_the_final_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle = bundle_with(
+            200,
+            "0.0.1",
+            &[("good.toml", &recipe("good", "www.gamers.org"))],
+        );
+        let entries = || {
+            let mut names: Vec<String> = std::fs::read_dir(dir.path().join("catalog"))
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+                .collect();
+            names.sort();
+            names
+        };
+        store_cache(dir.path(), &bundle, 1).unwrap();
+        assert_eq!(entries(), vec!["catalog.json".to_owned()]);
+        // Replacing an existing cache is also a rename, not an append.
+        store_cache(dir.path(), &bundle, 2).unwrap();
+        assert_eq!(entries(), vec!["catalog.json".to_owned()]);
+        assert_eq!(load_cache(dir.path()).unwrap().fetched_at, 2);
+    }
+
+    #[test]
     fn an_empty_bundle_is_never_cached() {
         let dir = tempfile::tempdir().unwrap();
         let bundle = bundle_with(200, "0.0.1", &[]);
