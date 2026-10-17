@@ -294,9 +294,12 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           set -euo pipefail
-          echo "DDL_CATALOG_SERIAL=$(git log -1 --format=%ct "${GITHUB_SHA}")" >> "$GITHUB_ENV"
-          echo "DDL_SOURCE_COMMIT=${GITHUB_SHA}" >> "$GITHUB_ENV"
-          cargo run --locked -p ddl -- catalog bundle --out "$RUNNER_TEMP/catalog.json"
+          # Pass the values as arguments: a `$GITHUB_ENV` write only reaches later steps,
+          # so exporting it here left the first published bundle at serial 0.
+          serial="$(git log -1 --format=%ct "${GITHUB_SHA}")"
+          test "$serial" -gt 0
+          cargo run --locked -p ddl -- catalog bundle --out "$RUNNER_TEMP/catalog.json" \
+            --serial "$serial" --commit "${GITHUB_SHA}"
 
       # Orphan `catalog` branch, ordinary commits only: the branch holds exactly
       # one file, `catalog.json`. The app reads it from
