@@ -470,3 +470,23 @@
     build-time index for the UI. Phase B (UI) dispatched to Codex. Also fixed the logo-asset test,
     which rejected the indexed (under-1-MB) social preview merged earlier.
   refs: [docs/reports/023-mapset-screenshots.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 019 merged: catalog updates without a DDL release (D-025). CI's `catalog-bundle` job
+    publishes a lint-clean `catalog.json` to the orphan `catalog` branch (never force-pushed; also
+    on first publish and manual dispatch); DDL fetches it from raw.githubusercontent.com every 24 h
+    (opt-out) or on demand, rejects stale/oversize/too-new bundles, drops recipes naming hosts
+    outside the embedded allowlist, and caches the result atomically. Review fixes: first publish,
+    a fixed bundle minimum version (0.0.4) instead of the builder's version, and the release
+    build now bakes the catalog serial.
+  refs: [docs/reports/019-catalog-updates.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 023 phase B merged: cards, Home, Library, Mapset detail and the art band show the bundled
+    in-game screenshots with a compact one-line "Screenshot: <credit>" caption (full credit on
+    detail); painted art stays as the fallback, including for remote recipes whose images are not
+    bundled. Review fix shrank the captions. README screenshots regenerated; Deck checks S1–S3
+    added to `docs/deck-testing.md`.
+  refs: [docs/reports/023-mapset-screenshots.md]

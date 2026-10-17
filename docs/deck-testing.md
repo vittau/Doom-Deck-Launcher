@@ -77,6 +77,14 @@ the controller now work (gilrs).
 | U2 | Repeat with the checkbox **checked**: profiles and their saves/screenshots are gone after a restart | Gaming | ⏳ | A toggles the checkbox; no text entry |
 | U3 | An installed mapset that is no longer in the catalog still shows **Uninstall** on detail and removes cleanly | Gaming | ⏳ | spec 020 R5 |
 
+## Screenshots and catalog updates (specs 023, 019) — needs Deck validation
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| S1 | Discover, Library, Home and Mapset detail show real in-game screenshots with a small "Screenshot: <credit>" caption, sharp on the Deck LCD | Gaming | ⏳ | Spec 023 A4; caption legible at arm's length |
+| S2 | Settings → Engine shows `Catalog: <date> (built-in)`; **Check for catalog updates** succeeds online and reports `updated` or "already current" | Gaming | ⏳ | Spec 019; needs Wi-Fi |
+| S3 | Airplane mode: start DDL — no error or delay from the automatic catalog check; the manual check shows a clear network error | Gaming | ⏳ | Automatic check is silent offline |
+
 ## GOG and other stores (spec 021)
 
 Everything here is **Needs Deck Validation**: the paths come from the launchers' own upstream

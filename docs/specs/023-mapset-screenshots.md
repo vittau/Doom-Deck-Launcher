@@ -1,6 +1,6 @@
 # 023 — Representative screenshots on mapset cards
 
-**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 002, 012, 013 · **Decision:** D-024
+**Status:** Done  ·  **Milestone:** M3  ·  **Depends on:** 002, 012, 013 · **Decision:** D-024
 **Owner request (2026-10-17):** "os cards dos PWADs devem mostrar alguma screenshot
 representativa do mod, e não 'original concept art'."
 

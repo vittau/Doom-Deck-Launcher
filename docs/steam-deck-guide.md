@@ -377,8 +377,10 @@ change that path. `./ddl doctor` prints the exact paths. `DDL_LOG=debug ./ddl do
 adds stderr detail. Review reports for personal paths before sharing them.
 
 **Are the screenshots actual gameplay?** They are off-screen renders of the real launcher
-UI with deterministic sample state. Card artwork is original mood art, not map screenshots;
-see the [asset provenance](design/visual-report.md) and [Rose Compass notes](design/logo/README.md).
+UI with deterministic sample state. The images on the mapset cards are real in-game
+screenshots, credited on each card; their sources are recorded next to them in
+`crates/ddl/ui/assets/screenshots/<mapset>/SOURCES.toml`. The frame and decoration are original
+art (see the [asset provenance](design/visual-report.md) and [Rose Compass notes](design/logo/README.md)).
 Synthetic test IWADs and installs demonstrate the UI and do not prove game compatibility.
 
 ## Maintainer note: regenerate README screenshots

@@ -1,6 +1,6 @@
 # 019 — Catalog updates without a DDL release
 
-**Status:** Ready · **Decision:** D-025  ·  **Milestone:** M3  ·  **Depends on:** 002, 006, 015
+**Status:** Done · **Decision:** D-025  ·  **Milestone:** M3  ·  **Depends on:** 002, 006, 015
 **Backlog item:** "Catalog updates without a DDL release" — D-019 left fetching updates to a
 separate decision: D-025 (owner answers 2026-10-17).
 
