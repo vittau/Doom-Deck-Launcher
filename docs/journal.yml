@@ -323,3 +323,12 @@
     app-state schema 1). Decisions: Lutris stays on the manual folder flow (its library is SQLite;
     no C dependency for this); GOG Final Doom hashes go into the known-IWAD table as a follow-up.
   refs: [docs/reports/021-gog-iwad-paths.md, docs/research/iwad-identification.md]
+- date: 2026-10-16
+  type: merge
+  summary: >-
+    Catalog batch B merged (Sunlust 9, Ancient Aliens 9, BTSX E1 2, BTSX E2 2, Eviternity II 21 —
+    Proposed). Eviternity II's 279.5 MiB WAD needed the catalog/member cap raised from 256 to
+    512 MiB (exact size + SHA-256 still verify every file) and the fixed body timeout raised
+    from 30 s to 300 s; a size-scaled download deadline replaces the fixed one next. e2e run
+    38987876930 dispatched for all 13 recipes.
+  refs: [docs/research/reference-eviternity-ii.md]
