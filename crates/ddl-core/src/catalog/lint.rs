@@ -526,6 +526,101 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
     errors
 }
 
+/// True when `text` links a year page of the Doomworld Cacowards, e.g.
+/// `https://www.doomworld.com/cacowards/2019/`.
+fn cites_cacowards_year(text: &str) -> bool {
+    const PAGE: &str = "doomworld.com/cacowards/";
+    text.match_indices(PAGE).any(|(at, _)| {
+        let year = &text[at + PAGE.len()..];
+        year.len() >= 4 && year.as_bytes()[..4].iter().all(u8::is_ascii_digit)
+    })
+}
+
+/// Tag rules for one recipe (spec 015, R2): every tag is in the vocabulary,
+/// none repeats, and `cacowards` carries a citation of the year's Doomworld
+/// page in the verification notes or `inspected` list. Offline and pure.
+pub fn validate_tags(r: &Recipe, vocabulary: &TagVocabulary) -> Vec<Violation> {
+    let mut errors = Vec::new();
+    let mut seen = HashSet::new();
+    for (i, tag) in r.tags.iter().enumerate() {
+        let key = format!("tags.{i}");
+        if vocabulary.get(tag).is_none() {
+            errors.push(Violation {
+                key: key.clone(),
+                message: format!("unknown tag `{tag}`"),
+                hint: "use an id from catalog/tags.toml, or add the tag there in the same pull request"
+                    .into(),
+            });
+        }
+        if !seen.insert(tag) {
+            errors.push(Violation {
+                key,
+                message: format!("duplicate tag `{tag}`"),
+                hint: "list each tag once".into(),
+            });
+        }
+    }
+    if r.tags.iter().any(|t| t == "cacowards")
+        && !std::iter::once(&r.verification.notes)
+            .chain(&r.verification.inspected)
+            .any(|text| cites_cacowards_year(text))
+    {
+        errors.push(Violation {
+            key: "tags".into(),
+            message: "`cacowards` tag without a Cacowards citation".into(),
+            hint: "cite that year's page, e.g. https://www.doomworld.com/cacowards/2019/, in verification.notes or verification.inspected"
+                .into(),
+        });
+    }
+    errors
+}
+
+/// Rules for `catalog/tags.toml` itself (spec 015, R1).
+pub fn validate_vocabulary(v: &TagVocabulary) -> Vec<Violation> {
+    let mut errors = Vec::new();
+    let mut issue = |key: String, message: &str, hint: &str| {
+        errors.push(Violation {
+            key,
+            message: message.into(),
+            hint: hint.into(),
+        });
+    };
+    if v.schema_version != 1 {
+        issue(
+            "schema_version".into(),
+            "unsupported schema_version",
+            "use schema_version = 1",
+        );
+    }
+    let mut ids = HashSet::new();
+    let mut orders = HashSet::new();
+    for (i, tag) in v.tags.iter().enumerate() {
+        let key = format!("tags.{i}");
+        if !slug(&tag.id) || !ids.insert(&tag.id) {
+            issue(
+                format!("{key}.id"),
+                "invalid or duplicate tag id",
+                "use unique lowercase alphanumeric/hyphen slugs",
+            );
+        }
+        if tag.label.trim().is_empty() || tag.description.trim().is_empty() {
+            issue(
+                format!("{key}.label"),
+                "missing tag text",
+                "supply an English label and a short description",
+            );
+        }
+        if !orders.insert(tag.order) {
+            issue(
+                format!("{key}.order"),
+                "duplicate tag order",
+                "give every tag its own position",
+            );
+        }
+    }
+    errors
+}
+
 fn diag(file: &Path, line: usize, message: impl ToString, hint: &str) -> Diagnostic {
     Diagnostic {
         file: file.into(),
@@ -680,6 +775,29 @@ pub fn lint_paths(
     }
     let mut files = Vec::new();
     let mut errors = Vec::new();
+    // The vocabulary sits beside hosts.toml; a missing file is an empty one, so
+    // a catalog without tags still lints and a tagged recipe reports unknown tags.
+    let tags_path = hosts_path.with_file_name("tags.toml");
+    let vocabulary = match read_text(&tags_path) {
+        Ok(text) => match parse::<TagVocabulary>(&tags_path, &text) {
+            Ok(vocabulary) => {
+                for v in validate_vocabulary(&vocabulary) {
+                    errors.push(diag(
+                        &tags_path,
+                        line_for(&text, &v.key),
+                        v.message,
+                        &v.hint,
+                    ));
+                }
+                vocabulary
+            }
+            Err(e) => {
+                errors.push(e);
+                TagVocabulary::default()
+            }
+        },
+        Err(_) => TagVocabulary::default(),
+    };
     for path in paths {
         if path.is_dir() {
             match fs::read_dir(path) {
@@ -688,7 +806,9 @@ pub fn lint_paths(
                         match entry {
                             Ok(e)
                                 if e.path().extension().is_some_and(|x| x == "toml")
-                                    && e.path().file_name().is_none_or(|n| n != "hosts.toml") =>
+                                    && e.path()
+                                        .file_name()
+                                        .is_none_or(|n| n != "hosts.toml" && n != "tags.toml") =>
                             {
                                 files.push(e.path())
                             }
@@ -729,7 +849,8 @@ pub fn lint_paths(
                 continue;
             }
         };
-        let violations = validate(&r, &path, &hosts);
+        let mut violations = validate(&r, &path, &hosts);
+        violations.extend(validate_tags(&r, &vocabulary));
         let valid = violations.is_empty();
         for v in violations {
             errors.push(diag(&path, line_for(&text, &v.key), v.message, &v.hint));

@@ -11,6 +11,9 @@ pub struct Recipe {
     pub page: String,
     pub description: String,
     pub permission: String,
+    /// Reviewed category tags from `catalog/tags.toml` (spec 015). Absent = none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
     #[serde(default)]
     pub images: Vec<Image>,
     pub base_game: BaseGame,
@@ -212,6 +215,42 @@ pub struct Hosts {
     pub schema_version: u32,
     pub pages: Vec<String>,
     pub downloads: Vec<String>,
+}
+
+/// The reviewed tag vocabulary, `catalog/tags.toml` (spec 015, R1).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TagVocabulary {
+    pub schema_version: u32,
+    #[serde(default)]
+    pub tags: Vec<TagDef>,
+}
+
+/// One tag: a stable id, an English label (the UI translates by id), a short
+/// description and the position of its category in Discover.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TagDef {
+    pub id: String,
+    pub label: String,
+    pub description: String,
+    pub order: u32,
+}
+
+impl TagVocabulary {
+    /// The definition with this id, if any.
+    #[must_use]
+    pub fn get(&self, id: &str) -> Option<&TagDef> {
+        self.tags.iter().find(|tag| tag.id == id)
+    }
+
+    /// Definitions sorted by `order` (ties by id), the Discover strip order.
+    #[must_use]
+    pub fn ordered(&self) -> Vec<&TagDef> {
+        let mut tags: Vec<_> = self.tags.iter().collect();
+        tags.sort_by(|a, b| a.order.cmp(&b.order).then_with(|| a.id.cmp(&b.id)));
+        tags
+    }
 }
 
 /// Symbolic order only: downstream installation/resolution maps these refs to files.

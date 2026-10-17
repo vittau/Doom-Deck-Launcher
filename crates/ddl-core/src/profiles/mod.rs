@@ -119,5 +119,6 @@ pub(crate) fn test_recipe() -> crate::catalog::Recipe {
             notes: "test".to_owned(),
             limitations: Vec::new(),
         },
+        tags: Vec::new(),
     }
 }

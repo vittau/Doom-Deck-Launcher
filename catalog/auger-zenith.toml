@@ -8,6 +8,7 @@ release = "2021-07-26"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp37_augzen"
 description = "DOOM II: MAP01–MAP22 (21 levels and a credits map). Optional blaster replacements."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
+tags = ["featured", "classics", "cacowards", "community-projects"]
 
 [base_game]
 game = "doom2"
@@ -30,8 +31,8 @@ status = "inspected"
 tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
-inspected = ["docs/research/upstream-sources.md §5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
-notes = "Confirmed archive/member identities and source inspection. Proposed complevel 2; no gameplay test performed."
+inspected = ["docs/research/upstream-sources.md §5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source", "Cacowards 2021 runner-up: https://www.doomworld.com/cacowards/2021/"]
+notes = "Confirmed archive/member identities and source inspection. Proposed complevel 2; no gameplay test performed. Tags: cacowards = 2021 runner-up per https://www.doomworld.com/cacowards/2021/ (secondary evidence only: DoomWiki Cacowards 2021 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = released 2021-07-26, over five years before this review; community-projects = Doomer Boards Project 37 with 30+ credited contributors (docs/research/upstream-sources.md §5); featured = D-010 reference recipe. Not a megawad by the 30-map rule (MAP01–MAP22, 21 levels plus credits)."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu."]
 
 [[packages]]

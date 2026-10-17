@@ -1,0 +1,54 @@
+# Reviewed recipe tag vocabulary (spec 015, R1). Hand-authored (D-006).
+# A recipe lists tag ids in `tags = [...]`; unknown ids are lint errors.
+# `label` is the English source string (the UI translates by id), `order` is the
+# position of the tag's category in Discover. To propose a tag, edit this file
+# in the same pull request that first uses it (see CONTRIBUTING.md).
+schema_version = 1
+
+[[tags]]
+id = "featured"
+label = "Featured"
+description = "Maintainer-picked starting points; the recipe notes say why."
+order = 10
+
+[[tags]]
+id = "beginner-friendly"
+label = "Beginner Friendly"
+description = "A gentler difficulty curve for players new to community maps."
+order = 20
+
+[[tags]]
+id = "classics"
+label = "Classics"
+description = "Established releases at least five years old, with community recognition cited in the recipe."
+order = 30
+
+[[tags]]
+id = "cacowards"
+label = "Cacowards"
+description = "Honoured in a Doomworld Cacowards feature (winner or runner-up); the recipe cites the year page and the role."
+order = 40
+
+[[tags]]
+id = "community-projects"
+label = "Community Projects"
+description = "Multi-author community projects such as the Doomer Boards Projects."
+order = 50
+
+[[tags]]
+id = "megawad"
+label = "Megawads"
+description = "Thirty or more maps in one release."
+order = 60
+
+[[tags]]
+id = "episode"
+label = "Episodes"
+description = "A single episode: nine maps or fewer."
+order = 70
+
+[[tags]]
+id = "challenging"
+label = "Challenging"
+description = "Aimed at experienced players."
+order = 80

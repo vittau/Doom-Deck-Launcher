@@ -7,8 +7,8 @@
 //! `catalog/` directory next to the binary — adds a deployment step and a
 //! runtime "catalog missing" failure mode for no benefit).
 //!
-//! The generated file defines `EMBEDDED_HOSTS` and `EMBEDDED_RECIPES`, consumed
-//! by `catalog::Catalog::embedded`.
+//! The generated file defines `EMBEDDED_HOSTS`, `EMBEDDED_TAGS` (the spec 015
+//! tag vocabulary) and `EMBEDDED_RECIPES`, consumed by `catalog::Catalog::embedded`.
 
 use std::env;
 use std::fs;
@@ -27,6 +27,11 @@ fn main() {
         println!("cargo:rerun-if-changed={}", hosts.display());
     }
 
+    let tags = catalog.join("tags.toml");
+    if tags.is_file() {
+        println!("cargo:rerun-if-changed={}", tags.display());
+    }
+
     let mut recipes: Vec<(String, PathBuf)> = Vec::new();
     match fs::read_dir(&catalog) {
         Ok(entries) => {
@@ -35,7 +40,10 @@ fn main() {
                 if path.extension().and_then(|ext| ext.to_str()) != Some("toml") {
                     continue;
                 }
-                if path.file_name().and_then(|name| name.to_str()) == Some("hosts.toml") {
+                if matches!(
+                    path.file_name().and_then(|name| name.to_str()),
+                    Some("hosts.toml" | "tags.toml")
+                ) {
                     continue;
                 }
                 let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
@@ -63,6 +71,14 @@ fn main() {
         ));
     } else {
         code.push_str("pub static EMBEDDED_HOSTS: &str = \"\";\n");
+    }
+    if tags.is_file() {
+        code.push_str(&format!(
+            "pub static EMBEDDED_TAGS: &str = include_str!({:?});\n",
+            tags.to_string_lossy().as_ref()
+        ));
+    } else {
+        code.push_str("pub static EMBEDDED_TAGS: &str = \"\";\n");
     }
     code.push_str("pub static EMBEDDED_RECIPES: &[(&str, &str)] = &[\n");
     for (name, path) in &recipes {
