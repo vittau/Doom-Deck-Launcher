@@ -15,12 +15,16 @@
 # 4, nerve 2). The shareware entry is marked `playable = false`: commercial
 # content refuses it.
 #
+# The GOG / id Anthology revisions of tnt.wad and plutonia.wad are listed
+# below (research §1.3/§1.4); which GOG product ships them, as opposed to the
+# Steam 1.9 copies, stays Needs Deck Validation (research open question 11).
+#
 # Deliberately NOT listed here yet, because the research marks them out of
-# scope until they can be validated on the Deck or are not DDL targets: the GOG
-# / id Anthology revisions of tnt.wad and plutonia.wad, the BFG Edition and
-# 2019 Unity "Enhanced" IWADs, and the remaining DOOM + DOOM II extra files
-# (extras.wad, id1*.wad, id24res.wad, iddm1.wad, masterlevels.wad, sigil*.wad)
-# for which no hashes are published. See research open questions 3, 4 and 8.
+# scope until they can be validated on the Deck or are not DDL targets: the BFG
+# Edition and 2019 Unity "Enhanced" IWADs, and the remaining DOOM + DOOM II
+# extra files (extras.wad, id1*.wad, id24res.wad, iddm1.wad, masterlevels.wad,
+# sigil*.wad) for which no hashes are published. See research open questions 3,
+# 4 and 8.
 
 schema_version = 1
 
@@ -268,6 +272,22 @@ crc32 = "903dcc27"
 default_complevel = 4
 source = "https://doomwiki.org/wiki/TNT.WAD"
 
+# id Anthology (later revision) / Mac / GOG, still labelled 1.9: only the hashes
+# (or the extra _DEUTEX_/P1_START markers) tell it from the Steam copy above.
+# Research §1.3; which GOG product ships it stays Needs Deck Validation.
+[[iwad]]
+id = "tnt-anthology"
+game = "tnt"
+title = "Final DOOM: TNT: Evilution v1.9 (id Anthology / Mac / GOG revision)"
+filename = "tnt.wad"
+size = 18654796
+md5 = "1d39e405bf6ee3df69a8d2646c8d5c49"
+sha1 = "4a65c8b960225505187c36040b41a40b152f8f3e"
+crc32 = "d4bb05c0"
+default_complevel = 4
+playable = true
+source = "https://doomwiki.org/wiki/TNT.WAD"
+
 [[iwad]]
 id = "tnt-1.9-kex-2024-08-08"
 game = "tnt"
@@ -304,6 +324,22 @@ md5 = "75c8cf89566741fa9d22447604053bd7"
 sha1 = "90361e2a538d2388506657252ae41aceeb1ba360"
 crc32 = "48d1453c"
 default_complevel = 4
+source = "https://doomwiki.org/wiki/PLUTONIA.WAD"
+
+# id Anthology (later revision) / Mac / GOG, still labelled 1.9: adds the MAP12
+# and MAP23 deathmatch starts; only the hashes tell it from the Steam copy.
+# Research §1.4; which GOG product ships it stays Needs Deck Validation.
+[[iwad]]
+id = "plutonia-anthology"
+game = "plutonia"
+title = "Final DOOM: The Plutonia Experiment v1.9 (id Anthology / Mac / GOG revision)"
+filename = "plutonia.wad"
+size = 18240172
+md5 = "3493be7e1e2588bc9c8b31eab2587a04"
+sha1 = "f131cbe1946d7fddb3caec4aa258c83399c21e60"
+crc32 = "15cd1448"
+default_complevel = 4
+playable = true
 source = "https://doomwiki.org/wiki/PLUTONIA.WAD"
 
 [[iwad]]

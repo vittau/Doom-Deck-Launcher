@@ -593,10 +593,10 @@ numeric complevel).
     (§4.1). Reading it means a new SQLite dependency (or a hand-written reader) that this research
     does not justify. Should DDL add one, or keep Lutris installs on the manual "Add IWAD folder"
     flow?
-11. **GOG IWAD revisions in the table.** GOG's *Final Doom* ships the Anthology/GOG revisions of
-    `tnt.wad`/`plutonia.wad` (§1.3/§1.4), which the known-IWAD table (`data/iwads.toml`) does not
-    list, so a GOG Final Doom pair is only ever `Ambiguous`. Should the two published GOG hashes be
-    added to the table (spec 007 R1), or is user choice enough?
+11. **GOG IWAD revisions in the table — resolved 2026-10-16.** DDL now lists the published
+    Anthology/GOG revisions as `tnt-anthology` and `plutonia-anthology` in `data/iwads.toml`, so a
+    GOG Final Doom pair identifies exactly instead of staying `Ambiguous`; which GOG product ships
+    that revision (rather than the Steam 1.9 copy) remains **Needs Deck Validation**.
 
 ## Sources
 
