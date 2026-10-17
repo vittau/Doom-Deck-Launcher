@@ -20,6 +20,8 @@ def main():
     p=argparse.ArgumentParser(); p.add_argument('--resvg',default='resvg');p.add_argument('--check',action='store_true');args=p.parse_args()
     version=subprocess.check_output([args.resvg,'--version'],text=True).strip()
     assert version=='0.47.0',version
+    # D-023: production must retain the owner-selected Rose Compass contours.
+    assert (HERE/'emblem.svg').read_bytes()==(HERE.parent/'logo-v2/rose-compass/emblem.svg').read_bytes()
     for master in HERE.glob('*.svg'):
         tree=ET.parse(master)
         for el in tree.iter():

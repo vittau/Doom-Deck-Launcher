@@ -134,3 +134,123 @@ pending choice stated directly in the spec. The coordinator must record the choi
 `docs/decisions.md`; phase B applies it under R2/A2. No edit to decisions, status, journal,
 OVERVIEW or other specs was made. Physical Deck checks for input handoff, gyro, strict
 recording, crop/readability and gameplay remain Needs Deck Validation.
+
+
+# Spec 016 phase B — apply Rose Compass
+
+## Result
+
+**Confirmed:** D-023's Rose Compass replaces Ember Gate in all production masters
+under `docs/design/logo/` and byte-identical compiled SVG copies. The emblem is
+byte-identical to the selected phase-A concept; the DDL contours are that concept's
+upright broad-counter wordmark. Existing lock-up sizes and Barlow full-name outlines
+remain. Header, loading and About references and embedded window-icon wiring already
+point to these paths, so no UI code or behaviour change is needed.
+
+The 256/512 px icons, portrait/wide capsules, transparent Steam logo, README top image
+and 1280×640 social preview use Rose Compass. Original capsule/social scenery and
+composition dimensions are preserved; the logo-free hero SVG and PNG are byte-identical.
+The unchanged release workflow packages the six `docs/design/logo/steam/*.png` files
+into `ddl/art/`; a scratch install check verified identical bytes and mode 0644.
+No local release was built or published.
+
+The usage note documents clear space, minimum sizes and production provenance.
+Native 32/64/256 px contact-sheet inspection on dark/light showed four separated bone
+petals and the amber centre; no alternate small-size emblem is needed. The production
+154×56 px header lock-up retains the same emblem. Rose Compass concept masters remain
+in `logo-v2/` as phase-A evidence; production geometry now lives in `logo/author.py`.
+Old Ember Gate production vectors are retained only in Git history. The original raster
+exploration and prompt in `logo/concepts/` remain for the historical spec 013 report.
+The coordinator authorized wording-only guide updates to remove stale branding and
+pending-choice statements. No new runtime, Cargo or Python dependency was introduced;
+authoring uses the existing pinned design-time fonttools 4.60.1 and resvg 0.47.0.
+
+## Verification
+
+R2/A2 reuse the existing asset dimension/alpha/master-copy integration tests, embedded
+window-icon assertions and headless loading/About journey assertions. The production
+exporter additionally verifies byte equality against the selected Rose Compass emblem.
+Visual originality and legibility require human inspection, rather than a unit test.
+All verification uses off-screen Slint rendering; no visible window or screen capture.
+
+Both author scripts reproduced all SVG bytes. Both production and concept export
+`--check` commands passed. `python3 scripts/check-readme-links.py` passed all 32
+local links/anchors. The social preview, portrait/wide capsules and 32 px/contact-sheet
+exports were inspected directly. Original scenery groups were compared with the parent
+commit, including exact byte equality for the unchanged hero PNG.
+
+`cargo fmt --all --check` — exit 0, no output.
+
+`cargo clippy --workspace --all-targets -- -D warnings` — exit 0, tail:
+
+```text
+   Compiling ddl v0.0.4 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-016b-logo/crates/ddl)
+    Checking slint v1.18.1
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 59s
+```
+
+`git merge main` reported `Already up to date` at `de61219`.
+
+
+`cargo test --workspace` — exit 0, **398 tests passed, zero failures**:
+
+```text
+test result: ok. 65 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 115.19s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 307 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Final test tail:
+
+```text
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+
+   Doc-tests ddl_core
+
+running 3 tests
+test crates/ddl-core/src/library/mod.rs - library (line 10) - compile ... ok
+test crates/ddl-core/src/downloads/mod.rs - downloads (line 22) - compile ... ok
+test crates/ddl-core/src/profiles/mod.rs - profiles (line 10) - compile ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.21s; merged doctests compilation took 0.97s
+```
+
+Headless `target/headless/010-loading.png` and `013-about.png` were inspected at
+1280×800: Rose Compass appears in the shared header, central loading panel and
+About lock-up without clipping. All four regenerated README screenshots were also
+inspected at native resolution; the header mark and DDL letters remain distinct.
+`python3 scripts/readme-screenshots.py` exited 0 and regenerated the four 1280×800
+images via the documented command:
+
+| Screenshot | Bytes |
+| --- | ---: |
+| Home | 416,023 |
+| Discover | 503,955 |
+| Play setup | 336,048 |
+| Mapset detail | 571,649 |
+
+
+Fresh `python3 scripts/readme-screenshots.py --check` — exit 0:
+
+```text
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 64 filtered out; finished in 90.97s
+docs/screenshots/home.png: 1280x800, 416,023 bytes
+docs/screenshots/discover.png: 1280x800, 503,955 bytes
+docs/screenshots/play-setup.png: 1280x800, 336,048 bytes
+docs/screenshots/mapset-detail.png: 1280x800, 571,649 bytes
+```
+
+All four screenshot exports reproduced byte-for-byte. `git diff --check` passed.
+A2 is checked; all assigned phase-B work is complete and no product question remains.
+No app behaviour, UI source, engine integration, dependencies, protected decisions or
+coordinator status files were changed. Actual Steam custom-artwork crop, Gaming Mode
+appearance and hardware input remain **Needs Deck Validation** (spec 013 A4).

@@ -6,29 +6,25 @@ from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
+BLOOD, AMBER = '#52272B', '#FFD078'
 BONE, BRONZE, EMBER, DARK = '#F8EAD5', '#B88960', '#B8583F', '#120C0D'
-def path(d, fill): return f'<path fill="{fill}" d="{d}"/>'
+def path(d, fill, even=False):
+    return f'<path fill="{fill}"' + (' fill-rule="evenodd"' if even else '') + f' d="{d}"/>'
 def group(body, x=0, y=0, scale=1): return f'<g transform="translate({x} {y}) scale({scale})">{body}</g>'
 def svg(w, h, body): return f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">{body}</svg>\n'
 def save(name, w, h, body): (OUT/name).write_text(svg(w,h,body))
-# Closed contours: an unbroken bronze threshold protects the ember. No strokes,
-# fonts, filters or raster payloads; broad negative space survives small sizes.
-mark = path('M128 8 222 78 222 214 128 248 34 214 34 78Z', DARK)
-mark += path('M128 16 214 82 214 208 128 240 42 208 42 82Z', BRONZE)
-mark += path('M128 29 201 87 201 199 128 226 55 199 55 87Z', '#52272B')
-mark += path('M128 43 186 92 186 193 128 213 70 193 70 92Z', DARK)
-mark += path('M128 43 186 92 179 103 128 62 77 103 70 92Z', BONE)
-mark += path('M70 100 83 110 83 184 116 196 116 209 70 193Z M186 100 173 110 173 184 140 196 140 209 186 193Z', BRONZE)
-mark += path('M128 87 140 131 158 150 128 184 98 150 116 131Z', EMBER)
-mark += path('M128 118 140 150 128 167 116 150Z', BONE)
-# Architectural feet and engraving stay secondary to the gate silhouette.
-mark += path('M46 89 51 93 51 195 46 193Z M210 89 205 93 205 195 210 193Z M83 213 128 229 173 213 128 234Z', '#80533B')
-mark += path('M128 19 133 30 128 35 123 30Z M46 204 53 204 53 211 46 211Z M203 204 210 204 210 211 203 211Z', BONE)
-# Original upright slab lettering, drawn by hand; no franchise-derived face.
-ddl = path('M0 0H28L42 12V52L28 64H0V54H6V10H0Z M18 12V52H25L30 47V17L25 12Z', BONE).replace('fill=', 'fill-rule="evenodd" fill=')
-ddl += group(path('M0 0H28L42 12V52L28 64H0V54H6V10H0Z M18 12V52H25L30 47V17L25 12Z', BONE).replace('fill=', 'fill-rule="evenodd" fill='), 52)
-ddl += path('M104 0H130V10H123V52H145V44H157V64H104V54H110V10H104Z', BONE)
-ddl += path('M0 72H68L78 78 88 72H157V75H89L78 84 67 75H0Z', EMBER)
+# Rose Compass production geometry, selected in D-023. Same filled contours as
+# the retained phase-A concept; scenery below stays unchanged.
+mark = path('M80 4H176L252 80V176L176 252H80L4 176V80Z', DARK)
+mark += path('M86 18H170L238 86V170L170 238H86L18 170V86Z', BRONZE)
+mark += path('M92 34H164L222 92V164L164 222H92L34 164V92Z', BLOOD)
+mark += path('M128 42 157 94 128 110 99 94Z M214 128 162 157 146 128 162 99Z M128 214 99 162 128 146 157 162Z M42 128 94 99 110 128 94 157Z', DARK)
+mark += path('M128 56 145 90 128 99 111 90Z M200 128 166 145 157 128 166 111Z M128 200 111 166 128 157 145 166Z M56 128 90 111 99 128 90 145Z', BONE)
+mark += path('M128 111 145 128 128 145 111 128Z', AMBER)
+mark += path('M69 58 80 69 69 80 58 69Z M187 58 198 69 187 80 176 69Z M69 176 80 187 69 198 58 187Z M187 176 198 187 187 198 176 187Z', BRONZE)
+# Original upright wordmark from the selected concept.
+d = path('M0 0H25L42 15V49L25 64H0Z M13 13V51H21L29 43V21L21 13Z', BONE, True)
+ddl = d + group(d, 54) + path('M108 0H122V50H154V64H108Z', BONE)
 font=TTFont(ROOT/'crates/ddl/ui/assets/Barlow-Regular.ttf'); glyphs=font.getGlyphSet(); cmap=font.getBestCmap()
 def lettering(text, size, color=BONE):
     x=0; body=''; scale=size/font['head'].unitsPerEm
