@@ -1,25 +1,40 @@
-# 017 — Widescreen status bars (NightFright's doom_widehud) — report
+# 017 — Widescreen status bars — final report
 
-**Status: PAUSED by coordinator (2026-10-17).** Work on branch `vittau/spec-017-widehud` was
-stopped mid-task at the coordinator's request. Commit `32fb9e3` is a WIP commit; nothing is
-finished and no Deck validation has happened. This file is a handoff: what is done, what is left,
-the coverage decisions already made, the pinned commit, and open doubts.
+**Status:** local implementation complete; A4 CI and A6 physical Deck validation remain open.
+Continued the paused WIP (`32fb9e3`, `5cf163b`), merged `main` through spec 016 and spec 018
+(`e24f027`, plus status-only `f18eff4`), and finished local acceptance on 2026-10-17. No visible window was opened,
+no screen was captured, no IWAD was fetched, and no downloaded WAD was executed.
 
-## Handoff
+## What changed
 
-### Pinned upstream commit
+- R1/R2: nine optional `wide-status-bar` graphics components (five mapset bars, four IWAD
+  bars), pinned to **`eb3773ce9e4563c69a092386bf2e4f8d740dfd4d`**, the upstream GPL-3.0
+  licence commit. Exact package/member sizes and SHA-256 values are in each recipe.
+- R3/R4: reviewed GitHub page/raw hosts; fetch lint parses bounded WAD directories and rejects
+  non-status-bar lumps. Offline synthetic fixtures exercise clean bars, `DEHACKED`, map,
+  music and sound rejection, malformed directories and the fetch-lint integration. Release
+  labels reject `/` and `\` as decided by the coordinator.
+- R5: all nine bars default on for fresh profiles. Existing choices persist; spec 018 copies
+  retain a disabled bar and its new-default action enables it. The existing Play setup toggle
+  and launch summary expose the choice and bar-last order.
+- R6: About displays the complete NightFright/contributors/GPL-3.0 credit and repository URL,
+  inside an expanded panel. README keeps spec 016's rewrite plus only the credit entry.
+  Component descriptions and verification notes carry each recipe's credit (schema 1 has no
+  dedicated credits field).
+- R7: the e2e workflow installs all nine components with `--with wide-status-bar` and checks
+  the final `-file` member for Eviternity and SIGIL. Running it on main belongs to A4.
+- Added explicit headless assertions for the enabled, actionable toggle, credit text/link and
+  panel bounds; inspected both off-screen PNGs. Added final argv assertions and profile-default
+  integration assertions after merging spec 018. No new dependencies.
 
-**`eb3773ce9e4563c69a092386bf2e4f8d740dfd4d`** (2026-10-17, "Add GNU General Public License v3"),
-the tip of `main` and the commit that added the GPL-3.0 `LICENSE`. It is later than the content
-pin in `docs/research/widescreen-statusbars.md` (`78d962173334aecdb8bd974a1ba9bac95ab6cde4`), so
-the same content plus the licence is referenced by every raw URL:
-`https://raw.githubusercontent.com/NightFright2k19/doom_widehud/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/<path>`.
+## Per-recipe coverage
 
-### Per-recipe coverage determined (all **Confirmed** by parsing the pinned tree)
-
-WADs were inspected with the lump directory only; nothing was executed. "Replaces STBAR" means
-the mapset's main WAD defines its own `STBAR`/status-bar graphics, so loading the base-game IWAD
-bar would clobber the mapset's art and it is not offered (R2 guard).
+**Confirmed** by pinned upstream tree/readme and release WAD directory inspection; the complete
+pin, matching-game citation, R4 allowlist and per-mapset release-date comparison are in
+[research §4.1](../research/widescreen-statusbars.md#41-spec-017-implementation-coverage-2026-10-17).
+Each added bar contains only `STBAR`. The four IWAD-bar mapsets replace **none** of the R4
+allowlist families. Upstream explicitly lists one `doom_uwide.wad` for Doom/Doom II in
+[`readme.txt:50`](https://github.com/NightFright2k19/doom_widehud/blob/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/readme.txt#L50).
 
 | Recipe | Decision | Upstream path | Basis |
 | --- | --- | --- | --- |
@@ -37,62 +52,72 @@ bar would clobber the mapset's art and it is not offered (R2 guard).
 | sunlust | **none** | — | No Sunlust file; `sunlust.wad` replaces the whole status bar. |
 | valiant | mapset bar | `pwad/valiant_wide.wad` | `STBAR` only (19,962 B). |
 
-Sizes/SHA-256 are computed from the pinned checkout (not invented); e.g. `aaliens_uwide.wad`
-23,570 B `1bda814a7bcce46f5b1abbddfde5817e0471405ebb007134c84bc5351b6cde36`; `doom_uwide.wad`
-23,652 B `e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5` (matches the research
-doc). `iwad/doom_uwide.wad` is offered for both Doom and Doom II: the upstream `readme.txt` lists
-`Doom/Doom II ... doom_uwide.wad / doom_uwide_v2.wad` as one entry.
 
-### Done (compiles; catalog/resolver tests passed at the time of pause)
+The five mapset-bar content dates post-date the recipe releases: Ancient Aliens 2024-08-05
+vs 2023-03-16; both BTSX episodes 2022-03-11 vs 2020-08-13; Eviternity 2022-03-10 vs
+2019-02-10; Valiant 2022-03-11 vs 2015-05. These are source/date checks, not gameplay validation.
 
-- **R1** — five mapset bars (`ancient-aliens`, `back-to-saturn-x-e1`, `back-to-saturn-x-e2`,
-  `eviternity`, `valiant`) as commit-pinned bare-WAD packages with one `graphics` member and one
-  optional `wide-status-bar` component at position 2, label "Widescreen status bar".
-- **R2** — four IWAD bars (`going-down`, `scythe`, `sigil`, `sigil-ii`) duplicated per recipe.
-- **R3** — `catalog/hosts.toml`: `raw.githubusercontent.com` → `downloads`, `github.com` → `pages`.
-- **R4** — `lint::wad_lump_names` + `lint::check_status_bar_lumps` (allowlist derived from the
-  added WADs and DSDA v0.30.1's status-bar code), wired into `--fetch` for "status bar" components;
-  unit + integration tests with tiny synthetic WAD fixtures (no network, no real WADs committed).
-- **R4 (extra)** — `release` must not contain `/` or `\` (install path component); lint rule +
-  test.
-- **R5** — `Recipe::default_components()` and a seeded `default_profile` in the UI, so the bar is
-  on by default for all nine recipes (coordinator confirmed IWAD bars default ON); resolver tests
-  prove the bar is last in the single `-file` list.
-- **R6** — About screen credit label, README credit line, and each affected recipe's
-  `verification.notes` + component description credit NightFright and contributors (GPL-3.0).
-- **R7** — `e2e.yml` installs each new component once with `--with wide-status-bar` and asserts
-  the bar is the last `-file` entry for `eviternity` and `sigil`.
-- `ddl catalog lint catalog` (offline) and `ddl catalog lint --fetch` on all nine changed recipes
-  passed.
+## Verification
 
-### Left / not finished
+All commands ran on macOS arm64. Tests use fakes, loopback fixtures and scratch XDG roots;
+no external network is used by tests. Explicit fetch lint verifies remote package identities
+(or their verified cache) and all named archive members, including the cosmetic-only check.
 
-- **Headless render test (A3, R5/R6) is not green.** Paused while updating
-  `crates/ddl/src/headless_production.rs`: the journey's synthetic SIGIL install now serves a
-  synthetic `widehud` WAD offline (`status_bar_wad()`, `/wide.wad`), and the SIGIL assertions were
-  updated for the default-on bar, but the final run had not completed when work stopped. Verify the
-  "2 content files" / order assertions and re-run
-  `DDL_HEADLESS_DIR=<scratch> cargo test -p ddl fixture_screens_navigation_and_focus_render_headlessly`,
-  then inspect `010-play-setup-ready.png` and `013-about.png`.
-- **Research doc not updated** — the coverage table above and the pinned commit must be recorded in
-  `docs/research/widescreen-statusbars.md` (R1 explicitly asks for it).
-- **Spec 017 acceptance boxes A1–A3, A5 not ticked.**
-- **Full checks not run to completion:** `cargo fmt --all --check`,
-  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`. Only
-  `cargo test -p ddl-core catalog`, `cargo test -p ddl-core resolver`, and the offline/`--fetch`
-  catalog lint had passed before the pause.
-- **A6 (Deck look)** remains *Needs Deck Validation* and was not attempted.
+```text
+$ ./target/debug/ddl catalog lint catalog
+Catalog lint passed (offline).
 
-### Open doubts / decisions to confirm
+$ ./target/debug/ddl catalog lint --fetch catalog/ancient-aliens.toml catalog/back-to-saturn-x-e1.toml catalog/back-to-saturn-x-e2.toml catalog/eviternity.toml catalog/valiant.toml catalog/going-down.toml catalog/scythe.toml catalog/sigil.toml catalog/sigil-ii.toml
+Catalog lint passed (fetched packages verified).
 
-- R5 for IWAD bars was ambiguous; the coordinator ruled **default ON**, with the extra guard that
-  an IWAD bar is only offered when the mapset replaces **no** status-bar lump in the R4 allowlist
-  (the four IWAD-bar mapsets were checked against the full allowlist, not just `STBAR`).
-- The cosmetic-only check runs only in the `--fetch` path (offline lint cannot read WAD bytes);
-  reading this as consistent with R4's "reads the WAD directory from a fixture in tests".
-- "Each recipe's credits list the bar": the schema has no `credits` field, so the credit lives in
-  the component description and `verification.notes` (plus the package `page`). Confirm that is
-  the intended surface.
-- The widehud `--fetch` cosmetic check confirms the *declared* bytes are status-bar-only; it does
-  not re-verify that a mapset bar matches the exact shipped mapset release beyond the date evidence
-  (upstream file dates post-date each recipe's release).
+$ cargo test -p ddl-core widescreen_status_bar_loads_last_after_the_mapset
+test resolver::tests::widescreen_status_bar_loads_last_after_the_mapset ... ok
+test result: ok. 1 passed; 0 failed
+```
+
+The resolver test checks exactly one `-file`, followed by the main WAD and the bar, then
+`-complevel`. Both main and SIGIL's compatibility replacement retain the final IWAD bar.
+The final workspace run below also executes these tests.
+
+```text
+$ cargo fmt --all --check
+(no output; exit 0)
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+    Checking ddl-core v0.0.4
+    Checking ddl v0.0.4
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.83s
+(exit 0)
+
+$ DDL_HEADLESS_DIR=/tmp/ddl-017-headless cargo test --workspace
+test result: ok. 65 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 106.72s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.15s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 307 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.78s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+(exit 0; 398 tests/doc tests passed in total)
+```
+
+A3 render command: `DDL_HEADLESS_DIR=/tmp/ddl-017-headless cargo test -p ddl
+fixture_screens_navigation_and_focus_render_headlessly` (also included in the full suite).
+Inspected `/tmp/ddl-017-headless/010-play-setup-ready.png`: the toggle reads **On**, and the
+summary shows `SIGIL_V1_23.wad` then `doom_uwide.wad`. Inspected
+`/tmp/ddl-017-headless/013-about.png`: the full author/licence credit and repository URL wrap
+legibly inside the panel. These are Slint off-screen software renders at 1280×800.
+Logs for this run are `/tmp/ddl-017-{fmt,clippy,tests,lint,fetch,order,headless-test}.log`.
+
+## Open items and limitations
+
+- **A4:** coordinator must run the e2e workflow on `main`; workflow edits and local checks
+  do not establish a successful Linux e2e run.
+- **A6 — Needs Deck Validation:** confirm the actual classic status bar fills the Deck's
+  16:10 panel correctly in DSDA-Doom. Fullscreen HUD modes may hide the classic status bar.
+- No unresolved implementation question. Credits use existing schema fields, with no schema
+  extension; cosmetic checking happens when fetch lint has bytes, with offline fixture tests.
+- The research retains the original licence/derivative-art discussion as historical evidence;
+  the pinned GPL-3.0 update and coordinator's licence decision govern this implementation.
+  Date evidence does not prove pixel-perfect compatibility with a particular mapset release.
