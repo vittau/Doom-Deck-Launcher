@@ -27,6 +27,16 @@ export global WiringStrings {
     out property <string> preset-speedrun: @tr("Speedrun");
     out property <string> preset-number: @tr("Profile {}", root.value);
 
+    out property <string> uninstall: @tr("Uninstall");
+    out property <string> uninstall-confirm: @tr("Uninstall {}?", root.value);
+    out property <string> uninstall-size: @tr("Installed size: {}", root.value);
+    out property <string> uninstall-profiles: @tr("Also delete profiles and saves ({} profiles)", root.value);
+    out property <string> uninstall-profiles-one: @tr("Also delete profiles and saves (1 profile)");
+    out property <string> uninstall-imported: @tr("Includes imported components; they are deleted too.");
+    out property <string> uninstall-keeps: @tr("Only the install files are removed. Profiles and saves are kept.");
+    out property <string> uninstall-deletes: @tr("Profiles, saves and screenshots will be deleted too.");
+    out property <string> uninstalled: @tr("Uninstalled {}", root.value);
+
     out property <string> addon-choice: @tr("Add-on — choose one");
     out property <string> none: @tr("None");
     out property <string> first-sub: @tr("Prepare the engine and bring your own base games.");

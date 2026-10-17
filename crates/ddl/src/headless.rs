@@ -464,6 +464,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     production::journey(&window, &ui);
     production::categories_journey(&window, &ui);
     production::recipe_changes_journey(&window, &ui);
+    production::uninstall_journey(&window, &ui);
 }
 
 #[path = "headless_production.rs"]

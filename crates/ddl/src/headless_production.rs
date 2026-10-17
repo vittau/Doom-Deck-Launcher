@@ -1627,4 +1627,137 @@ pub(super) fn recipe_changes_journey(window: &MinimalSoftwareWindow, ui: &AppWin
             .any(|n| n.label == "No longer in the catalog")
     );
     capture(window, "020-detail-removed.png");
+    // Spec 022 R1: an install that is no longer in the catalog can still be
+    // uninstalled from its detail screen.
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.id == 5 && n.label == "Uninstall"),
+        "removed-catalog installs keep the Uninstall action"
+    );
+}
+
+/// Spec 022 R1/R2: the detail action, the confirm dialog unchecked then checked
+/// (driven by real keys), the safe Cancel default, and the unchecked path that
+/// keeps profiles while removing the install files.
+pub(super) fn uninstall_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    use crate::services::recipe_change_tests::{installed, setup};
+    let (_temp, _server, env, _hits) = setup();
+    let mut services = installed(&env);
+    services
+        .execute(
+            Command::NewProfile("auger-zenith".into(), false),
+            &ddl_core::downloads::CancellationToken::new(),
+            &mut |_| {},
+        )
+        .unwrap();
+    let store = ddl_core::profiles::ProfileStore::new(&env.paths.config, &env.paths.data);
+    let profiles = store.list().unwrap();
+    assert_eq!(profiles.len(), 2);
+    for profile in &profiles {
+        std::fs::write(store.dirs(&profile.id).save.join("save.dsg"), b"save").unwrap();
+    }
+    drop(services);
+
+    let state = crate::runtime::attach_environment(ui, env.clone());
+    idle(&state);
+    let index = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .position(|i| i.recipe.id == "auger-zenith")
+        .unwrap();
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Detail;
+        r.selected = index;
+        r.focus = 5;
+        r.sync(ui);
+    }
+    let action = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == 5)
+        .expect("an installed mapset offers Uninstall on detail");
+    assert_eq!(action.label, "Uninstall");
+    capture(window, "022-detail-uninstall.png");
+
+    press(window, Key::Return);
+    assert!(ui.get_sheet_open());
+    // R2: focus starts on Cancel and the checkbox is unchecked by default.
+    assert_eq!(ui.get_focused(), 900);
+    assert!(ui.get_sheet_title().contains("Uninstall"));
+    let checkbox = |ui: &AppWindow| {
+        ui.get_sheet_nodes()
+            .iter()
+            .find(|n| n.id == 902)
+            .expect("the checkbox renders")
+    };
+    assert_eq!(checkbox(ui).art, 0);
+    assert!(
+        checkbox(ui).label.contains("2 profiles"),
+        "{}",
+        checkbox(ui).label
+    );
+    assert!(
+        ui.get_sheet_nodes()
+            .iter()
+            .any(|n| n.label.starts_with("Installed size:")),
+        "the dialog names the installed size"
+    );
+    assert!(
+        ui.get_sheet_nodes()
+            .iter()
+            .any(|n| n.label.contains("Profiles and saves are kept")),
+        "the unchecked dialog says what is kept"
+    );
+    capture(window, "022-uninstall-confirm.png");
+
+    // Up reaches the checkbox; A toggles it without any text entry.
+    press(window, Key::UpArrow);
+    assert_eq!(ui.get_focused(), 902);
+    press(window, Key::Return);
+    assert_eq!(checkbox(ui).art, 1);
+    assert!(ui.get_sheet_open(), "toggling never closes the dialog");
+    assert!(
+        ui.get_sheet_nodes()
+            .iter()
+            .any(|n| n.label.contains("will be deleted too")),
+        "the checked dialog names the consequence"
+    );
+    capture(window, "022-uninstall-delete-profiles.png");
+
+    // B cancels; nothing changes.
+    press(window, Key::Escape);
+    assert!(!ui.get_sheet_open());
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[index]
+            .manifest
+            .is_some()
+    );
+
+    // Confirm with the checkbox unchecked: only the install files go.
+    press(window, Key::Return);
+    assert_eq!(ui.get_focused(), 900);
+    press(window, Key::RightArrow);
+    assert_eq!(ui.get_focused(), 901);
+    press(window, Key::Return);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Library);
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[index]
+            .manifest
+            .is_none(),
+        "the mapset is no longer installed"
+    );
+    assert_eq!(store.list().unwrap().len(), 2, "profiles are kept");
+    for profile in &profiles {
+        assert_eq!(
+            std::fs::read(store.dirs(&profile.id).save.join("save.dsg")).unwrap(),
+            b"save"
+        );
+    }
 }
