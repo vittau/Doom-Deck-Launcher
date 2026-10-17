@@ -1,0 +1,83 @@
+# Confirmed bytes and release metadata: docs/research/reference-back-to-saturn-x-e1.md §1–§7; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "back-to-saturn-x-e1"
+title = "Back to Saturn X E1: Get Out Of My Stations"
+authors = ["Sarah \"Esselfortium\" Mancuso (project lead)", "Back to Saturn X team"]
+release = "1.1.6 (2020-08-13)"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1"
+description = "DOOM II: 27 vanilla-compatible maps (MAP01–MAP25, MAP31–MAP32) with a custom texture set and MIDI music; the release splits its content across two WADs that must be loaded together."
+permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP25, MAP31–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-back-to-saturn-x-e1.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Proposed complevel 2 from the authors' 'Doom2.exe or compatible' vanilla target; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, two-WAD load order, gameplay and audio.", "The canonical Doomworld page is Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror.", "The separate btsx_e1.deh is for vanilla/Chocolate Doom and is intentionally not loaded: DSDA-Doom reads the embedded DEHACKED lump of btsx_e1a.wad."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/btsx_e1.zip", "https://youfailit.net/pub/idgames/levels/doom2/megawads/btsx_e1.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/megawads/btsx_e1.zip"]
+size = 18652774
+sha256 = "9f6d2fba63e20e2fddd5a1012813da1087b751f9311d3d8bf4757f69373c2c9a"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/btsx_e1.zip"
+
+[[packages.members]]
+id = "maps"
+path = "btsx_e1a.wad"
+size = 22307013
+sha256 = "92cb0aba71cfd59276fde5f4456e030d9e55488135bd416d8932ff40a1a77f3d"
+keep = false
+
+[[packages.members]]
+id = "resources"
+path = "btsx_e1b.wad"
+size = 29449016
+sha256 = "fc405051c044f4f7f5264902978ff087f7d9985546c7f103bf69be5caec92011"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "btsx_e1.txt"
+size = 15746
+sha256 = "639ca057a87c1b19f447f7fbb618bdd95cacfdffe1b59de1212102728594c70f"
+keep = true
+
+[[components]]
+id = "main"
+label = "Back to Saturn X E1"
+description = "Main 27-map vanilla mapset; both WADs load together in the order btsx_e1a.wad then btsx_e1b.wad, with the embedded DEHACKED patch applied automatically."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components.members]]
+package = "free"
+member = "resources"
+role = "graphics"
