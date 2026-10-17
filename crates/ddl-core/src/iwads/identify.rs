@@ -649,6 +649,17 @@ mod tests {
         }
     }
 
+    fn sha1_bytes(bytes: &[u8]) -> String {
+        use sha1::Digest as _;
+        let mut hasher = sha1::Sha1::new();
+        hasher.update(bytes);
+        hasher
+            .finalize()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect()
+    }
+
     #[test]
     fn ultimate_doom_lumps_are_ambiguous() {
         let dir = TempDir::new().expect("tempdir");
@@ -702,6 +713,46 @@ mod tests {
                 assert!(!candidates.iter().any(|id| id.starts_with("nerve")));
             }
             other => panic!("expected Ambiguous, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn anthology_revisions_identify_by_size_and_sha1() {
+        // A fixture cannot carry a commercial IWAD's published hash, so mirror
+        // each new table entry onto a synthetic file: keep the entry's identity
+        // (id/game/filename) and its strongest hash kind (SHA-1, the one
+        // identification matches), substituting the fixture's real size and
+        // SHA-1. The published literals themselves are asserted in table.rs.
+        for (id, game, filename) in [
+            ("tnt-anthology", Game::Tnt, "tnt.wad"),
+            ("plutonia-anthology", Game::Plutonia, "plutonia.wad"),
+        ] {
+            let dir = TempDir::new().expect("tempdir");
+            let lumps: Vec<String> = (1..=32).map(|map| format!("MAP{map:02}")).collect();
+            let path = write_wad(&dir, filename, b"IWAD", &names(&lumps));
+            let bytes = fs::read(&path).expect("read fixture");
+
+            let mut variant = IwadTable::embedded()
+                .get(id)
+                .expect("new entry present")
+                .clone();
+            variant.size = bytes.len() as u64;
+            variant.sha1 = Some(sha1_bytes(&bytes));
+
+            let table = IwadTable {
+                schema_version: 1,
+                variants: vec![variant],
+            };
+
+            let identification = identify(&path, &table).expect("identifies");
+            assert_eq!(
+                identification.outcome,
+                Outcome::Known {
+                    id: id.to_owned(),
+                    game,
+                },
+                "{id} must identify by size and SHA-1"
+            );
         }
     }
 
