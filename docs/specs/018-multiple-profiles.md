@@ -36,10 +36,10 @@ Text entry / on-screen keyboard. Moving saves between profiles. Profile import/e
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R4) — core and service tests: create/copy/rename/delete, last-profile guard,
+- [x] **A1** (R1–R4) — core and service tests: create/copy/rename/delete, last-profile guard,
   delete order, remembered last profile, Continue uses it.
-- [ ] **A2** (R1, R5) — headless renders: picker with 2+ profiles, delete confirm, Home Continue
+- [x] **A2** (R1, R5) — headless renders: picker with 2+ profiles, delete confirm, Home Continue
   with profile name; navigation tests drive the picker with keys.
-- [ ] **A3** (R6) — CLI tests for `--profile`.
-- [ ] **A4** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** (R6) — CLI tests for `--profile`.
+- [x] **A4** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A5** — *Needs Deck Validation:* `deck-testing.md` C4 (saves stay separate).
