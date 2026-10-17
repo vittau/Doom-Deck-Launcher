@@ -458,6 +458,55 @@ mod tests {
     }
 
     #[test]
+    fn embedded_table_contains_the_anthology_gog_revisions() {
+        let table = IwadTable::embedded();
+
+        // Values transcribed from research §1.3 / §1.4 (DoomWiki TNT.WAD /
+        // PLUTONIA.WAD, read via the Wayback Machine). MD5/SHA-1/CRC-32 only.
+        let tnt = table.get("tnt-anthology").expect("tnt anthology present");
+        assert_eq!(tnt.game, Game::Tnt);
+        assert_eq!(tnt.filename, "tnt.wad");
+        assert_eq!(tnt.size, 18_654_796);
+        assert_eq!(tnt.md5.as_deref(), Some("1d39e405bf6ee3df69a8d2646c8d5c49"));
+        assert_eq!(
+            tnt.sha1.as_deref(),
+            Some("4a65c8b960225505187c36040b41a40b152f8f3e")
+        );
+        assert_eq!(tnt.crc32.as_deref(), Some("d4bb05c0"));
+        assert_eq!(tnt.default_complevel, 4);
+        assert!(tnt.playable);
+        assert_eq!(tnt.source, "https://doomwiki.org/wiki/TNT.WAD");
+        // The strongest published hash is the one identification matches on.
+        assert_eq!(
+            tnt.strongest_hash().map(|(kind, _)| kind),
+            Some(HashKind::Sha1)
+        );
+
+        let plutonia = table
+            .get("plutonia-anthology")
+            .expect("plutonia anthology present");
+        assert_eq!(plutonia.game, Game::Plutonia);
+        assert_eq!(plutonia.filename, "plutonia.wad");
+        assert_eq!(plutonia.size, 18_240_172);
+        assert_eq!(
+            plutonia.md5.as_deref(),
+            Some("3493be7e1e2588bc9c8b31eab2587a04")
+        );
+        assert_eq!(
+            plutonia.sha1.as_deref(),
+            Some("f131cbe1946d7fddb3caec4aa258c83399c21e60")
+        );
+        assert_eq!(plutonia.crc32.as_deref(), Some("15cd1448"));
+        assert_eq!(plutonia.default_complevel, 4);
+        assert!(plutonia.playable);
+        assert_eq!(plutonia.source, "https://doomwiki.org/wiki/PLUTONIA.WAD");
+        assert_eq!(
+            plutonia.strongest_hash().map(|(kind, _)| kind),
+            Some(HashKind::Sha1)
+        );
+    }
+
+    #[test]
     fn shareware_entry_is_not_playable() {
         let table = IwadTable::embedded();
         let shareware = table.get("doom-shareware-1.9").expect("shareware present");
