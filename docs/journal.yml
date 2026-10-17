@@ -437,3 +437,12 @@
     credit), not downloaded at runtime; every recipe gets at least one; concept art is only a
     fallback. Spec 023 rewritten accordingly.
   refs: [docs/specs/023-mapset-screenshots.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 022 merged: uninstall from Mapset detail with the D-022 checkbox (off by default) to also
+    delete profiles and saves; marks the install inactive atomically, then deletes only
+    canonicalised paths inside the recipe's library dir, finishing interrupted deletes on next
+    start; `ddl mapset uninstall`. Review also caught a pre-existing duplicate "Play setup" button
+    on detail (from 020) and the gap it left; the action column now collapses.
+  refs: [docs/reports/022-uninstall-mapset.md]
