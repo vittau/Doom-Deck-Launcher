@@ -314,3 +314,12 @@
     install) and 021 (GOG IWAD paths). Order: 021 now; 017 after the catalog batch; 018 after
     015; 020 after 018.
   refs: [docs/specs/017-widescreen-status-bars.md, docs/specs/018-multiple-profiles.md, docs/specs/019-catalog-updates.md, docs/specs/020-recipe-change-after-install.md, docs/specs/021-gog-iwad-paths.md]
+- date: 2026-10-16
+  type: merge
+  summary: >-
+    Catalog batch A merged (Scythe 2, Alien Vendetta 2, Going Down 9, Valiant 11 — complevels
+    Proposed). Spec 021 merged: GOG IWAD discovery via Heroic and minigalaxy records and the GOG
+    default folder, source labels, opt-in "Search standard Linux folders" (additive field in
+    app-state schema 1). Decisions: Lutris stays on the manual folder flow (its library is SQLite;
+    no C dependency for this); GOG Final Doom hashes go into the known-IWAD table as a follow-up.
+  refs: [docs/reports/021-gog-iwad-paths.md, docs/research/iwad-identification.md]

@@ -393,9 +393,9 @@ section.
   installed to, and its default is `~/GOG Games`.
   Source ([`sharkwouter/minigalaxy`](https://github.com/sharkwouter/minigalaxy), `master` read
   2026-10-16):
-  [`minigalaxy/paths.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/paths.py)
+  [`minigalaxy/paths.py`](https://github.com/sharkwouter/minigalaxy/blob/eeed0ffcf853760808c0bfa9afcc05b0f99720f0/minigalaxy/paths.py)
   (`CONFIG_DIR`, `CONFIG_FILE_PATH`, `DEFAULT_INSTALL_DIR = os.path.expanduser("~/GOG Games")`) and
-  [`minigalaxy/config.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/config.py)
+  [`minigalaxy/config.py`](https://github.com/sharkwouter/minigalaxy/blob/eeed0ffcf853760808c0bfa9afcc05b0f99720f0/minigalaxy/config.py)
   (`install_dir` property reads/writes `config["install_dir"]`).
 * **Proposed.** minigalaxy's Flatpak id is `io.github.sharkwouter.Minigalaxy`, so the Flatpak
   config is `~/.var/app/io.github.sharkwouter.Minigalaxy/config/minigalaxy/config.json`.
@@ -413,7 +413,7 @@ section.
   and the per-game install directory is the `directory` column of its `games` table. The runner
   code sets `self.directory = game_data.get("directory")` straight from that row.
   Source ([`lutris/lutris`](https://github.com/lutris/lutris), `master` read 2026-10-16):
-  [`lutris/game.py`](https://github.com/lutris/lutris/blob/master/lutris/game.py); directory layout
+  [`lutris/game.py`](https://github.com/lutris/lutris/blob/5a3c64231b23e473c4eab5644d53e2a476bb32ef/lutris/game.py); directory layout
   per the [Gentoo wiki: Lutris](https://wiki.gentoo.org/wiki/Lutris) and the Lutris forums
   [(library data location)](https://forums.lutris.net/t/where-is-lutris-library-data-stored/6739).
   Flatpak id is `net.lutris.Lutris`; its data/config live under `~/.var/app/net.lutris.Lutris/`
@@ -636,10 +636,10 @@ returned HTTP 403 to this client):
   [`src/backend/config.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/config.ts) ·
   [`src/backend/storeManagers/gog/electronStores.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/storeManagers/gog/electronStores.ts) ·
   [`src/backend/storeManagers/gog/library.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/storeManagers/gog/library.ts)
-- minigalaxy `master`:
-  [`minigalaxy/paths.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/paths.py) ·
-  [`minigalaxy/config.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/config.py)
-- Lutris `master`: [`lutris/game.py`](https://github.com/lutris/lutris/blob/master/lutris/game.py);
+- minigalaxy commit `eeed0ff` (master on 2026-10-16):
+  [`minigalaxy/paths.py`](https://github.com/sharkwouter/minigalaxy/blob/eeed0ffcf853760808c0bfa9afcc05b0f99720f0/minigalaxy/paths.py) ·
+  [`minigalaxy/config.py`](https://github.com/sharkwouter/minigalaxy/blob/eeed0ffcf853760808c0bfa9afcc05b0f99720f0/minigalaxy/config.py)
+- Lutris commit `5a3c642` (master on 2026-10-16): [`lutris/game.py`](https://github.com/lutris/lutris/blob/5a3c64231b23e473c4eab5644d53e2a476bb32ef/lutris/game.py);
   [Gentoo wiki: Lutris](https://wiki.gentoo.org/wiki/Lutris) ·
   [Lutris forums: library data](https://forums.lutris.net/t/where-is-lutris-library-data-stored/6739) ·
   [Lutris forums: Flatpak config](https://forums.lutris.net/t/lutris-config-location-with-flatpak/18516)

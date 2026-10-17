@@ -34,8 +34,12 @@ pub const LIBRARY_DIR: &str = "library";
 /// Subdirectory of an install holding user-imported files.
 pub const IMPORT_DIR: &str = "imports";
 
-/// Hard upper bound on a single installed member (matches the catalog lint cap).
-pub const MAX_MEMBER_BYTES: u64 = 256 * 1024 * 1024;
+/// Hard upper bound on a single installed member. Keep in sync with the catalog lint
+/// cap `catalog::lint::MAX_BYTES` (both are 512 MiB; the download request below and the
+/// installed-member re-check use this bound, while extraction uses the larger
+/// `downloads::extract::ExtractLimits` defaults). Raised from 256 MiB so Eviternity II's
+/// 293,081,691-byte WAD member can be installed; exact size + SHA-256 still verify it.
+pub const MAX_MEMBER_BYTES: u64 = 512 * 1024 * 1024;
 
 /// A source of wall-clock time, injectable so `installed_at` is deterministic
 /// in tests.

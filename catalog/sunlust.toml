@@ -1,0 +1,79 @@
+# Confirmed bytes and release metadata: docs/research/reference-sunlust.md §1–§7; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "sunlust"
+title = "Sunlust"
+authors = ["Ribbiks", "Dannebubinga"]
+release = "2015-08-07"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sunlust"
+description = "DOOM II: 32 Boom-compatible maps (MAP01–MAP32) designed for pistol start, with bundled MIDI music, graphics and an embedded DEHACKED patch."
+permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text files unedited. See the kept text members for the full terms and resource credits."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = 9
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# The authors state the set is designed to be played from pistol start; a profile suggestion only.
+pistol_start = true
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-sunlust.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Proposed complevel 9 (Boom) from the authors' 'Boom-compatible' release text; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio.", "The canonical Doomworld page and forum thread are Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sunlust"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/sunlust.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/megawads/sunlust.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/sunlust.zip"]
+size = 24388254
+sha256 = "46bc1fe72abec5ad06739b91657f3ed2fed1fda967cd38e6faa4a1701999d64a"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/sunlust.zip"
+
+[[packages.members]]
+id = "maps"
+path = "sunlust/sunlust.wad"
+size = 65966252
+sha256 = "6a90becf56040896fd2876a29f60a7a528d9802b081e0a1cc7d7cc65d546a964"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "sunlust/sunlust.txt"
+size = 2952
+sha256 = "e5c3e93ee5b188a4263f6f3f04649c5713141c464f41fe78b1611088982b9b53"
+keep = true
+
+[[packages.members]]
+id = "extra"
+path = "sunlust/sunlust_extra_info.txt"
+size = 23602
+sha256 = "8cb41747aea2f95f735742a0f7504947bcd931eff945248f4f6f5eb2799c3bdb"
+keep = true
+
+[[components]]
+id = "main"
+label = "Sunlust"
+description = "Main 32-map Boom mapset with bundled MIDI music, graphics and an embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

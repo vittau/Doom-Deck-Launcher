@@ -25,12 +25,17 @@ fn sha(bytes: &[u8]) -> String {
 fn reference_recipes_round_trip_and_lint_offline() {
     for id in [
         "alien-vendetta",
+        "ancient-aliens",
         "auger-zenith",
+        "back-to-saturn-x-e1",
+        "back-to-saturn-x-e2",
         "eviternity",
+        "eviternity-ii",
         "going-down",
         "scythe",
         "sigil",
         "sigil-ii",
+        "sunlust",
         "valiant",
     ] {
         let r = recipe(id);
@@ -689,23 +694,33 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
         ids,
         [
             "alien-vendetta",
+            "ancient-aliens",
             "auger-zenith",
+            "back-to-saturn-x-e1",
+            "back-to-saturn-x-e2",
             "eviternity",
+            "eviternity-ii",
             "going-down",
             "scythe",
             "sigil",
             "sigil-ii",
+            "sunlust",
             "valiant"
         ]
     );
     for id in [
         "alien-vendetta",
+        "ancient-aliens",
         "auger-zenith",
+        "back-to-saturn-x-e1",
+        "back-to-saturn-x-e2",
         "eviternity",
+        "eviternity-ii",
         "going-down",
         "scythe",
         "sigil",
         "sigil-ii",
+        "sunlust",
         "valiant",
     ] {
         let loaded = catalog.get(id).expect("recipe present");

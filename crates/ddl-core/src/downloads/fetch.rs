@@ -128,9 +128,15 @@ pub struct Fetcher {
 
 impl Fetcher {
     /// Creates a fetcher writing into `<cache_dir>/downloads` (spec 006, R3).
+    ///
+    /// The receive-body timeout is a *total* deadline for the response body
+    /// (ureq's `timeout_recv_body` is total, not idle). It must clear the largest
+    /// package DDL accepts: at the 512 MiB cap this 300 s bound still needs only
+    /// ~1.7 MiB/s, and Eviternity II's 121 MiB archive comfortably fits at
+    /// ~3 MiB/s. The connect timeout stays short so an unreachable host fails fast.
     #[must_use]
     pub fn new(cache_dir: impl Into<PathBuf>) -> Self {
-        Self::with_timeouts(cache_dir, Duration::from_secs(15), Duration::from_secs(30))
+        Self::with_timeouts(cache_dir, Duration::from_secs(15), Duration::from_secs(300))
     }
 
     /// Creates a fetcher with explicit connect and read timeouts.

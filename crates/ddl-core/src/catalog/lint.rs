@@ -6,7 +6,12 @@ use std::{
 };
 use url::Url;
 
-pub(crate) const MAX_BYTES: u64 = 256 * 1024 * 1024;
+/// Largest single package or named member the catalog accepts, and the aggregate
+/// decompressed budget per package check (`fetch.rs`). Raised from 256 MiB to 512 MiB
+/// so Eviternity II's 293,081,691-byte `Eviternity II.wad` fits; the exact size and
+/// SHA-256 checks are the real integrity guarantee, so this is only an abuse bound.
+/// Keep in sync with `library::install::MAX_MEMBER_BYTES`.
+pub(crate) const MAX_BYTES: u64 = 512 * 1024 * 1024;
 pub(crate) const MAX_RECIPE_BYTES: u64 = 1024 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -224,7 +229,7 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
             format!("{key}.size"),
             p.size == 0 || p.size > MAX_BYTES,
             "invalid package size",
-            "use an exact positive byte count at most 256 MiB",
+            "use an exact positive byte count at most 512 MiB",
         );
         issue(
             format!("{key}.sha256"),
@@ -266,7 +271,7 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
                 format!("{mk}.size"),
                 m.size == 0 || m.size > MAX_BYTES,
                 "invalid member size",
-                "use an exact positive byte count at most 256 MiB",
+                "use an exact positive byte count at most 512 MiB",
             );
             issue(
                 format!("{mk}.sha256"),

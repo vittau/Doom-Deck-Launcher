@@ -44,9 +44,9 @@ are supported. `--fetch` tries the primary direct URL, then mirrors on failure;
 it verifies downloaded size/hash and **all named members**, including kept text
 and optional members. It follows at most five redirects, validating HTTPS and
 an exact download host at each hop. It never extracts to disk or executes content.
-Resource limits are 1 MiB per TOML document, 256 MiB per package/member and total
+Resource limits are 1 MiB per TOML document, 512 MiB per package/member and total
 decompressed bytes per package check, 10,000 ZIP entries, and four path layers.
-A download attempt times out after 60 seconds. Tests are offline with fake fetches.
+A download attempt times out after 5 minutes. Tests are offline with fake fetches.
 
 Host review is a separate change to `catalog/hosts.toml`. `pages` permits canonical
 attribution pages; `downloads` permits direct files **and redirect targets**.
