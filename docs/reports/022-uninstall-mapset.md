@@ -50,6 +50,7 @@ screenshots will be deleted too." when checked. Confirming returns to Library wi
 | Item | Evidence |
 | --- | --- |
 | R1 / A2 | Detail id 5 is asserted present for an installed mapset and for a removed-catalog install (`recipe_changes_journey`); `action()` ignores all input while playing. |
+| R1 / review fix | `assert_detail_actions_unique` asserts unique labels and exactly one primary for the Current (`uninstall_journey`) and Update (`recipe_changes_journey`) states; the pre-existing duplicate was reproduced on `main` (`020-detail-removed.png`). |
 | R2 / A2 | `022-uninstall-confirm.png` (unchecked, Cancel focused, size and count) and `022-uninstall-delete-profiles.png` (checked, amber tick, delete consequence) inspected; the journey drives `UpArrow` + `Return` with real keys and asserts `art` 0 → 1 and that the sheet stays open. |
 | R3 / A1 | `uninstall_marks_inactive_first_and_removes_only_this_recipe` (mark makes `load_manifest` `None` while files remain, then the recipe dir goes and the neighbour/cache stay); `retired_cleanup_refuses_profile_paths_and_symlink_escapes` (traversal + symlink); `uninstall_never_follows_a_symlinked_directory_out_of_the_library`; `an_interrupted_uninstall_stays_inactive_and_is_finished_on_the_next_start` (crash between mark and delete, then startup completes it). |
 | R4 / A1 | `uninstall_keeps_profiles_by_default_and_a_reinstall_finds_them` (saves/shots survive, selection kept, reinstall reuses them); `uninstall_can_delete_profiles_and_saves_but_keeps_favorites`; `delete_fully_removes_the_document_and_runtime_dirs_without_a_last_profile_guard`; `delete_fully_refuses_a_symlinked_runtime_directory`. |
@@ -64,7 +65,8 @@ screenshots will be deleted too." when checked. Confirming returns to Library wi
 Inspected the off-screen 1280×800 PNGs under `target/headless/`:
 
 - `022-detail-uninstall.png`: the fifth detail action scrolled into view with its amber ring and
-  the "A Uninstall" hint; the surrounding Ember chrome is unchanged.
+  the "A Uninstall" hint; the action column is Play setup → Add to favorites → Active profile →
+  Uninstall, each label once (see the review fix below).
 - `022-uninstall-confirm.png`: title "Uninstall AUGER;ZENITH?", "Installed size: 24 B" (the
   synthetic fixture member), the unchecked checkbox with the profile count, the "profiles and saves
   are kept" line, and Cancel focused first with Uninstall separated to the right.
@@ -73,6 +75,32 @@ Inspected the off-screen 1280×800 PNGs under `target/headless/`:
   too."; the hint bar shows the checkbox action.
 
 No continuous animation at idle (the capture helper still asserts a clean idle frame).
+
+## Review fix — duplicate "Play setup" on detail
+
+**Pre-existing, not from this spec.** Detail's second action was unconditional: for an installed
+mapset with no catalog update (Current or Removed) it fell back to the label `T::Setup` while the
+primary button already said `T::Setup`, so the column showed "Play setup" twice. The block is
+unchanged from `main` (`git diff 6cd5df0 HEAD -- crates/ddl/src/runtime.rs` shows no hunk in the
+detail actions) and I reproduced it by building `main` (`da93e97`) in a detached worktree and
+running the existing `fixture_screens` headless test: its `020-detail-removed.png` shows two
+stacked "Play setup" buttons.
+
+Fix: the second action now renders only when the recipe has an update (`RecipeStatus::Update`), so
+it reads "Update" and never repeats the primary. For every other detail state each label appears
+once: installed → Play setup / Add to favorites / Active profile / Uninstall; update available →
+Play setup / Update / Keep current / Active profile / Uninstall; not installed → Install / Add to
+favorites / Active profile. The primary is still the action that makes sense — Install when there
+is no install, Play setup otherwise (the established Continue → Play setup → Play flow; a bare
+"Play" here would silently skip setup). No button ids or y positions moved, so existing navigation
+and the spec 020 update/keep tests are unaffected.
+
+`assert_detail_actions_unique` in the production headless test now asserts, for both the update
+state (`recipe_changes_journey`) and the installed Current state (`uninstall_journey`), that the
+detail action labels are unique and that exactly one is primary.
+
+Re-rendered and inspected: `022-detail-uninstall.png` (single Play setup) and `020-detail-removed.png`
+(single Play setup) both drop the duplicate.
 
 ## Final verification
 
@@ -85,7 +113,7 @@ cargo fmt --all --check
 
 cargo clippy --workspace --all-targets -- -D warnings
   Compiling ddl v0.0.4 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-022-uninstall/crates/ddl)
-  Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.03s
+  Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.43s
 
 cargo test --workspace
   ddl unit:       test result: ok. 81 passed; 0 failed

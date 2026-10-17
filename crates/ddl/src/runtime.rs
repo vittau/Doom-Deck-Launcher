@@ -1613,24 +1613,15 @@ impl Runtime {
                             ),
                             true,
                         );
-                        b.button(
-                            2,
-                            12.,
-                            366.,
-                            360.,
-                            text(
-                                ui,
-                                if matches!(
-                                    item.recipe_status,
-                                    ddl_core::library::RecipeStatus::Update(_)
-                                ) {
-                                    T::RecipeUpdateAction
-                                } else {
-                                    T::Setup
-                                },
-                            ),
-                            false,
-                        );
+                        // Spec 022 review fix: the second action is only the
+                        // update. Without one the column previously repeated the
+                        // primary "Play setup" immediately below itself.
+                        if matches!(
+                            item.recipe_status,
+                            ddl_core::library::RecipeStatus::Update(_)
+                        ) {
+                            b.button(2, 12., 366., 360., text(ui, T::RecipeUpdateAction), false);
+                        }
                         b.button(
                             3,
                             12.,

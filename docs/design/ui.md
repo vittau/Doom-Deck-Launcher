@@ -422,6 +422,11 @@ including installs no longer in the catalog (spec 020, R5) — and it is unreach
 runs. There is no separate Library shortcut: from Library, **A** opens detail, where the action
 lives (coordinator clarification, 2026-10-17).
 
+The second detail action is the spec 020 **Update** action and is rendered only when an update is
+available (with **Keep current** in the third slot); otherwise the column goes straight from the
+primary **Play setup** / **Install** action to the favorite, profile and Uninstall actions, so no
+label is ever repeated.
+
 The confirmation is the existing Ember sheet. It names the mapset and its installed size, and has
 one controller-toggleable checkbox, **“Also delete profiles and saves (N profiles)”**, which starts
 **unchecked** every time the sheet opens. **A** on the checkbox toggles it — no text entry — while

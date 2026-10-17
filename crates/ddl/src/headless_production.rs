@@ -1235,6 +1235,28 @@ fn profiles_journey(
     assert!(store.dirs("auger-zenith-default").root.exists());
 }
 
+/// Spec 022 review fix: each Mapset detail action label must appear exactly once
+/// (an installed mapset used to show two "Play setup" buttons), with one primary.
+fn assert_detail_actions_unique(ui: &AppWindow) {
+    let actions: Vec<_> = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.kind == 2 && (1..=5).contains(&n.id))
+        .collect();
+    let labels: Vec<String> = actions.iter().map(|n| n.label.to_string()).collect();
+    let unique: std::collections::BTreeSet<&String> = labels.iter().collect();
+    assert_eq!(
+        unique.len(),
+        labels.len(),
+        "duplicate detail action: {labels:?}"
+    );
+    assert_eq!(
+        actions.iter().filter(|n| n.primary).count(),
+        1,
+        "exactly one primary detail action: {labels:?}"
+    );
+}
+
 fn assert_profile_dirs(fake: &dsda::FakeEngineRunner, dirs: &ddl_core::profiles::ProfileDirs) {
     let launches = fake.launches();
     let args = &launches.last().unwrap().argv;
@@ -1575,6 +1597,7 @@ pub(super) fn recipe_changes_journey(window: &MinimalSoftwareWindow, ui: &AppWin
     capture(window, "020-library-update.png");
     press(window, Key::Return);
     assert_eq!(state.borrow().screen, Screen::Detail);
+    assert_detail_actions_unique(ui);
     assert!(
         ui.get_nodes()
             .iter()
@@ -1683,6 +1706,7 @@ pub(super) fn uninstall_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
         .find(|n| n.id == 5)
         .expect("an installed mapset offers Uninstall on detail");
     assert_eq!(action.label, "Uninstall");
+    assert_detail_actions_unique(ui);
     capture(window, "022-detail-uninstall.png");
 
     press(window, Key::Return);
