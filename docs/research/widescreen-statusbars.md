@@ -10,7 +10,9 @@ implication. **Needs Deck Validation** = runtime/hardware behaviour source inspe
 establish. Every repository and source link is pinned to a commit or tag; artifact observations
 are dated evidence, not upstream guarantees.
 
-**Bottom line:** the licence is **not granted anywhere** — that is a blocker for automatic
+**Update 2026-10-16 (Confirmed):** in reply to [issue #6](https://github.com/NightFright2k19/doom_widehud/issues/6) the author added a [GPL-3.0 licence](https://github.com/NightFright2k19/doom_widehud/blob/eb3773ce9e/LICENSE) (commit `eb3773ce9e`) and wrote: "Do whatever you want with it, but giving credit where credit is due is always polite. I didn't make all of these by myself." The §2 blocker is resolved for the collection; DDL credits NightFright and the contributors. The note on derived mapset art (§4.3) stays a documented residual risk.
+
+**Original bottom line (before the licence):** the licence is **not granted anywhere** — that is a blocker for automatic
 download (§2). DSDA-Doom v0.30.1 **does** support wide `STBAR` graphics out of the box with no
 flag (§3). The collection covers only **1 of DDL's 4 catalog mapsets** plus the IWADs (§4).
 
