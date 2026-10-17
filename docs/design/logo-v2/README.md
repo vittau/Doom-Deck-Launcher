@@ -1,11 +1,13 @@
-# Logo v2 — owner selection pending
+# Logo v2 — Rose Compass selected
 
 Three original directions in the Ember Cathedral palette: oxblood recesses, bronze
 carving, bone highlights and one amber focal point. All use a newly hand-drawn upright
 DDL wordmark with generous counters. The full name reuses the existing Barlow outlines
 ([SIL OFL notice](../../../crates/ddl/ui/assets/Barlow-OFL.txt)); original artwork is
 GPL-3.0-or-later. No franchise marks, game imagery or franchise-derived lettering.
-The current Ember Gate remains the production identity until the owner chooses.
+The owner selected **Rose Compass** on 2026-10-17 (D-023). Production masters,
+compiled assets and Steam exports now live under [logo/](../logo/README.md);
+these concept sheets remain as the phase-A comparison record.
 
 | Concept | Idea and strength | Small-size risk |
 | --- | --- | --- |
@@ -41,4 +43,5 @@ python3 docs/design/logo-v2/export.py --resvg /tmp/ddl-logo-tools/bin/resvg --ch
 The author script stores the hand-authored contours and reuses the committed Barlow
 name outlines without consulting system fonts. The exporter checks SVG element types,
 absence of font/image references, PNG dimensions and byte equality in `--check` mode.
-No image generation was used. Owner choice and application (spec 016 R2) remain open.
+No image generation was used. Rose Compass application is tracked in spec 016 R2/A2. Production exports use
+`../logo/export.py`; this exporter preserves the three historical comparison sheets.

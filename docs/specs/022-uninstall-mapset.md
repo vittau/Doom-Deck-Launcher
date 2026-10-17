@@ -11,8 +11,9 @@ saves go too, and nothing outside that mapset is ever touched.
 
 ## Requirements
 
-- **R1** — **Action:** "Uninstall" on Mapset detail and Library (installed mapsets only, including
-  ones no longer in the catalog, spec 020 R5). Not offered while the mapset is running.
+- **R1** — **Action:** "Uninstall" on Mapset detail (installed mapsets only, including ones no
+  longer in the catalog, spec 020 R5); from Library it is reached through the card → detail. No new
+  Library binding (Y stays reserved). Not offered while the mapset is running.
 - **R2** — **Confirm dialog with a checkbox (D-022):** names the mapset and its installed size;
   a controller-toggleable checkbox "Also delete profiles and saves (N profiles)" — **unchecked by
   default**; focus starts on Cancel. With the box unchecked only the install files go; with it

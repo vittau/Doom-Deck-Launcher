@@ -405,3 +405,35 @@
     Keep current is remembered per recipe hash in app state (schema 2, additive). 411 tests.
     Found and fixed in the spec: DDL had no uninstall flow (now spec 022 / D-022).
   refs: [docs/reports/020-recipe-change-after-install.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 016 phase B merged: Rose Compass replaces Ember Gate in the production SVG masters,
+    window icon, Steam artwork, README and social preview; screenshots regenerated. Spec 016 done.
+  refs: [docs/reports/016-readme-and-logo-v2.md]
+- date: 2026-10-17
+  type: docs
+  summary: >-
+    Orchestration docs refreshed for a successor orchestrator: routing fallback when Codex is
+    spent, brief checklist (briefs are lost between sessions), review-before-release, checks on
+    main after each merge and e2e after catalog/download changes, pause/resume with WIP branches,
+    new known stalls (headless opencode after terminal close, provider errors, Codex
+    terminal_handle_stale, run-use after a terminal change, Cloudflare-blocked sources), current
+    Run/repo ids. AGENTS.md layout corrected (no recipes/diagnostics modules; iwads added) and
+    status.md milestone line brought up to date.
+  refs: [docs/orchestration.md, AGENTS.md, docs/status.md]
+- date: 2026-10-17
+  type: spec
+  summary: >-
+    Owner asked for real screenshots on mapset cards instead of "original concept art". Spec 023
+    and D-024 (Proposed): recipes reference official screenshots with size, SHA-256 and credit;
+    DDL downloads and caches them like packages; concept art becomes the fallback.
+  refs: [docs/specs/023-mapset-screenshots.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-024 revised and accepted: the owner wants real screens in Discover without caution-driven
+    gaps ("muito preciosismo não mostrar"). Screenshots are bundled (resized, with source and
+    credit), not downloaded at runtime; every recipe gets at least one; concept art is only a
+    fallback. Spec 023 rewritten accordingly.
+  refs: [docs/specs/023-mapset-screenshots.md]
