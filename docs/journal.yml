@@ -422,3 +422,10 @@
     Run/repo ids. AGENTS.md layout corrected (no recipes/diagnostics modules; iwads added) and
     status.md milestone line brought up to date.
   refs: [docs/orchestration.md, AGENTS.md, docs/status.md]
+- date: 2026-10-17
+  type: spec
+  summary: >-
+    Owner asked for real screenshots on mapset cards instead of "original concept art". Spec 023
+    and D-024 (Proposed): recipes reference official screenshots with size, SHA-256 and credit;
+    DDL downloads and caches them like packages; concept art becomes the fallback.
+  refs: [docs/specs/023-mapset-screenshots.md]

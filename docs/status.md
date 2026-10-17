@@ -42,4 +42,5 @@
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | **Done**: typed change classification, silent metadata adoption, staged generations published by an atomic `library/<id>/active.json` rename, idempotent profile reconciliation, Update / Keep current (per recipe hash), removed-from-catalog badge, `ddl mapset status|update` |
 | Uninstall a mapset (owner decision D-022: checkbox to also delete profiles and saves) | 022 | In progress (opencode; Codex window spent until 21:38) |
+| Real mapset screenshots on cards (owner request 2026-10-17; D-024 referenced, not bundled) | 023 | Ready — research + core on opencode now; UI part on Codex after its reset |
 | GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). GOG/id Anthology Final Doom hashes added to `data/iwads.toml`. |
