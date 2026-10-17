@@ -40,9 +40,9 @@ Search/text entry. Remote catalog updates. Per-user custom tags.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R3) — lint tests for unknown tags and the cacowards citation rule; all catalog
+- [x] **A1** (R1–R3) — lint tests for unknown tags and the cacowards citation rule; all catalog
   recipes lint clean with tags; CONTRIBUTING.md updated.
-- [ ] **A2** (R4–R6) — headless renders: Discover "All", one tag category, Favorites empty and
+- [x] **A2** (R4–R6) — headless renders: Discover "All", one tag category, Favorites empty and
   non-empty, detail with tags; navigation tests for the strip and X toggling; state migration test.
-- [ ] **A3** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A4** — *Needs Deck Validation:* category strip and favorites with the controller.

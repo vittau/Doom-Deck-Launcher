@@ -123,7 +123,7 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
         }
     }
     if name == "010-discover.png" {
-        for y in 222..246 {
+        for y in 294..318 {
             for x in 32..432 {
                 assert_eq!(
                     buffer.as_slice()[y * WIDTH as usize + x],
@@ -622,6 +622,18 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert!(ui.get_nodes().iter().any(|n| n.id == 11));
     assert!(!ui.get_nodes().iter().any(|n| n.id == 12));
     capture(window, "010-library.png");
+    // Spec 015, R5: X marks the focused installed mapset; Library shows the star and sorts it first.
+    let marks = |ui: &AppWindow| ui.get_nodes().iter().filter(|n| n.kind == 12).count();
+    assert_eq!(marks(ui), 0);
+    press_char(window, "x");
+    idle(&state);
+    assert_eq!(marks(ui), 1);
+    assert!(ui.get_favorite_hint());
+    assert_eq!(ui.get_favorite_label(), "Unfavorite");
+    capture(window, "015-library-favorite.png");
+    press_char(window, "x");
+    idle(&state);
+    assert_eq!(marks(ui), 0);
     press(window, Key::F1);
     assert_eq!(state.borrow().screen, Screen::Home);
     assert!(ui.get_nodes().iter().any(|n| n.label == "Recently played"));
@@ -1000,6 +1012,246 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .content
             .len(),
         1
+    );
+}
+
+fn press_char(window: &MinimalSoftwareWindow, text: &str) {
+    window.dispatch_event(WindowEvent::KeyPressed { text: text.into() });
+}
+fn card_ids(ui: &AppWindow) -> Vec<i32> {
+    ui.get_nodes()
+        .iter()
+        .filter(|n| n.kind == 1 && n.actionable)
+        .map(|n| n.id)
+        .collect()
+}
+fn chip_labels(ui: &AppWindow) -> Vec<String> {
+    ui.get_nodes()
+        .iter()
+        .filter(|n| n.kind == 14 && (200..230).contains(&n.id))
+        .map(|n| n.label.to_string())
+        .collect()
+}
+fn selected_chip(ui: &AppWindow) -> String {
+    ui.get_nodes()
+        .iter()
+        .find(|n| n.kind == 14 && (200..230).contains(&n.id) && n.primary)
+        .map(|n| n.label.to_string())
+        .unwrap()
+}
+
+/// Spec 015 (R4–R6): category strip, favorites, tag chips; embedded catalog, no network.
+pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+        (key == "HOME").then(|| home.display().to_string())
+    })
+    .unwrap();
+    let env = Environment {
+        paths,
+        home,
+        test: None,
+    };
+    let state = crate::runtime::attach_environment(ui, env.clone());
+    idle(&state);
+    let catalog = Catalog::embedded();
+    let used: Vec<_> = catalog
+        .tags
+        .ordered()
+        .into_iter()
+        .filter(|tag| {
+            catalog
+                .recipes
+                .iter()
+                .any(|r| r.recipe.tags.contains(&tag.id))
+        })
+        .collect();
+    assert!(used.len() >= 2, "the shipped recipes use several tags");
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Discover;
+        r.focus = 10;
+        r.sync(ui);
+    }
+    let all = card_ids(ui);
+    assert_eq!(all.len(), catalog.recipes.len());
+    let mut expected = vec!["All".to_owned()];
+    expected.extend(used.iter().map(|t| t.label.clone()));
+    expected.push("Favorites".into());
+    // The strip scrolls when it is wider than the grid: the visible chips are a window
+    // of the full list, and arrows mark what is hidden.
+    let visible = chip_labels(ui);
+    assert!(
+        visible.len() >= 6 && expected.starts_with(&visible),
+        "{visible:?}"
+    );
+    let arrow = |glyph: &str| ui.get_nodes().iter().any(|n| n.label == glyph);
+    assert_eq!(arrow("›"), visible.len() < expected.len());
+    assert!(!arrow("‹"));
+    assert_eq!(selected_chip(ui), "All");
+    assert!(ui.get_category_hint() && ui.get_favorite_hint());
+    capture(window, "015-discover-all.png");
+
+    // Up from the grid reaches the strip; Left/Right switch the category as focus moves.
+    press(window, Key::UpArrow);
+    assert_eq!(ui.get_focused(), 200);
+    assert!(!ui.get_favorite_hint(), "X has no target on the strip");
+    press(window, Key::LeftArrow);
+    assert_eq!(ui.get_focused(), 200, "no edge wrap");
+    let tag_cards = |id: &str| {
+        let cards = card_ids(ui);
+        let items = state.borrow().snapshot.as_ref().unwrap().items.clone();
+        let holding: Vec<i32> = items
+            .iter()
+            .enumerate()
+            .filter(|(_, i)| i.recipe.tags.iter().any(|t| t == id))
+            .map(|(i, _)| 10 + i as i32)
+            .collect();
+        (cards, holding)
+    };
+    for (n, tag) in used.iter().enumerate() {
+        press(window, Key::RightArrow);
+        assert_eq!(ui.get_focused(), 201 + n as i32);
+        assert_eq!(selected_chip(ui), tag.label);
+        let (mut cards, mut holding) = tag_cards(&tag.id);
+        cards.sort_unstable();
+        holding.sort_unstable();
+        assert_eq!(cards, holding, "category {}", tag.id);
+        assert!(!cards.is_empty());
+        if tag.id == "cacowards" {
+            capture(window, "015-discover-category.png");
+        }
+    }
+    // Triggers (L2/R2) step the same list without wrapping, from the grid too.
+    ui.invoke_action(11);
+    assert_eq!(selected_chip(ui), used[used.len() - 2].label);
+    ui.invoke_action(12);
+    assert_eq!(selected_chip(ui), used[used.len() - 1].label);
+    press(window, Key::DownArrow);
+    assert!(card_ids(ui).contains(&ui.get_focused()));
+    ui.invoke_action(12);
+    assert_eq!(selected_chip(ui), "Favorites");
+    ui.invoke_action(12);
+    assert_eq!(selected_chip(ui), "Favorites", "no wrap at the end");
+    assert_eq!(
+        chip_labels(ui).last().map(String::as_str),
+        Some("Favorites")
+    );
+    assert_eq!(arrow("‹"), chip_labels(ui).len() < expected.len());
+    assert!(!arrow("›"));
+    // Empty Favorites: friendly explanation and a way forward.
+    assert!(card_ids(ui).is_empty());
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label.contains("press X to keep it here"))
+    );
+    assert_eq!(ui.get_focused(), 200 + used.len() as i32 + 1);
+    capture(window, "015-discover-favorites-empty.png");
+    press(window, Key::DownArrow);
+    assert_eq!(ui.get_focused(), 230);
+    press(window, Key::Return);
+    assert_eq!(selected_chip(ui), "All");
+    assert_eq!(ui.get_focused(), card_ids(ui)[0]);
+
+    // X on the second card: persisted, starred, and sorted first.
+    press(window, Key::RightArrow);
+    let second = ui.get_focused();
+    assert_ne!(second, card_ids(ui)[0]);
+    press_char(window, "x");
+    idle(&state);
+    let marked = state.borrow().snapshot.as_ref().unwrap().items[(second - 10) as usize]
+        .recipe
+        .id
+        .clone();
+    let saved = Services::open(env.clone()).unwrap().snapshot().unwrap();
+    assert_eq!(
+        saved
+            .items
+            .iter()
+            .filter(|i| i.favorite)
+            .map(|i| i.recipe.id.as_str())
+            .collect::<Vec<_>>(),
+        [marked.as_str()]
+    );
+    let first_card = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == second)
+        .map(|n| (n.x, n.y))
+        .unwrap();
+    assert_eq!(first_card, (12., 84.), "favorites sort first");
+    assert_eq!(ui.get_nodes().iter().filter(|n| n.kind == 12).count(), 1);
+    assert_eq!(ui.get_favorite_label(), "Unfavorite");
+    capture(window, "015-discover-all-favorite.png");
+    // The Favorites category now shows exactly that mapset.
+    ui.invoke_action(12);
+    assert_eq!(selected_chip(ui), used[0].label);
+    for _ in 0..used.len() {
+        ui.invoke_action(12);
+    }
+    assert_eq!(selected_chip(ui), "Favorites");
+    assert_eq!(card_ids(ui), [second]);
+    capture(window, "015-discover-favorites.png");
+
+    // Detail: all tag chips, favorite mark, X and the Favorite button.
+    press(window, Key::Return);
+    assert_eq!(state.borrow().screen, Screen::Detail);
+    let recipe = &catalog.recipe(&marked).unwrap();
+    let chips: Vec<_> = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.kind == 13)
+        .map(|n| n.label.to_string())
+        .collect();
+    let want: Vec<_> = catalog
+        .tags
+        .ordered()
+        .into_iter()
+        .filter(|t| recipe.tags.contains(&t.id))
+        .map(|t| t.label.clone())
+        .collect();
+    assert_eq!(chips, want);
+    assert!(chips.len() >= 2);
+    assert!(ui.get_nodes().iter().any(|n| n.kind == 12));
+    assert!(ui.get_favorite_hint());
+    capture(window, "015-detail-tags.png");
+    press_char(window, "x");
+    idle(&state);
+    assert!(!ui.get_nodes().iter().any(|n| n.kind == 12));
+    assert_eq!(ui.get_favorite_label(), "Favorite");
+    ui.invoke_clicked(3);
+    idle(&state);
+    assert!(ui.get_nodes().iter().any(|n| n.kind == 12));
+    ui.invoke_clicked(3);
+    idle(&state);
+    assert!(!ui.get_nodes().iter().any(|n| n.kind == 12));
+    assert!(
+        Services::open(env.clone())
+            .unwrap()
+            .snapshot()
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| !i.favorite)
+    );
+
+    // Back keeps the category; leaving Discover and returning does too.
+    press(window, Key::Escape);
+    assert_eq!(state.borrow().screen, Screen::Discover);
+    assert_eq!(selected_chip(ui), "Favorites");
+    assert!(card_ids(ui).is_empty());
+    assert!(card_ids(ui).iter().all(|id| *id != ui.get_focused()));
+    press(window, Key::F3);
+    assert_eq!(state.borrow().screen, Screen::Library);
+    press(window, Key::F2);
+    assert_eq!(state.borrow().screen, Screen::Discover);
+    assert_eq!(
+        selected_chip(ui),
+        "Favorites",
+        "last category kept for the session"
     );
 }
 

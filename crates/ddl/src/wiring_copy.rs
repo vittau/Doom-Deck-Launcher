@@ -163,6 +163,15 @@ pub enum Text {
     CancelPending,
     Shortcuts,
     Recognized,
+    AllCategory,
+    FavoritesCategory,
+    NoFavorites,
+    NoFavoritesHelp,
+    ShowAll,
+    FavoriteAdd,
+    FavoriteRemove,
+    FavoriteAddButton,
+    FavoriteRemoveButton,
     SearchStandardFolders,
 }
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
@@ -328,6 +337,15 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::CancelPending => s.get_cancel_pending(),
         Text::Shortcuts => s.get_shortcuts(),
         Text::Recognized => s.get_recognized(),
+        Text::AllCategory => s.get_all_category(),
+        Text::FavoritesCategory => s.get_favorites_category(),
+        Text::NoFavorites => s.get_no_favorites(),
+        Text::NoFavoritesHelp => s.get_no_favorites_help(),
+        Text::ShowAll => s.get_show_all(),
+        Text::FavoriteAdd => s.get_favorite_add(),
+        Text::FavoriteRemove => s.get_favorite_remove(),
+        Text::FavoriteAddButton => s.get_favorite_add_button(),
+        Text::FavoriteRemoveButton => s.get_favorite_remove_button(),
         Text::SearchStandardFolders => s.get_search_standard_folders(),
     }
 }

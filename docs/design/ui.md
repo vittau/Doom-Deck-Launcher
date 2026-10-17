@@ -159,11 +159,19 @@ Continue with “Finish setup”, naming the blocker.
 
 ### Discover — `mockups/discover.png`
 
-Purpose: browse curated categories without typing. Category strip: Featured, Beginner Friendly,
-Classics, Cacowards, Doomer Boards Projects. A 3-column grid contains cover placeholders, title,
-creators, required game + IWAD status, verification evidence summary and install state. Focused
-card gets ring; no text over art. Select opens detail, X toggles favorite. Initial first category;
-down first card, left/right cards, up category, last row down scrolls. L1/R1 remain root navigation.
+Purpose: browse curated categories without typing. **Category strip (spec 015):** “All”, then
+each tag of `catalog/tags.toml` that at least one recipe uses, in the vocabulary's `order`, then
+“Favorites”. A 3-column grid contains cover placeholders, title, creators, required game + IWAD
+status, install state, a favorite star and at most two tag chips (the open category's tag first).
+Focused card gets ring; no text over art. Select opens detail.
+Bindings: **Up** from the first grid row enters the strip at the selected chip; **Left/Right** on
+the strip moves the chip and switches the category at once (no wrap); **Down** from the strip
+enters the first card; **L2/R2** (keyboard `[` `]`) switch to the previous/next category from the
+strip or the grid, without wrap; **X** on a focused card toggles favorite (the hint bar shows
+“Favorite” / “Unfavorite”); L1/R1 remain root navigation. Favorites sort first in every category.
+A strip wider than the grid scrolls and shows `‹` / `›` for hidden chips. The last category is
+kept for the session. Empty Favorites: “No favorites yet” / “Focus a mapset in Discover or
+Library and press X to keep it here.” / “Show all mapsets”.
 Loading: “Loading curated mapsets…”; empty: “No mapsets in this collection yet” / Featured;
 error: “Catalog could not be refreshed” / Retry + use saved catalog; offline without cache:
 “Connect to download the catalog” / Open library. Search is deferred beyond curated MVP.
@@ -174,7 +182,7 @@ Purpose: decide confidently. Left cover + primary Install or Play setup; right t
 short description, base-game readiness, compatibility confidence + tested engine/date, optional
 components summary, credits/source and installed version. No invented “Verified” label in mockups:
 “Verification pending” is deliberate. “Install” stays available if the IWAD is missing; no
-“Install & Play” promise while blocked. Focus primary → Favorite → Profiles → requirements →
+“Install & Play” promise while blocked. Focus primary → Setup → Favorite (“Add to favorites” / “Remove from favorites”; **X** does the same from anywhere on the screen) → Profiles → requirements →
 components → evidence → source/credits. The pane scrolls to keep whole focused row visible.
 Loading “Loading mapset details…”; empty/removed recipe “This mapset is no longer in the catalog”
 with installed copy still reachable; error “Could not read this recipe” / Retry + Diagnostics;
@@ -231,7 +239,7 @@ missing, wrong version and ready; offline has no effect on local scan.
 
 Purpose: manage installed titles/imported PWADs. Filters All / Ready / Needs setup / Favorites;
 two-column rows show identity, game, confidence, last played, profile count and storage. Initial
-last selected card, otherwise first; A detail, X favorite, Y import local PWAD. Filter first then
+last selected card, otherwise first; A detail, X favorite (star on the card, favorites sort first; spec 015), Y import local PWAD. Filter first then
 rows in spatial order. Import is controller picker → identification summary → create local entry;
 unknown compatibility says “Not verified”, never fabricates a curated recipe. Empty “No installed
 mapsets yet” / Discover or Import; loading “Reading installed mapsets…”; error “Some installs could

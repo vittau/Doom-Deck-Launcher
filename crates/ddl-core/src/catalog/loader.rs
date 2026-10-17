@@ -11,7 +11,8 @@ use std::path::Path;
 use crate::downloads::Sha256;
 
 use super::lint::{MAX_RECIPE_BYTES, validate};
-use super::{Hosts, Recipe};
+use super::lint::{validate_tags, validate_vocabulary};
+use super::{Hosts, Recipe, TagVocabulary};
 
 /// One recipe that passed validation, with the identity of the file it came
 /// from.
@@ -40,6 +41,9 @@ pub struct SkippedRecipe {
 pub struct Catalog {
     /// The download/page host allowlist shared by every recipe.
     pub hosts: Hosts,
+    /// The reviewed tag vocabulary (spec 015); empty when `tags.toml` is
+    /// missing or invalid, in which case tagged recipes are skipped.
+    pub tags: TagVocabulary,
     /// Recipes that loaded and validated.
     pub recipes: Vec<LoadedRecipe>,
     /// Recipes (or the host file) that were rejected, with reasons.
@@ -50,17 +54,21 @@ impl Catalog {
     /// Loads the catalog compiled into the binary.
     #[must_use]
     pub fn embedded() -> Self {
-        Self::from_sources(super::EMBEDDED_HOSTS, super::EMBEDDED_RECIPES)
+        Self::from_sources(
+            super::EMBEDDED_HOSTS,
+            super::EMBEDDED_TAGS,
+            super::EMBEDDED_RECIPES,
+        )
     }
 
-    /// Loads a catalog from raw source text: the host allowlist plus
-    /// `(file name, TOML)` pairs.
+    /// Loads a catalog from raw source text: the host allowlist, the tag
+    /// vocabulary plus `(file name, TOML)` pairs.
     ///
     /// Never panics. Every recipe is validated with spec 002's rules; invalid
     /// ones are recorded in [`Catalog::skipped`] with their reason, and a
     /// duplicate id keeps the first file.
     #[must_use]
-    pub fn from_sources(hosts_text: &str, files: &[(&str, &str)]) -> Self {
+    pub fn from_sources(hosts_text: &str, tags_text: &str, files: &[(&str, &str)]) -> Self {
         let mut skipped = Vec::new();
         let hosts = match toml::from_str::<Hosts>(hosts_text) {
             Ok(hosts) => hosts,
@@ -79,9 +87,21 @@ impl Catalog {
             }
         };
 
+        let tags = match load_tags(tags_text) {
+            Ok(tags) => tags,
+            Err(reason) => {
+                tracing::warn!(reason, "catalog tags rejected; loading recipes untagged");
+                skipped.push(SkippedRecipe {
+                    file: "tags.toml".to_owned(),
+                    reason,
+                });
+                TagVocabulary::default()
+            }
+        };
+
         let mut recipes: Vec<LoadedRecipe> = Vec::with_capacity(files.len());
         for (file, text) in files {
-            match load_recipe(file, text, &hosts) {
+            match load_recipe(file, text, &hosts, &tags) {
                 Ok(loaded)
                     if recipes
                         .iter()
@@ -107,6 +127,7 @@ impl Catalog {
 
         Catalog {
             hosts,
+            tags,
             recipes,
             skipped,
         }
@@ -136,12 +157,40 @@ impl Catalog {
     }
 }
 
-fn load_recipe(file: &str, text: &str, hosts: &Hosts) -> Result<LoadedRecipe, String> {
+/// An empty `tags.toml` is an empty vocabulary; a broken one is an error.
+fn load_tags(text: &str) -> Result<TagVocabulary, String> {
+    if text.trim().is_empty() {
+        return Ok(TagVocabulary::default());
+    }
+    let vocabulary: TagVocabulary = toml::from_str(text)
+        .map_err(|error| format!("catalog tags are invalid: {}", error.message()))?;
+    let problems = validate_vocabulary(&vocabulary);
+    if problems.is_empty() {
+        Ok(vocabulary)
+    } else {
+        Err(format!(
+            "catalog tags are invalid: {}",
+            problems
+                .iter()
+                .map(|problem| format!("{} (hint: {})", problem.message, problem.hint))
+                .collect::<Vec<_>>()
+                .join("; ")
+        ))
+    }
+}
+
+fn load_recipe(
+    file: &str,
+    text: &str,
+    hosts: &Hosts,
+    tags: &TagVocabulary,
+) -> Result<LoadedRecipe, String> {
     if text.len() as u64 > MAX_RECIPE_BYTES {
         return Err(format!("recipe exceeds {MAX_RECIPE_BYTES} bytes"));
     }
     let recipe: Recipe = toml::from_str(text).map_err(|error| error.message().to_owned())?;
-    let violations = validate(&recipe, Path::new(file), hosts);
+    let mut violations = validate(&recipe, Path::new(file), hosts);
+    violations.extend(validate_tags(&recipe, tags));
     if !violations.is_empty() {
         let reason = violations
             .iter()

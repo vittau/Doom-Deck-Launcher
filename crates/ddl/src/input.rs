@@ -14,6 +14,9 @@ pub enum Action {
     Y,
     PreviousTab,
     NextTab,
+    /// L2/R2 on Discover: previous/next category (spec 015, R4).
+    PreviousCategory,
+    NextCategory,
     Menu,
     Tab(usize),
 }
@@ -31,6 +34,8 @@ impl Action {
             8 => Self::PreviousTab,
             9 => Self::NextTab,
             10 => Self::Menu,
+            11 => Self::PreviousCategory,
+            12 => Self::NextCategory,
             20..=23 => Self::Tab((code - 20) as usize),
             _ => return None,
         })
@@ -172,6 +177,8 @@ impl Mapper {
                         Button::North => Some(Action::Y),
                         Button::LeftTrigger => Some(Action::PreviousTab),
                         Button::RightTrigger => Some(Action::NextTab),
+                        Button::LeftTrigger2 => Some(Action::PreviousCategory),
+                        Button::RightTrigger2 => Some(Action::NextCategory),
                         Button::Start => Some(Action::Menu),
                         _ => None,
                     };
@@ -343,6 +350,8 @@ mod tests {
             (Button::North, Action::Y),
             (Button::LeftTrigger, Action::PreviousTab),
             (Button::RightTrigger, Action::NextTab),
+            (Button::LeftTrigger2, Action::PreviousCategory),
+            (Button::RightTrigger2, Action::NextCategory),
             (Button::Start, Action::Menu),
         ] {
             assert_eq!(m.event(0, Signal::Button(b, true), Duration::ZERO), Some(a));

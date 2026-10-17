@@ -8,6 +8,7 @@ release = "1.0"
 page = "https://romero.com/sigil"
 description = "Episode 6 for DOOM with a free MIDI soundtrack by James Paddock."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
+tags = ["featured", "episode", "challenging"]
 
 [base_game]
 game = "doom"
@@ -31,7 +32,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
-notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed."
+notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed. Tags: episode = nine maps E6M1–E6M9 (docs/research/reference-sigil.md); challenging = the romero.com release page calls it \"some hardcore classic DOOM punishment\" (docs/research/reference-sigil.md, Confirmed); featured = D-010 reference recipe. No Cacoward found for SIGIL II, so it is not tagged cacowards."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
 
 [[packages]]

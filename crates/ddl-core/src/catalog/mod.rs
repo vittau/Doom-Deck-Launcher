@@ -11,7 +11,7 @@ mod loader;
 mod model;
 
 pub use fetch::{Fetch, HttpsFetch, check_package};
-pub use lint::{Diagnostic, lint_paths, validate};
+pub use lint::{Diagnostic, lint_paths, validate, validate_tags, validate_vocabulary};
 pub use loader::{Catalog, LoadedRecipe, SkippedRecipe};
 pub use model::*;
 

@@ -71,6 +71,7 @@ fn base_recipe(id: &str) -> Recipe {
             notes: "synthetic".to_owned(),
             limitations: Vec::new(),
         },
+        tags: Vec::new(),
     }
 }
 

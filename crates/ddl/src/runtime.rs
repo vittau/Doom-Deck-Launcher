@@ -31,6 +31,23 @@ pub enum Screen {
     Browser,
     Settings,
 }
+/// A Discover category (spec 015, R4). The strip lists `All`, one `Tag` per
+/// vocabulary tag some recipe uses, then `Favorites`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Category {
+    All,
+    Tag(String),
+    Favorites,
+}
+/// First node id of the category strip; chip `k` has id `CHIP + k`.
+const CHIP: i32 = 200;
+const CHIPS_MAX: usize = 30;
+/// "Show all mapsets" button of the empty Favorites state.
+const SHOW_ALL: i32 = 230;
+/// Horizontal room for the strip, between the card grid's edges.
+const STRIP_WIDTH: f32 = 1200.;
+/// Vertical room the strip takes above the Discover grid.
+const STRIP_HEIGHT: f32 = 72.;
 #[derive(Clone)]
 enum Sheet {
     Quit,
@@ -65,6 +82,10 @@ pub struct Runtime {
     review_return: (Screen, i32),
     settings_section: usize,
     advanced: bool,
+    /// Discover category, remembered for the session (spec 015, R4).
+    category: Category,
+    /// First strip chip drawn when the strip is wider than the grid.
+    strip_start: usize,
     updates: Vec<String>,
     updates_checked: bool,
     pub last_exit: Option<ddl_core::engines::dsda::LaunchOutcome>,
@@ -97,6 +118,8 @@ impl Runtime {
             review_return: (Screen::FirstRun, 2),
             settings_section: 0,
             advanced: false,
+            category: Category::All,
+            strip_start: 0,
             updates: vec![],
             updates_checked: false,
             last_exit: None,
@@ -351,7 +374,36 @@ impl Runtime {
                     self.focus = 2;
                 }
             }
+            Action::Left | Action::Right
+                if self.screen == Screen::Discover
+                    && (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) =>
+            {
+                self.step_category(if action == Action::Right { 1 } else { -1 });
+            }
+            // The strip is entered at the selected chip and left for the first card, so
+            // the way in and out never depends on column geometry.
+            Action::Up if self.screen == Screen::Discover && (10..=99).contains(&self.focus) => {
+                self.move_focus(action);
+                if (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
+                    self.focus = CHIP + self.category_index() as i32;
+                }
+            }
+            Action::Down
+                if self.screen == Screen::Discover
+                    && (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus)
+                    && !self.discover_items().is_empty() =>
+            {
+                self.focus = 10 + self.discover_items()[0] as i32;
+            }
             Action::Up | Action::Down | Action::Left | Action::Right => self.move_focus(action),
+            Action::PreviousCategory | Action::NextCategory if self.screen == Screen::Discover => {
+                self.step_category(if action == Action::NextCategory {
+                    1
+                } else {
+                    -1
+                });
+            }
+            Action::X => self.toggle_favorite(ui),
             Action::Tab(tab) => self.tab(tab),
             Action::PreviousTab | Action::NextTab => {
                 let tab = self.tab_index();
@@ -470,6 +522,21 @@ impl Runtime {
                 self.screen = Screen::Discover;
                 self.focus = 10;
             }
+            (Screen::Discover, id) if (CHIP..CHIP + CHIPS_MAX as i32).contains(&id) => {
+                if let Some(category) = self.categories().get((id - CHIP) as usize) {
+                    self.category = category.clone();
+                }
+                if let Some(&first) = self.discover_items().first() {
+                    self.focus = 10 + first as i32;
+                }
+            }
+            (Screen::Discover, SHOW_ALL) => {
+                self.category = Category::All;
+                self.focus = self
+                    .discover_items()
+                    .first()
+                    .map_or(CHIP, |&i| 10 + i as i32);
+            }
             (Screen::Discover | Screen::Library, 10..=99) => {
                 if self.screen == Screen::Library
                     && self
@@ -494,6 +561,7 @@ impl Runtime {
                 }
             }
             (Screen::Detail, 2) => self.enter(Screen::Setup, 50),
+            (Screen::Detail, 3) => self.toggle_favorite(ui),
             (Screen::Setup, 1) => {
                 if self.snapshot.as_ref().is_some_and(|s| !s.config_usable) {
                     self.enter(Screen::Settings, 70);
@@ -692,6 +760,103 @@ impl Runtime {
             _ => {}
         }
     }
+    /// The strip: `All`, the vocabulary tags some recipe uses (in `order`), `Favorites`.
+    fn categories(&self) -> Vec<Category> {
+        let mut list = vec![Category::All];
+        if let Some(s) = &self.snapshot {
+            list.extend(
+                s.tags
+                    .ordered()
+                    .into_iter()
+                    .filter(|tag| s.items.iter().any(|i| i.recipe.tags.contains(&tag.id)))
+                    .take(CHIPS_MAX - 2)
+                    .map(|tag| Category::Tag(tag.id.clone())),
+            );
+        }
+        list.push(Category::Favorites);
+        list
+    }
+    fn category_label(&self, ui: &AppWindow, category: &Category) -> String {
+        match category {
+            Category::All => text(ui, T::AllCategory).into(),
+            Category::Favorites => text(ui, T::FavoritesCategory).into(),
+            Category::Tag(id) => self
+                .snapshot
+                .as_ref()
+                .and_then(|s| s.tags.get(id))
+                .map_or_else(|| id.clone(), |tag| tag.label.clone()),
+        }
+    }
+    fn category_index(&self) -> usize {
+        self.categories()
+            .iter()
+            .position(|c| *c == self.category)
+            .unwrap_or(0)
+    }
+    /// Snapshot indexes shown on Discover in the current category, favorites first.
+    fn discover_items(&self) -> Vec<usize> {
+        let Some(s) = &self.snapshot else {
+            return vec![];
+        };
+        let mut shown: Vec<usize> = (0..s.items.len())
+            .filter(|&i| match &self.category {
+                Category::All => true,
+                Category::Tag(id) => s.items[i].recipe.tags.contains(id),
+                Category::Favorites => s.items[i].favorite,
+            })
+            .collect();
+        shown.sort_by_key(|&i| !s.items[i].favorite);
+        shown
+    }
+    /// Snapshot indexes shown on Library: installed mapsets, favorites first.
+    fn library_items(&self) -> Vec<usize> {
+        let Some(s) = &self.snapshot else {
+            return vec![];
+        };
+        let mut shown: Vec<usize> = (0..s.items.len())
+            .filter(|&i| s.items[i].manifest.is_some())
+            .collect();
+        shown.sort_by_key(|&i| !s.items[i].favorite);
+        shown
+    }
+    /// Moves the category by `delta` without wrapping; the strip chip keeps focus
+    /// when it had it, otherwise focus enters the new grid (or the chip when empty).
+    fn step_category(&mut self, delta: isize) {
+        let list = self.categories();
+        let next = (self.category_index() as isize + delta).clamp(0, list.len() as isize - 1);
+        self.category = list[next as usize].clone();
+        if !(CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
+            self.focus = self
+                .discover_items()
+                .first()
+                .map_or(CHIP + next as i32, |&i| 10 + i as i32);
+        } else {
+            self.focus = CHIP + next as i32;
+        }
+    }
+    /// X: toggles the favorite mark of the focused card, or of the open detail.
+    fn toggle_favorite(&mut self, ui: &AppWindow) {
+        if self.busy {
+            return;
+        }
+        let target = match self.screen {
+            Screen::Discover | Screen::Library if (10..=99).contains(&self.focus) => {
+                Some((self.focus - 10) as usize)
+            }
+            Screen::Detail => Some(self.selected),
+            _ => None,
+        };
+        let Some(index) = target else {
+            return;
+        };
+        let Some(item) = self.snapshot.as_mut().and_then(|s| s.items.get_mut(index)) else {
+            return;
+        };
+        // Optimistic: the saved state replaces the snapshot when the worker finishes.
+        item.favorite = !item.favorite;
+        let id = item.recipe.id.clone();
+        self.start(ui, Command::Favorite(id));
+    }
     fn tab_index(&self) -> usize {
         match self.screen {
             Screen::Discover => 1,
@@ -746,6 +911,9 @@ impl Runtime {
         }
     }
     pub fn sync(&mut self, ui: &AppWindow) {
+        if !self.categories().contains(&self.category) {
+            self.category = Category::All;
+        }
         if self.screen == Screen::Settings && (1..=4).contains(&self.focus) {
             self.settings_section = (self.focus - 1) as usize;
         }
@@ -975,16 +1143,23 @@ impl Runtime {
                     b.button(2, 852., 402., 336., text(ui, T::DiscoverAction), false);
                 }
                 Screen::Discover | Screen::Library => {
+                    let discover = self.screen == Screen::Discover;
+                    let shown = if discover {
+                        self.discover_items()
+                    } else {
+                        self.library_items()
+                    };
+                    let top = if discover { STRIP_HEIGHT } else { 0. };
                     if let Some(s) = &self.snapshot {
-                        let mut visible = 0;
-                        for (i, item) in s.items.iter().enumerate() {
-                            if self.screen == Screen::Library && item.manifest.is_none() {
-                                continue;
-                            }
+                        for (visible, &i) in shown.iter().enumerate() {
+                            let item = &s.items[i];
                             let x = 12. + 408. * (visible % 3) as f32;
-                            let y = 12. + 438. * (visible / 3) as f32;
+                            let y = 12. + top + 438. * (visible / 3) as f32;
                             b.card(10 + i as i32, x, y, 384., 410.);
                             b.art(x + 16., y + 16., 352., 142., art(&item.recipe.id));
+                            if item.favorite {
+                                b.favorite(x + 316., y + 26.);
+                            }
                             b.label(
                                 x + 20.,
                                 y + 174.,
@@ -995,25 +1170,25 @@ impl Runtime {
                             );
                             b.label(
                                 x + 20.,
-                                y + 222.,
+                                y + 218.,
                                 344.,
-                                54.,
-                                item.recipe.authors.join(", ").into(),
+                                50.,
+                                authors_line(&item.recipe, 60),
                                 20.,
                             );
                             b.label(
                                 x + 20.,
-                                y + 284.,
+                                y + 270.,
                                 344.,
-                                30.,
+                                28.,
                                 game(ui, item.recipe.base_game.game),
                                 22.,
                             );
                             b.label(
                                 x + 20.,
-                                y + 320.,
+                                y + 300.,
                                 344.,
-                                36.,
+                                28.,
                                 text(
                                     ui,
                                     if base_ready(s, &item.recipe) {
@@ -1026,9 +1201,9 @@ impl Runtime {
                             );
                             b.label(
                                 x + 20.,
-                                y + 366.,
+                                y + 330.,
                                 344.,
-                                30.,
+                                28.,
                                 text(
                                     ui,
                                     if item.manifest.is_some() {
@@ -1039,22 +1214,65 @@ impl Runtime {
                                 ),
                                 20.,
                             );
-                            visible += 1;
+                            let lead = match &self.category {
+                                Category::Tag(id) if discover => Some(id.as_str()),
+                                _ => None,
+                            };
+                            b.chips(
+                                &tag_labels(s, &item.recipe, 2, lead),
+                                x + 20.,
+                                y + 366.,
+                                344.,
+                            );
                         }
-                        if visible == 0 {
+                        if discover && self.category == Category::Favorites && shown.is_empty() {
+                            b.panel(12., 12. + top, 1200., 280.);
+                            b.label(36., 36. + top, 1100., 70., text(ui, T::NoFavorites), 30.);
+                            b.label(
+                                36.,
+                                112. + top,
+                                1100.,
+                                70.,
+                                text(ui, T::NoFavoritesHelp),
+                                22.,
+                            );
+                            b.button(SHOW_ALL, 36., 204. + top, 400., text(ui, T::ShowAll), true);
+                        } else if shown.is_empty() {
                             b.panel(12., 12., 1200., 300.);
                             b.label(36., 60., 1100., 70., text(ui, T::NoInstalled), 30.);
                             b.button(10, 36., 180., 400., text(ui, T::DiscoverAction), true);
+                        }
+                        if discover {
+                            // After the cards, so the first actionable node stays a card.
+                            let chips: Vec<(String, bool)> = self
+                                .categories()
+                                .iter()
+                                .map(|c| (self.category_label(ui, c), *c == self.category))
+                                .collect();
+                            let selected = self.category_index();
+                            self.strip_start = b.strip(
+                                &chips,
+                                selected,
+                                self.strip_start,
+                                if self.focus >= CHIP && self.focus < CHIP + CHIPS_MAX as i32 {
+                                    Some((self.focus - CHIP) as usize)
+                                } else {
+                                    None
+                                },
+                            );
                         }
                     }
                 }
                 Screen::Detail => {
                     if let Some(item) = self.item() {
-                        b.art(12., 12., 360., 318., art(&item.recipe.id));
+                        b.art(12., 12., 360., 262., art(&item.recipe.id));
+                        if item.favorite {
+                            b.favorite(316., 22.);
+                        }
                         b.button(
                             1,
                             12.,
-                            362.,
+                            298.,
                             360.,
                             text(
                                 ui,
@@ -1066,7 +1284,22 @@ impl Runtime {
                             ),
                             true,
                         );
-                        b.button(2, 12., 438., 360., text(ui, T::Setup), false);
+                        b.button(2, 12., 366., 360., text(ui, T::Setup), false);
+                        b.button(
+                            3,
+                            12.,
+                            434.,
+                            360.,
+                            text(
+                                ui,
+                                if item.favorite {
+                                    T::FavoriteRemoveButton
+                                } else {
+                                    T::FavoriteAddButton
+                                },
+                            ),
+                            false,
+                        );
                         b.panel(404., 12., 808., 478.);
                         b.label(
                             428.,
@@ -1076,25 +1309,25 @@ impl Runtime {
                             display_title(&item.recipe).into(),
                             40.,
                         );
+                        b.label(428., 100., 760., 32., authors_line(&item.recipe, 66), 22.);
                         b.label(
                             428.,
-                            110.,
+                            138.,
                             760.,
-                            36.,
-                            item.recipe.authors.join(", ").into(),
-                            22.,
-                        );
-                        b.label(
-                            428.,
-                            164.,
-                            760.,
-                            100.,
+                            96.,
                             item.recipe.description.clone().into(),
                             22.,
                         );
+                        let mut y = 242.;
+                        if let Some(s) = &self.snapshot {
+                            let labels = tag_labels(s, &item.recipe, usize::MAX, None);
+                            if !labels.is_empty() {
+                                y += 38. * b.chips(&labels, 428., y, 760.) as f32 + 6.;
+                            }
+                        }
                         b.label(
                             428.,
-                            278.,
+                            y,
                             760.,
                             36.,
                             game(ui, item.recipe.base_game.game),
@@ -1102,9 +1335,9 @@ impl Runtime {
                         );
                         b.label(
                             428.,
-                            326.,
+                            y + 44.,
                             760.,
-                            54.,
+                            44.,
                             text(
                                 ui,
                                 if self
@@ -1119,8 +1352,15 @@ impl Runtime {
                             ),
                             22.,
                         );
-                        b.label(428., 392., 760., 36., text(ui, T::Verification), 20.);
-                        b.label(428., 438., 760., 36., item.recipe.page.clone().into(), 20.);
+                        b.label(428., y + 104., 760., 36., text(ui, T::Verification), 20.);
+                        b.label(
+                            428.,
+                            y + 148.,
+                            760.,
+                            36.,
+                            item.recipe.page.clone().into(),
+                            20.,
+                        );
                     }
                 }
                 Screen::Setup => {
@@ -1878,7 +2118,28 @@ impl Runtime {
                 .find(|n| n.id == self.focus && !n.label.is_empty())
                 .map_or_else(|| text(ui, T::Open), |n| n.label.clone()),
         );
-        ui.set_favorite_hint(false);
+        let card_focus = matches!(self.screen, Screen::Discover | Screen::Library)
+            && (10..=99).contains(&self.focus);
+        let marked = if card_focus {
+            self.snapshot
+                .as_ref()
+                .and_then(|s| s.items.get((self.focus - 10) as usize))
+        } else {
+            self.item()
+        }
+        .is_some_and(|i| i.favorite);
+        ui.set_favorite_hint(
+            !self.playing && (card_focus || self.screen == Screen::Detail) && self.sheet.is_none(),
+        );
+        ui.set_favorite_label(text(
+            ui,
+            if marked {
+                T::FavoriteRemove
+            } else {
+                T::FavoriteAdd
+            },
+        ));
+        ui.set_category_hint(self.screen == Screen::Discover && !self.playing);
         ui.set_detail_hint(false);
         ui.set_import_hint(false);
         ui.set_sheet_open(self.sheet.is_some());
@@ -1897,6 +2158,48 @@ impl Runtime {
             ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
         }
     }
+}
+/// Vocabulary labels of a recipe's tags in `order`, at most `limit`; ids the
+/// vocabulary does not know are left out. `first` (the open category's tag)
+/// leads, so a Cacowards card keeps its Cacowards chip when only two fit.
+fn tag_labels(
+    s: &Snapshot,
+    recipe: &ddl_core::catalog::Recipe,
+    limit: usize,
+    first: Option<&str>,
+) -> Vec<String> {
+    let mut tags: Vec<_> = s
+        .tags
+        .ordered()
+        .into_iter()
+        .filter(|tag| recipe.tags.contains(&tag.id))
+        .collect();
+    tags.sort_by_key(|tag| Some(tag.id.as_str()) != first);
+    tags.into_iter()
+        .take(limit)
+        .map(|tag| tag.label.clone())
+        .collect()
+}
+/// The credited authors on one line: whole names up to `max` characters, then `…`.
+fn authors_line(recipe: &ddl_core::catalog::Recipe, max: usize) -> SharedString {
+    let mut line = String::new();
+    for (n, author) in recipe.authors.iter().enumerate() {
+        let next = if n == 0 {
+            author.clone()
+        } else {
+            format!("{line}, {author}")
+        };
+        if next.chars().count() > max && n > 0 {
+            line.push('…');
+            return line.into();
+        }
+        line = next;
+    }
+    line.into()
+}
+/// Rough text width of a Barlow label at `size`, for packing chips.
+fn chip_width(label: &str, size: f32) -> f32 {
+    (label.chars().count() as f32 * size * 0.53 + 26.).ceil()
 }
 fn art(id: &str) -> i32 {
     match id {
@@ -2114,6 +2417,101 @@ impl Nodes {
             false,
         );
     }
+    /// A gold star on a dark disc marking a favorite.
+    fn favorite(&mut self, x: f32, y: f32) {
+        self.push(
+            -999,
+            x,
+            y,
+            36.,
+            36.,
+            12,
+            Default::default(),
+            Default::default(),
+            false,
+            false,
+        );
+    }
+    /// Tag chips from `x`, wrapping inside `width`; returns the rows used.
+    /// Chips that do not fit in the second row are dropped.
+    fn chips(&mut self, labels: &[String], x: f32, y: f32, width: f32) -> usize {
+        let (mut cx, mut row) = (0., 0);
+        for label in labels {
+            let w = chip_width(label, 18.);
+            if cx > 0. && cx + w > width {
+                (cx, row) = (0., row + 1);
+            }
+            if row > 1 {
+                break;
+            }
+            self.push(
+                -999,
+                x + cx,
+                y + row as f32 * 38.,
+                w,
+                30.,
+                13,
+                label.as_str().into(),
+                Default::default(),
+                false,
+                false,
+            );
+            self.nodes.last_mut().unwrap().size = 18.;
+            cx += w + 8.;
+        }
+        if labels.is_empty() { 0 } else { row.min(1) + 1 }
+    }
+    /// The Discover category strip at the top of the grid. Chips wider than the
+    /// grid scroll: `start` is the first chip drawn, kept so `selected` and
+    /// `focused` stay visible. Returns the new `start`.
+    fn strip(
+        &mut self,
+        chips: &[(String, bool)],
+        selected: usize,
+        start: usize,
+        focused: Option<usize>,
+    ) -> usize {
+        let widths: Vec<f32> = chips.iter().map(|(l, _)| chip_width(l, 20.)).collect();
+        let span = |a: usize, b: usize| widths[a..=b].iter().sum::<f32>() + 12. * (b - a) as f32;
+        let overflow = span(0, chips.len() - 1) > STRIP_WIDTH;
+        let room = if overflow {
+            STRIP_WIDTH - 72.
+        } else {
+            STRIP_WIDTH
+        };
+        let anchor = focused.unwrap_or(selected).min(chips.len() - 1);
+        let mut start = if overflow { start.min(anchor) } else { 0 };
+        while overflow && start < anchor && span(start, anchor) > room {
+            start += 1;
+        }
+        let mut x = if overflow { 48. } else { 12. };
+        let mut last = start;
+        for (k, (label, on)) in chips.iter().enumerate().skip(start) {
+            if x + widths[k] > 12. + STRIP_WIDTH - if overflow { 36. } else { 0. } && k > anchor {
+                break;
+            }
+            self.choice(
+                CHIP + k as i32,
+                x,
+                12.,
+                widths[k],
+                label.as_str().into(),
+                *on,
+            );
+            self.nodes.last_mut().unwrap().kind = 14;
+            x += widths[k] + 12.;
+            last = k;
+        }
+        if overflow {
+            for (hidden, gx) in [(start > 0, 12.), (last + 1 < chips.len(), 1176.)] {
+                if hidden {
+                    let glyph = if gx < 100. { "‹" } else { "›" };
+                    self.label(gx, 12., 36., 52., glyph.into(), 40.);
+                }
+            }
+        }
+        start
+    }
     fn card(&mut self, id: i32, x: f32, y: f32, w: f32, h: f32) {
         self.push(
             id,
@@ -2250,5 +2648,125 @@ mod visual_copy_tests {
 
         // Every other problem stays a static key.
         assert!(problem_detail(&Problem::Engine).is_none());
+    }
+}
+
+#[cfg(test)]
+mod category_tests {
+    use super::*;
+    use ddl_core::catalog::Catalog;
+
+    fn chips(labels: &[&str], selected: usize) -> Vec<(String, bool)> {
+        labels
+            .iter()
+            .enumerate()
+            .map(|(i, l)| ((*l).to_owned(), i == selected))
+            .collect()
+    }
+    fn drawn(b: &Nodes) -> Vec<i32> {
+        b.nodes
+            .iter()
+            .filter(|n| n.kind == 14)
+            .map(|n| n.id - CHIP)
+            .collect()
+    }
+    #[test]
+    fn a_strip_that_fits_is_drawn_whole_without_arrows() {
+        let mut b = Nodes { nodes: vec![] };
+        let start = b.strip(&chips(&["All", "Episodes", "Favorites"], 0), 0, 0, None);
+        assert_eq!((start, drawn(&b)), (0, vec![0, 1, 2]));
+        assert!(b.nodes.iter().all(|n| n.kind != 0));
+        assert!(b.nodes.iter().all(|n| n.x + n.w <= 12. + STRIP_WIDTH));
+    }
+    #[test]
+    fn a_wide_strip_scrolls_to_keep_the_selected_and_focused_chip_visible() {
+        let labels = [
+            "All",
+            "Featured",
+            "Beginner Friendly",
+            "Classics",
+            "Cacowards",
+            "Community Projects",
+            "Megawads",
+            "Episodes",
+            "Challenging",
+            "Favorites",
+        ];
+        for selected in 0..labels.len() {
+            let mut b = Nodes { nodes: vec![] };
+            let start = b.strip(&chips(&labels, selected), selected, 0, Some(selected));
+            let shown = drawn(&b);
+            assert!(shown.contains(&(selected as i32)), "{selected}: {shown:?}");
+            assert_eq!(shown[0] as usize, start);
+            assert!(
+                b.nodes
+                    .iter()
+                    .all(|n| n.x >= 0. && n.x + n.w <= 12. + STRIP_WIDTH),
+                "{selected}: strip inside the grid width"
+            );
+            let arrows: Vec<_> = b.nodes.iter().filter(|n| n.kind == 0).collect();
+            assert_eq!(arrows.iter().any(|n| n.label == "‹"), start > 0);
+            assert_eq!(
+                arrows.iter().any(|n| n.label == "›"),
+                *shown.last().unwrap() as usize + 1 < labels.len()
+            );
+        }
+        // The window stays put while the selection moves inside it.
+        let mut b = Nodes { nodes: vec![] };
+        let held = b.strip(&chips(&labels, 5), 5, 3, Some(5));
+        assert_eq!(held, 3);
+    }
+    #[test]
+    fn cards_show_at_most_two_tag_chips_led_by_the_open_category() {
+        let catalog = Catalog::embedded();
+        let recipe = catalog.recipe("eviternity").unwrap();
+        let s = Snapshot {
+            items: vec![],
+            tags: catalog.tags.clone(),
+            engine: None,
+            previous: None,
+            attribution: None,
+            iwads: vec![],
+            folders: vec![],
+            config_notice: false,
+            config_usable: true,
+            config_version: String::new(),
+            logs: PathBuf::new(),
+            search_standard_folders: false,
+        };
+        assert_eq!(
+            tag_labels(&s, recipe, 2, None),
+            ["Classics", "Cacowards"],
+            "vocabulary order"
+        );
+        assert_eq!(
+            tag_labels(&s, recipe, 2, Some("megawad")),
+            ["Megawads", "Classics"]
+        );
+        assert_eq!(
+            tag_labels(&s, recipe, usize::MAX, None).len(),
+            recipe.tags.len()
+        );
+        let mut b = Nodes { nodes: vec![] };
+        let labels = tag_labels(&s, recipe, usize::MAX, None);
+        assert_eq!(b.chips(&labels, 0., 0., 760.), 1);
+        let many: Vec<String> = (0..12).map(|n| format!("Long tag name {n}")).collect();
+        let mut b = Nodes { nodes: vec![] };
+        assert_eq!(
+            b.chips(&many, 0., 0., 760.),
+            2,
+            "wraps, then drops the rest"
+        );
+        assert!(b.nodes.iter().all(|n| n.x + n.w <= 760.));
+    }
+    #[test]
+    fn author_lines_elide_whole_names() {
+        let catalog = Catalog::embedded();
+        let eviternity = catalog.recipe("eviternity").unwrap();
+        let line = authors_line(eviternity, 66);
+        assert!(line.ends_with('…') && line.chars().count() <= 67, "{line}");
+        assert!(line.starts_with("Joshua"));
+        let sigil = catalog.recipe("sigil").unwrap();
+        assert_eq!(authors_line(sigil, 66), "John Romero");
     }
 }

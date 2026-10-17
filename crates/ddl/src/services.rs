@@ -1,6 +1,6 @@
 //! Thin application services. Constructed and used exclusively on a worker thread.
 use ddl_core::{
-    catalog::{Catalog, Game, Recipe},
+    catalog::{Catalog, Game, Recipe, TagVocabulary},
     downloads::{CancellationToken, HostAllowlist, InstallProgress},
     dsda_config::DsdaConfigManager,
     engines::dsda::{self, EngineManager, EngineRunner},
@@ -15,7 +15,7 @@ use ddl_core::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fmt, fs,
     io::{self, Write},
     path::{Path, PathBuf},
@@ -126,20 +126,42 @@ struct AppState {
     schema_version: u32,
     folders: Vec<PathBuf>,
     recipes: BTreeMap<String, Recipe>,
-    /// R4: also probe the generic DOOM folders and `DOOMWADDIR`/`DOOMWADPATH`.
-    /// Default off. The field is additive inside schema 1, so an existing state
-    /// file without it loads as `false`; spec 015 folds it into its schema 2.
+    /// Recipe ids the player marked (spec 015, R5); added by schema 2.
+    #[serde(default)]
+    favorites: BTreeSet<String>,
+    /// Spec 021 R4: also probe the generic DOOM folders and
+    /// `DOOMWADDIR`/`DOOMWADPATH`. Default off. Added while the file was still
+    /// schema 1 (absent loads as `false`); schema 2 carries it unchanged.
     #[serde(default)]
     search_standard_folders: bool,
 }
+/// Current `app.json` schema. 1 → 2 added `favorites` (spec 015) and kept spec
+/// 021's additive `search_standard_folders`; a schema 1 file is migrated in
+/// memory on load and written as schema 2 by the next save.
+const STATE_SCHEMA: u32 = 2;
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            schema_version: 1,
+            schema_version: STATE_SCHEMA,
             folders: vec![],
             recipes: BTreeMap::new(),
+            favorites: BTreeSet::new(),
             search_standard_folders: false,
         }
+    }
+}
+impl AppState {
+    /// Reads `app.json` bytes of any supported schema; newer or unknown
+    /// schemas are rejected rather than guessed at.
+    fn parse(bytes: &[u8]) -> Result<Self, Problem> {
+        let mut state: Self =
+            serde_json::from_slice(bytes).map_err(|e| logged(Problem::State, e))?;
+        match state.schema_version {
+            1 => state.schema_version = STATE_SCHEMA,
+            STATE_SCHEMA => {}
+            _ => return Err(Problem::State),
+        }
+        Ok(state)
     }
 }
 /// Versioned machine state, replace by rename after flushing the complete file.
@@ -169,10 +191,13 @@ pub struct Item {
     pub manifest: Option<InstallManifest>,
     pub profile: Profile,
     pub launch: Result<Summary, Blocker>,
+    pub favorite: bool,
 }
 #[derive(Debug, Clone)]
 pub struct Snapshot {
     pub items: Vec<Item>,
+    /// The reviewed tag vocabulary, for Discover categories and chips.
+    pub tags: TagVocabulary,
     pub engine: Option<dsda::InstalledEngine>,
     pub previous: Option<String>,
     pub attribution: Option<dsda::Attribution>,
@@ -200,6 +225,8 @@ pub enum Command {
     RemoveFolder(PathBuf),
     Install(String),
     Save(Profile),
+    /// Toggles the favorite mark of a recipe id (spec 015, R5).
+    Favorite(String),
     Play(String),
     Browse(PathBuf, bool),
     Updates,
@@ -266,9 +293,7 @@ impl Services {
         }
         let state_path = paths.config.join("app.json");
         let state: AppState = match fs::read(&state_path) {
-            Ok(bytes) if bytes.len() <= 4 * 1024 * 1024 => {
-                serde_json::from_slice(&bytes).map_err(|e| logged(Problem::State, e))?
-            }
+            Ok(bytes) if bytes.len() <= 4 * 1024 * 1024 => AppState::parse(&bytes)?,
             Err(e) if e.kind() == io::ErrorKind::NotFound => AppState::default(),
             result => {
                 return Err(logged(
@@ -277,11 +302,6 @@ impl Services {
                 ));
             }
         };
-        // Spec 021 R4's `search_standard_folders` is additive inside schema 1
-        // (absent = `false`); spec 015 owns the 1 -> 2 bump.
-        if state.schema_version != 1 {
-            return Err(Problem::State);
-        }
         let catalog = Catalog::embedded();
         #[cfg(test)]
         let catalog = env.test.as_ref().map_or(catalog, |t| t.catalog.clone());
@@ -365,6 +385,14 @@ impl Services {
             .map(|r| (r.recipe.id.clone(), r.recipe.clone()))
             .collect();
         recipes.extend(self.state.recipes.clone());
+        // Tags are display metadata: an install snapshot taken before a recipe
+        // was tagged still shows the catalog's current tags (launch data stays
+        // frozen in the snapshot, D-019).
+        for recipe in recipes.values_mut() {
+            if let Some(current) = self.catalog.recipe(&recipe.id) {
+                recipe.tags.clone_from(&current.tags);
+            }
+        }
         let held_profiles = self
             .profiles
             .list()
@@ -395,6 +423,7 @@ impl Services {
                 None => Err(Blocker::NotInstalled),
             };
             items.push(Item {
+                favorite: self.state.favorites.contains(&recipe.id),
                 recipe,
                 manifest,
                 profile,
@@ -404,6 +433,7 @@ impl Services {
         let config = self.config.state().ok();
         Ok(Snapshot {
             items,
+            tags: self.catalog.tags.clone(),
             previous: engines.previous_good,
             attribution: engine
                 .as_ref()
@@ -538,6 +568,13 @@ impl Services {
                 self.profiles
                     .save(&profile)
                     .map_err(|e| logged(Problem::Storage, e))?;
+            }
+            Command::Favorite(id) => {
+                self.recipe(&id)?;
+                if !self.state.favorites.remove(&id) {
+                    self.state.favorites.insert(id);
+                }
+                self.save()?;
             }
             Command::Play(id) => {
                 let recipe = self.recipe(&id)?;
@@ -1465,6 +1502,91 @@ mod tests {
         .unwrap();
         assert!(matches!(Services::open(env), Err(Problem::State)));
     }
+    fn favorite(s: &mut Services, id: &str) -> Result<(), Problem> {
+        s.execute(
+            Command::Favorite(id.into()),
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+    }
+    fn state_file(env: &Environment) -> serde_json::Value {
+        serde_json::from_slice(&fs::read(env.paths.config.join("app.json")).unwrap()).unwrap()
+    }
+    #[test]
+    fn favorites_toggle_persist_and_reject_unknown_recipes() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        assert!(s.snapshot().unwrap().items.iter().all(|i| !i.favorite));
+        favorite(&mut s, "sigil").unwrap();
+        let state = state_file(&env);
+        assert_eq!(state["schema_version"], 2);
+        assert_eq!(state["favorites"], serde_json::json!(["sigil"]));
+        let reopened = Services::open(env.clone()).unwrap().snapshot().unwrap();
+        let marked: Vec<_> = reopened
+            .items
+            .iter()
+            .filter(|i| i.favorite)
+            .map(|i| i.recipe.id.as_str())
+            .collect();
+        assert_eq!(marked, ["sigil"]);
+        // An id the catalog does not know is refused and changes nothing.
+        assert_eq!(favorite(&mut s, "no-such-mapset"), Err(Problem::State));
+        assert_eq!(state_file(&env)["favorites"], serde_json::json!(["sigil"]));
+        favorite(&mut s, "sigil").unwrap();
+        assert_eq!(state_file(&env)["favorites"], serde_json::json!([]));
+    }
+    #[test]
+    fn schema_one_state_migrates_to_two_keeping_folders_and_installs() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        fs::create_dir_all(&env.paths.config).unwrap();
+        let folder = temp.path().join("iwads");
+        fs::write(
+            env.paths.config.join("app.json"),
+            format!(r#"{{"schema_version":1,"folders":[{folder:?}],"recipes":{{}}}}"#),
+        )
+        .unwrap();
+        let mut s = Services::open(env.clone()).unwrap();
+        // Loading alone leaves the old file as written.
+        assert_eq!(state_file(&env)["schema_version"], 1);
+        let snapshot = s.snapshot().unwrap();
+        assert_eq!(snapshot.folders, std::slice::from_ref(&folder));
+        assert!(snapshot.items.iter().all(|i| !i.favorite));
+        // The next save writes schema 2 with the old data and the new field.
+        favorite(&mut s, "sigil-ii").unwrap();
+        let state = state_file(&env);
+        assert_eq!(state["schema_version"], 2);
+        assert_eq!(state["favorites"], serde_json::json!(["sigil-ii"]));
+        assert_eq!(state["folders"], serde_json::json!([folder]));
+        assert!(Services::open(env).is_ok());
+    }
+    #[test]
+    fn install_snapshots_without_tags_show_the_catalog_tags() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let catalog = Catalog::embedded();
+        let mut old = catalog.recipe("sigil").unwrap().clone();
+        old.tags.clear();
+        fs::create_dir_all(&env.paths.config).unwrap();
+        fs::write(
+            env.paths.config.join("app.json"),
+            serde_json::json!({
+                "schema_version": 1, "folders": [], "recipes": { "sigil": old }
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let snapshot = Services::open(env).unwrap().snapshot().unwrap();
+        let sigil = snapshot
+            .items
+            .iter()
+            .find(|i| i.recipe.id == "sigil")
+            .unwrap();
+        assert!(!sigil.recipe.tags.is_empty());
+        assert_eq!(sigil.recipe.tags, catalog.recipe("sigil").unwrap().tags);
+        assert_eq!(snapshot.tags, catalog.tags);
+    }
 
     #[test]
     fn an_existing_state_file_without_the_setting_loads_off_and_round_trips() {
@@ -1497,7 +1619,8 @@ mod tests {
             "the setting round-trips"
         );
         let raw = fs::read_to_string(env.paths.config.join("app.json")).unwrap();
-        assert!(raw.contains("\"schema_version\": 1"), "{raw}");
+        // The save migrated the file to schema 2 (spec 015) and kept the setting.
+        assert!(raw.contains("\"schema_version\": 2"), "{raw}");
         assert!(raw.contains("\"search_standard_folders\": true"), "{raw}");
     }
     #[test]

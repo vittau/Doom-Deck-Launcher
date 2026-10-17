@@ -739,6 +739,7 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
 #[test]
 fn invalid_recipes_are_skipped_with_a_logged_reason_never_crashing() {
     let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
+    let tags_text = fs::read_to_string(format!("{CATALOG}/tags.toml")).unwrap();
     let good = fs::read_to_string(format!("{CATALOG}/sigil.toml")).unwrap();
     // A recipe whose package hash is malformed must be skipped, not accepted.
     let broken = good.replace(
@@ -750,6 +751,7 @@ fn invalid_recipes_are_skipped_with_a_logged_reason_never_crashing() {
 
     let catalog = Catalog::from_sources(
         &hosts_text,
+        &tags_text,
         &[
             ("sigil.toml", good.as_str()),
             ("broken.toml", broken.as_str()),
@@ -775,9 +777,11 @@ fn invalid_recipes_are_skipped_with_a_logged_reason_never_crashing() {
 #[test]
 fn duplicate_recipe_ids_keep_the_first_file() {
     let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
+    let tags_text = fs::read_to_string(format!("{CATALOG}/tags.toml")).unwrap();
     let good = fs::read_to_string(format!("{CATALOG}/sigil.toml")).unwrap();
     let catalog = Catalog::from_sources(
         &hosts_text,
+        &tags_text,
         &[("sigil.toml", good.as_str()), ("sigil.toml", good.as_str())],
     );
     assert_eq!(catalog.recipes.len(), 1);
@@ -805,4 +809,192 @@ fn semantic_diagnostics_locate_repeated_nested_keys() {
     );
     assert_eq!(errors.len(), 1, "{errors:?}");
     assert_eq!(errors[0].line, expected, "{errors:?}");
+}
+
+fn vocabulary() -> TagVocabulary {
+    toml::from_str(&fs::read_to_string(format!("{CATALOG}/tags.toml")).unwrap()).unwrap()
+}
+
+#[test]
+fn shipped_vocabulary_is_valid_and_has_the_spec_015_tags() {
+    let vocabulary = vocabulary();
+    assert_eq!(validate_vocabulary(&vocabulary), vec![]);
+    let ids: Vec<_> = vocabulary.ordered().iter().map(|t| t.id.as_str()).collect();
+    assert_eq!(
+        ids,
+        [
+            "featured",
+            "beginner-friendly",
+            "classics",
+            "cacowards",
+            "community-projects",
+            "megawad",
+            "episode",
+            "challenging"
+        ]
+    );
+    assert_eq!(Catalog::embedded().tags, vocabulary);
+}
+
+#[test]
+fn vocabulary_rules_reject_bad_ids_text_and_order() {
+    let mut v = vocabulary();
+    v.tags[1].id = v.tags[0].id.clone();
+    v.tags[2].id = "Bad Id".into();
+    v.tags[3].label = " ".into();
+    v.tags[4].order = v.tags[5].order;
+    v.schema_version = 2;
+    let keys: Vec<_> = validate_vocabulary(&v).into_iter().map(|e| e.key).collect();
+    for key in [
+        "schema_version",
+        "tags.1.id",
+        "tags.2.id",
+        "tags.3.label",
+        "tags.5.order",
+    ] {
+        assert!(keys.iter().any(|k| k == key), "{key} missing in {keys:?}");
+    }
+}
+
+#[test]
+fn unknown_and_duplicate_tags_are_lint_errors() {
+    let mut r = recipe("sigil");
+    r.tags = vec!["episode".into(), "no-such-tag".into(), "episode".into()];
+    let errors = validate_tags(&r, &vocabulary());
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.key == "tags.1" && e.message.contains("unknown tag `no-such-tag`")),
+        "{errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.key == "tags.2" && e.message.contains("duplicate tag")),
+        "{errors:?}"
+    );
+    r.tags = vec!["episode".into()];
+    assert_eq!(validate_tags(&r, &vocabulary()), vec![]);
+    r.tags.clear();
+    assert_eq!(validate_tags(&r, &vocabulary()), vec![], "absent = none");
+}
+
+#[test]
+fn cacowards_tag_needs_a_year_page_citation_in_notes_or_inspected() {
+    let mut r = recipe("sigil");
+    r.tags = vec!["cacowards".into()];
+    r.verification.notes.clear();
+    r.verification.inspected.clear();
+    let missing = |r: &Recipe| {
+        validate_tags(r, &vocabulary())
+            .iter()
+            .any(|e| e.message.contains("Cacowards citation"))
+    };
+    assert!(missing(&r));
+    // A bare mention, another host or a page without a year is not a citation.
+    r.verification.notes = "Cacoward winner".into();
+    r.verification.inspected = vec![
+        "https://example.com/cacowards/2019/".into(),
+        "https://www.doomworld.com/cacowards/".into(),
+    ];
+    assert!(missing(&r));
+    r.verification
+        .inspected
+        .push("Cacowards 2019: https://www.doomworld.com/cacowards/2019/".into());
+    assert!(!missing(&r));
+    r.verification.inspected.pop();
+    r.verification.notes = "Listed in https://www.doomworld.com/cacowards/2021/best1/".into();
+    assert!(!missing(&r));
+    // Other tags never require it.
+    r.verification.notes = "n".into();
+    r.tags = vec!["episode".into()];
+    assert!(!missing(&r));
+}
+
+#[test]
+fn lint_paths_reports_unknown_tags_with_file_and_line() {
+    let temp = Temp::new();
+    for name in ["hosts.toml", "tags.toml"] {
+        fs::copy(Path::new(CATALOG).join(name), temp.0.join(name)).unwrap();
+    }
+    let mut r = recipe("sigil");
+    r.tags = vec!["episode".into(), "bogus".into()];
+    let text = toml::to_string_pretty(&r).unwrap();
+    let expected = text.lines().position(|l| l.contains("\"bogus\"")).unwrap() + 1;
+    fs::write(temp.0.join("sigil.toml"), &text).unwrap();
+    let errors = lint_paths(
+        std::slice::from_ref(&temp.0),
+        &temp.0.join("hosts.toml"),
+        None,
+    );
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(errors[0].message.contains("unknown tag `bogus`"));
+    assert_eq!(errors[0].line, expected, "{errors:?}");
+    assert!(errors[0].hint.contains("tags.toml"));
+    // tags.toml beside the recipes is never linted as a recipe.
+    fs::write(
+        temp.0.join("sigil.toml"),
+        toml::to_string_pretty(&recipe("sigil")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        lint_paths(
+            std::slice::from_ref(&temp.0),
+            &temp.0.join("hosts.toml"),
+            None
+        ),
+        vec![]
+    );
+}
+
+#[test]
+fn tags_round_trip_and_are_optional_in_schema_one() {
+    let mut r = recipe("sigil");
+    r.tags = vec!["episode".into(), "challenging".into()];
+    let text = toml::to_string_pretty(&r).unwrap();
+    assert!(text.contains("tags = ["), "{text}");
+    assert_eq!(toml::from_str::<Recipe>(&text).unwrap(), r);
+    r.tags.clear();
+    assert!(!toml::to_string_pretty(&r).unwrap().contains("tags"));
+    // JSON state written before tags existed still loads (installed snapshots).
+    let json = serde_json::to_string(&r).unwrap();
+    assert!(!json.contains("tags"));
+    assert_eq!(serde_json::from_str::<Recipe>(&json).unwrap(), r);
+}
+
+#[test]
+fn loader_skips_recipes_with_unknown_tags_and_keeps_known_ones() {
+    let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
+    let tags_text = fs::read_to_string(format!("{CATALOG}/tags.toml")).unwrap();
+    let good = fs::read_to_string(format!("{CATALOG}/sigil.toml")).unwrap();
+    let with = |tags: &str, file: &str| {
+        let line = good.lines().find(|l| l.starts_with("tags = ")).unwrap();
+        (
+            file.to_owned(),
+            good.replace(line, &format!("tags = {tags}")),
+        )
+    };
+    let (f1, tagged) = with("[\"episode\"]", "sigil.toml");
+    let (f2, unknown) = with("[\"nope\"]", "sigil-ii.toml");
+    let unknown = unknown.replace("id = \"sigil\"", "id = \"sigil-ii\"");
+    let catalog = Catalog::from_sources(
+        &hosts_text,
+        &tags_text,
+        &[
+            (f1.as_str(), tagged.as_str()),
+            (f2.as_str(), unknown.as_str()),
+        ],
+    );
+    assert_eq!(catalog.recipe("sigil").unwrap().tags, ["episode"]);
+    assert!(catalog.recipe("sigil-ii").is_none());
+    assert!(
+        catalog.skipped[0].reason.contains("unknown tag `nope`"),
+        "{:?}",
+        catalog.skipped
+    );
+    // A broken vocabulary is reported and leaves tagged recipes skipped.
+    let broken =
+        Catalog::from_sources(&hosts_text, "not toml [", &[(f1.as_str(), tagged.as_str())]);
+    assert!(broken.skipped.iter().any(|s| s.file == "tags.toml"));
+    assert!(broken.recipe("sigil").is_none());
 }

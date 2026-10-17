@@ -462,6 +462,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     assert_eq!(quits.get(), 1, "only explicit confirmation quits");
     let _ = ui.window(); // ComponentHandle methods are available without showing a window.
     production::journey(&window, &ui);
+    production::categories_journey(&window, &ui);
 }
 
 #[path = "headless_production.rs"]

@@ -47,7 +47,8 @@ fn visible_slint_literals_are_translatable() {
                 || before.ends_with("import")
                 || before.ends_with("from")
                 || before.ends_with("@image-url(")
-                || (matches!(value.as_str(), "x" | "y") && before.ends_with("event.text =="));
+                || (matches!(value.as_str(), "x" | "y" | "[" | "]")
+                    && before.ends_with("event.text =="));
             assert!(
                 resource || noncopy,
                 "{}: untranslated literal {value:?}",

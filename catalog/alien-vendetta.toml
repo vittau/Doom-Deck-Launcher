@@ -22,6 +22,7 @@ release = "Compet-N edition (second release), 2002-12-24"
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/av"
 description = "DOOM II megawad: 32 vanilla-format maps by a team of authors, with an external DEHACKED patch that supplies the intermission level names and story text."
 permission = "Authors may not use the levels as a base for new levels, and the AV-specific graphics may not be reused. Redistribution is permitted provided AV.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits and changelog files."
+tags = ["classics", "community-projects", "megawad"]
 
 [base_game]
 game = "doom2"
@@ -45,7 +46,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-alien-vendetta.md §1–§9", "Archive, member, WAD and DEHACKED inspection; DSDA-Doom v0.30.1 source; authors' release text"]
-notes = "Confirmed archive/member identities, the external AV.DEH string patch and the absence of COMPLVL/DEHACKED/UMAPINFO/MAPINFO lumps in AV.WAD. Proposed complevel 2 from the authors' 'constructed with vanilla Doom2 v1.9 exe in mind' statement; no gameplay test performed."
+notes = "Confirmed archive/member identities, the external AV.DEH string patch and the absence of COMPLVL/DEHACKED/UMAPINFO/MAPINFO lumps in AV.WAD. Proposed complevel 2 from the authors' 'constructed with vanilla Doom2 v1.9 exe in mind' statement; no gameplay test performed. Tags: classics = Compet-N edition dated 2002-12-24, over five years before this review; community-projects = 13 contributors credited in AV.TXT (docs/research/reference-alien-vendetta.md); megawad = 32 maps. No Cacoward could be confirmed, so it is not tagged cacowards."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The bundled DOS launcher AV.EXE is not declared; DDL never executes it, so the exe's par-time changes are not reproduced."]
 
 [[packages]]

@@ -8,6 +8,7 @@ release = "1.23"
 page = "https://romero.com/sigil"
 description = "Episode 5 for DOOM, with a MIDI soundtrack and an optional Episode 3 compatibility replacement."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
+tags = ["featured", "classics", "cacowards", "episode"]
 
 [base_game]
 game = "doom"
@@ -30,8 +31,8 @@ status = "inspected"
 tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
-inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
-notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed."
+inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source", "Cacowards 2019 runner-up: https://www.doomworld.com/cacowards/2019/"]
+notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
 
 [[packages]]
