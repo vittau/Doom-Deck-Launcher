@@ -1,4 +1,23 @@
 export global WiringStrings {
+    out property <string> manage-profiles: @tr("Profiles");
+    out property <string> active-profile: @tr("Active profile: {}", root.value);
+    out property <string> profile-count: @tr("{} profiles", root.value);
+    out property <string> previous-profile: @tr("Previous profile");
+    out property <string> next-profile: @tr("Next profile");
+    out property <string> copy-profile: @tr("New — copy settings");
+    out property <string> default-profile: @tr("New — defaults");
+    out property <string> rename-profile: @tr("Rename profile");
+    out property <string> delete-profile: @tr("Delete profile");
+    out property <string> last-profile: @tr("Keep at least one profile");
+    out property <string> delete-profile-confirm: @tr("Delete {}? Its saves and screenshots will be deleted.", root.value);
+    out property <string> preset-default: @tr("Default");
+    out property <string> preset-casual: @tr("Casual");
+    out property <string> preset-uv: @tr("UV");
+    out property <string> preset-pistol: @tr("Pistol start");
+    out property <string> preset-coop: @tr("Co-op");
+    out property <string> preset-speedrun: @tr("Speedrun");
+    out property <string> preset-number: @tr("Profile {}", root.value);
+
     out property <string> addon-choice: @tr("Add-on — choose one");
     out property <string> none: @tr("None");
     out property <string> first-sub: @tr("Prepare the engine and bring your own base games.");
