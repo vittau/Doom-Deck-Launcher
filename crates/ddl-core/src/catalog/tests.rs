@@ -26,6 +26,7 @@ fn reference_recipes_round_trip_and_lint_offline() {
     for id in [
         "ancient-aliens",
         "auger-zenith",
+        "back-to-saturn-x-e1",
         "eviternity",
         "sigil",
         "sigil-ii",
@@ -688,6 +689,7 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
         [
             "ancient-aliens",
             "auger-zenith",
+            "back-to-saturn-x-e1",
             "eviternity",
             "sigil",
             "sigil-ii",
@@ -697,6 +699,7 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
     for id in [
         "ancient-aliens",
         "auger-zenith",
+        "back-to-saturn-x-e1",
         "eviternity",
         "sigil",
         "sigil-ii",
