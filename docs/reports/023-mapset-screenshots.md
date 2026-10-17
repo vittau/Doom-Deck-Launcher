@@ -155,10 +155,13 @@ passes.
   use `image-fit: cover` with explicit horizontal/vertical centre alignment. No runtime
   network or filesystem image loading is needed. Detail keeps the same first image; a
   carousel or additional controller action would add little value here.
-- Bone text on opaque `Tokens.deep` plates, with bronze borders, protects the caption from
-  bright skies and busy imagery. Caption plates size themselves to the wrapped text, including
-  the longer credits on the narrower Home hero. Home history uses a separate two-line plate below
-  each small thumbnail; its layout was tightened to keep the plate inside the carved frame.
+- **Review fix — compact credits:** captions use the unchanged `Tokens.metadata` (20 px)
+  on a slim 28 px, 90%-opaque near-black plate with a thin bronze border. Plates hug the text,
+  sit at the image's bottom-left (bottom-right in the band), and elide long text on one line.
+  Detail alone enables the full credit and may wrap to two lines. Images narrower than 160 px,
+  including Home history thumbnails, have no caption; the separate history credit row was
+  removed and Home's original hero/history spacing restored. The painted fallback uses the
+  same compact treatment.
 - Missing screenshot metadata, unknown/unbundled assets, and future recipes without bundled
   files retain the painted cover and `Original concept art` caption. Existing catalog updates
   cannot turn an arbitrary remote asset path into a filesystem image load.
@@ -189,7 +192,9 @@ recipes resolve to a 640×360 Slint image, the exact translated caption, and mat
 detail and art-band properties. It writes one focused Discover render per recipe, covering
 all scroll positions, plus bright-sky, long Home credit and metadata-absent fallback fixtures.
 It also checks recipe screenshot reordering and an unbundled asset fallback. Existing Home
-and Library journeys assert their image nodes carry screenshots and captions. These are
+and Library journeys assert their large image nodes carry screenshots and captions; tiny Home
+images keep their screenshots but no credit label, and no separate caption row remains. Only
+detail image nodes enable full-credit wrapping. These are
 render-only recipe mutations; no live catalog or user state is changed.
 
 ### Headless visual review (A2)
@@ -209,17 +214,25 @@ I also inspected the detail/band compositions (`010-mapset-detail.png`,
 `023-discover-white-sky.png` / `023-detail-white-sky.png` fixture reorders Ancient Aliens' two
 shots so its white-cloud image stress-tests the same plate; shipped recipes still use their
 first declared shot. `023-home-long-credit.png` checks the longer Back to Saturn X credit on
-both the narrow hero and the history row. Captions remain readable against the bright sky,
-neon/fire and dark scenes, and the complete long credit stays inside its plate.
+the narrow hero (elided), the band (elided), and the history thumbnail (no caption).
+`023-detail-back-to-saturn-x-e1.png` retains the full long credit in the two-line detail plate.
+Captions remain readable against the bright sky, neon/fire and dark scenes; compact labels
+leave more of each screenshot visible.
 
 No visible window was opened and no screen was captured. All images came from Slint's
 software renderer. A2 is ticked; A4 remains **Needs Deck Validation**.
 
 ### Final verification
 
-Validated on macOS arm64. `main` at `aca466b` was merged cleanly and checked again before
-completion (already up to date). Linux CI and the physical Deck were not run here. No new
-dependencies were added.
+Validated on macOS arm64. Phase B merged `main` at `aca466b` cleanly; the compact-caption
+review fix stays on the same task branch. Linux CI and the physical Deck were not run here.
+No new dependencies were added. The targeted headless journey passed before the full checks:
+
+```text
+$ cargo test -p ddl fixture_screens_navigation_and_focus_render_headlessly
+test headless::fixture_screens_navigation_and_focus_render_headlessly ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 81 filtered out; finished in 103.82s
+```
 
 All **430 tests** pass: 82 launcher tests, 7 launcher integration tests, 322 core tests,
 16 process/smoke tests and 3 doctests. The existing headless journey contains the new screenshot
@@ -231,38 +244,39 @@ $ cargo fmt --all --check
 (exit 0; no output)
 
 $ cargo clippy --workspace --all-targets -- -D warnings
-    Checking ddl v0.0.4 (.../crates/ddl)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.62s
+    Compiling ddl v0.0.4 (.../crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.32s
 
 $ cargo test --workspace
 ...
-test result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 122.59s
+test result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 124.35s
 ...
-test result: ok. 322 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.87s
+test result: ok. 322 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s
 ...
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
 ...
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
 README images were regenerated with the documented spec 016 R5 command and all four were
 visually inspected. They also byte-match the optimized PNGs from the independent final
-workspace run (`DDL_HEADLESS_DIR="$PWD/target/headless/workspace" cargo test --workspace`):
+workspace run (`DDL_HEADLESS_DIR="$PWD/target/headless/compact-workspace" cargo test --workspace`):
 
 ```text
 $ python3 scripts/readme-screenshots.py
 ...
-docs/screenshots/home.png: 1280x800, 337,259 bytes
-docs/screenshots/discover.png: 1280x800, 487,551 bytes
-docs/screenshots/play-setup.png: 1280x800, 330,100 bytes
-docs/screenshots/mapset-detail.png: 1280x800, 542,884 bytes
+docs/screenshots/home.png: 1280x800, 361,528 bytes
+docs/screenshots/discover.png: 1280x800, 557,175 bytes
+docs/screenshots/play-setup.png: 1280x800, 344,886 bytes
+docs/screenshots/mapset-detail.png: 1280x800, 570,902 bytes
 ```
 
 ### Remaining observations
 
 - Physical Deck sharpness/readability is still A4, outside this phase's acceptance.
 - Existing long mapset titles can clip in Home/Discover text slots (visible in the Back to
-  Saturn X render fixture); the screenshot credits themselves wrap fully. This predates R3
+  Saturn X render fixture); screenshot credits now elide intentionally except on detail, where
+  the full credit wraps to two lines. This predates R3
   and was left outside the screenshot change.
 - Proposed documentation follow-up outside this task's ownership: the guide's FAQ
   (`docs/steam-deck-guide.md`, “Are the screenshots actual gameplay?”) still calls the card

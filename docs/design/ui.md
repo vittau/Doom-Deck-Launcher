@@ -53,9 +53,11 @@ Original carved oxblood wall repeats seamlessly, visibly surrounding smooth info
 Pre-rendered bronze / red-stone frames use 28 px nine-slice borders, preserving corners at all
 panel sizes. Cards (Home, Discover and Library), detail and the top art band show the recipe's
 first bundled screenshot, centred and cropped to fill (spec 023, D-024). A bone-coloured
-“Screenshot: <credit>” caption sits on an opaque near-black plate with a bronze edge; it wraps
-rather than truncating the credit, including over bright skies. Small Home history thumbnails
-place the credit just below the image on the opaque Home panel. A recipe without a bundled
+“Screenshot: <credit>” uses the existing 20 px metadata text on a slim, 90%-opaque near-black
+plate with a thin bronze edge. It hugs the text at the image's bottom-left (bottom-right in the
+art band), stays on one line and elides long credits with “…”. Detail alone may wrap the full
+credit to two lines. Images narrower than 160 px, including Home history thumbnails, omit the
+caption; the hero and detail carry the credit. A recipe without a bundled
 screenshot keeps its painted cover and “Original concept art” caption. Images are embedded by
 Slint at build time, so browsing requires no network. Detail repeats the first shot rather than
 adding a carousel or a new controller action.
