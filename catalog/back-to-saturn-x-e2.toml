@@ -1,0 +1,83 @@
+# Confirmed bytes and release metadata: docs/research/reference-back-to-saturn-x-e2.md §1–§7; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "back-to-saturn-x-e2"
+title = "Back to Saturn X E2: Tower in the Fountain of Sparks"
+authors = ["Sarah \"Esselfortium\" Mancuso (project lead)", "Back to Saturn X team"]
+release = "1.0.1 (2020-08-13)"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e2"
+description = "DOOM II: 27 vanilla-compatible maps (MAP01–MAP27, MAP31) with a custom texture set and MIDI music; the release splits its content across two WADs that must be loaded together, and bundles a MAP20 patch for old ports."
+permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP27, MAP31, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-back-to-saturn-x-e2.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Complevel 2 is the authors' explicit value ('PRBOOM USERS USE COMPLEVEL 2 OR MAP20 WILL BREAK'); no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, two-WAD load order, gameplay and audio.", "The canonical Doomworld page is Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror.", "The bundled map20_for_old_ports.zip is a genuine official component but is deliberately not offered: it is documented for old Boom/ZDoom-derived ports and is NOT vanilla compatible, and DSDA-Doom with complevel 2 does not need it.", "The separate btsx_e2.deh is for vanilla/Chocolate Doom and is intentionally not loaded: DSDA-Doom reads the embedded DEHACKED lump of btsx_e2a.wad."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e2"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/btsx_e2.zip", "https://youfailit.net/pub/idgames/levels/doom2/megawads/btsx_e2.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/megawads/btsx_e2.zip"]
+size = 27988469
+sha256 = "2365b9ff5884027523553519830884cc85106c483fdf19c0f2bbe75155b60331"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/btsx_e2.zip"
+
+[[packages.members]]
+id = "maps"
+path = "btsx_e2a.wad"
+size = 27856614
+sha256 = "f3151768ee30d8c04a3c5e9ac091bbfd99dfe2271bfc6885b1ef1bde710a158d"
+keep = false
+
+[[packages.members]]
+id = "resources"
+path = "btsx_e2b.wad"
+size = 40471797
+sha256 = "f3dc59270166d5c5f5b1fcb7911aef2b5f672df74372a5cd2b49b34b2cc7b551"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "btsx_e2.txt"
+size = 16003
+sha256 = "8066832552e33a0d4ba372dfd1377083ec0b787d7fc26ecc48e9e6fd48146d5e"
+keep = true
+
+[[components]]
+id = "main"
+label = "Back to Saturn X E2"
+description = "Main 27-map vanilla mapset; both WADs load together in the order btsx_e2a.wad then btsx_e2b.wad, with the embedded DEHACKED patch applied automatically."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components.members]]
+package = "free"
+member = "resources"
+role = "graphics"
