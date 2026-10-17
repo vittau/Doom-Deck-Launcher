@@ -129,9 +129,15 @@ struct AppState {
     /// Recipe ids the player marked (spec 015, R5); added by schema 2.
     #[serde(default)]
     favorites: BTreeSet<String>,
+    /// Spec 021 R4: also probe the generic DOOM folders and
+    /// `DOOMWADDIR`/`DOOMWADPATH`. Default off. Added while the file was still
+    /// schema 1 (absent loads as `false`); schema 2 carries it unchanged.
+    #[serde(default)]
+    search_standard_folders: bool,
 }
-/// Current `app.json` schema. 1 → 2 added `favorites`; a schema 1 file is
-/// migrated in memory on load and written as schema 2 by the next save.
+/// Current `app.json` schema. 1 → 2 added `favorites` (spec 015) and kept spec
+/// 021's additive `search_standard_folders`; a schema 1 file is migrated in
+/// memory on load and written as schema 2 by the next save.
 const STATE_SCHEMA: u32 = 2;
 impl Default for AppState {
     fn default() -> Self {
@@ -140,6 +146,7 @@ impl Default for AppState {
             folders: vec![],
             recipes: BTreeMap::new(),
             favorites: BTreeSet::new(),
+            search_standard_folders: false,
         }
     }
 }
@@ -196,6 +203,8 @@ pub struct Snapshot {
     pub attribution: Option<dsda::Attribution>,
     pub iwads: Vec<RegistryEntry>,
     pub folders: Vec<PathBuf>,
+    /// R4: whether DDL probes the generic DOOM roots (default off).
+    pub search_standard_folders: bool,
     pub config_notice: bool,
     pub config_usable: bool,
     pub config_version: String,
@@ -224,6 +233,8 @@ pub enum Command {
     Rollback,
     Reset,
     Import(String, String, PathBuf),
+    /// R4: persist the "Search standard Linux folders" setting.
+    SetSearchStandardFolders(bool),
 }
 
 impl Command {
@@ -430,6 +441,7 @@ impl Services {
             engine,
             iwads: self.registry.entries().to_vec(),
             folders: self.state.folders.clone(),
+            search_standard_folders: self.state.search_standard_folders,
             config_notice: config.as_ref().is_none_or(|s| {
                 !s.conflicts.is_empty()
                     || s.template_version != self.config.template().template_version
@@ -508,6 +520,10 @@ impl Services {
                 self.registry
                     .choose(&path, &variant, &iwads::IwadTable::embedded())
                     .map_err(|e| logged(Problem::State, e))?;
+                self.save()?;
+            }
+            Command::SetSearchStandardFolders(enabled) => {
+                self.state.search_standard_folders = enabled;
                 self.save()?;
             }
             Command::RemoveFolder(path) => {
@@ -743,6 +759,30 @@ impl Services {
             .into_iter()
             .map(|p| (p, iwads::Source::Steam))
             .collect();
+        // GOG installs recorded by Heroic / minigalaxy plus the documented
+        // GOG default folders (spec 021, R2). Garbled records only log.
+        let stores = iwads::stores::discover(&self.env.home);
+        for unreadable in &stores.unreadable {
+            tracing::warn!(
+                path = %unreadable.display(),
+                "ignoring a garbled store launcher record"
+            );
+        }
+        paths.extend(
+            stores
+                .candidates
+                .into_iter()
+                .map(|candidate| (candidate.path, store_source(candidate.launcher))),
+        );
+        // The generic roots are opt-in and never scanned by default (spec 021,
+        // R4).
+        if self.state.search_standard_folders {
+            paths.extend(
+                iwads::standard_paths(&self.env.home, &|key| std::env::var(key).ok())
+                    .into_iter()
+                    .map(|p| (p, iwads::Source::StandardFolder)),
+            );
+        }
         for folder in &self.state.folders {
             let scan = iwads::scan_folder(folder).map_err(|e| logged(Problem::Storage, e))?;
             paths.extend(
@@ -1288,6 +1328,15 @@ impl Services {
     }
 }
 
+/// The registry source for a GOG candidate's launcher (spec 021, R2).
+fn store_source(launcher: iwads::GogLauncher) -> iwads::Source {
+    match launcher {
+        iwads::GogLauncher::Heroic => iwads::Source::GogHeroic,
+        iwads::GogLauncher::Minigalaxy => iwads::Source::GogMinigalaxy,
+        iwads::GogLauncher::Offline => iwads::Source::GogOffline,
+    }
+}
+
 /// The embedded IWAD game a recipe's base game maps to (spec 007).
 #[cfg(any(test, feature = "test-support"))]
 fn iwad_game(game: Game) -> iwads::Game {
@@ -1538,6 +1587,42 @@ mod tests {
         assert_eq!(sigil.recipe.tags, catalog.recipe("sigil").unwrap().tags);
         assert_eq!(snapshot.tags, catalog.tags);
     }
+
+    #[test]
+    fn an_existing_state_file_without_the_setting_loads_off_and_round_trips() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        fs::create_dir_all(&env.paths.config).unwrap();
+        // A state file written before R4 has no `search_standard_folders`.
+        fs::write(
+            env.paths.config.join("app.json"),
+            br#"{"schema_version":1,"folders":[],"recipes":{}}"#,
+        )
+        .unwrap();
+        let mut s = Services::open(env.clone()).unwrap();
+        assert!(
+            !s.snapshot().unwrap().search_standard_folders,
+            "the new setting defaults off"
+        );
+        s.execute(
+            Command::SetSearchStandardFolders(true),
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+        .unwrap();
+        assert!(
+            Services::open(env.clone())
+                .unwrap()
+                .snapshot()
+                .unwrap()
+                .search_standard_folders,
+            "the setting round-trips"
+        );
+        let raw = fs::read_to_string(env.paths.config.join("app.json")).unwrap();
+        // The save migrated the file to schema 2 (spec 015) and kept the setting.
+        assert!(raw.contains("\"schema_version\": 2"), "{raw}");
+        assert!(raw.contains("\"search_standard_folders\": true"), "{raw}");
+    }
     #[test]
     fn unreadable_config_is_a_reset_notice_without_losing_the_catalog() {
         let temp = tempfile::tempdir().unwrap();
@@ -1612,6 +1697,127 @@ mod steam_wiring_tests {
             .unwrap();
         assert!(browser.shortcuts.contains(&home));
         assert!(browser.shortcuts.contains(&common));
+    }
+}
+
+#[cfg(test)]
+mod store_wiring_tests {
+    use super::*;
+
+    /// A synthetic Ultimate DOOM (`E1M1`–`E4M9`), which identifies as the
+    /// ambiguous `doomu` family without any copyrighted data.
+    fn ultimate_wad() -> Vec<u8> {
+        let mut bytes = b"IWAD".to_vec();
+        bytes.extend_from_slice(&36i32.to_le_bytes());
+        bytes.extend_from_slice(&12i32.to_le_bytes());
+        for e in 1..=4 {
+            for m in 1..=9 {
+                bytes.extend_from_slice(&[0; 8]);
+                let name = format!("E{e}M{m}");
+                let mut lump = [0; 8];
+                lump[..name.len()].copy_from_slice(name.as_bytes());
+                bytes.extend_from_slice(&lump);
+            }
+        }
+        bytes
+    }
+
+    fn home_env(temp: &tempfile::TempDir) -> Environment {
+        let home = temp.path().join("home");
+        fs::create_dir_all(&home).unwrap();
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .unwrap();
+        Environment {
+            paths,
+            home,
+            test: None,
+        }
+    }
+
+    #[test]
+    fn gog_install_via_heroic_is_found_and_labelled() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = home_env(&temp);
+        let install = env.home.join("Games/Heroic/DOOM + DOOM II");
+        fs::create_dir_all(install.join("base")).unwrap();
+        fs::write(install.join("base/doom.wad"), ultimate_wad()).unwrap();
+        let record = env.home.join(".config/heroic/gog_store/installed.json");
+        fs::create_dir_all(record.parent().unwrap()).unwrap();
+        fs::write(
+            &record,
+            format!(
+                "{{\"installed\":[{{\"appName\":\"1\",\"install_path\":\"{}\"}}]}}",
+                install.display()
+            ),
+        )
+        .unwrap();
+
+        let mut services = Services::open(env).unwrap();
+        services
+            .execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        let snapshot = services.snapshot().unwrap();
+        let entry = snapshot
+            .iwads
+            .iter()
+            .find(|e| e.path.ends_with("base/doom.wad"))
+            .expect("the Heroic GOG install is discovered");
+        assert_eq!(entry.source, iwads::Source::GogHeroic);
+        assert!(entry.variant.is_none(), "lump-only match stays ambiguous");
+        assert!(entry.candidates.iter().any(|id| id == "doom-1.9ud"));
+    }
+
+    #[test]
+    fn garbled_store_records_do_not_fail_or_add_candidates() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = home_env(&temp);
+        let record = env.home.join(".config/heroic/gog_store/installed.json");
+        fs::create_dir_all(record.parent().unwrap()).unwrap();
+        fs::write(&record, "{ truncated").unwrap();
+
+        let mut services = Services::open(env).unwrap();
+        services
+            .execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        assert!(services.snapshot().unwrap().iwads.is_empty());
+    }
+
+    #[test]
+    fn standard_folders_stay_off_until_the_setting_is_enabled() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = home_env(&temp);
+        let local = env.home.join(".local/share/games/doom");
+        fs::create_dir_all(&local).unwrap();
+        fs::write(local.join("doom.wad"), ultimate_wad()).unwrap();
+
+        let mut services = Services::open(env).unwrap();
+        services
+            .execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        assert!(
+            services.snapshot().unwrap().iwads.is_empty(),
+            "the generic roots are off by default"
+        );
+
+        services
+            .execute(
+                Command::SetSearchStandardFolders(true),
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .unwrap();
+        services
+            .execute(Command::Scan(None), &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        let snapshot = services.snapshot().unwrap();
+        let entry = snapshot
+            .iwads
+            .iter()
+            .find(|e| e.path == local.join("doom.wad"))
+            .expect("the opted-in standard root is scanned");
+        assert_eq!(entry.source, iwads::Source::StandardFolder);
     }
 }
 

@@ -1,0 +1,20 @@
+{
+  "installed": [
+    {
+      "appName": "1440047501",
+      "install_path": "/home/deck/Games/Heroic/DOOM + DOOM II",
+      "executable": "/home/deck/Games/Heroic/DOOM + DOOM II/DOOMx64.exe",
+      "install_size": 1500000000,
+      "is_dlc": false,
+      "version": "1.0",
+      "platform": "windows"
+    },
+    {
+      "appName": "1207659162",
+      "install_path": "/run/media/deck/sdcard/Games/Heroic/Final DOOM",
+      "install_size": 400000000,
+      "is_dlc": false,
+      "platform": "windows"
+    }
+  ]
+}

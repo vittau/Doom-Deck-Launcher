@@ -694,6 +694,49 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             capture(window, "013-about.png");
         }
     }
+    // Spec 021 A3: the opt-in Settings row renders (existing Ember row) and
+    // persists, defaulting off.
+    state.borrow_mut().focus = 2;
+    state.borrow_mut().sync(ui);
+    let row = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == 72)
+        .expect("the standard-folders row renders");
+    assert_eq!(row.label, "Search standard Linux folders");
+    assert_eq!(row.detail, "Off");
+    assert!(
+        !state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .search_standard_folders
+    );
+    ui.invoke_clicked(72);
+    idle(&state);
+    assert!(
+        state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .search_standard_folders
+    );
+    assert_eq!(
+        ui.get_nodes().iter().find(|n| n.id == 72).unwrap().detail,
+        "On"
+    );
+    ui.invoke_clicked(72);
+    idle(&state);
+    assert!(
+        !state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .search_standard_folders
+    );
     state.borrow_mut().focus = 1;
     state.borrow_mut().sync(ui);
     assert!(

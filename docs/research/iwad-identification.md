@@ -346,6 +346,112 @@ creates the legacy separate apps' folders, the SD-card library mount path
 (commonly `/run/media/mmcblk0p1/…`, but the label can differ), where GOG installs on the Deck, and
 Flatpak Steam's path. DDL must read Steam files only, never write them.
 
+### 4.1 GOG and other store IWAD locations (spec 021)
+
+Added 2026-10-16 for spec 021. Everything below is either read from the launcher's own upstream
+source at a pinned tag, or from the vendor's support documentation; nothing here is guessed. The
+**folder layout *inside* a GOG DOOM product** is deliberately *not* asserted — see the end of this
+section.
+
+**Heroic Games Launcher — the GOG install record**
+
+* **Confirmed.** Heroic keeps its GOG library in an Electron `electron-store` file at
+  `<userData>/gog_store/installed.json`; every record is an object whose `install_path` is the
+  directory the game was installed to and whose `appName` is the GOG product id.
+  Source (tag `v2.22.4`):
+  [`src/backend/storeManagers/gog/electronStores.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/storeManagers/gog/electronStores.ts)
+  (`installedGamesStore` = `TypeCheckedStoreBackend('gogInstalledGamesStore', { cwd: 'gog_store', name: 'installed' })`)
+  and
+  [`src/backend/storeManagers/gog/library.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/storeManagers/gog/library.ts)
+  (`refreshInstalled()` reads `value.appName` and `value.install_path`).
+* **Confirmed.** `<userData>` is Electron's `app.getPath('userData')`. On Linux that is
+  `$XDG_CONFIG_HOME/<name>` (`~/.config/<name>` by default); Heroic's package name is `heroic` and
+  its config folder is `app.getPath('appData')/heroic`, both of which resolve to `~/.config/heroic`.
+  Source: [`package.json`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/package.json)
+  (`"name": "heroic"`) and
+  [`src/backend/constants/paths.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/constants/paths.ts)
+  (`configFolder = app.getPath('appData')`, `appFolder = join(configFolder, 'heroic')`,
+  `configPath = join(appFolder, 'config.json')`). So the record DDL reads is
+  `~/.config/heroic/gog_store/installed.json`.
+* **Confirmed.** Heroic's default install directory for GOG games is `~/Games/Heroic`.
+  Source (tag `v2.22.4`):
+  [`paths.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/constants/paths.ts)
+  (`heroicInstallPath = join(userHome, 'Games', 'Heroic')`, and
+  `defaultInstallPath: heroicInstallPath` in
+  [`config.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/config.ts)).
+* **Confirmed.** Heroic's Flatpak app id is `com.heroicgameslauncher.hgl` (its build script builds
+  `com.heroicgameslauncher.hgl.yml`); Flatpak keeps app config under
+  `~/.var/app/<app id>/config`, so the Flatpak record path is
+  `~/.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store/installed.json`.
+  Source: [`package.json`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/package.json)
+  (`flatpak:build`). *Needs Deck Validation:* the exact Flatpak path on a Deck.
+
+**minigalaxy — the install directory setting**
+
+* **Confirmed.** minigalaxy stores its settings in `$XDG_CONFIG_HOME/minigalaxy/config.json`
+  (`~/.config/minigalaxy/config.json` by default); the key `install_dir` is the directory games are
+  installed to, and its default is `~/GOG Games`.
+  Source ([`sharkwouter/minigalaxy`](https://github.com/sharkwouter/minigalaxy), `master` read
+  2026-10-16):
+  [`minigalaxy/paths.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/paths.py)
+  (`CONFIG_DIR`, `CONFIG_FILE_PATH`, `DEFAULT_INSTALL_DIR = os.path.expanduser("~/GOG Games")`) and
+  [`minigalaxy/config.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/config.py)
+  (`install_dir` property reads/writes `config["install_dir"]`).
+* **Proposed.** minigalaxy's Flatpak id is `io.github.sharkwouter.Minigalaxy`, so the Flatpak
+  config is `~/.var/app/io.github.sharkwouter.Minigalaxy/config/minigalaxy/config.json`.
+  *Needs Deck Validation.*
+
+**GOG offline installers**
+
+* **Confirmed.** GOG's own support states the default install location is `$HOME/GOG Games` and that
+  the user can choose another path at install time.
+  Source: [GOG Support "Where is my game installed?"](https://support.gog.com/hc/en-us/articles/213039625-Where-is-my-game-installed).
+
+**Lutris — researched, not implemented**
+
+* **Confirmed.** Lutris keeps its library in a **SQLite** database, `~/.local/share/lutris/pga.db`,
+  and the per-game install directory is the `directory` column of its `games` table. The runner
+  code sets `self.directory = game_data.get("directory")` straight from that row.
+  Source ([`lutris/lutris`](https://github.com/lutris/lutris), `master` read 2026-10-16):
+  [`lutris/game.py`](https://github.com/lutris/lutris/blob/master/lutris/game.py); directory layout
+  per the [Gentoo wiki: Lutris](https://wiki.gentoo.org/wiki/Lutris) and the Lutris forums
+  [(library data location)](https://forums.lutris.net/t/where-is-lutris-library-data-stored/6739).
+  Flatpak id is `net.lutris.Lutris`; its data/config live under `~/.var/app/net.lutris.Lutris/`
+  (Lutris forums, [(Flatpak config location)](https://forums.lutris.net/t/lutris-config-location-with-flatpak/18516)).
+* **Not implemented in DDL (open question 10).** Reading `pga.db` needs a SQLite reader. DDL has no
+  SQLite dependency and the IWAD path has none; a bundled-SQLite crate would add a C dependency the
+  project has so far avoided (cf. D-018). Lutris-owned DOOM installs therefore stay
+  **Needs Deck Validation** and are left to the user's "Add IWAD folder" flow until a decision is
+  taken.
+
+**Which GOG DOOM products ship which IWAD revisions**
+
+* **Confirmed.** GOG's product slug for *DOOM + DOOM II* is `doom_doom_ii`: the Lutris installers for
+  The Ultimate Doom (installer `35796`) and Doom II (installer `35797`) both carry
+  `gogslug: doom_doom_ii`. Source: [Lutris 35796](https://lutris.net/games/install/35796/view) ·
+  [Lutris 35797](https://lutris.net/games/install/35797/view).
+* **Confirmed (revisions).** *DOOM + DOOM II* bundles the original DOS releases **and** the 2024 KEX
+  copies; GOG's *Final Doom* uses the **Anthology/GOG revisions** of `tnt.wad`/`plutonia.wad`, which
+  carry no revision-number change and can only be told apart by hash or by the extra lumps
+  (§1.3/§1.4). The KEX and 1.9 revisions are hashed in §1.1–§1.4.
+* **Needs Deck Validation — internal folder layout.** This research could **not** confirm a
+  source-backed, per-product description of where GOG places the WADs inside each install directory
+  (whether `DOOM + DOOM II` uses Steam's `base/` + `rerelease/` split, and where the classic
+  *The Ultimate Doom* / *DOOM II* / *Final Doom* installers put `doom.wad` etc.). Rather than invent
+  a path, DDL treats the **launcher-recorded install directory** as the root and looks for `*.wad`
+  in that directory and one level of its subfolders (no deeper), then identifies the files by
+  content (§2). This finds the WADs whatever the product's internal layout is, and a wrong or empty
+  directory simply yields no candidates.
+
+**Generic roots (spec 021 R4, opt-in).** `DOOMWADDIR` / `DOOMWADPATH`, `/usr/share/games/doom` and
+`~/.local/share/games/doom` are the non-store conventions Chocolate Doom and DSDA-Doom search
+(linked in §4); DDL mirrors them as candidate roots **only** when the user enables "Search standard
+Linux folders", never by default.
+
+**Open question 10 — Lutris `pga.db`.** How should DDL read Lutris install paths: accept a SQLite
+dependency, add a tiny read-only SQLite page reader, or require the user to add the folder by hand?
+Left to the coordinator.
+
 ---
 
 ## 5. Implications for DDL (Proposed)
@@ -483,6 +589,14 @@ numeric complevel).
 9. **v1.666 / 1.8 registered builds.** DDL's SIGIL research says "do not accept them"; should the
    known-IWAD table list them as *recognised-but-unsupported* (so the UI can explain the mismatch)
    rather than ignore them?
+10. **Lutris `pga.db`.** Lutris records install directories only in a binary SQLite database
+    (§4.1). Reading it means a new SQLite dependency (or a hand-written reader) that this research
+    does not justify. Should DDL add one, or keep Lutris installs on the manual "Add IWAD folder"
+    flow?
+11. **GOG IWAD revisions in the table.** GOG's *Final Doom* ships the Anthology/GOG revisions of
+    `tnt.wad`/`plutonia.wad` (§1.3/§1.4), which the known-IWAD table (`data/iwads.toml`) does not
+    list, so a GOG Final Doom pair is only ever `Ambiguous`. Should the two published GOG hashes be
+    added to the table (spec 007 R1), or is user choice enough?
 
 ## Sources
 
@@ -513,6 +627,25 @@ returned HTTP 403 to this client):
   [`prboom2/src/dsda/settings.c`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/settings.c) ·
   [`prboom2/src/doomtype.h`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/doomtype.h)
 - [Chocolate Doom `src/d_iwad.c`](https://github.com/chocolate-doom/chocolate-doom/blob/master/src/d_iwad.c)
+
+**Store launchers (spec 021; pinned tags / commits read 2026-10-16):**
+
+- Heroic Games Launcher `v2.22.4`:
+  [`package.json`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/package.json) ·
+  [`src/backend/constants/paths.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/constants/paths.ts) ·
+  [`src/backend/config.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/config.ts) ·
+  [`src/backend/storeManagers/gog/electronStores.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/storeManagers/gog/electronStores.ts) ·
+  [`src/backend/storeManagers/gog/library.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/v2.22.4/src/backend/storeManagers/gog/library.ts)
+- minigalaxy `master`:
+  [`minigalaxy/paths.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/paths.py) ·
+  [`minigalaxy/config.py`](https://github.com/sharkwouter/minigalaxy/blob/master/minigalaxy/config.py)
+- Lutris `master`: [`lutris/game.py`](https://github.com/lutris/lutris/blob/master/lutris/game.py);
+  [Gentoo wiki: Lutris](https://wiki.gentoo.org/wiki/Lutris) ·
+  [Lutris forums: library data](https://forums.lutris.net/t/where-is-lutris-library-data-stored/6739) ·
+  [Lutris forums: Flatpak config](https://forums.lutris.net/t/lutris-config-location-with-flatpak/18516)
+- [GOG Support: "Where is my game installed?"](https://support.gog.com/hc/en-us/articles/213039625-Where-is-my-game-installed)
+- Lutris GOG installers for DOOM + DOOM II (`gogslug: doom_doom_ii`):
+  [35796](https://lutris.net/games/install/35796/view) · [35797](https://lutris.net/games/install/35797/view)
 
 **Platform / community:**
 
