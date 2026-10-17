@@ -33,12 +33,12 @@
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
 
-## Backlog — next major release (owner-requested or deferred; each needs a spec first)
+## Backlog — next major release (owner said go 2026-10-16; specs written)
 
-| Item | Notes |
-| --- | --- |
-| **Widescreen status bars** (owner request 2026-10-16) | **Unblocked:** the author licensed the collection GPL-3.0 (commit `eb3773ce9e`, 2026-10-16) in reply to https://github.com/NightFright2k19/doom_widehud/issues/6 and asked for credit. Spec 017 next, after the catalog batch merges. |
-| Multiple profiles per mapset | UI shows one Default profile today (spec 010); `deck-testing.md` C4. |
-| Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |
-| Catalog updates without a DDL release | D-019 embeds the catalog; fetching updates is a separate decision. |
-| GOG IWAD paths | After the Steam paths are validated on the Deck (spec 007). |
+| Item | Spec | State |
+| --- | --- | --- |
+| Widescreen status bars (doom_widehud, GPL-3.0 since `eb3773ce9e`; credit NightFright and contributors) | 017 | Ready — starts after the catalog batch merges |
+| Multiple profiles per mapset (`deck-testing.md` C4) | 018 | Ready — starts after 015 merges (UI overlap) |
+| Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
+| Recipe changes after install | 020 | Ready — after 018 |
+| GOG and other store IWAD paths | 021 | Ready — in progress |
