@@ -142,11 +142,30 @@ cargo run -p ddl -- catalog lint                         → Catalog lint passed
 - **Other files outside the stated ownership:** `crates/ddl-core/src/library/tests.rs` and
   `profiles/mod.rs` only gained `tags: Vec::new()` in their test `Recipe` literals (needed to
   compile). `crates/ddl/tests/ui_strings.rs` allows the new `[`/`]` key literals.
-- **Batch B is not on `main` yet** (Sunlust, Ancient Aliens, Back to Saturn X E1/E2,
-  Eviternity II): those recipes are **untagged**; the coordinator should tag them in a follow-up
-  after merging them. Candidates from what I found: Ancient Aliens — Cacowards 2016 (skillsaw's
-  Cacowards list says so; read the year page first); Eviternity II — Cacowards 2024 (secondary).
-  Both tests and the strip are data-driven, so new recipes need no Rust change.
+- **Batch B is tagged (follow-up, after merging `main` at 9d5f44a; 13 recipes).** The merge had no
+  conflicts. Tags and evidence (all Cacowards claims are **secondary**: doomworld.com and doomwiki.org
+  return 403 to automated fetches, so only DoomWiki-derived web-search results could be read; each
+  recipe says so in `verification.notes` and cites the year page):
+
+  | Recipe | Tags | Basis |
+  | --- | --- | --- |
+  | `sunlust` | classics, cacowards, megawad | 2015 winner (first listed among winners); first release 2015-08-07; 32 maps |
+  | `ancient-aliens` | classics, cacowards, megawad | 2016 winner; v1 released 2016-05-08; 32 maps |
+  | `back-to-saturn-x-e1` | classics, cacowards, community-projects | 2013 winner (20th Annual Cacowards, the award was for the episode's earlier public release); 1.1.6 dated 2020-08-13; release text "Esselfortium and a lot of wonderful people" |
+  | `back-to-saturn-x-e2` | classics, community-projects | no Cacoward confirmed: DoomWiki's series page mentions a 2014 Cacoward without naming the episode, so it is **not** tagged `cacowards`; 1.0.1 dated 2020-08-13 |
+  | `eviternity-ii` | cacowards, community-projects, megawad | 2024 winner; 14 credited authors; 37 maps; not `classics` (2024-09-30) |
+
+  Neither BTSX episode is `megawad` (27 maps) or `episode` (more than nine). Anyone with browser
+  access should read the year pages once; the claim to double-check first is the BTSX E1 / 2013
+  role and whether BTSX E2 has a Cacoward of its own. The batch-B research docs were not edited.
+  Re-run after the merge and tagging: fmt exit 0; clippy clean; `cargo test --workspace` 375 passed,
+  0 failed (ddl unit 59, ddl-core unit 290, integration and doc-tests the rest); `catalog lint`
+  passes. Headless renders re-inspected (`015-discover-all.png`, `015-discover-category.png`,
+  `015-detail-tags.png`): the strip still fits (seven chips plus the scroll arrow), the Discover grid
+  holds all 13 items (asserted by `services` tests), the Cacowards category starts with Ancient
+  Aliens, AUGER;ZENITH, Back to Saturn X E1. One cosmetic point: the long title "Back to Saturn X
+  E1: Get Out Of My Stations" is clipped at the second line on the card (pre-existing title
+  behaviour, now visible); a third chip row can be cut off on a card with three tags.
 - **Needs Deck Validation (A4):** L2/R2 are mapped to gilrs `LeftTrigger2`/`RightTrigger2`; on a Deck
   without Steam Input these may arrive as axes and never fire (keyboard `[`/`]` always work, and
   Left/Right on the strip covers the controller). Chip text at 20 px and the 72 px grid offset need a
