@@ -1,0 +1,124 @@
+# Confirmed bytes and release metadata: docs/research/reference-alien-vendetta.md §1–§9; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "alien-vendetta"
+title = "Alien Vendetta (Compet-N edition)"
+authors = [
+  "Anders Johnsen (project lead)",
+  "Mattias Berggren",
+  "Vincent Catalaa",
+  "Pablo Dictter",
+  "Yashar \"GeminI\" Garibzadeh",
+  "Madani El Hariri",
+  "Martin Aalen Hunsager",
+  "Jan Endre Jansen",
+  "Kristian Käll",
+  "Kim André \"Mutator\" Malde",
+  "Anthony Soto",
+  "Brad Spencer",
+  "Lee Szymanski",
+]
+release = "Compet-N edition (second release), 2002-12-24"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/av"
+description = "DOOM II megawad: 32 vanilla-format maps by a team of authors, with an external DEHACKED patch that supplies the intermission level names and story text."
+permission = "Authors may not use the levels as a base for new levels, and the AV-specific graphics may not be reused. Redistribution is permitted provided AV.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits and changelog files."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-alien-vendetta.md §1–§9", "Archive, member, WAD and DEHACKED inspection; DSDA-Doom v0.30.1 source; authors' release text"]
+notes = "Confirmed archive/member identities, the external AV.DEH string patch and the absence of COMPLVL/DEHACKED/UMAPINFO/MAPINFO lumps in AV.WAD. Proposed complevel 2 from the authors' 'constructed with vanilla Doom2 v1.9 exe in mind' statement; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The bundled DOS launcher AV.EXE is not declared; DDL never executes it, so the exe's par-time changes are not reproduced."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/av"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/av.zip", "https://youfailit.net/pub/idgames/levels/doom2/megawads/av.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/megawads/av.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/megawads/av.zip"]
+size = 9041333
+sha256 = "5c5382cc50b565946b6725b3058cc1fdefe7367ee3067808068900117aabf8fc"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/av.zip"
+
+[[packages.members]]
+id = "maps"
+path = "AV.WAD"
+size = 23819412
+sha256 = "fe5fd9ebaaafdf948d5c518ab4cb4d78411a176e2264a89fd0edefb23b190091"
+keep = false
+
+[[packages.members]]
+id = "patch"
+path = "AV.DEH"
+size = 7403
+sha256 = "9fb5ab09b7c3aad40eba090cff4d50e74fa8907457a210c08d275a06b089c77b"
+keep = false
+
+[[packages.members]]
+id = "movfix"
+path = "AVMOVFIX.WAD"
+size = 1816944
+sha256 = "1fa72a1eba15022b8f794cf362df042072614da92606a3aef02d1872a1b86ffd"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "AV.TXT"
+size = 55068
+sha256 = "52aca80bef87884359cc3f671616e37c35a6e8f98012423ee9109e1a265ec5df"
+keep = true
+
+[[packages.members]]
+id = "changelog"
+path = "CHANGES.TXT"
+size = 7660
+sha256 = "95b49036375644882e5ac7c9f47ba83a05b109635743398497422731e59db750"
+keep = true
+
+[[components]]
+id = "main"
+label = "Alien Vendetta"
+description = "Main 32-map vanilla megawad with the external DEHACKED string patch for its level names and story text."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components.members]]
+package = "free"
+member = "patch"
+role = "dehacked"
+
+[[components]]
+id = "movfix"
+label = "MAP20 movie fix (Compet-N)"
+description = "Official alternate MAP20 without the large mountain area, for Compet-N maxkill demo recording; the author says it should be ignored for ordinary port play."
+optional = true
+default = false
+position = 2
+
+[[components.members]]
+package = "free"
+member = "movfix"
+role = "maps"
