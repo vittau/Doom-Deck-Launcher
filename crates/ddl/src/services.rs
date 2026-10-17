@@ -2785,12 +2785,18 @@ mod tests {
         let snapshot = s.snapshot().unwrap();
         assert_eq!(snapshot.folders, std::slice::from_ref(&folder));
         assert!(snapshot.items.iter().all(|i| !i.favorite));
+        // Spec 019 R5: the additive fields default on/absent for an old file.
+        assert!(snapshot.catalog.auto_update);
+        assert_eq!(snapshot.catalog.last_check, None);
+        assert!(!snapshot.catalog.updated);
         // The next save writes schema 2 with the old data and the new field.
         favorite(&mut s, "sigil-ii").unwrap();
         let state = state_file(&env);
         assert_eq!(state["schema_version"], 2);
         assert_eq!(state["favorites"], serde_json::json!(["sigil-ii"]));
         assert_eq!(state["folders"], serde_json::json!([folder]));
+        assert_eq!(state["catalog_auto_update"], serde_json::json!(true));
+        assert_eq!(state["catalog_last_check"], serde_json::Value::Null);
         assert!(Services::open(env).is_ok());
     }
     #[test]
