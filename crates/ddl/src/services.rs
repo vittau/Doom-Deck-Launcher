@@ -5,7 +5,10 @@ use ddl_core::{
     dsda_config::DsdaConfigManager,
     engines::dsda::{self, EngineManager, EngineRunner},
     iwads::{self, Registry, RegistryEntry},
-    library::{InstallManifest, Installer},
+    library::{
+        ActiveInstall, InstallManifest, Installer, RecipeStatus, classify, recipe_content_sha256,
+        reconcile_profile,
+    },
     platform::{
         lock::{LockError, StateLock},
         paths::Paths,
@@ -132,6 +135,9 @@ struct AppState {
     /// Spec 018: additive schema-2 selection; old files default to no selection.
     #[serde(default)]
     last_profiles: BTreeMap<String, String>,
+    /// Spec 020: dismissal is scoped to one canonical recipe identity.
+    #[serde(default)]
+    kept_recipes: BTreeMap<String, String>,
     /// Spec 021 R4: also probe the generic DOOM folders and
     /// `DOOMWADDIR`/`DOOMWADPATH`. Default off. Added while the file was still
     /// schema 1 (absent loads as `false`); schema 2 carries it unchanged.
@@ -150,6 +156,7 @@ impl Default for AppState {
             recipes: BTreeMap::new(),
             favorites: BTreeSet::new(),
             last_profiles: BTreeMap::new(),
+            kept_recipes: BTreeMap::new(),
             search_standard_folders: false,
         }
     }
@@ -166,6 +173,17 @@ impl AppState {
             _ => return Err(Problem::State),
         }
         Ok(state)
+    }
+}
+/// Removes an unpublished generation after any pre-publication failure.
+struct UnpublishedGeneration(Option<PathBuf>);
+impl Drop for UnpublishedGeneration {
+    fn drop(&mut self) {
+        if let Some(path) = &self.0 {
+            if let Err(error) = fs::remove_dir_all(path) {
+                tracing::warn!(%error, path=%path.display(), "unpublished generation cleanup deferred");
+            }
+        }
     }
 }
 /// Versioned machine state, replace by rename after flushing the complete file.
@@ -199,6 +217,10 @@ pub struct Item {
     pub last_played: Option<u64>,
     pub launch: Result<Summary, Blocker>,
     pub favorite: bool,
+    pub recipe_status: RecipeStatus,
+    pub change_summary: String,
+    pub update_dismissed: bool,
+    pub update_notice: Vec<String>,
 }
 #[derive(Debug, Clone)]
 pub struct Snapshot {
@@ -231,6 +253,8 @@ pub enum Command {
     Choose(PathBuf, String),
     RemoveFolder(PathBuf),
     Install(String),
+    UpdateMapset(String),
+    KeepCurrent(String),
     Save(Profile),
     SelectProfile(String, String),
     NewProfile(String, bool),
@@ -371,7 +395,298 @@ impl Services {
             .save(&self.env.paths.config.join("iwads.json"))
             .map_err(|e| logged(Problem::Storage, e))
     }
+    fn manifest(
+        &self,
+        recipe: &Recipe,
+    ) -> Result<Option<InstallManifest>, ddl_core::library::InstallError> {
+        self.installer.load_manifest(recipe)
+    }
+    fn active(&self, id: &str) -> Result<Option<ActiveInstall>, Problem> {
+        self.installer.active(id).map_err(install_error)
+    }
+    fn install_content(
+        &mut self,
+        recipe: &Recipe,
+        enabled: &[&str],
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(InstallProgress),
+    ) -> Result<InstallManifest, ddl_core::library::InstallError> {
+        if let Some(mut active) = self.installer.active(&recipe.id)? {
+            let previous = active.manifest.clone();
+            let mut manifest = self
+                .installer
+                .stage_update(recipe, enabled, &previous, cancel, progress)?;
+            let mut unpublished =
+                UnpublishedGeneration(Some(self.installer.manifest_dir(&manifest)?));
+            for profile in self
+                .profiles
+                .list()
+                .map_err(|e| ddl_core::library::InstallError::Serialize(e.to_string()))?
+                .iter()
+                .filter(|p| p.recipe_id == recipe.id)
+            {
+                manifest = self.installer.extend_install(
+                    recipe,
+                    &profile
+                        .components
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>(),
+                    &manifest,
+                    cancel,
+                    progress,
+                )?;
+            }
+            self.installer.verify_staged(&manifest, cancel)?;
+            active
+                .retired_dirs
+                .push(self.installer.manifest_dir(&previous)?);
+            active.manifest = manifest.clone();
+            self.installer.publish(&active)?;
+            unpublished.0 = None;
+            self.cleanup_retired();
+            Ok(manifest)
+        } else {
+            self.installer
+                .install_with_progress(recipe, enabled, cancel, progress)
+        }
+    }
+    fn adopt_metadata(&mut self) -> Result<(), Problem> {
+        for id in self.installed_ids() {
+            let old = self.recipe(&id)?;
+            let Some(new) = self.catalog.recipe(&id).cloned() else {
+                continue;
+            };
+            let Some(mut manifest) = self.manifest(&old).map_err(install_error)? else {
+                continue;
+            };
+            if classify(&manifest, &old, Some(&new)) == RecipeStatus::MetadataOnly {
+                manifest.recipe_sha256 = recipe_content_sha256(&new).map_err(install_error)?;
+                let mut active = self.active(&id)?.unwrap_or(ActiveInstall {
+                    schema_version: 1,
+                    recipe: old,
+                    manifest: manifest.clone(),
+                    previous_recipe: None,
+                    pending_profiles: vec![],
+                    notices: vec![],
+                    retired_dirs: vec![],
+                });
+                active.recipe = new;
+                active.manifest = manifest;
+                self.installer.publish(&active).map_err(install_error)?;
+            }
+        }
+        Ok(())
+    }
+    fn installed_ids(&self) -> BTreeSet<String> {
+        self.state.recipes.keys().cloned().collect()
+    }
+    fn reconcile_install(&self, id: &str) -> Result<(), Problem> {
+        let Some(mut active) = self.active(id)? else {
+            return Ok(());
+        };
+        let Some(old) = active.previous_recipe.as_ref() else {
+            return Ok(());
+        };
+        // Save each profile atomically before removing its pending marker. A crash
+        // between those writes repeats the same deterministic reconciliation.
+        for id in active.pending_profiles.clone() {
+            if let Some(mut profile) = self
+                .profiles
+                .load_optional(&id)
+                .map_err(|e| logged(Problem::State, e))?
+            {
+                reconcile_profile(&mut profile, old, &active.recipe);
+                profile
+                    .validate(&active.recipe)
+                    .map_err(|e| logged(Problem::State, e))?;
+                self.profiles
+                    .save(&profile)
+                    .map_err(|e| logged(Problem::Storage, e))?;
+            }
+            active.pending_profiles.retain(|p| p != &id);
+            self.installer.publish(&active).map_err(install_error)?;
+        }
+        Ok(())
+    }
+    fn cleanup_retired(&self) {
+        for id in self.installed_ids() {
+            let Ok(Some(mut active)) = self.active(&id) else {
+                continue;
+            };
+            if active.retired_dirs.is_empty() {
+                continue;
+            }
+            active.retired_dirs.retain(|dir| {
+                if active.manifest.members.iter().any(|m| m.path.starts_with(dir)) { return true; }
+                match self.installer.remove_retired(dir) {
+                    Ok(()) => false,
+                    Err(error) => { tracing::warn!(%error, path=%dir.display(), "retired install cleanup deferred"); true }
+                }
+            });
+            if let Err(error) = self.installer.publish(&active) {
+                tracing::warn!(%error, "retired cleanup queue retained");
+            }
+        }
+    }
+    fn update_mapset_inner(
+        &mut self,
+        id: &str,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(InstallProgress),
+    ) -> Result<InstallManifest, Problem> {
+        self.reconcile_install(id)?;
+        let old = self.recipe(id)?;
+        let new = self.catalog.recipe(id).cloned().ok_or(Problem::State)?;
+        let previous = self
+            .manifest(&old)
+            .map_err(install_error)?
+            .ok_or(Problem::State)?;
+        let status = classify(&previous, &old, Some(&new));
+        if matches!(status, RecipeStatus::MetadataOnly | RecipeStatus::Current) {
+            self.adopt_metadata()?;
+            return self
+                .manifest(&new)
+                .map_err(install_error)?
+                .ok_or(Problem::State);
+        }
+        let mut profiles: Vec<_> = self
+            .profiles
+            .list()
+            .map_err(|e| logged(Problem::State, e))?
+            .into_iter()
+            .filter(|p| p.recipe_id == id)
+            .collect();
+        if profiles.is_empty() {
+            let p = default_profile(&old);
+            self.profiles
+                .save(&p)
+                .map_err(|e| logged(Problem::Storage, e))?;
+            profiles.push(p);
+        }
+        let pending_profiles = profiles.iter().map(|p| p.id.clone()).collect();
+        let mut notices = Vec::new();
+        for profile in &mut profiles {
+            for dropped in reconcile_profile(profile, &old, &new) {
+                notices.push(format!("{}: removed add-on {dropped}", profile.name));
+            }
+            profile
+                .validate(&new)
+                .map_err(|e| logged(Problem::State, e))?;
+        }
+        let mut staging_progress = |p: InstallProgress| {
+            progress(if p.stage == ddl_core::downloads::InstallStage::Commit {
+                InstallProgress::stage(ddl_core::downloads::InstallStage::Verify)
+            } else {
+                p
+            });
+        };
+        let mut manifest = self
+            .installer
+            .stage_update(
+                &new,
+                &profiles[0]
+                    .components
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
+                &previous,
+                cancel,
+                &mut staging_progress,
+            )
+            .map_err(install_error)?;
+        let mut unpublished = UnpublishedGeneration(Some(
+            self.installer
+                .manifest_dir(&manifest)
+                .map_err(install_error)?,
+        ));
+        for profile in profiles.iter().skip(1) {
+            manifest = self
+                .installer
+                .extend_install(
+                    &new,
+                    &profile
+                        .components
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>(),
+                    &manifest,
+                    cancel,
+                    &mut staging_progress,
+                )
+                .map_err(install_error)?;
+        }
+        self.installer
+            .verify_staged(&manifest, cancel)
+            .map_err(install_error)?;
+        if cancel.is_cancelled() {
+            return Err(Problem::Cancelled);
+        }
+        let mut retired_dirs = self.active(id)?.map_or_else(Vec::new, |a| a.retired_dirs);
+        retired_dirs.push(
+            self.installer
+                .manifest_dir(&previous)
+                .map_err(install_error)?,
+        );
+        let active = ActiveInstall {
+            schema_version: 1,
+            recipe: new,
+            manifest: manifest.clone(),
+            previous_recipe: Some(old),
+            pending_profiles,
+            notices,
+            retired_dirs,
+        };
+        progress(InstallProgress::stage(
+            ddl_core::downloads::InstallStage::Commit,
+        ));
+        self.installer.publish(&active).map_err(install_error)?;
+        unpublished.0 = None;
+        // Publication succeeded. Reconciliation/cleanup failures are retryable
+        // maintenance, never reported as a failed content transaction.
+        if let Err(error) = self.reconcile_install(id) {
+            tracing::warn!(%error, "profile reconciliation deferred");
+        }
+        self.cleanup_retired();
+        Ok(manifest)
+    }
+    pub fn update_mapset(
+        &mut self,
+        id: &str,
+        progress: &mut dyn FnMut(InstallProgress),
+    ) -> Result<InstallManifest, CliFailure> {
+        let _lock = self.lock_cli()?;
+        self.update_mapset_inner(id, &CancellationToken::new(), progress)
+            .map_err(|e| CliFailure::message(e.to_string()))
+    }
+    pub fn mapset_status(
+        &self,
+        id: Option<&str>,
+    ) -> Result<Vec<(String, RecipeStatus, String)>, CliFailure> {
+        let snapshot = self
+            .snapshot()
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        if id.is_some_and(|id| {
+            !snapshot
+                .items
+                .iter()
+                .any(|i| i.recipe.id == id && i.manifest.is_some())
+        }) {
+            return Err(CliFailure::message(
+                "mapset is not installed; use `ddl mapset list`",
+            ));
+        }
+        Ok(snapshot
+            .items
+            .into_iter()
+            .filter(|i| i.manifest.is_some() && id.is_none_or(|id| i.recipe.id == id))
+            .map(|i| (i.recipe.id, i.recipe_status, i.change_summary))
+            .collect())
+    }
     fn recipe(&self, id: &str) -> Result<Recipe, Problem> {
+        if let Some(active) = self.active(id)? {
+            return Ok(active.recipe);
+        }
         self.state
             .recipes
             .get(id)
@@ -396,6 +711,11 @@ impl Services {
             .map(|r| (r.recipe.id.clone(), r.recipe.clone()))
             .collect();
         recipes.extend(self.state.recipes.clone());
+        for id in self.installed_ids() {
+            if let Some(active) = self.active(&id)? {
+                recipes.insert(id, active.recipe);
+            }
+        }
         // Tags are display metadata: an install snapshot taken before a recipe
         // was tagged still shows the catalog's current tags (launch data stays
         // frozen in the snapshot, D-019).
@@ -410,10 +730,7 @@ impl Services {
             .map_err(|e| logged(Problem::State, e))?;
         let mut items = vec![];
         for recipe in recipes.into_values() {
-            let manifest = self
-                .installer
-                .load_manifest(&recipe)
-                .map_err(install_error)?;
+            let manifest = self.manifest(&recipe).map_err(install_error)?;
             let mut profiles: Vec<_> = held_profiles
                 .iter()
                 .filter(|p| p.recipe_id == recipe.id)
@@ -421,6 +738,15 @@ impl Services {
                 .collect();
             if profiles.is_empty() {
                 profiles.push(default_profile(&recipe));
+            }
+            if let Some(active) = self.active(&recipe.id)? {
+                if let Some(old) = &active.previous_recipe {
+                    for profile in &mut profiles {
+                        if active.pending_profiles.contains(&profile.id) {
+                            reconcile_profile(profile, old, &active.recipe);
+                        }
+                    }
+                }
             }
             let profile = selected_profile(&profiles, self.state.last_profiles.get(&recipe.id));
             let last_played = profiles.iter().filter_map(|p| p.last_played).max();
@@ -436,7 +762,26 @@ impl Services {
                 .map(|r| r.summary().clone()),
                 None => Err(Blocker::NotInstalled),
             };
+            let recipe_status = manifest.as_ref().map_or(RecipeStatus::Current, |m| {
+                classify(
+                    m,
+                    &self.recipe(&recipe.id).unwrap_or_else(|_| recipe.clone()),
+                    self.catalog.recipe(&recipe.id),
+                )
+            });
+            let change_summary = recipe_status.summary(&recipe, self.catalog.recipe(&recipe.id));
+            let update_dismissed = self
+                .catalog
+                .recipe(&recipe.id)
+                .and_then(|r| recipe_content_sha256(r).ok())
+                .is_some_and(|hash| self.state.kept_recipes.get(&recipe.id) == Some(&hash));
+            let active = self.active(&recipe.id)?;
+            let update_notice = active.as_ref().map_or_else(Vec::new, |a| a.notices.clone());
             items.push(Item {
+                recipe_status,
+                change_summary,
+                update_dismissed,
+                update_notice,
                 favorite: self.state.favorites.contains(&recipe.id),
                 recipe,
                 manifest,
@@ -496,6 +841,11 @@ impl Services {
                     logged(Problem::Config, error);
                 }
 
+                self.cleanup_retired();
+                self.adopt_metadata()?;
+                for id in self.installed_ids() {
+                    self.reconcile_install(&id)?;
+                }
                 self.scan(None, cancel, emit)?;
             }
             Command::InstallEngine(version) => {
@@ -566,15 +916,23 @@ impl Services {
                 self.profiles
                     .save(&p)
                     .map_err(|e| logged(Problem::Storage, e))?;
-                self.installer
-                    .install_with_progress(
-                        &recipe,
-                        &p.components.iter().map(String::as_str).collect::<Vec<_>>(),
-                        cancel,
-                        &mut |p| emit(Event::Progress(p)),
-                    )
-                    .map_err(install_error)?;
+                self.install_content(
+                    &recipe,
+                    &p.components.iter().map(String::as_str).collect::<Vec<_>>(),
+                    cancel,
+                    &mut |p| emit(Event::Progress(p)),
+                )
+                .map_err(install_error)?;
                 self.state.recipes.insert(id, recipe);
+                self.save()?;
+            }
+            Command::UpdateMapset(id) => {
+                self.update_mapset_inner(&id, cancel, &mut |p| emit(Event::Progress(p)))?;
+            }
+            Command::KeepCurrent(id) => {
+                let recipe = self.catalog.recipe(&id).ok_or(Problem::State)?;
+                let hash = recipe_content_sha256(recipe).map_err(install_error)?;
+                self.state.kept_recipes.insert(id, hash);
                 self.save()?;
             }
             Command::Save(profile) => {
@@ -669,6 +1027,10 @@ impl Services {
                 self.save()?;
             }
             Command::Play(id) => {
+                {
+                    let _lock = self.lock_state()?;
+                    self.reconcile_install(&id)?;
+                }
                 let recipe = self.recipe(&id)?;
                 let mut profile = self.profile(&recipe)?;
                 let guard = self
@@ -722,10 +1084,72 @@ impl Services {
             }
             Command::Import(id, component, path) => {
                 let recipe = self.recipe(&id)?;
-                let outcome = self
-                    .installer
-                    .import_user_component_with_cancel(&recipe, &component, &path, cancel)
-                    .map_err(install_error)?;
+                let outcome = if let Some(mut active) = self.active(&id)? {
+                    let previous = active.manifest.clone();
+                    let profile = self.profile(&recipe)?;
+                    let mut staged = self
+                        .installer
+                        .stage_update(
+                            &recipe,
+                            &profile
+                                .components
+                                .iter()
+                                .map(String::as_str)
+                                .collect::<Vec<_>>(),
+                            &previous,
+                            cancel,
+                            &mut |_| {},
+                        )
+                        .map_err(install_error)?;
+                    let mut unpublished = UnpublishedGeneration(Some(
+                        self.installer
+                            .manifest_dir(&staged)
+                            .map_err(install_error)?,
+                    ));
+                    for profile in self
+                        .profiles
+                        .list()
+                        .map_err(|e| logged(Problem::State, e))?
+                        .iter()
+                        .filter(|p| p.recipe_id == id)
+                    {
+                        staged = self
+                            .installer
+                            .extend_install(
+                                &recipe,
+                                &profile
+                                    .components
+                                    .iter()
+                                    .map(String::as_str)
+                                    .collect::<Vec<_>>(),
+                                &staged,
+                                cancel,
+                                &mut |_| {},
+                            )
+                            .map_err(install_error)?;
+                    }
+                    let (outcome, manifest) = self
+                        .installer
+                        .import_into_manifest(&recipe, &component, &path, cancel, &staged)
+                        .map_err(install_error)?;
+                    self.installer
+                        .verify_staged(&manifest, cancel)
+                        .map_err(install_error)?;
+                    active.retired_dirs.push(
+                        self.installer
+                            .manifest_dir(&previous)
+                            .map_err(install_error)?,
+                    );
+                    active.manifest = manifest;
+                    self.installer.publish(&active).map_err(install_error)?;
+                    unpublished.0 = None;
+                    self.cleanup_retired();
+                    outcome
+                } else {
+                    self.installer
+                        .import_user_component_with_cancel(&recipe, &component, &path, cancel)
+                        .map_err(install_error)?
+                };
                 if !outcome.matched {
                     tracing::warn!(sha256=%outcome.sha256,component,"unrecognized imported component was stored but not enabled");
                     return Err(Problem::UnknownFile);
@@ -771,7 +1195,7 @@ impl Services {
         recipe: &Recipe,
         profile: &Profile,
     ) -> Result<resolver::Resolution, Blocker> {
-        let manifest = match self.installer.load_manifest(recipe) {
+        let manifest = match self.manifest(recipe) {
             Ok(Some(manifest)) => manifest,
             Ok(None) => return Err(Blocker::NotInstalled),
             Err(error) => {
@@ -1149,9 +1573,11 @@ impl Services {
             if !seen.insert(recipe.id.clone()) {
                 continue;
             }
+            let recipe = self
+                .recipe(&recipe.id)
+                .map_err(|e| CliFailure::message(e.to_string()))?;
             let installed = self
-                .installer
-                .load_manifest(&recipe)
+                .manifest(&recipe)
                 .map_err(|error| CliFailure::message(error.to_string()))?
                 .is_some();
             rows.push(MapsetRow {
@@ -1229,8 +1655,7 @@ impl Services {
             .map_err(|error| CliFailure::message(error.to_string()))?;
         let enabled: Vec<&str> = profile.components.iter().map(String::as_str).collect();
         let manifest = self
-            .installer
-            .install_with_progress(&recipe, &enabled, &CancellationToken::new(), progress)
+            .install_content(&recipe, &enabled, &CancellationToken::new(), progress)
             .map_err(|error| CliFailure::message(error.to_string()))?;
         self.state.recipes.insert(id.to_owned(), recipe);
         self.save()
@@ -1246,8 +1671,13 @@ impl Services {
         overrides: &LaunchOverrides,
     ) -> Result<Profile, CliFailure> {
         let mut profile = self
-            .profile(recipe)
-            .map_err(|problem| CliFailure::message(problem.to_string()))?;
+            .snapshot()
+            .map_err(|e| CliFailure::message(e.to_string()))?
+            .items
+            .into_iter()
+            .find(|i| i.recipe.id == recipe.id)
+            .ok_or_else(|| CliFailure::message("unknown mapset"))?
+            .profile;
         if let Some(selector) = &overrides.profile {
             let snapshot = self
                 .snapshot()
@@ -1352,6 +1782,11 @@ impl Services {
         id: &str,
         overrides: &LaunchOverrides,
     ) -> Result<dsda::LaunchOutcome, CliFailure> {
+        {
+            let _lock = self.lock_cli()?;
+            self.reconcile_install(id)
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+        }
         let recipe = self
             .recipe(id)
             .map_err(|_| CliFailure::message(format!("no catalog recipe with id `{id}`")))?;
@@ -2169,3 +2604,7 @@ pub fn choose_exclusive_component(
         profile.set_component(id, true);
     }
 }
+
+#[cfg(test)]
+#[path = "recipe_change_tests.rs"]
+pub(crate) mod recipe_change_tests;
