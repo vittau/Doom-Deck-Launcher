@@ -76,7 +76,11 @@ jobs:
       - name: Build ddl in release mode
         run: |
           set -euo pipefail
+          # The container user does not own the checkout; without this git refuses it
+          # ("dubious ownership") and the release build fails.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           serial="$(git log -1 --format=%ct)"
+          test "$serial" -gt 0
           export DDL_CATALOG_SERIAL="$serial"
           echo "catalog serial: $serial"
           cargo build --release --locked -p ddl
