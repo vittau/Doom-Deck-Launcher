@@ -463,6 +463,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     let _ = ui.window(); // ComponentHandle methods are available without showing a window.
     production::journey(&window, &ui);
     production::categories_journey(&window, &ui);
+    production::recipe_changes_journey(&window, &ui);
 }
 
 #[path = "headless_production.rs"]

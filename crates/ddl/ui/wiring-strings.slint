@@ -1,4 +1,12 @@
 export global WiringStrings {
+    out property <string> recipe-update: @tr("Update available");
+    out property <string> recipe-removed: @tr("No longer in the catalog");
+    out property <string> recipe-update-action: @tr("Update");
+    out property <string> recipe-keep: @tr("Keep current");
+    out property <string> recipe-summary: @tr("Update available · {}", root.value);
+    out property <string> recipe-saves: @tr("Old saves may not load in the new release.");
+    out property <string> recipe-notice: @tr("Component selections updated: {}", root.value);
+
     out property <string> manage-profiles: @tr("Profiles");
     out property <string> active-profile: @tr("Active profile: {}", root.value);
     out property <string> single-profile: @tr("1 profile");

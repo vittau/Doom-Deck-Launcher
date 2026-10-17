@@ -1465,3 +1465,91 @@ fn zip_entries(entries: Vec<(String, Vec<u8>)>) -> Vec<u8> {
     }
     zip.finish().unwrap().into_inner()
 }
+
+pub(super) fn recipe_changes_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    use crate::services::recipe_change_tests::{catalog_env, installed, setup};
+    let (_temp, _server, env, _hits) = setup();
+    let mut services = installed(&env);
+    let snapshot = services.snapshot().unwrap();
+    let mut profile = snapshot.items[0].profile.clone();
+    profile
+        .components
+        .push(snapshot.items[0].recipe.components[1].id.clone());
+    services
+        .execute(
+            Command::Save(profile),
+            &ddl_core::downloads::CancellationToken::new(),
+            &mut |_| {},
+        )
+        .unwrap();
+    let changed = catalog_env(&env, |c| {
+        let recipe = &mut c.recipes[0].recipe;
+        recipe.release = "1.1".into();
+        recipe.compatibility.complevel = ddl_core::catalog::Complevel::Number(11);
+        recipe.components[1].id = "new-addon".into();
+    });
+    let state = crate::runtime::attach_environment(ui, changed.clone());
+    idle(&state);
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Library;
+        r.focus = 10;
+        r.sync(ui);
+    }
+    assert!(ui.get_nodes().iter().any(|n| n.label == "Update available"));
+    capture(window, "020-library-update.png");
+    press(window, Key::Return);
+    assert_eq!(state.borrow().screen, Screen::Detail);
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label.contains("New release 1.1") && n.label.contains("complevel"))
+    );
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "Old saves may not load in the new release.")
+    );
+    capture(window, "020-detail-update.png");
+    press(window, Key::DownArrow);
+    assert_eq!(ui.get_focused(), 2);
+    press(window, Key::DownArrow);
+    assert_eq!(ui.get_focused(), 3);
+    press(window, Key::Return);
+    idle(&state);
+    assert!(state.borrow().snapshot.as_ref().unwrap().items[0].update_dismissed);
+    // An explicit Update remains available in detail after Keep current.
+    press(window, Key::UpArrow);
+    assert_eq!(ui.get_focused(), 2);
+    press(window, Key::Return);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(
+        state.borrow().snapshot.as_ref().unwrap().items[0].recipe_status,
+        ddl_core::library::RecipeStatus::Current
+    );
+    assert!(ui.get_toast().contains("removed add-on"));
+    capture(window, "020-update-notice.png");
+    let removed = catalog_env(&changed, |c| c.recipes.clear());
+    let state = crate::runtime::attach_environment(ui, removed);
+    idle(&state);
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Library;
+        r.focus = 10;
+        r.sync(ui);
+    }
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "No longer in the catalog")
+    );
+    capture(window, "020-library-removed.png");
+    press(window, Key::Return);
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "No longer in the catalog")
+    );
+    capture(window, "020-detail-removed.png");
+}
