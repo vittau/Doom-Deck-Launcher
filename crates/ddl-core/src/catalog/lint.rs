@@ -63,6 +63,70 @@ pub(crate) fn safe_path(s: &str) -> bool {
         })
 }
 
+/// Status-bar/HUD lump-name prefixes a cosmetic-only "Widescreen status bar"
+/// WAD may contain (spec 017, R4). Derived from the status-bar-only files in
+/// NightFright's `doom_widehud` plus the lump families DSDA-Doom v0.30.1 draws
+/// as part of the classic status bar (`st_stuff.c` `STBAR`/`STARMS`; the face
+/// `STF*`, number/percent `STT*`/`STG*`/`STYS*`, key/armour `STK*`/`STC*`, the
+/// Doom 1 disk/CD-ROM icons and the `BRDR_*` background tiles). Any lump that
+/// does not match (maps, `DEHACKED`, `MAPINFO`, `UMAPINFO`, music, sounds,
+/// textures, sprites) makes the WAD non-cosmetic.
+const STATUS_BAR_LUMP_PREFIXES: &[&str] = &[
+    "STBAR", "STARMS", "STF", "STT", "STG", "STK", "STYS", "STC", "STDISK", "STCDROM", "BRDR_",
+];
+
+/// A component whose label marks it as the widescreen status bar (spec 017, R4).
+fn is_status_bar_component(c: &Component) -> bool {
+    c.label.to_ascii_lowercase().contains("status bar")
+}
+
+/// Reads the lump names of a WAD/PWAD held in memory (spec 017, R4). Bounds the
+/// header, the declared lump count and the directory so untrusted bytes cannot
+/// force a large allocation or a slice panic.
+pub fn wad_lump_names(bytes: &[u8]) -> Result<Vec<String>, String> {
+    const HEADER: usize = 12;
+    const ENTRY: usize = 16;
+    const MAX_LUMPS: i32 = 200_000;
+    if bytes.len() < HEADER || !matches!(&bytes[..4], b"IWAD" | b"PWAD") {
+        return Err("not a WAD/PWAD (bad header magic)".into());
+    }
+    let numlumps = i32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+    let infotableofs = i32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
+    if numlumps < 0 || infotableofs < 0 || numlumps > MAX_LUMPS {
+        return Err("invalid WAD lump directory".into());
+    }
+    let start = infotableofs as usize;
+    let end = start
+        .checked_add(numlumps as usize * ENTRY)
+        .ok_or("WAD lump directory overflows")?;
+    if start < HEADER || end > bytes.len() {
+        return Err("WAD lump directory is out of bounds".into());
+    }
+    let mut names = Vec::with_capacity(numlumps as usize);
+    for entry in bytes[start..end].as_chunks::<ENTRY>().0 {
+        let name = &entry[8..16];
+        let len = name.iter().position(|b| *b == 0).unwrap_or(name.len());
+        names.push(String::from_utf8_lossy(&name[..len]).into_owned());
+    }
+    Ok(names)
+}
+
+/// Rejects a status-bar WAD that carries any non-cosmetic lump (spec 017, R4).
+pub fn check_status_bar_lumps(names: &[String]) -> Result<(), String> {
+    for name in names {
+        let upper = name.to_ascii_uppercase();
+        if !STATUS_BAR_LUMP_PREFIXES
+            .iter()
+            .any(|prefix| upper.starts_with(prefix))
+        {
+            return Err(format!(
+                "non-cosmetic lump `{name}` in a widescreen status-bar WAD"
+            ));
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn checked_url(s: &str, allowed: &[String]) -> Result<Url, String> {
     let u = Url::parse(s).map_err(|_| "use an absolute HTTPS URL".to_string())?;
     if u.scheme() != "https"
@@ -160,6 +224,12 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
         r.authors.is_empty() || r.authors.iter().any(|a| a.trim().is_empty()),
         "missing authors",
         "credit the release authors",
+    );
+    issue(
+        "release".into(),
+        r.release.contains(['/', '\\']),
+        "invalid release label",
+        "release becomes an install path component; remove `/` and `\\`",
     );
     issue(
         "page".into(),
@@ -747,6 +817,20 @@ fn line_for(text: &str, key: &str) -> usize {
     text[..offset].bytes().filter(|b| *b == b'\n').count() + 1
 }
 
+/// The member paths in `package` that a widescreen-status-bar component loads,
+/// so `--fetch` can check their WAD directory for non-cosmetic lumps (R4).
+fn cosmetic_member_paths<'a>(r: &'a Recipe, package: &'a Package) -> Vec<&'a str> {
+    r.components
+        .iter()
+        .filter(|c| is_status_bar_component(c))
+        .flat_map(|c| c.members.iter())
+        .filter(|m| m.role == Role::Graphics && m.package.as_deref() == Some(package.id.as_str()))
+        .filter_map(|m| m.member.as_deref())
+        .filter_map(|id| package.members.iter().find(|member| member.id == id))
+        .map(|member| member.path.as_str())
+        .collect()
+}
+
 /// Lints directories or individual recipes. Hosts are supplied explicitly so
 /// callers/tests need not depend on cwd. Network occurs only with `Some(fetch)`.
 pub fn lint_paths(
@@ -870,7 +954,8 @@ pub fn lint_paths(
         }
         if valid && let Some(fetcher) = fetch.as_deref_mut() {
             for (i, p) in r.packages.iter().enumerate() {
-                if let Err(e) = fetch::fetch_package(p, &hosts, fetcher) {
+                let cosmetic = cosmetic_member_paths(&r, p);
+                if let Err(e) = fetch::fetch_package(p, &hosts, fetcher, &cosmetic) {
                     errors.push(diag(&path, line_for(&text, &format!("packages.{i}")), e, "check upstream bytes, size, SHA-256 and exact member paths; never guess new hashes"));
                 }
             }

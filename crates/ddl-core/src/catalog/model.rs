@@ -315,6 +315,17 @@ impl Recipe {
         Ok(active)
     }
 
+    /// The optional component ids a fresh profile enables by default (spec 017,
+    /// R5). Lint proves this combination is legal (`load_order`).
+    #[must_use]
+    pub fn default_components(&self) -> Vec<String> {
+        self.components
+            .iter()
+            .filter(|c| c.optional && c.default)
+            .map(|c| c.id.clone())
+            .collect()
+    }
+
     /// Checks one selection; validation proves the invariants for every selection.
     /// `enabled` contains optional component ids; main is implicitly required.
     pub fn load_order<'a>(&'a self, enabled: &[&str]) -> Result<LoadOrder<'a>, String> {

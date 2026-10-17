@@ -32,7 +32,7 @@ losing saves or breaking the installed copy.
   recipe default. A content change warns that old saves may not load in the new release (DSDA
   saves are version-sensitive) — wording only, no blocking.
 - **R5** — **Removed from catalog:** the mapset stays installed and playable, marked
-  "No longer in the catalog"; Uninstall works as before.
+  "No longer in the catalog". (DDL has no uninstall flow yet — backlog item, not part of this spec.)
 - **R6** — **CLI:** `ddl mapset status [<id>]` prints the classification; `ddl mapset update <id>`
   runs the Update path.
 

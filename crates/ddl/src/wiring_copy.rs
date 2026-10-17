@@ -197,6 +197,7 @@ pub enum Text {
     FavoriteAddButton,
     FavoriteRemoveButton,
     SearchStandardFolders,
+    StatusBarCredit,
 }
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
@@ -394,6 +395,7 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::FavoriteAddButton => s.get_favorite_add_button(),
         Text::FavoriteRemoveButton => s.get_favorite_remove_button(),
         Text::SearchStandardFolders => s.get_search_standard_folders(),
+        Text::StatusBarCredit => s.get_status_bar_credit(),
     }
 }
 pub fn value(ui: &AppWindow, key: Text, value: impl ToString) -> slint::SharedString {

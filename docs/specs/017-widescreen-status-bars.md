@@ -47,10 +47,10 @@ schema. Bars for mapsets not in the catalog.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R3) — recipes lint clean; per-recipe coverage table in the report and the
+- [x] **A1** (R1–R3) — recipes lint clean; per-recipe coverage table in the report and the
   research doc; dry-run argv shows the bar last in `-file` when enabled.
-- [ ] **A2** (R4) — lint tests: a cosmetic WAD with `DEHACKED`/map lumps is rejected; a clean one passes.
-- [ ] **A3** (R5, R6) — headless render of Play setup with the toggle; About shows the credit.
-- [ ] **A4** (R7) — e2e run on `main` passes with the new components (coordinator triggers).
-- [ ] **A5** — fmt, clippy `-D warnings`, tests green.
+- [x] **A2** (R4) — lint tests: a cosmetic WAD with `DEHACKED`/map lumps is rejected; a clean one passes.
+- [x] **A3** (R5, R6) — headless render of Play setup with the toggle; About shows the credit.
+- [x] **A4** (R7) — e2e run on `main` passes with the new components — run 39065323300.
+- [x] **A5** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A6** — *Needs Deck Validation:* bar fills the 16:10 screen correctly in DSDA.

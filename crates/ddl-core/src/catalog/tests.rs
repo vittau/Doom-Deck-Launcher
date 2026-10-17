@@ -61,6 +61,41 @@ fn reference_recipes_round_trip_and_lint_offline() {
 }
 
 #[test]
+fn recipes_with_a_status_bar_default_it_on() {
+    for id in [
+        "ancient-aliens",
+        "back-to-saturn-x-e1",
+        "back-to-saturn-x-e2",
+        "eviternity",
+        "valiant",
+        "going-down",
+        "scythe",
+        "sigil",
+        "sigil-ii",
+    ] {
+        let r = recipe(id);
+        assert_eq!(
+            r.default_components(),
+            vec!["wide-status-bar".to_owned()],
+            "{id}"
+        );
+        // The default combination is legal and loads the bar last.
+        let order = r.load_order(&["wide-status-bar"]).unwrap();
+        assert_eq!(
+            order.files.last().unwrap().member.as_deref(),
+            Some("statusbar")
+        );
+    }
+    for id in ["alien-vendetta", "auger-zenith", "eviternity-ii", "sunlust"] {
+        assert_eq!(
+            recipe(id).default_components(),
+            Vec::<String>::new(),
+            "{id}"
+        );
+    }
+}
+
+#[test]
 fn reference_combinations_have_explicit_order_and_replacements() {
     let auger = recipe("auger-zenith");
     assert_eq!(auger.load_order(&[]).unwrap().files.len(), 1);
@@ -103,6 +138,10 @@ fn every_semantic_rule_rejects_a_bad_recipe() {
         ("invalid recipe id", |r| r.id = "SIGIL".into()),
         ("file name", |r| r.id = "different".into()),
         ("identity/permission", |r| r.permission.clear()),
+        ("invalid release label", |r| {
+            r.release = "Final/version".into()
+        }),
+        ("invalid release label", |r| r.release = r"WIP\build".into()),
         ("missing authors", |r| r.authors.clear()),
         ("canonical page", |r| {
             r.page = "http://romero.com/sigil".into()
@@ -595,13 +634,13 @@ fn injected_fetch_verifies_declared_bytes_and_reports_failures() {
         bytes: bytes.clone(),
         calls: 0,
     };
-    assert!(fetch::fetch_package(&package, &hosts(), &mut fake).is_ok());
+    assert!(fetch::fetch_package(&package, &hosts(), &mut fake, &[]).is_ok());
     assert_eq!(fake.calls, 1);
 
     // A fetch that returns the wrong bytes is reported with the package id.
     fake.bytes = vec![];
     fake.calls = 0;
-    let error = fetch::fetch_package(&package, &hosts(), &mut fake).unwrap_err();
+    let error = fetch::fetch_package(&package, &hosts(), &mut fake, &[]).unwrap_err();
     assert!(error.contains("size mismatch"), "{error}");
     assert!(error.contains("package `fixture`"), "{error}");
     assert_eq!(fake.calls, 1);
@@ -650,6 +689,204 @@ fn lint_fetch_calls_the_injected_boundary_only_when_requested() {
         .is_empty()
     );
     assert_eq!(fake.calls, 1);
+}
+
+/// Builds the smallest valid in-memory WAD whose directory names are `names`.
+/// One zero byte of payload per lump keeps fixtures tiny (spec 017, R4).
+fn wad_bytes(magic: &[u8; 4], names: &[&str]) -> Vec<u8> {
+    let mut data = Vec::new();
+    data.extend_from_slice(magic);
+    data.extend_from_slice(&(names.len() as i32).to_le_bytes());
+    data.extend_from_slice(&0_i32.to_le_bytes()); // infotableofs, patched below
+    let mut offsets = Vec::new();
+    for _ in names {
+        offsets.push((data.len() as i32, 1_i32));
+        data.push(0);
+    }
+    let infotableofs = data.len() as i32;
+    data[8..12].copy_from_slice(&infotableofs.to_le_bytes());
+    for (name, (offset, size)) in names.iter().zip(offsets) {
+        data.extend_from_slice(&offset.to_le_bytes());
+        data.extend_from_slice(&size.to_le_bytes());
+        let mut field = [0_u8; 8];
+        let end = name.len().min(8);
+        field[..end].copy_from_slice(&name.as_bytes()[..end]);
+        data.extend_from_slice(&field);
+    }
+    data
+}
+
+fn bare_wad_package(id: &str, member_id: &str, bytes: &[u8], path: &str) -> Package {
+    Package {
+        id: id.into(),
+        page: "https://github.com/NightFright2k19/doom_widehud".into(),
+        urls: vec![format!(
+            "https://raw.githubusercontent.com/NightFright2k19/doom_widehud/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/pwad/{path}"
+        )],
+        size: bytes.len() as u64,
+        sha256: sha(bytes),
+        kind: PackageKind::Wad,
+        idgames_path: None,
+        members: vec![Member {
+            id: member_id.into(),
+            path: path.into(),
+            size: bytes.len() as u64,
+            sha256: sha(bytes),
+            keep: false,
+        }],
+    }
+}
+
+#[test]
+fn wad_directory_reads_and_bounds_lump_names() {
+    assert_eq!(
+        wad_lump_names(&wad_bytes(b"PWAD", &["STBAR"])).unwrap(),
+        ["STBAR"]
+    );
+    assert_eq!(
+        wad_lump_names(&wad_bytes(b"IWAD", &["STBAR", "MAP01"])).unwrap(),
+        ["STBAR", "MAP01"]
+    );
+    assert!(wad_lump_names(b"not a wad").is_err());
+    assert!(wad_lump_names(&[]).is_err());
+    let mut truncated = wad_bytes(b"IWAD", &["STBAR", "MAP01"]);
+    truncated.truncate(truncated.len() - 1);
+    assert!(wad_lump_names(&truncated).is_err());
+}
+
+#[test]
+fn cosmetic_only_lumps_allow_status_bar_families_and_reject_the_rest() {
+    let allowed = [
+        "STBAR", "STARMS", "STFST00", "STFOUCH0", "STFTL10", "STFGOD0", "STTNUM0", "STTMINUS",
+        "STTPRCNT", "STGNUM3", "STYSNUM4", "STKEYS0", "STCFN033", "STDISK", "STCDROM", "BRDR_TL",
+    ];
+    let names: Vec<String> = allowed.iter().map(|s| (*s).to_string()).collect();
+    assert!(check_status_bar_lumps(&names).is_ok(), "{names:?}");
+    let mut lumpy = names.clone();
+    for bad in [
+        "DEHACKED", "MAPINFO", "UMAPINFO", "MAP01", "D_RUNNIN", "DSPISTOL", "TROOA1", "TEXTURE1",
+        "PNAMES", "BOSSBACK", "CWILV00", "WINUM0", "STEEL1", "STEP1",
+    ] {
+        lumpy.push(bad.to_string());
+        assert!(
+            check_status_bar_lumps(&lumpy).unwrap_err().contains(bad),
+            "{bad}"
+        );
+        lumpy.pop();
+    }
+}
+
+#[test]
+fn fetch_package_rejects_a_non_cosmetic_status_bar_member() {
+    struct Fake(Vec<u8>);
+    impl Fetch for Fake {
+        fn download(&mut self, _package: &Package, _hosts: &Hosts) -> Result<Vec<u8>, String> {
+            Ok(self.0.clone())
+        }
+    }
+    let clean = wad_bytes(b"PWAD", &["STBAR"]);
+    let package = bare_wad_package("widehud", "statusbar", &clean, "x.wad");
+    assert!(fetch::fetch_package(&package, &hosts(), &mut Fake(clean.clone()), &["x.wad"]).is_ok());
+    let dirty = wad_bytes(b"PWAD", &["DEHACKED", "MAPINFO", "STBAR"]);
+    let package = bare_wad_package("widehud", "statusbar", &dirty, "x.wad");
+    let error =
+        fetch::fetch_package(&package, &hosts(), &mut Fake(dirty.clone()), &["x.wad"]).unwrap_err();
+    assert!(error.contains("non-cosmetic lump `DEHACKED`"), "{error}");
+    // A package no status-bar component references is verified, not lump-checked.
+    assert!(fetch::fetch_package(&package, &hosts(), &mut Fake(dirty.clone()), &[]).is_ok());
+}
+
+#[test]
+fn lint_fetch_rejects_a_status_bar_component_that_is_not_cosmetic() {
+    struct Fake {
+        main: Vec<u8>,
+        bar: Vec<u8>,
+    }
+    impl Fetch for Fake {
+        fn download(&mut self, package: &Package, _hosts: &Hosts) -> Result<Vec<u8>, String> {
+            Ok(if package.id == "widehud" {
+                self.bar.clone()
+            } else {
+                self.main.clone()
+            })
+        }
+    }
+    let main = wad_bytes(b"PWAD", &["MAP01"]);
+    let dirty = wad_bytes(b"PWAD", &["DEHACKED", "STBAR"]);
+    let build = |bar: &[u8]| {
+        let mut r = recipe("eviternity");
+        r.packages = vec![
+            bare_wad_package("free", "maps", &main, "main.wad"),
+            bare_wad_package("widehud", "statusbar", bar, "x.wad"),
+        ];
+        r.components = vec![
+            Component {
+                id: "main".into(),
+                label: "Eviternity".into(),
+                description: "main".into(),
+                optional: false,
+                default: true,
+                position: 1,
+                exclusive_group: None,
+                replaces: None,
+                user_supplied: false,
+                obtain: None,
+                known_sha256: vec![],
+                members: vec![ComponentMember {
+                    package: Some("free".into()),
+                    member: Some("maps".into()),
+                    role: Role::Maps,
+                }],
+            },
+            Component {
+                id: "wide-status-bar".into(),
+                label: "Widescreen status bar".into(),
+                description: "bar".into(),
+                optional: true,
+                default: true,
+                position: 2,
+                exclusive_group: None,
+                replaces: None,
+                user_supplied: false,
+                obtain: None,
+                known_sha256: vec![],
+                members: vec![ComponentMember {
+                    package: Some("widehud".into()),
+                    member: Some("statusbar".into()),
+                    role: Role::Graphics,
+                }],
+            },
+        ];
+        r
+    };
+    let temp = Temp::new();
+    let file = temp.0.join("eviternity.toml");
+    let hosts_path = Path::new(CATALOG).join("hosts.toml");
+    let notes = |r: &Recipe| toml::to_string_pretty(r).unwrap();
+    fs::write(&file, notes(&build(&dirty))).unwrap();
+    let errors = lint_paths(
+        std::slice::from_ref(&file),
+        &hosts_path,
+        Some(&mut Fake {
+            main: main.clone(),
+            bar: dirty.clone(),
+        }),
+    );
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(errors[0].message.contains("non-cosmetic lump `DEHACKED`"));
+    let clean = wad_bytes(b"PWAD", &["STBAR"]);
+    fs::write(&file, notes(&build(&clean))).unwrap();
+    assert_eq!(
+        lint_paths(
+            std::slice::from_ref(&file),
+            &hosts_path,
+            Some(&mut Fake {
+                main: main.clone(),
+                bar: clean.clone(),
+            }),
+        ),
+        vec![]
+    );
 }
 
 #[test]

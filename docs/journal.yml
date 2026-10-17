@@ -370,3 +370,28 @@
     the CLI); app state stays schema 2 with an additive last_profiles map. Owner: Codex first
     today.
   refs: [docs/reports/016-readme-and-logo-v2.md, docs/reports/018-multiple-profiles.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 017 merged: widescreen status bars from NightFright's doom_widehud (pinned eb3773ce9e,
+    GPL-3.0, credited). 5 mapset bars + the Doom/Doom II IWAD bar on 4 recipes whose WADs replace
+    no status-bar lump; 4 recipes get none (AV's bar carries DEHACKED/MAPINFO and fails the
+    cosmetic-only lint; Sunlust, Eviternity II and AUGER;ZENITH ship their own status bars).
+    Bars default on and load last in -file. New lint: cosmetic-only graphics components and no
+    path separators in `release`. Paused WIP from 2026-10-16 finished on Codex after the opencode
+    session kept running headless and had to be interrupted.
+  refs: [docs/reports/017-widescreen-status-bars.md, docs/research/widescreen-statusbars.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-022: uninstalling a mapset removes its install files; a confirm-dialog checkbox (off by
+    default) also deletes its profiles and saves. Spec 022 written; starts after 020. e2e run
+    39065323300 passed with all 9 widescreen status-bar components installed and the bar last
+    in -file (spec 017 A4).
+  refs: [docs/specs/022-uninstall-mapset.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-023: the owner picked the Rose Compass logo (octagonal rose window / compass around an
+    ember). Spec 016 phase B applies it everywhere spec 013 placed the logo.
+  refs: [docs/design/logo-v2/rose-compass/]
