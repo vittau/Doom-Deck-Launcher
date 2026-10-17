@@ -32,9 +32,11 @@ fn every_subcommand_help_exits_zero_and_prints_usage() {
         (&["iwad", "scan", "--help"], "ddl iwad scan [PATH...]"),
         (
             &["mapset", "--help"],
-            "ddl mapset: list and install catalog mapsets",
+            "ddl mapset: inspect and manage mapsets",
         ),
         (&["mapset", "list", "--help"], "ddl mapset list"),
+        (&["mapset", "status", "--help"], "ddl mapset status [<id>]"),
+        (&["mapset", "update", "--help"], "ddl mapset update <id>"),
         (
             &["mapset", "install", "--help"],
             "ddl mapset install <id> [--with <component>...]",
@@ -64,6 +66,8 @@ fn unknown_subcommands_are_usage_errors() {
         &["engine", "frobnicate"],
         &["iwad"],
         &["mapset", "install"],
+        &["mapset", "update"],
+        &["mapset", "status", "extra", "extra"],
         &["launch"],
         &["doctor", "extra"],
     ] {

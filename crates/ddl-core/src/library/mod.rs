@@ -26,15 +26,19 @@
 //! assert_eq!(manifest.recipe_id, "auger-zenith");
 //! ```
 
+mod active;
+mod change;
 mod install;
 mod manifest;
 
 #[cfg(test)]
 mod tests;
 
+pub use active::ActiveInstall;
+pub use change::{Changes, RecipeStatus, classify, reconcile_profile};
 pub use install::{
     Clock, IMPORT_DIR, ImportOutcome, InstallError, Installer, LIBRARY_DIR, MAX_MEMBER_BYTES,
-    SystemClock,
+    SystemClock, recipe_content_sha256,
 };
 pub use manifest::{
     InstallManifest, InstalledMember, InstalledPackage, MANIFEST_FILE, ManifestError,

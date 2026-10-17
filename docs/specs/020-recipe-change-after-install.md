@@ -42,9 +42,9 @@ Automatic updates without confirmation (except R2). Migrating save files.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2) — classification tests for each kind, combinations, and metadata-only adoption.
-- [ ] **A2** (R3–R5) — update tests with the loopback fake: staging + atomic swap, failure leaves the
+- [x] **A1** (R1, R2) — classification tests for each kind, combinations, and metadata-only adoption.
+- [x] **A2** (R3–R5) — update tests with the loopback fake: staging + atomic swap, failure leaves the
   old install intact, saves untouched, dropped component notice; removed-recipe handling.
-- [ ] **A3** — headless renders: Library "Update available", detail with the summary, removed
+- [x] **A3** — headless renders: Library "Update available", detail with the summary, removed
   badge; CLI tests.
-- [ ] **A4** — fmt, clippy `-D warnings`, tests green.
+- [x] **A4** — fmt, clippy `-D warnings`, tests green.

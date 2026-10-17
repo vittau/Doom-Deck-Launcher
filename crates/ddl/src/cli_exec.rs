@@ -90,6 +90,49 @@ pub fn run_io(
             let services = open(env)?;
             print_mapset_list(&services.mapset_list()?, out)
         }
+        cli::Command::MapsetStatus { id } => {
+            let services = open(env)?;
+            for (id, status, summary) in services.mapset_status(id.as_deref())? {
+                let kinds = match &status {
+                    ddl_core::library::RecipeStatus::Update(c) => {
+                        let mut kinds = Vec::new();
+                        if c.content {
+                            kinds.push("content change");
+                        }
+                        if c.launch {
+                            kinds.push("launch change");
+                        }
+                        if c.components() {
+                            kinds.push("components changed");
+                        }
+                        kinds.join(", ")
+                    }
+                    _ => status.label().into(),
+                };
+                writeln!(out, "{id}: {kinds} — {summary}").map_err(output_error)?;
+            }
+            Ok(())
+        }
+        cli::Command::MapsetUpdate { id } => {
+            let mut services = open(env)?;
+            let mut progress = ProgressPrinter::default();
+            let before = services.mapset_status(Some(&id))?;
+            if before.iter().any(|(_, status, _)| matches!(status, ddl_core::library::RecipeStatus::Update(c) if c.content)) {
+                writeln!(err, "Old saves may not load in the new release.").map_err(output_error)?;
+            }
+            let manifest = services.update_mapset(&id, &mut |p| progress.write(p, err))?;
+            writeln!(out, "Updated {} {}", manifest.recipe_id, manifest.release)
+                .map_err(output_error)?;
+            let snapshot = services
+                .snapshot()
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+            if let Some(item) = snapshot.items.iter().find(|i| i.recipe.id == id) {
+                for notice in &item.update_notice {
+                    writeln!(out, "{notice}").map_err(output_error)?;
+                }
+            }
+            Ok(())
+        }
         cli::Command::MapsetInstall { id, components } => {
             let mut services = open(env)?;
             let mut progress = ProgressPrinter::default();

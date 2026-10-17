@@ -399,3 +399,18 @@ Open questions for coordinator/owner:
 4. Supported engine/template pair for initial release and precise recipe evidence badge vocabulary.
 
 These are data/hardware gates, not missing screen designs. No new runtime dependencies.
+
+## 9. Installed recipe changes (spec 020)
+
+Library cards replace their base-game readiness line with “Update available” when the embedded
+recipe changes; profile counts remain visible. Detail keeps Play setup as the initial action and
+shows the change summary, with “Old saves may not load in the new release.” for content changes.
+The next two actions become **Update** and **Keep current**. D-pad Up/Down selects actions, A
+activates, B returns; X still toggles favorites. Keep current persists for this exact recipe hash;
+the Library reminder disappears, while detail retains the explicit Update action.
+
+Update uses the existing progress/cancel/retry view, then returns to Play setup. Removed component
+selections produce a non-blocking notice. The frame, type, colors and focus ring use existing Ember
+components. A removed recipe shows “No longer in the catalog” in Library and detail; Play setup
+continues to use the installed snapshot. Metadata-only changes are adopted during startup without
+progress or a download. No uninstall action is added by this spec.

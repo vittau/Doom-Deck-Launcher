@@ -190,8 +190,10 @@ impl Runtime {
         }
         self.pending = Some(command.clone());
         self.retry = Some(command.clone());
-        if matches!(command, Command::InstallEngine(_) | Command::Install(_))
-            && self.screen != Screen::Progress
+        if matches!(
+            command,
+            Command::InstallEngine(_) | Command::Install(_) | Command::UpdateMapset(_)
+        ) && self.screen != Screen::Progress
         {
             self.enter(Screen::Progress, 1);
         }
@@ -251,6 +253,19 @@ impl Runtime {
                         Ok(snapshot) => {
                             self.snapshot = Some(*snapshot);
                             self.problem = None;
+                            if let Some(Command::UpdateMapset(id)) = &command
+                                && let Some(item) = self
+                                    .snapshot
+                                    .as_ref()
+                                    .and_then(|s| s.items.iter().find(|i| &i.recipe.id == id))
+                                && !item.update_notice.is_empty()
+                            {
+                                ui.set_toast(value(
+                                    ui,
+                                    T::RecipeNotice,
+                                    item.update_notice.join(" · "),
+                                ));
+                            }
                             match command {
                                 Some(Command::Startup) => {
                                     self.screen = if self
@@ -287,7 +302,7 @@ impl Runtime {
                                         };
                                     }
                                 }
-                                Some(Command::Install(_)) => {
+                                Some(Command::Install(_) | Command::UpdateMapset(_)) => {
                                     self.screen = Screen::Setup;
                                     self.focus = 50;
                                     if self.return_to.0 == Screen::Setup {
@@ -606,8 +621,30 @@ impl Runtime {
                     self.show_sheet(Sheet::Profiles);
                 }
             }
-            (Screen::Detail, 2) => self.enter(Screen::Setup, 50),
-            (Screen::Detail, 3) => self.toggle_favorite(ui),
+            (Screen::Detail, 2) => {
+                if let Some(item) = self.item() {
+                    if matches!(
+                        item.recipe_status,
+                        ddl_core::library::RecipeStatus::Update(_)
+                    ) {
+                        self.start(ui, Command::UpdateMapset(item.recipe.id.clone()));
+                    } else {
+                        self.enter(Screen::Setup, 50);
+                    }
+                }
+            }
+            (Screen::Detail, 3) => {
+                if let Some(item) = self.item() {
+                    if matches!(
+                        item.recipe_status,
+                        ddl_core::library::RecipeStatus::Update(_)
+                    ) {
+                        self.start(ui, Command::KeepCurrent(item.recipe.id.clone()));
+                    } else {
+                        self.toggle_favorite(ui);
+                    }
+                }
+            }
             (Screen::Setup, 1) => {
                 if self.snapshot.as_ref().is_some_and(|s| !s.config_usable) {
                     self.enter(Screen::Settings, 70);
@@ -1382,10 +1419,17 @@ impl Runtime {
                                 28.,
                                 text(
                                     ui,
-                                    if base_ready(s, &item.recipe) {
-                                        T::BaseReady
-                                    } else {
-                                        T::BaseMissingShort
+                                    match item.recipe_status {
+                                        ddl_core::library::RecipeStatus::Removed => {
+                                            T::RecipeRemoved
+                                        }
+                                        ddl_core::library::RecipeStatus::Update(_)
+                                            if !item.update_dismissed =>
+                                        {
+                                            T::RecipeUpdate
+                                        }
+                                        _ if base_ready(s, &item.recipe) => T::BaseReady,
+                                        _ => T::BaseMissingShort,
                                     },
                                 ),
                                 20.,
@@ -1479,7 +1523,24 @@ impl Runtime {
                             ),
                             true,
                         );
-                        b.button(2, 12., 366., 360., text(ui, T::Setup), false);
+                        b.button(
+                            2,
+                            12.,
+                            366.,
+                            360.,
+                            text(
+                                ui,
+                                if matches!(
+                                    item.recipe_status,
+                                    ddl_core::library::RecipeStatus::Update(_)
+                                ) {
+                                    T::RecipeUpdateAction
+                                } else {
+                                    T::Setup
+                                },
+                            ),
+                            false,
+                        );
                         b.button(
                             3,
                             12.,
@@ -1487,7 +1548,12 @@ impl Runtime {
                             360.,
                             text(
                                 ui,
-                                if item.favorite {
+                                if matches!(
+                                    item.recipe_status,
+                                    ddl_core::library::RecipeStatus::Update(_)
+                                ) {
+                                    T::RecipeKeep
+                                } else if item.favorite {
                                     T::FavoriteRemoveButton
                                 } else {
                                     T::FavoriteAddButton
@@ -1518,7 +1584,18 @@ impl Runtime {
                             138.,
                             760.,
                             96.,
-                            item.recipe.description.clone().into(),
+                            match &item.recipe_status {
+                                ddl_core::library::RecipeStatus::Update(_) => {
+                                    value(ui, T::RecipeSummary, &item.change_summary)
+                                }
+                                ddl_core::library::RecipeStatus::Removed => {
+                                    text(ui, T::RecipeRemoved)
+                                }
+                                _ if !item.update_notice.is_empty() => {
+                                    value(ui, T::RecipeNotice, item.update_notice.join(" · "))
+                                }
+                                _ => item.recipe.description.clone().into(),
+                            },
                             22.,
                         );
                         let mut y = 242.;
@@ -1555,7 +1632,7 @@ impl Runtime {
                             ),
                             22.,
                         );
-                        b.label(428., y + 104., 760., 36., text(ui, T::Verification), 20.);
+                        b.label(428., y + 104., 760., 52., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
                         b.label(
                             428.,
                             y + 148.,
@@ -1875,7 +1952,7 @@ impl Runtime {
                         Some(Command::InstallEngine(version)) => {
                             value(ui, T::EngineVersion, version)
                         }
-                        Some(Command::Install(id)) => self
+                        Some(Command::Install(id) | Command::UpdateMapset(id)) => self
                             .snapshot
                             .as_ref()
                             .and_then(|s| s.items.iter().find(|i| i.recipe.id == *id))

@@ -43,6 +43,8 @@ pub enum HelpTopic {
     MapsetList,
     /// `ddl mapset install --help`.
     MapsetInstall,
+    MapsetStatus,
+    MapsetUpdate,
     /// `ddl launch --help`.
     Launch,
     /// `ddl doctor --help`.
@@ -55,7 +57,10 @@ pub enum Command {
     /// Start the launcher with the given options.
     Run(Options),
     /// Offline by default; --fetch explicitly verifies upstream package bytes.
-    CatalogLint { paths: Vec<PathBuf>, fetch: bool },
+    CatalogLint {
+        paths: Vec<PathBuf>,
+        fetch: bool,
+    },
     /// `ddl engine status`: installed versions, the active one and its mode.
     EngineStatus,
     /// `ddl engine install`: the reviewed install path, optionally forcing the
@@ -67,9 +72,17 @@ pub enum Command {
         force_extract: bool,
     },
     /// `ddl iwad scan`: Steam discovery plus the given folders.
-    IwadScan { paths: Vec<PathBuf> },
+    IwadScan {
+        paths: Vec<PathBuf>,
+    },
     /// `ddl mapset list`.
     MapsetList,
+    MapsetStatus {
+        id: Option<String>,
+    },
+    MapsetUpdate {
+        id: String,
+    },
     /// `ddl mapset install`: install a recipe, optionally enabling components.
     MapsetInstall {
         /// Recipe id.
@@ -157,6 +170,8 @@ Usage: {BIN} [OPTIONS]
        {BIN} engine install [--version <V>] [--force-extract]
        {BIN} iwad scan [PATH...]
        {BIN} mapset list
+       {BIN} mapset status [<id>]
+       {BIN} mapset update <id>
        {BIN} mapset install <id> [--with <component>...]
        {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
        {BIN} doctor
@@ -165,7 +180,7 @@ Commands:
   catalog lint  Validate catalog recipes (offline; --fetch verifies upstream bytes)
   engine        Install or inspect the DSDA-Doom engine
   iwad scan     Find and identify your IWAD files
-  mapset        List or install catalog mapsets
+  mapset        List, inspect, install or update mapsets
   launch        Resolve a mapset; without --dry-run, run it
   doctor        Print a paste-friendly diagnostic report
 
@@ -248,14 +263,18 @@ Usage: {BIN} iwad scan [PATH...]
         ),
         HelpTopic::Mapset => format!(
             "\
-{BIN} mapset: list and install catalog mapsets
+{BIN} mapset: inspect and manage mapsets
 
 Usage: {BIN} mapset list
+       {BIN} mapset status [<id>]
+       {BIN} mapset update <id>
        {BIN} mapset install <id> [--with <component>...]
 
 Commands:
   list     List every catalog recipe with its install state
   install  Install a mapset, optionally enabling components
+  status   Classify changes to installed recipes
+  update   Apply a recipe update safely
 "
         ),
         HelpTopic::MapsetList => format!(
@@ -267,6 +286,8 @@ List every catalog recipe with its id, title, base game and install state.
 Usage: {BIN} mapset list
 "
         ),
+        HelpTopic::MapsetStatus => format!("{BIN} mapset status [<id>]\n\nPrint installed recipe change classifications and summaries.\n\nUsage: {BIN} mapset status [<id>]\n"),
+        HelpTopic::MapsetUpdate => format!("{BIN} mapset update <id>\n\nStage, verify and atomically activate a catalog update; preserve profiles and saves.\nProgress goes to stderr.\n\nUsage: {BIN} mapset update <id>\n"),
         HelpTopic::MapsetInstall => format!(
             "\
 {BIN} mapset install <id> [--with <component>...]
@@ -475,10 +496,37 @@ fn parse_mapset(args: &[OsString]) -> Result<Command, ParseError> {
             }
             Ok(Command::MapsetList)
         }
+        Some("status" | "update") => {
+            let update = args[0] == "update";
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(if update {
+                    HelpTopic::MapsetUpdate
+                } else {
+                    HelpTopic::MapsetStatus
+                }));
+            }
+            if args.len() > 2 {
+                return Err(ParseError::unknown(&args[2].to_string_lossy()));
+            }
+            let id = args.get(1).map(|s| s.to_string_lossy().into_owned());
+            if let Some(id) = &id
+                && id.starts_with('-')
+            {
+                return Err(ParseError::unknown(id));
+            }
+            if update {
+                Ok(Command::MapsetUpdate {
+                    id: id
+                        .ok_or_else(|| ParseError::message("`mapset update` needs a recipe id"))?,
+                })
+            } else {
+                Ok(Command::MapsetStatus { id })
+            }
+        }
         Some("install") => parse_mapset_install(&args[1..]),
         _ if wants_help(args) => Ok(Command::Help(HelpTopic::Mapset)),
         _ => Err(ParseError::message(
-            "expected `mapset list` or `mapset install <id> [--with <component>...]`",
+            "expected `mapset list`, `mapset status [<id>]`, `mapset install <id>` or `mapset update <id>`",
         )),
     }
 }
@@ -958,6 +1006,46 @@ mod tests {
             let text = help_for(topic);
             assert!(text.starts_with("ddl"), "{topic:?}: {text}");
             assert!(text.contains("Usage:"), "{topic:?}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod recipe_change_tests {
+    use super::*;
+    fn parse_args(args: &[&str]) -> Result<Command, ParseError> {
+        parse(args.iter().map(OsString::from))
+    }
+    #[test]
+    fn mapset_status_and_update_follow_positional_style() {
+        assert_eq!(
+            parse_args(&["mapset", "status"]),
+            Ok(Command::MapsetStatus { id: None })
+        );
+        assert_eq!(
+            parse_args(&["mapset", "status", "sigil"]),
+            Ok(Command::MapsetStatus {
+                id: Some("sigil".into())
+            })
+        );
+        assert_eq!(
+            parse_args(&["mapset", "update", "sigil"]),
+            Ok(Command::MapsetUpdate { id: "sigil".into() })
+        );
+        assert_eq!(
+            parse_args(&["mapset", "status", "--help"]),
+            Ok(Command::Help(HelpTopic::MapsetStatus))
+        );
+        assert_eq!(
+            parse_args(&["mapset", "update", "--help"]),
+            Ok(Command::Help(HelpTopic::MapsetUpdate))
+        );
+        for args in [
+            vec!["mapset", "update"],
+            vec!["mapset", "update", "sigil", "extra"],
+            vec!["mapset", "status", "--bad"],
+        ] {
+            assert!(parse_args(&args).is_err());
         }
     }
 }

@@ -524,3 +524,153 @@ fn main_to_replacement_to_main_keeps_valid_records_without_redownloading() {
         Err(InstallError::Download(crate::downloads::Error::Cancelled))
     ));
 }
+
+#[test]
+fn recipe_change_categories_and_combinations() {
+    let old = fixture("changes", "https://example.invalid/maps.zip").recipe;
+    let manifest = InstallManifest {
+        schema_version: SCHEMA_VERSION,
+        recipe_id: old.id.clone(),
+        release: old.release.clone(),
+        recipe_sha256: super::install::recipe_content_sha256(&old).unwrap(),
+        installed_at: 1,
+        packages: vec![],
+        members: vec![],
+    };
+    assert_eq!(classify(&manifest, &old, Some(&old)), RecipeStatus::Current);
+    assert_eq!(classify(&manifest, &old, None), RecipeStatus::Removed);
+    let mut new = old.clone();
+    new.authors.push("Another author".into());
+    new.compatibility.engine.status = VerificationStatus::Verified;
+    new.tags.push("test".into());
+    new.packages[0]
+        .urls
+        .push("https://mirror.invalid/maps.zip".into());
+    new.packages[0].members.reverse();
+    assert_eq!(
+        classify(&manifest, &old, Some(&new)),
+        RecipeStatus::MetadataOnly
+    );
+    for mutate in [
+        |r: &mut Recipe| r.compatibility.complevel = Complevel::Number(11),
+        |r: &mut Recipe| r.base_game.game = Game::Doom,
+        |r: &mut Recipe| r.components[0].position = 5,
+        |r: &mut Recipe| r.components[0].members[0].role = Role::Dehacked,
+    ] {
+        let mut new = old.clone();
+        mutate(&mut new);
+        assert!(matches!(
+            classify(&manifest, &old, Some(&new)),
+            RecipeStatus::Update(Changes {
+                launch: true,
+                content: false,
+                ..
+            })
+        ));
+    }
+    for mutate in [
+        |r: &mut Recipe| r.release = "1.1".into(),
+        |r: &mut Recipe| r.packages[0].sha256 = "a".repeat(64),
+        |r: &mut Recipe| r.packages[0].members[0].sha256 = "a".repeat(64),
+    ] {
+        let mut new = old.clone();
+        mutate(&mut new);
+        assert!(matches!(
+            classify(&manifest, &old, Some(&new)),
+            RecipeStatus::Update(Changes { content: true, .. })
+        ));
+    }
+    let mut new = old.clone();
+    new.components[1].id = "new-addon".into();
+    let RecipeStatus::Update(changes) = classify(&manifest, &old, Some(&new)) else {
+        panic!()
+    };
+    assert_eq!(changes.added_components, ["new-addon"]);
+    assert_eq!(changes.removed_components, ["addon"]);
+    assert!(!changes.launch && !changes.content);
+    new.release = "1.1".into();
+    new.compatibility.complevel = Complevel::Number(11);
+    let status = classify(&manifest, &old, Some(&new));
+    assert!(matches!(&status, RecipeStatus::Update(c) if c.launch && c.content && c.components()));
+    assert!(
+        status
+            .summary(&old, Some(&new))
+            .contains("complevel 2 → 11")
+    );
+}
+
+#[test]
+fn profile_reconciliation_drops_removed_and_applies_only_new_defaults() {
+    let old = fixture("changes", "https://example.invalid/maps.zip").recipe;
+    let mut new = old.clone();
+    new.components[1].id = "new-addon".into();
+    new.components[1].default = true;
+    let mut profile = crate::profiles::Profile::new("run", "Run", &old.id);
+    profile.components.push("addon".into());
+    profile.skill = 5;
+    profile.last_played = Some(100);
+    assert_eq!(reconcile_profile(&mut profile, &old, &new), ["addon"]);
+    assert_eq!(profile.components, ["new-addon"]);
+    assert_eq!(profile.skill, 5);
+    assert_eq!(profile.last_played, Some(100));
+}
+
+#[test]
+fn retired_cleanup_refuses_profile_paths_and_symlink_escapes() {
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache);
+    let save = data.path().join("profiles/run/save");
+    std::fs::create_dir_all(&save).unwrap();
+    std::fs::write(save.join("save.dsg"), b"save").unwrap();
+    assert!(installer.remove_retired(&save).is_err());
+    assert!(
+        installer
+            .remove_retired(&data.path().join("library/id/../../profiles/run"))
+            .is_err()
+    );
+    #[cfg(unix)]
+    {
+        std::fs::create_dir_all(data.path().join("library/id")).unwrap();
+        std::os::unix::fs::symlink(&save, data.path().join("library/id/old")).unwrap();
+        assert!(
+            installer
+                .remove_retired(&data.path().join("library/id/old"))
+                .is_err()
+        );
+    }
+    assert_eq!(std::fs::read(save.join("save.dsg")).unwrap(), b"save");
+}
+
+#[test]
+fn active_record_round_trips_and_rejects_unknown_manifest_versions() {
+    let recipe = fixture("active", "https://example.invalid/maps.zip").recipe;
+    let active = ActiveInstall {
+        schema_version: 1,
+        manifest: InstallManifest {
+            schema_version: SCHEMA_VERSION,
+            recipe_id: recipe.id.clone(),
+            release: recipe.release.clone(),
+            recipe_sha256: recipe_content_sha256(&recipe).unwrap(),
+            installed_at: 1,
+            packages: vec![],
+            members: vec![],
+        },
+        recipe,
+        previous_recipe: None,
+        pending_profiles: vec![],
+        notices: vec![],
+        retired_dirs: vec![],
+    };
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("active.json");
+    active.save(&path).unwrap();
+    assert_eq!(ActiveInstall::load(&path).unwrap(), Some(active.clone()));
+    let mut bad = active;
+    bad.manifest.schema_version = 99;
+    bad.save(&path).unwrap();
+    assert!(matches!(
+        ActiveInstall::load(&path),
+        Err(ManifestError::UnsupportedSchema(99))
+    ));
+}
