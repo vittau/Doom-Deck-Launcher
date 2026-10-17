@@ -18,7 +18,8 @@ readability, input repeat/hotplug, game handoff, pistol start behavior and SIGIL
 - Readable at handheld distance on the 7-inch 1280×800 LCD: 22 px body, short lines, generous gaps.
 - Clear over clever: name the required game, explain blockers and show the consequence of toggles.
 - DOOM atmosphere through charcoal, ember accents and strong hierarchy; no texture behind text,
-  copyrighted artwork, franchise logos or bitmap display fonts. Layout-reference art says “cover art”; visual concepts use original abstract generated imagery.
+  franchise logos or bitmap display fonts. Bundled, credited mapset screenshots follow D-024;
+  original painted art remains the fallback.
 - Progressive disclosure: title and Play first; files, compatibility and diagnostics one action away.
 - Honest confidence: “Verified” requires recipe evidence for the selected engine and combination.
   Distinguish “Partially checked”, “Not verified” and “Incompatible”; never rely on color alone.
@@ -50,7 +51,14 @@ reduced opacity. Unavailable controls give explicit reasons and preserve readabl
 
 Original carved oxblood wall repeats seamlessly, visibly surrounding smooth information panels.
 Pre-rendered bronze / red-stone frames use 28 px nine-slice borders, preserving corners at all
-panel sizes. Dedicated top art bands and cover regions carry “Original concept art” plaques.
+panel sizes. Cards (Home, Discover and Library), detail and the top art band show the recipe's
+first bundled screenshot, centred and cropped to fill (spec 023, D-024). A bone-coloured
+“Screenshot: <credit>” caption sits on an opaque near-black plate with a bronze edge; it wraps
+rather than truncating the credit, including over bright skies. Small Home history thumbnails
+place the credit just below the image on the opaque Home panel. A recipe without a bundled
+screenshot keeps its painted cover and “Original concept art” caption. Images are embedded by
+Slint at build time, so browsing requires no network. Detail repeats the first shot rather than
+adding a carousel or a new controller action.
 The original angular broken-circle emblem pairs with a clearly legible bone Barlow DDL logotype;
 no franchise lettering, sprites or copied textures. See `visual-v2/ember-cathedral/prompt.txt`
 for the retained original generation prompt and `crates/ddl/ui/assets/ember/build_assets.py`
@@ -162,7 +170,7 @@ Purpose: browse curated categories without typing. **Category strip (spec 015):*
 each tag of `catalog/tags.toml` that at least one recipe uses, in the vocabulary's `order`, then
 “Favorites”. A 3-column grid contains cover placeholders, title, creators, required game + IWAD
 status, install state, a favorite star and at most two tag chips (the open category's tag first).
-Focused card gets ring; no text over art. Select opens detail.
+Focused card gets ring; titles stay below the image and only the credit plate overlays it. Select opens detail.
 Bindings: **Up** from the first grid row enters the strip at the selected chip; **Left/Right** on
 the strip moves the chip and switches the category at once (no wrap); **Down** from the strip
 enters the first card; **L2/R2** (keyboard `[` `]`) switch to the previous/next category from the

@@ -143,3 +143,128 @@ passes.
    a trivial conflict against the spec 022 worker at worst.
 2. I ticked **A1** and **A3** in `docs/specs/023-mapset-screenshots.md`; **A2** (UI) and **A4**
    (Deck) are left for their owners.
+
+## Phase B — show bundled screenshots in the UI
+
+**Status:** R3 / A2 complete; final fmt, clippy and workspace tests pass. A4 remains open.
+
+### Implementation (R3)
+
+- Home (hero and history), Discover and Library cards, mapset detail, and the art band now
+  resolve the recipe's **first declared screenshot** and show `Screenshot: <credit>`. Images
+  use `image-fit: cover` with explicit horizontal/vertical centre alignment. No runtime
+  network or filesystem image loading is needed. Detail keeps the same first image; a
+  carousel or additional controller action would add little value here.
+- Bone text on opaque `Tokens.deep` plates, with bronze borders, protects the caption from
+  bright skies and busy imagery. Caption plates size themselves to the wrapped text, including
+  the longer credits on the narrower Home hero. Home history uses a separate two-line plate below
+  each small thumbnail; its layout was tightened to keep the plate inside the carved frame.
+- Missing screenshot metadata, unknown/unbundled assets, and future recipes without bundled
+  files retain the painted cover and `Original concept art` caption. Existing catalog updates
+  cannot turn an arbitrary remote asset path into a filesystem image load.
+- Both caption strings live in `ui/wiring-strings.slint` and use `@tr`; the screenshot credit
+  is formatted through the existing Rust `wiring_copy::value` path. The temporary module-wide
+  `allow(dead_code)` in `screenshots.rs` is removed.
+- `docs/design/ui.md` describes the screenshot and fallback treatment. No catalog, screenshot
+  JPEG, source manifest, Settings or catalog-update implementation was edited.
+
+### Embedding choice
+
+`build.rs` extends phase A's sorted directory index with an **OUT_DIR-generated Slint global**,
+imported as `@screenshots` using Slint's library-path configuration. Its deterministic lookup
+maps the indexed asset paths to literal `@image-url` expressions. Slint's existing
+`EmbedResourcesKind::EmbedFiles` embeds and decodes the images using the support already in the
+application; Rust sends the checked asset key and translated credit through `ViewNode` and the
+band properties. Recipe metadata, rather than directory order, chooses the first image. The
+lookup includes the remaining bundled shots so reordering a recipe works without another
+hand-maintained mapping. Generated files are only rewritten when their contents change to
+avoid retriggering Cargo through the generated Slint import.
+
+**New dependencies: none.** In particular, no additional image-decoding crate was added.
+
+### Requirement coverage
+
+The existing off-screen software-renderer journey now asserts that all thirteen embedded
+recipes resolve to a 640×360 Slint image, the exact translated caption, and matching card,
+detail and art-band properties. It writes one focused Discover render per recipe, covering
+all scroll positions, plus bright-sky, long Home credit and metadata-absent fallback fixtures.
+It also checks recipe screenshot reordering and an unbundled asset fallback. Existing Home
+and Library journeys assert their image nodes carry screenshots and captions. These are
+render-only recipe mutations; no live catalog or user state is changed.
+
+### Headless visual review (A2)
+
+Off-screen PNGs are under `target/headless/` (not committed). I inspected all thirteen cards
+across the focused Discover renders, including these full rows:
+
+- `023-discover-ancient-aliens.png` — Alien Vendetta, Ancient Aliens, AUGER;ZENITH.
+- `023-discover-back-to-saturn-x-e1.png` — both Back to Saturn X episodes, Eviternity.
+- `023-discover-eviternity-ii.png` — Eviternity II, Going Down, Scythe.
+- `023-discover-sigil.png` — SIGIL, SIGIL II, Sunlust.
+- `023-discover-valiant.png` — Valiant.
+
+I also inspected the detail/band compositions (`010-mapset-detail.png`,
+`023-detail-ancient-aliens.png`, `023-detail-auger-zenith.png`), Home and Library cards
+(`010-home-continue.png`, `010-library.png`), and `023-discover-fallback.png`. The explicit
+`023-discover-white-sky.png` / `023-detail-white-sky.png` fixture reorders Ancient Aliens' two
+shots so its white-cloud image stress-tests the same plate; shipped recipes still use their
+first declared shot. `023-home-long-credit.png` checks the longer Back to Saturn X credit on
+both the narrow hero and the history row. Captions remain readable against the bright sky,
+neon/fire and dark scenes, and the complete long credit stays inside its plate.
+
+No visible window was opened and no screen was captured. All images came from Slint's
+software renderer. A2 is ticked; A4 remains **Needs Deck Validation**.
+
+### Final verification
+
+Validated on macOS arm64. `main` at `aca466b` was merged cleanly and checked again before
+completion (already up to date). Linux CI and the physical Deck were not run here. No new
+dependencies were added.
+
+All **430 tests** pass: 82 launcher tests, 7 launcher integration tests, 322 core tests,
+16 process/smoke tests and 3 doctests. The existing headless journey contains the new screenshot
+assertions and render fixtures, so no second UI platform runs concurrently in the test process.
+Command tails:
+
+```text
+$ cargo fmt --all --check
+(exit 0; no output)
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+    Checking ddl v0.0.4 (.../crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.62s
+
+$ cargo test --workspace
+...
+test result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 122.59s
+...
+test result: ok. 322 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.87s
+...
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+...
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+README images were regenerated with the documented spec 016 R5 command and all four were
+visually inspected. They also byte-match the optimized PNGs from the independent final
+workspace run (`DDL_HEADLESS_DIR="$PWD/target/headless/workspace" cargo test --workspace`):
+
+```text
+$ python3 scripts/readme-screenshots.py
+...
+docs/screenshots/home.png: 1280x800, 337,259 bytes
+docs/screenshots/discover.png: 1280x800, 487,551 bytes
+docs/screenshots/play-setup.png: 1280x800, 330,100 bytes
+docs/screenshots/mapset-detail.png: 1280x800, 542,884 bytes
+```
+
+### Remaining observations
+
+- Physical Deck sharpness/readability is still A4, outside this phase's acceptance.
+- Existing long mapset titles can clip in Home/Discover text slots (visible in the Back to
+  Saturn X render fixture); the screenshot credits themselves wrap fully. This predates R3
+  and was left outside the screenshot change.
+- Proposed documentation follow-up outside this task's ownership: the guide's FAQ
+  (`docs/steam-deck-guide.md`, “Are the screenshots actual gameplay?”) still calls the card
+  images original mood art. It should distinguish the off-screen launcher UI captures from
+  their now-real, credited in-game mapset images.
