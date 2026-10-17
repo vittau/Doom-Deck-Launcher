@@ -31,7 +31,8 @@ clean SVGs, and the compiled master copies. No network is used by exports or tes
 To edit authored geometry / re-outline the name, use Python 3 with
 `fonttools==4.60.1` in a virtual environment and run `author.py` with that
 environment's Python before exporting. It uses the bundled,
-unmodified OFL Barlow font, with no system-font dependency. The original Ember Gate exploration and prompt remain in `concepts/` for the
+unmodified OFL Barlow font, with no system-font dependency. The original Ember
+Gate exploration and prompt remain in `concepts/` for the
 historical spec 013 report. Its production masters have been replaced; Git history
 preserves the old vectors. The phase-A Rose Compass concept is retained under
 `../logo-v2/rose-compass/`; `author.py` now contains the identical emblem contours
