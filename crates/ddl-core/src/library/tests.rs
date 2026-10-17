@@ -45,6 +45,7 @@ fn base_recipe(id: &str) -> Recipe {
         page: "https://example.invalid/page".to_owned(),
         description: "A synthetic mapset for tests.".to_owned(),
         permission: "Test permission text.".to_owned(),
+        screenshots: Vec::new(),
         images: Vec::<Image>::new(),
         base_game: BaseGame {
             game: Game::Doom2,

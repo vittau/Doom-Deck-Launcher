@@ -14,6 +14,10 @@ pub struct Recipe {
     /// Reviewed category tags from `catalog/tags.toml` (spec 015). Absent = none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
+    /// Bundled representative screenshots (spec 023, R2; D-024). Absent = the UI
+    /// falls back to the painted concept art for this recipe.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub screenshots: Vec<Screenshot>,
     #[serde(default)]
     pub images: Vec<Image>,
     pub base_game: BaseGame,
@@ -27,6 +31,53 @@ pub struct Recipe {
 #[serde(deny_unknown_fields)]
 pub struct Image {
     pub path: String,
+    pub permission: String,
+}
+
+/// One bundled screenshot a recipe references (spec 023, R2; D-024).
+///
+/// The image itself lives under `crates/ddl/ui/assets/screenshots/` and is
+/// committed to this repository (D-024); `asset` names it relative to that
+/// directory, so a community pull request can add a screenshot by dropping the
+/// file, its `SOURCES.toml` entry and this reference. DDL never downloads a
+/// screenshot at runtime.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Screenshot {
+    /// Path under `crates/ddl/ui/assets/screenshots/`, e.g. `sigil/01.jpg`.
+    pub asset: String,
+    /// Short attribution the UI shows as the card/detail caption.
+    pub credit: String,
+}
+
+/// `crates/ddl/ui/assets/screenshots/<recipe-id>/SOURCES.toml` (spec 023, R1):
+/// the provenance and permission record kept beside the bundled images.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScreenshotSources {
+    pub schema_version: u32,
+    #[serde(default)]
+    pub screenshot: Vec<ScreenshotSource>,
+}
+
+/// One `[[screenshot]]` entry in a `SOURCES.toml`: everything a reviewer needs
+/// to trace an image back to where it came from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScreenshotSource {
+    /// File name inside the recipe's screenshot directory, e.g. `01.jpg`.
+    pub file: String,
+    /// Exact URL the committed bytes were originally retrieved from.
+    pub source_url: String,
+    /// Page a human can open to see the image in context.
+    pub source_page: String,
+    /// Who made/owns the image, for the credit caption.
+    pub credit: String,
+    /// Dimensions of the downloaded original before DDL's resize/crop.
+    pub original_size: String,
+    /// Retrieval date, `YYYY-MM-DD`.
+    pub retrieved: String,
+    /// Any permission/licence text found, or that none was found.
     pub permission: String,
 }
 

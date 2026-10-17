@@ -274,6 +274,25 @@ fn every_semantic_rule_rejects_a_bad_recipe() {
         ("inspection mislabeled", |r| {
             r.compatibility.engine.status = VerificationStatus::Verified
         }),
+        ("screenshot asset", |r| {
+            r.screenshots.push(Screenshot {
+                asset: "../escape.jpg".into(),
+                credit: "Someone".into(),
+            })
+        }),
+        ("screenshot asset", |r| {
+            r.screenshots.push(Screenshot {
+                asset: "card.gif".into(),
+                credit: "Someone".into(),
+            })
+        }),
+        ("screenshot asset", |r| {
+            let shot = r.screenshots[0].clone();
+            r.screenshots.push(shot);
+        }),
+        ("screenshot credit", |r| {
+            r.screenshots[0].credit.clear();
+        }),
     ];
     for (message, mutation) in cases {
         let mut r = recipe("sigil");
@@ -1234,4 +1253,131 @@ fn loader_skips_recipes_with_unknown_tags_and_keeps_known_ones() {
         Catalog::from_sources(&hosts_text, "not toml [", &[(f1.as_str(), tagged.as_str())]);
     assert!(broken.skipped.iter().any(|s| s.file == "tags.toml"));
     assert!(broken.recipe("sigil").is_none());
+}
+
+/// A header-only JPEG good enough for `image::image_info`; DDL never decodes
+/// pixels in lint, so a fabricated SOF0 segment is a valid fixture.
+fn jpeg_header(width: u16, height: u16) -> Vec<u8> {
+    let mut bytes = vec![0xFF, 0xD8];
+    bytes.extend_from_slice(&[0xFF, 0xC0, 0x00, 0x11, 0x08]);
+    bytes.extend_from_slice(&height.to_be_bytes());
+    bytes.extend_from_slice(&width.to_be_bytes());
+    bytes.extend_from_slice(&[3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1, 0xFF, 0xD9]);
+    bytes
+}
+
+fn sources_toml(credit: &str) -> String {
+    format!(
+        "schema_version = 1\n\
+         [[screenshot]]\n\
+         file = \"01.jpg\"\n\
+         source_url = \"https://example.invalid/01.jpg\"\n\
+         source_page = \"https://example.invalid/\"\n\
+         credit = \"{credit}\"\n\
+         original_size = \"640x360\"\n\
+         retrieved = \"2026-10-17\"\n\
+         permission = \"none found\"\n"
+    )
+}
+
+/// Lays out `<repo>/catalog/sigil.toml` plus the screenshots tree and returns
+/// the repository root.
+fn screenshot_repo(sources: Option<&str>) -> Temp {
+    let temp = Temp::new();
+    let mut r = recipe("sigil");
+    r.screenshots = vec![Screenshot {
+        asset: "sigil/01.jpg".into(),
+        credit: "Test author".into(),
+    }];
+    fs::create_dir_all(temp.0.join("catalog")).unwrap();
+    fs::write(
+        temp.0.join("catalog/sigil.toml"),
+        toml::to_string(&r).unwrap(),
+    )
+    .unwrap();
+    let dir = temp.0.join("crates/ddl/ui/assets/screenshots/sigil");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("01.jpg"), jpeg_header(640, 360)).unwrap();
+    if let Some(sources) = sources {
+        fs::write(dir.join("SOURCES.toml"), sources).unwrap();
+    }
+    temp
+}
+
+fn lint_screenshot_repo(temp: &Temp) -> Vec<Diagnostic> {
+    lint_paths(
+        &[temp.0.join("catalog")],
+        &Path::new(CATALOG).join("hosts.toml"),
+        None,
+    )
+}
+
+#[test]
+fn screenshots_lint_accepts_a_carded_asset_with_sources() {
+    let temp = screenshot_repo(Some(&sources_toml("Test author")));
+    assert_eq!(lint_screenshot_repo(&temp), vec![]);
+}
+
+#[test]
+fn screenshots_lint_reports_missing_oversize_small_and_uncredited_assets() {
+    // A referenced asset that is not committed.
+    let temp = screenshot_repo(None);
+    fs::remove_file(temp.0.join("crates/ddl/ui/assets/screenshots/sigil/01.jpg")).unwrap();
+    let errors = lint_screenshot_repo(&temp);
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.message.contains("missing screenshot")),
+        "{errors:?}"
+    );
+
+    // Over the 256 KiB hard bound.
+    let temp = screenshot_repo(Some(&sources_toml("Test author")));
+    let mut big = jpeg_header(640, 360);
+    big.resize(300 * 1024, 0);
+    fs::write(
+        temp.0.join("crates/ddl/ui/assets/screenshots/sigil/01.jpg"),
+        big,
+    )
+    .unwrap();
+    let errors = lint_screenshot_repo(&temp);
+    assert!(
+        errors.iter().any(|e| e.message.contains("over the")),
+        "{errors:?}"
+    );
+
+    // Below the 640x360 card floor.
+    let temp = screenshot_repo(Some(&sources_toml("Test author")));
+    fs::write(
+        temp.0.join("crates/ddl/ui/assets/screenshots/sigil/01.jpg"),
+        jpeg_header(320, 200),
+    )
+    .unwrap();
+    let errors = lint_screenshot_repo(&temp);
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.message.contains("smaller than 640x360")),
+        "{errors:?}"
+    );
+
+    // A committed image with no SOURCES.toml credit entry.
+    let temp = screenshot_repo(None);
+    let errors = lint_screenshot_repo(&temp);
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.message.contains("no SOURCES.toml entry")),
+        "{errors:?}"
+    );
+
+    // A SOURCES.toml entry with an empty credit is rejected too.
+    let temp = screenshot_repo(Some(&sources_toml("")));
+    let errors = lint_screenshot_repo(&temp);
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.message.contains("no SOURCES.toml entry")),
+        "{errors:?}"
+    );
 }
