@@ -5,7 +5,9 @@
 #                       Ubuntu runner, mirroring the commands in `AGENTS.md`;
 #   * `catalog-lint`  - offline recipe validation on every pull request;
 #   * `catalog-bundle`- publishes the catalog bundle to the `catalog` branch on
-#                       a push to `main` that touches `catalog/**` (spec 019, R2);
+#                       a push to `main` that touches `catalog/**`, on the first
+#                       publish (the branch does not exist yet) and when run by
+#                       hand on `main` (spec 019, R2);
 #   * `steamrt-build` - a release-mode build inside the same Steam Linux Runtime
 #                       SDK container the release uses, to prove the binary
 #                       actually links against SteamOS/Yocto-era libraries before
@@ -19,6 +21,8 @@ name: CI
 # changed. Docs, status/journal, Markdown and orchestration scripts do not rebuild anything
 # (`docs/design/` stays: the headless UI tests read its reference images). Tag pushes do not
 # run CI either: `release.yml` builds and smoke-tests the tagged commit itself.
+# `workflow_dispatch` (spec 019, R2) lets a maintainer publish the catalog bundle on
+# demand; only the `catalog-bundle` job reacts to it, and only on `main`.
 on:
   push:
     branches: [main]
@@ -37,13 +41,15 @@ on:
       - '!**/*.md'
       - '!scripts/orchestration/**'
       - '!LICENSE'
+  workflow_dispatch:
 
 # A newer push to the same branch or PR supersedes a running one.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# CI only reads the repository. `release.yml` is the only workflow that writes.
+# CI only reads the repository; `release.yml` and the `catalog-bundle` job (which opts in
+# to `contents: write` itself) are the only writers.
 permissions:
   contents: read
 
@@ -191,8 +197,11 @@ jobs:
 
   catalog-bundle:
     name: Publish catalog bundle
-    # Only a push to `main` can publish; pull requests never write the branch.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only a push to `main`, or a manual run on `main`, can publish; pull
+    # requests, tags and other refs never write the branch (spec 019, R2).
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     # Serialize bundle jobs instead of cancelling them. Each one commits on top
     # of the previous `catalog` head; cancelling a run mid-push or racing two
@@ -211,11 +220,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      # `catalog/**` only: a Rust-only push must not republish the same bundle.
+      # `catalog/**` only, plus two exceptions: a manual run on `main` always
+      # publishes, and so does the very first publish, when the remote `catalog`
+      # branch does not exist yet (spec 019 review fix).
       - name: Detect catalog changes
         id: changes
         run: |
           set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git ls-remote --exit-code --heads origin catalog >/dev/null 2>&1; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           base="${{ github.event.before }}"
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
             echo "changed=true" >> "$GITHUB_OUTPUT"

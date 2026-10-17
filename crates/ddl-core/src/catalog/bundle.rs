@@ -35,6 +35,19 @@ use super::{Catalog, SkippedRecipe};
 /// The bundle format this DDL understands (spec 019, R1).
 pub const BUNDLE_SCHEMA: u32 = 1;
 
+/// The oldest DDL a bundle built from this repository is promised to work on,
+/// used by `ddl catalog bundle` unless `--min-ddl-version` overrides it
+/// (spec 019, R1/R3).
+///
+/// This is **deliberate and stable**, not the version of whatever binary builds
+/// the bundle: if it tracked `Cargo.toml`, bumping the workspace version on
+/// `main` would make every installed DDL reject every published bundle and
+/// defeat the whole feature. Raise it only when a bundle genuinely needs a newer
+/// client (a new bundle/recipe schema); an individual recipe that a client
+/// cannot understand is already dropped per recipe, with a diagnostic, by
+/// [`accept_bundle`].
+pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.4";
+
 /// Largest bundle DDL accepts, matching spec 019 R3's ≤ 2 MiB bound.
 pub const MAX_BUNDLE_BYTES: u64 = 2 * 1024 * 1024;
 
@@ -814,6 +827,26 @@ limitations = []
         assert!(bundle.files.contains_key("tags.toml"));
         assert!(bundle.files.contains_key("hosts.toml"));
         assert!(build_bundle(dir.path(), 42, "deadbeef", "not-semver").is_err());
+    }
+
+    #[test]
+    fn the_default_min_version_is_a_stable_semver() {
+        // Spec 019 review fix: the minimum is a deliberate constant, not the
+        // building binary's version, so a Cargo.toml bump cannot make installed
+        // DDLs reject every published bundle.
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.4");
+        assert!(semver::Version::parse(DEFAULT_MIN_DDL_VERSION).is_ok());
+        let bundle = bundle_with(
+            200,
+            DEFAULT_MIN_DDL_VERSION,
+            &[("good.toml", &recipe("good", "www.gamers.org"))],
+        );
+        assert!(accept_bundle(&bundle, HOSTS, 100, DEFAULT_MIN_DDL_VERSION).is_ok());
+        assert!(accept_bundle(&bundle, HOSTS, 100, "0.0.5").is_ok());
+        assert!(matches!(
+            accept_bundle(&bundle, HOSTS, 100, "0.0.3"),
+            Err(BundleRejection::TooNew { .. })
+        ));
     }
 
     #[test]

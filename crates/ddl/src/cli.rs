@@ -82,7 +82,7 @@ pub enum Command {
         /// The source commit (`--commit`, default `DDL_SOURCE_COMMIT`/`GITHUB_SHA`).
         commit: Option<String>,
         /// The oldest DDL allowed to consume the bundle (`--min-ddl-version`,
-        /// default this binary's version).
+        /// default `DEFAULT_MIN_DDL_VERSION`, a deliberate constant).
         min_ddl_version: Option<String>,
     },
     /// `ddl catalog status`: the effective catalog's serial and source.
@@ -403,7 +403,8 @@ Options:
                              (default: DDL_CATALOG_SERIAL, then SOURCE_DATE_EPOCH)
       --commit <sha>         Source commit (default: DDL_SOURCE_COMMIT, then GITHUB_SHA)
       --min-ddl-version <v>  Oldest DDL allowed to consume the bundle
-                             (default: this binary's version)
+                             (default: a deliberate constant, currently 0.0.4;
+                             raise it only when the bundle needs a newer client)
 "
         ),
         HelpTopic::CatalogStatus => format!(

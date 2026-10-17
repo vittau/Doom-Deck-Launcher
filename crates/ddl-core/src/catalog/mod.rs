@@ -15,8 +15,9 @@ pub mod remote;
 
 pub use bundle::{
     AcceptedBundle, BUNDLE_SCHEMA, Bundle, BundleRejection, CHECK_INTERVAL_SECS, CachedBundle,
-    LoadedCache, MAX_BUNDLE_BYTES, accept_bundle, build_bundle, cache_path, catalog_check_due,
-    embedded_serial, load_cache, parse_bundle, serial_date, store_cache,
+    DEFAULT_MIN_DDL_VERSION, LoadedCache, MAX_BUNDLE_BYTES, accept_bundle, build_bundle,
+    cache_path, catalog_check_due, embedded_serial, load_cache, parse_bundle, serial_date,
+    store_cache,
 };
 pub use fetch::{Fetch, HttpsFetch, check_package};
 pub use image::{

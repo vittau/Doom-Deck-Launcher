@@ -207,7 +207,8 @@ pub fn run_io(
         } => {
             let serial = serial.unwrap_or_else(env_serial);
             let commit = commit.unwrap_or_else(env_commit);
-            let min_ddl_version = min_ddl_version.unwrap_or_else(|| cli::VERSION.to_owned());
+            let min_ddl_version = min_ddl_version
+                .unwrap_or_else(|| ddl_core::catalog::DEFAULT_MIN_DDL_VERSION.to_owned());
             match ddl_core::catalog::build_bundle(&catalog, serial, &commit, &min_ddl_version) {
                 Ok(bundle) => {
                     let mut json = serde_json::to_vec_pretty(&bundle).map_err(|error| {
@@ -1248,6 +1249,27 @@ exit 1
         assert_eq!(bundle.source_commit, "deadbeef");
         assert_eq!(bundle.bundle_schema, ddl_core::catalog::BUNDLE_SCHEMA);
         assert!(!bundle.recipe_files().is_empty());
+
+        // Without `--min-ddl-version` the bundle uses the deliberate constant,
+        // not this binary's version (spec 019 review fix).
+        let default_out = fx.env.home.join("default-bundle.json");
+        run(
+            &fx,
+            cli::Command::CatalogBundle {
+                out: default_out.clone(),
+                catalog: catalog.clone(),
+                serial: Some(1_700_000_001),
+                commit: None,
+                min_ddl_version: None,
+            },
+        )
+        .expect("bundle with defaults");
+        let default_bundle: ddl_core::catalog::Bundle =
+            serde_json::from_slice(&std::fs::read(&default_out).unwrap()).unwrap();
+        assert_eq!(
+            default_bundle.min_ddl_version,
+            ddl_core::catalog::DEFAULT_MIN_DDL_VERSION
+        );
 
         // A catalog that does not lint never produces a file.
         let empty = fx.env.home.join("empty-catalog");
