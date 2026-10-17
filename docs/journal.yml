@@ -341,3 +341,12 @@
     BTSX E2's missing 2014 Cacoward. Also merged: GOG/id Anthology Final Doom IWAD hashes.
     e2e run 38987876930 passed for all 13 recipes.
   refs: [docs/reports/015-tags-categories-favorites.md]
+- date: 2026-10-16
+  type: merge
+  summary: >-
+    Download body deadline is now size-scaled: 60 s + size / 64 KiB/s (expected size, else the
+    request cap), at most 6 h, via ureq 3.4.2 per-request timeout_recv_body; new TooSlow error
+    with progress and a retry hint. Known limit: ureq has no idle timeout, so a server that sends
+    nothing is only abandoned when that deadline expires (a blocking read also delays Cancel);
+    revisit with a socket-level idle timeout if Deck testing shows hung downloads.
+  refs: [crates/ddl-core/src/downloads/fetch.rs]
