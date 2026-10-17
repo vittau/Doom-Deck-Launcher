@@ -1,6 +1,6 @@
 # 023 — Representative screenshots on mapset cards
 
-**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 002, 006, 012, 013 · **Decision:** D-024 (Proposed)
+**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 002, 012, 013 · **Decision:** D-024
 **Owner request (2026-10-17):** "os cards dos PWADs devem mostrar alguma screenshot
 representativa do mod, e não 'original concept art'."
 
@@ -10,51 +10,40 @@ Each mapset card, detail page and art band shows a real screenshot of that mapse
 its source, so players recognise what they are choosing. The painted concept art stays only as
 the fallback when no screenshot is available or downloaded yet.
 
-## Decision D-024 (Proposed)
+## Decision D-024 (Accepted, revised 2026-10-17)
 
-Screenshots are third-party material (the mapset authors' art and levels). DDL does **not**
-commit them to this repository. A recipe **references** screenshots on official or
-author-controlled sources (the author's site or release page, the project's repository, the
-/idgames mirrors, ModDB/Doomworld attachments only if fetchable), each with exact size, SHA-256
-and a credit line, exactly like packages (D-010, D-015); DDL downloads them on demand into its
-cache, verifies them and shows them with the credit. Where a mapset's text grants permission to
-redistribute screenshots, the recipe notes say so. Hosts go through `catalog/hosts.toml`.
+The owner wants real screens in Discover without caution-driven gaps. Screenshots are
+**bundled**: representative in-game shots from public official or community sources, resized
+and committed to the repository with source and credit, compiled into the binary like the
+covers. No runtime download. Concept art is only the fallback for a recipe that has none yet.
 
 ## Requirements
 
-- **R1** — **Recipe field** (schema 1 compatible, optional): `[[screenshots]]` with `url`
-  (HTTPS, allowlisted `images` host list in `hosts.toml`), `size`, `sha256`, `width`, `height`,
-  `credit` (who made the mapset / who took the shot), `source_page` (where a human can see it),
-  optional `role = "card" | "band" | "gallery"`. Lint: formats PNG/JPEG/WebP only, ≤ 4 MiB,
-  ≥ 640×360, hashes well-formed, host allowlisted; `--fetch` verifies bytes and dimensions.
-- **R2** — **Research per recipe** (all 13): find 1–3 representative official screenshots,
-  record source, permission/licence text found, and why it is representative (a recognisable
-  map, not a title screen). Cite links; Doomworld/DoomWiki are Cloudflare-blocked for
-  automation — prefer author sites, GitHub/GitLab, /idgames mirrors. No source → keep the
-  fallback art and say so.
-- **R3** — **Fetch and cache:** images download through the existing download stack (bounded,
-  timed, verified) into `<XDG cache>/ddl/images/<sha256>`; decoded with bounded dimensions
-  (reject decompression bombs); failures fall back silently to the concept art. Downloads start
-  when Discover/detail first needs them, never block the UI, and are retried at most once per
-  session.
-- **R4** — **UI:** cards, detail and the art band use the screenshot (cropped/scaled to fill,
-  focal point kept centred), with a small credit caption instead of "Original concept art"; the
-  painted fallback keeps its current caption. Ember style, legible caption on a dark plate.
-- **R5** — **Offline:** cached images show offline; a never-fetched image shows the fallback.
-- **R6** — CONTRIBUTING.md documents how to add screenshots to a recipe.
+- **R1** — **Assets:** for each of the 13 recipes, 1–3 representative in-game screenshots (a
+  recognisable map view, not a title screen or logo), resized/cropped for the card (and the art
+  band / detail where it helps), JPEG or PNG, small (aim ≤ 250 KB each), under
+  `crates/ddl/ui/assets/screenshots/<recipe-id>/`, with `SOURCES.toml` (or per-file entries)
+  recording source URL, source page, author/credit, original dimensions, retrieval date and any
+  permission text found. Every recipe gets at least one; a recipe left without one is listed in
+  the report with what was tried.
+- **R2** — **Recipe link:** recipes reference their screenshots by asset name (optional field,
+  schema 1 compatible) so community PRs can add them; lint checks the referenced asset exists,
+  is within size/dimension bounds and has a source/credit entry. The build embeds them.
+- **R3** — **UI:** cards, Discover, detail and the art band show the screenshot (cropped to fill,
+  focal point centred) with a small credit caption ("Screenshot: <credit>") instead of
+  "Original concept art"; the painted fallback keeps its caption. Ember style, legible caption
+  on a dark plate. Headless renders cover Discover with all 13 cards.
+- **R4** — CONTRIBUTING.md documents how to add screenshots with source and credit.
 
 ## Out of scope
 
-Taking our own screenshots (needs IWADs, which DDL never downloads). User-supplied images.
-Videos.
+Runtime screenshot downloads. User-supplied images. Videos.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R6) — lint tests (format, size, dimensions, host, hash); CONTRIBUTING updated.
-- [ ] **A2** (R2) — research note per recipe; every recipe with a found source has screenshots
-  and passes `catalog lint --fetch`.
-- [ ] **A3** (R3, R5) — loopback-fake tests: verify, cache hit, bad hash, oversize, bomb
-  dimensions, offline fallback.
-- [ ] **A4** (R4) — headless renders: Discover with screenshots + one fallback, detail with
-  credit caption.
-- [ ] **A5** — fmt, clippy `-D warnings`, tests green; Linux e2e fetches every screenshot.
+- [ ] **A1** (R1, R2, R4) — all 13 recipes have at least one screenshot with source/credit;
+  lint tests for missing asset, oversize, missing credit; CONTRIBUTING updated.
+- [ ] **A2** (R3) — headless renders: Discover (all cards with screenshots), detail and art band
+  with the credit caption.
+- [ ] **A3** — fmt, clippy `-D warnings`, tests green.
+- [ ] **A4** — *Needs Deck Validation:* screenshots look sharp on the Deck panel.

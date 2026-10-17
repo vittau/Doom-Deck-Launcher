@@ -429,3 +429,11 @@
     and D-024 (Proposed): recipes reference official screenshots with size, SHA-256 and credit;
     DDL downloads and caches them like packages; concept art becomes the fallback.
   refs: [docs/specs/023-mapset-screenshots.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-024 revised and accepted: the owner wants real screens in Discover without caution-driven
+    gaps ("muito preciosismo não mostrar"). Screenshots are bundled (resized, with source and
+    credit), not downloaded at runtime; every recipe gets at least one; concept art is only a
+    fallback. Spec 023 rewritten accordingly.
+  refs: [docs/specs/023-mapset-screenshots.md]
