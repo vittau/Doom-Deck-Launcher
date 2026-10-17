@@ -27,6 +27,8 @@ pub(crate) fn setup() -> (tempfile::TempDir, Server, Environment, Arc<AtomicUsiz
         hits.fetch_add(1, Ordering::SeqCst);
         if r.target == "/bad" {
             Response::ok(b"bad content".to_vec())
+        } else if r.target == "/new" {
+            Response::ok(b"updated synthetic mapset content".to_vec())
         } else {
             Response::ok(bytes.to_vec())
         }
@@ -139,6 +141,12 @@ fn update_publishes_atomically_preserves_profiles_and_retries_cleanup_after_cras
     let changed = catalog_env(&env, |c| {
         let r = &mut c.recipes[0].recipe;
         r.release = "new-release".into();
+        let bytes = b"updated synthetic mapset content";
+        r.packages[0].urls = vec![_server.url("/new")];
+        r.packages[0].size = bytes.len() as u64;
+        r.packages[0].sha256 = Sha256::of(bytes).to_hex();
+        r.packages[0].members[0].size = bytes.len() as u64;
+        r.packages[0].members[0].sha256 = r.packages[0].sha256.clone();
         r.compatibility.complevel = Complevel::Number(11);
         r.components[1].id = "new-addon".into();
         r.components[1].default = true;
@@ -157,6 +165,10 @@ fn update_publishes_atomically_preserves_profiles_and_retries_cleanup_after_cras
         .unwrap();
     assert!(observed_old);
     assert_eq!(updated.release, "new-release");
+    assert_eq!(
+        fs::read(&updated.members[0].path).unwrap(),
+        b"updated synthetic mapset content"
+    );
     assert!(!old_dir.exists(), "cleanup is after publication");
     let after = item(&s);
     assert_eq!(after.recipe_status, RecipeStatus::Current);
