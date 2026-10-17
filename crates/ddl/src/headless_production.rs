@@ -1005,7 +1005,11 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     );
     assert!(ui.get_nodes().iter().any(|n| n.label == "1 content file"));
     assert_eq!(
-        Services::open(env).unwrap().snapshot().unwrap().items[0]
+        Services::open(env.clone())
+            .unwrap()
+            .snapshot()
+            .unwrap()
+            .items[0]
             .launch
             .as_ref()
             .unwrap()
@@ -1013,6 +1017,163 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .len(),
         1
     );
+    profiles_journey(window, ui, &state, &env, &fake);
+}
+
+/// Spec 018: real keys, production services, independent save identity and Continue.
+fn profiles_journey(
+    window: &MinimalSoftwareWindow,
+    ui: &AppWindow,
+    state: &Rc<RefCell<Runtime>>,
+    env: &Environment,
+    fake: &dsda::FakeEngineRunner,
+) {
+    // Current mapset is installed AUGER;ZENITH, with all game prerequisites ready.
+    state.borrow_mut().focus = 60;
+    state.borrow_mut().sync(ui);
+    press(window, Key::Return);
+    idle(state);
+    assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_focused(), 912);
+    assert!(
+        !ui.get_sheet_nodes()
+            .iter()
+            .find(|n| n.id == 915)
+            .unwrap()
+            .actionable
+    );
+    press(window, Key::Return); // New — copy settings
+    idle(state);
+    assert_eq!(ui.get_focused(), 60);
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "Active profile: Profile 2")
+    );
+    let copied = state.borrow().snapshot.as_ref().unwrap().items[0]
+        .profile
+        .clone();
+    assert_eq!(copied.name, "Profile 2");
+    press(window, Key::Return);
+    idle(state);
+    capture(window, "018-profile-picker.png");
+    // At the last profile, focus begins on copy; Up reaches Previous.
+    press(window, Key::UpArrow);
+    assert_eq!(ui.get_focused(), 910);
+    press(window, Key::Return);
+    idle(state);
+    assert!(ui.get_sheet_title().contains("Default"));
+    assert_eq!(ui.get_focused(), 911); // Disabled Previous cannot strand focus.
+    press(window, Key::Return);
+    idle(state);
+    assert!(ui.get_sheet_title().contains("Profile 2"));
+    press(window, Key::Escape);
+    assert_eq!(ui.get_focused(), 60);
+    // Rename via a D-pad preset, without text entry.
+    press(window, Key::Return);
+    idle(state);
+    press(window, Key::DownArrow); // copy -> rename
+    assert_eq!(ui.get_focused(), 914);
+    press(window, Key::Return);
+    assert_eq!(ui.get_focused(), 910);
+    capture(window, "018-profile-names.png");
+    press(window, Key::RightArrow);
+    press(window, Key::Return); // Casual
+    idle(state);
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "Active profile: Casual")
+    );
+    // Confirm names the profile and its data; B preserves both and restores focus.
+    press(window, Key::Return);
+    idle(state);
+    press(window, Key::DownArrow);
+    press(window, Key::RightArrow);
+    assert_eq!(ui.get_focused(), 915);
+    press(window, Key::Return);
+    assert_eq!(ui.get_focused(), 900);
+    assert!(ui.get_sheet_title().contains("Casual"));
+    assert!(ui.get_sheet_title().contains("saves and screenshots"));
+    capture(window, "018-delete-confirm.png");
+    press(window, Key::Escape);
+    assert_eq!(ui.get_focused(), 60);
+    let store = ddl_core::profiles::ProfileStore::new(&env.paths.config, &env.paths.data);
+    assert!(store.load(&copied.id).is_ok());
+    // Play and Home Continue both use Casual's actual isolated runtime directories.
+    let before_play = fake.launches().len();
+    ui.invoke_clicked(50);
+    idle(state);
+    state.borrow_mut().neutral_poll(true);
+    assert_eq!(fake.launches().len(), before_play + 1);
+    assert_profile_dirs(fake, &store.dirs(&copied.id));
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Home;
+        r.focus = 1;
+        r.sync(ui);
+    }
+    assert!(ui.get_nodes().iter().any(|n| n.label.contains("Casual")));
+    capture(window, "018-home-continue.png");
+    let before_continue = fake.launches().len();
+    press(window, Key::Return); // Continue opens setup, preserving the established flow.
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(ui.get_focused(), 50);
+    assert_eq!(
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .profile
+            .id,
+        copied.id
+    );
+    assert_eq!(fake.launches().len(), before_continue);
+    press(window, Key::Return); // Play the remembered profile.
+    idle(state);
+    state.borrow_mut().neutral_poll(true);
+    assert_eq!(fake.launches().len(), before_continue + 1);
+    assert_profile_dirs(fake, &store.dirs(&copied.id));
+    // Library shows the count using the same snapshot.
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Library;
+        r.focus = 10;
+        r.sync(ui);
+    }
+    assert!(ui.get_nodes().iter().any(|n| n.label == "2 profiles"));
+    capture(window, "018-library-profiles.png");
+    // Delete explicitly, and ensure the other profile's dirs survive.
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Setup;
+        r.focus = 60;
+        r.sync(ui);
+    }
+    press(window, Key::Return);
+    idle(state);
+    press(window, Key::DownArrow);
+    press(window, Key::RightArrow);
+    press(window, Key::Return);
+    press(window, Key::RightArrow);
+    press(window, Key::Return);
+    idle(state);
+    assert!(store.load_optional(&copied.id).unwrap().is_none());
+    assert!(!store.dirs(&copied.id).root.exists());
+    assert!(store.dirs("auger-zenith-default").root.exists());
+}
+
+fn assert_profile_dirs(fake: &dsda::FakeEngineRunner, dirs: &ddl_core::profiles::ProfileDirs) {
+    let launches = fake.launches();
+    let args = &launches.last().unwrap().argv;
+    for (flag, path) in [
+        ("-save", &dirs.save),
+        ("-data", &dirs.data),
+        ("-shotdir", &dirs.shots),
+    ] {
+        assert!(
+            args.windows(2)
+                .any(|pair| pair[0] == flag && pair[1] == path.as_os_str()),
+            "{flag}: {args:?}"
+        );
+    }
 }
 
 fn press_char(window: &MinimalSoftwareWindow, text: &str) {

@@ -83,6 +83,8 @@ pub enum Command {
         id: String,
         /// Print the argv and working directory instead of launching.
         dry_run: bool,
+        /// Profile name or stable id.
+        profile: Option<String>,
         /// Optional component ids to enable (`--with`).
         components: Vec<String>,
         /// Starting skill override (`--skill`).
@@ -156,7 +158,7 @@ Usage: {BIN} [OPTIONS]
        {BIN} iwad scan [PATH...]
        {BIN} mapset list
        {BIN} mapset install <id> [--with <component>...]
-       {BIN} launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+       {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
        {BIN} doctor
 
 Commands:
@@ -278,19 +280,20 @@ Usage: {BIN} mapset install <id> [--with <component>...]
         ),
         HelpTopic::Launch => format!(
             "\
-{BIN} launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+{BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
 
 Resolve a mapset exactly as the UI's Play does. With --dry-run it prints the
 argv (one argument per line) and the working directory, or the typed blocker
 with its explanation. Without --dry-run it starts DSDA-Doom through the same
 run guard as the UI.
 
-Usage: {BIN} launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+Usage: {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
 
 Options:
       --dry-run        Print the launch plan instead of starting the engine
       --with <C>       Enable an optional component (repeatable)
       --skill <1-5>    Starting skill
+      --profile <name|id>  Select a saved profile
       --pistol-start   Reset to a pistol start on every map
 "
         ),
@@ -516,6 +519,7 @@ fn parse_mapset_install(args: &[OsString]) -> Result<Command, ParseError> {
 fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
     let mut id = None;
     let mut dry_run = false;
+    let mut profile = None;
     let mut components = Vec::new();
     let mut skill = None;
     let mut pistol_start = false;
@@ -531,6 +535,17 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
             dry_run = true;
         } else if !positional && arg == "--pistol-start" {
             pistol_start = true;
+        } else if !positional && arg == "--profile" {
+            if profile.is_some() {
+                return Err(ParseError::message("`--profile` may appear only once"));
+            }
+            let value = args
+                .get(index + 1)
+                .and_then(|v| v.to_str())
+                .filter(|v| !v.is_empty() && !v.starts_with('-'))
+                .ok_or_else(|| ParseError::message("`--profile` needs a name or id"))?;
+            profile = Some(value.to_owned());
+            index += 1;
         } else if !positional && arg == "--with" {
             let value = args
                 .get(index + 1)
@@ -570,6 +585,7 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
     Ok(Command::Launch {
         id,
         dry_run,
+        profile,
         components,
         skill,
         pistol_start,
@@ -833,6 +849,7 @@ mod tests {
             Ok(Command::Launch {
                 id: "sigil".into(),
                 dry_run: true,
+                profile: None,
                 components: vec![],
                 skill: None,
                 pistol_start: false
@@ -851,6 +868,7 @@ mod tests {
             Ok(Command::Launch {
                 id: "auger-zenith".into(),
                 dry_run: false,
+                profile: None,
                 components: vec!["alternate-blaster".into()],
                 skill: Some(4),
                 pistol_start: true
@@ -863,6 +881,29 @@ mod tests {
             parse_str(&["launch", "--help"]),
             Ok(Command::Help(HelpTopic::Launch))
         );
+    }
+
+    #[test]
+    fn launch_profile_accepts_names_and_ids_and_rejects_missing_or_repeated_values() {
+        for selector in ["Casual", "Profile 2", "sigil-default"] {
+            for args in [
+                vec!["launch", "sigil", "--profile", selector],
+                vec!["launch", "--profile", selector, "sigil"],
+            ] {
+                assert!(
+                    matches!(parse_str(&args), Ok(Command::Launch { profile: Some(p), .. }) if p == selector)
+                );
+            }
+        }
+        for args in [
+            vec!["launch", "sigil", "--profile"],
+            vec!["launch", "sigil", "--profile", ""],
+            vec!["launch", "sigil", "--profile", "--dry-run"],
+            vec!["launch", "sigil", "--profile", "UV", "--profile", "Casual"],
+        ] {
+            assert!(parse_str(&args).is_err());
+        }
+        assert!(help_for(HelpTopic::Launch).contains("--profile"));
     }
 
     #[test]

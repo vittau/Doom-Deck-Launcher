@@ -105,6 +105,7 @@ pub fn run_io(
         cli::Command::Launch {
             id,
             dry_run,
+            profile,
             components,
             skill,
             pistol_start,
@@ -112,6 +113,7 @@ pub fn run_io(
             let mut services = open(env)?;
             apply_iwad_seam(&mut services)?;
             let overrides = LaunchOverrides {
+                profile,
                 components,
                 skill,
                 pistol_start,
@@ -343,6 +345,12 @@ fn print_doctor(report: &DoctorReport, out: &mut dyn Write) -> Result<(), CliFai
         }
     }
 
+    writeln!(out, "profiles:").map_err(output_error)?;
+    for (mapset, profiles) in &report.profiles {
+        for profile in profiles {
+            writeln!(out, "  {mapset}: {} ({})", profile.name, profile.id).map_err(output_error)?;
+        }
+    }
     writeln!(out, "mapsets:").map_err(output_error)?;
     for row in &report.mapsets {
         writeln!(
@@ -770,6 +778,7 @@ exit 1
             cli::Command::Launch {
                 id: "sigil".into(),
                 dry_run: true,
+                profile: None,
                 components: vec![],
                 skill: None,
                 pistol_start: false,
@@ -800,6 +809,7 @@ exit 1
             cli::Command::Launch {
                 id: "sigil".into(),
                 dry_run: true,
+                profile: None,
                 components: vec![],
                 skill: Some(4),
                 pistol_start: true,
@@ -869,6 +879,88 @@ exit 1
             "{out}"
         );
         assert!(out.contains("SIGIL_V1_23.wad"), "{out}");
+    }
+
+    #[test]
+    fn launch_profile_selects_isolated_paths_and_remembers_without_saving_overrides() {
+        let fx = fixture();
+        install_engine(&fx, false);
+        install_sigil(&fx, &[]);
+        let seam = fx.env.home.join("seam-iwads");
+        let mut services = Services::open(fx.env.clone()).unwrap();
+        services.register_fake_iwads(&seam).unwrap();
+        services
+            .execute(
+                crate::services::Command::NewProfile("sigil".into(), false),
+                &ddl_core::downloads::CancellationToken::new(),
+                &mut |_| {},
+            )
+            .unwrap();
+        let store = ddl_core::profiles::ProfileStore::new(&fx.env.paths.config, &fx.env.paths.data);
+        let selected = store
+            .list()
+            .unwrap()
+            .into_iter()
+            .find(|p| p.name == "Profile 2")
+            .unwrap();
+        services
+            .execute(
+                crate::services::Command::SelectProfile("sigil".into(), "sigil-default".into()),
+                &ddl_core::downloads::CancellationToken::new(),
+                &mut |_| {},
+            )
+            .unwrap();
+        for selector in [selected.name.clone(), selected.id.clone()] {
+            let (out, _) = run(
+                &fx,
+                cli::Command::Launch {
+                    id: "sigil".into(),
+                    dry_run: true,
+                    profile: Some(selector),
+                    components: vec![],
+                    skill: Some(5),
+                    pistol_start: true,
+                },
+            )
+            .unwrap();
+            assert!(
+                out.contains(&store.dirs(&selected.id).save.display().to_string()),
+                "{out}"
+            );
+        }
+        assert_eq!(
+            Services::open(fx.env.clone())
+                .unwrap()
+                .snapshot()
+                .unwrap()
+                .items[0]
+                .profile
+                .id,
+            "sigil-default"
+        );
+        run(
+            &fx,
+            cli::Command::Launch {
+                id: "sigil".into(),
+                dry_run: false,
+                profile: Some(selected.name),
+                components: vec![],
+                skill: Some(5),
+                pistol_start: true,
+            },
+        )
+        .unwrap();
+        let restored = Services::open(fx.env.clone()).unwrap().snapshot().unwrap();
+        assert_eq!(restored.items[0].profile.id, selected.id);
+        assert!(restored.items[0].profile.last_played.is_some());
+        assert_eq!(restored.items[0].profile.skill, 3);
+        assert!(!restored.items[0].profile.pistol_start);
+        let (out, _) = run(&fx, cli::Command::Doctor).unwrap();
+        assert!(
+            out.contains(&format!("sigil: Profile 2 ({})", selected.id)),
+            "{out}"
+        );
+        assert!(out.contains("sigil: Default (sigil-default)"), "{out}");
     }
 
     #[test]

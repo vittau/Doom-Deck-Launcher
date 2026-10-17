@@ -129,6 +129,9 @@ struct AppState {
     /// Recipe ids the player marked (spec 015, R5); added by schema 2.
     #[serde(default)]
     favorites: BTreeSet<String>,
+    /// Spec 018: additive schema-2 selection; old files default to no selection.
+    #[serde(default)]
+    last_profiles: BTreeMap<String, String>,
     /// Spec 021 R4: also probe the generic DOOM folders and
     /// `DOOMWADDIR`/`DOOMWADPATH`. Default off. Added while the file was still
     /// schema 1 (absent loads as `false`); schema 2 carries it unchanged.
@@ -146,6 +149,7 @@ impl Default for AppState {
             folders: vec![],
             recipes: BTreeMap::new(),
             favorites: BTreeSet::new(),
+            last_profiles: BTreeMap::new(),
             search_standard_folders: false,
         }
     }
@@ -190,6 +194,9 @@ pub struct Item {
     pub recipe: Recipe,
     pub manifest: Option<InstallManifest>,
     pub profile: Profile,
+    pub profiles: Vec<Profile>,
+    /// History across every run, even when the selected profile has never played.
+    pub last_played: Option<u64>,
     pub launch: Result<Summary, Blocker>,
     pub favorite: bool,
 }
@@ -225,6 +232,10 @@ pub enum Command {
     RemoveFolder(PathBuf),
     Install(String),
     Save(Profile),
+    SelectProfile(String, String),
+    NewProfile(String, bool),
+    RenameProfile(String, String),
+    DeleteProfile(String),
     /// Toggles the favorite mark of a recipe id (spec 015, R5).
     Favorite(String),
     Play(String),
@@ -403,13 +414,16 @@ impl Services {
                 .installer
                 .load_manifest(&recipe)
                 .map_err(install_error)?;
-            let profile = held_profiles
+            let mut profiles: Vec<_> = held_profiles
                 .iter()
-                .find(|p| p.recipe_id == recipe.id)
+                .filter(|p| p.recipe_id == recipe.id)
                 .cloned()
-                .unwrap_or_else(|| {
-                    Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
-                });
+                .collect();
+            if profiles.is_empty() {
+                profiles.push(default_profile(&recipe));
+            }
+            let profile = selected_profile(&profiles, self.state.last_profiles.get(&recipe.id));
+            let last_played = profiles.iter().filter_map(|p| p.last_played).max();
             let launch = match &manifest {
                 Some(m) => resolver::resolve(
                     &recipe,
@@ -427,6 +441,8 @@ impl Services {
                 recipe,
                 manifest,
                 profile,
+                profiles,
+                last_played,
                 launch,
             });
         }
@@ -568,6 +584,82 @@ impl Services {
                 self.profiles
                     .save(&profile)
                     .map_err(|e| logged(Problem::Storage, e))?;
+                self.state
+                    .last_profiles
+                    .insert(profile.recipe_id.clone(), profile.id.clone());
+                self.save()?;
+            }
+            Command::SelectProfile(recipe_id, id) => {
+                let profile = self
+                    .profiles
+                    .load(&id)
+                    .map_err(|e| logged(Problem::State, e))?;
+                if profile.recipe_id != recipe_id {
+                    return Err(Problem::State);
+                }
+                self.state.last_profiles.insert(recipe_id, id);
+                self.save()?;
+            }
+            Command::NewProfile(recipe_id, copy) => {
+                let recipe = self.recipe(&recipe_id)?;
+                let current = self.profile(&recipe)?;
+                self.profiles
+                    .save(&current)
+                    .map_err(|e| logged(Problem::Storage, e))?;
+                let all = self
+                    .profiles
+                    .list()
+                    .map_err(|e| logged(Problem::State, e))?;
+                let n = (2..)
+                    .find(|n| {
+                        !all.iter()
+                            .any(|p| p.recipe_id == recipe_id && p.name == format!("Profile {n}"))
+                    })
+                    .ok_or(Problem::State)?;
+                let suffix = (2..)
+                    .find(|n| {
+                        let id = format!("{recipe_id}-profile-{n}");
+                        !all.iter().any(|p| p.id == id)
+                            && self.profiles.path(&id).is_ok_and(|p| !p.exists())
+                            && !self.profiles.dirs(&id).root.exists()
+                    })
+                    .ok_or(Problem::State)?;
+                let mut profile = if copy {
+                    current
+                } else {
+                    default_profile(&recipe)
+                };
+                profile.id = format!("{recipe_id}-profile-{suffix}");
+                profile.name = format!("Profile {n}");
+                profile.last_played = None;
+                profile
+                    .validate(&recipe)
+                    .map_err(|e| logged(Problem::State, e))?;
+                self.profiles
+                    .save(&profile)
+                    .map_err(|e| logged(Problem::Storage, e))?;
+                self.state.last_profiles.insert(recipe_id, profile.id);
+                self.save()?;
+            }
+            Command::RenameProfile(id, name) => {
+                let mut profile = self
+                    .profiles
+                    .load(&id)
+                    .map_err(|e| logged(Problem::State, e))?;
+                if !profile_names().contains(&name.as_str()) && !is_numbered_profile(&name) {
+                    return Err(Problem::State);
+                }
+                profile.name = name;
+                self.profiles
+                    .save(&profile)
+                    .map_err(|e| logged(Problem::Storage, e))?;
+            }
+            Command::DeleteProfile(id) => {
+                self.profiles
+                    .delete_with_data(&id)
+                    .map_err(|e| logged(Problem::Storage, e))?;
+                self.state.last_profiles.retain(|_, held| held != &id);
+                self.save()?;
             }
             Command::Favorite(id) => {
                 self.recipe(&id)?;
@@ -648,13 +740,20 @@ impl Services {
         Ok(())
     }
     fn profile(&self, recipe: &Recipe) -> Result<Profile, Problem> {
-        Ok(self
+        let profiles: Vec<_> = self
             .profiles
-            .load_optional(&format!("{}-default", recipe.id))
+            .list()
             .map_err(|e| logged(Problem::State, e))?
-            .unwrap_or_else(|| {
-                Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
-            }))
+            .into_iter()
+            .filter(|p| p.recipe_id == recipe.id)
+            .collect();
+        if profiles.is_empty() {
+            return Ok(default_profile(recipe));
+        }
+        Ok(selected_profile(
+            &profiles,
+            self.state.last_profiles.get(&recipe.id),
+        ))
     }
 
     /// Acquires DDL's cross-process state lock for this process (spec 014, R2).
@@ -925,6 +1024,7 @@ pub struct ScanReport {
 /// (spec 014, R1).
 #[derive(Debug, Clone, Default)]
 pub struct LaunchOverrides {
+    pub profile: Option<String>,
     /// Optional component ids to enable (`--with`).
     pub components: Vec<String>,
     /// Starting skill override (`--skill`).
@@ -936,6 +1036,7 @@ pub struct LaunchOverrides {
 /// The data behind `ddl doctor` (spec 014, R1).
 #[derive(Debug, Clone)]
 pub struct DoctorReport {
+    pub profiles: BTreeMap<String, Vec<Profile>>,
     /// DDL's resolved XDG directories.
     pub paths: Paths,
     /// Engine state.
@@ -1147,6 +1248,39 @@ impl Services {
         let mut profile = self
             .profile(recipe)
             .map_err(|problem| CliFailure::message(problem.to_string()))?;
+        if let Some(selector) = &overrides.profile {
+            let snapshot = self
+                .snapshot()
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+            let item = snapshot
+                .items
+                .iter()
+                .find(|i| i.recipe.id == recipe.id)
+                .ok_or_else(|| CliFailure::message("unknown mapset"))?;
+            profile = if let Some(exact) = item.profiles.iter().find(|p| &p.id == selector) {
+                exact.clone()
+            } else {
+                let matches: Vec<_> = item
+                    .profiles
+                    .iter()
+                    .filter(|p| &p.name == selector)
+                    .collect();
+                match matches.as_slice() {
+                    [one] => (*one).clone(),
+                    [] => {
+                        return Err(CliFailure::message(format!(
+                            "no profile `{selector}` for `{}`",
+                            recipe.id
+                        )));
+                    }
+                    _ => {
+                        return Err(CliFailure::message(format!(
+                            "ambiguous profile `{selector}`; use its id"
+                        )));
+                    }
+                }
+            };
+        }
         if !overrides.components.is_empty() {
             profile.components.clear();
             for component in &overrides.components {
@@ -1206,14 +1340,15 @@ impl Services {
     }
 
     /// `ddl launch` without `--dry-run`: launch through the same run guard as
-    /// the UI. The override selection is not saved.
+    /// the UI. The selected profile and play history are remembered; per-launch
+    /// option overrides are not saved.
     ///
     /// # Errors
     ///
     /// Returns a [`CliFailure`] for a typed blocker, a busy run guard, or a
     /// launch failure.
     pub fn run_mapset(
-        &self,
+        &mut self,
         id: &str,
         overrides: &LaunchOverrides,
     ) -> Result<dsda::LaunchOutcome, CliFailure> {
@@ -1228,6 +1363,25 @@ impl Services {
         let resolution = self
             .resolve_launch(&recipe, &profile)
             .map_err(CliFailure::from)?;
+        // Save only the selected profile's original settings, never CLI overrides.
+        // The cross-process state lock is short-lived; the run guard owns the game.
+        {
+            let _lock = self.lock_cli()?;
+            let mut saved = self
+                .profiles
+                .load_optional(&profile.id)
+                .map_err(|e| CliFailure::message(e.to_string()))?
+                .unwrap_or_else(|| default_profile(&recipe));
+            saved.touch(dsda::Clock::now_unix_secs(&dsda::SystemClock));
+            self.profiles
+                .save(&saved)
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+            self.state
+                .last_profiles
+                .insert(recipe.id.clone(), profile.id.clone());
+            self.save()
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+        }
         let outcome = self
             .run_resolution(&resolution)
             .map_err(|problem| CliFailure::message(problem.to_string()))?;
@@ -1249,6 +1403,11 @@ impl Services {
         let engine = self.engine_status()?;
         let config = self.config.state().ok();
         Ok(DoctorReport {
+            profiles: snapshot
+                .items
+                .iter()
+                .map(|i| (i.recipe.id.clone(), i.profiles.clone()))
+                .collect(),
             paths: self.env.paths.clone(),
             engine,
             iwads: snapshot.iwads,
@@ -1329,6 +1488,33 @@ impl Services {
 }
 
 /// The registry source for a GOG candidate's launcher (spec 021, R2).
+fn default_profile(recipe: &Recipe) -> Profile {
+    Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
+}
+fn selected_profile(profiles: &[Profile], remembered: Option<&String>) -> Profile {
+    profiles
+        .iter()
+        .find(|p| Some(&p.id) == remembered)
+        .or_else(|| profiles.iter().max_by_key(|p| p.last_played))
+        .expect("at least one profile")
+        .clone()
+}
+pub fn profile_names() -> [&'static str; 6] {
+    [
+        "Default",
+        "Casual",
+        "UV",
+        "Pistol start",
+        "Co-op",
+        "Speedrun",
+    ]
+}
+fn is_numbered_profile(name: &str) -> bool {
+    name.strip_prefix("Profile ")
+        .and_then(|n| n.parse::<u32>().ok())
+        .is_some_and(|n| n >= 2)
+}
+
 fn store_source(launcher: iwads::GogLauncher) -> iwads::Source {
     match launcher {
         iwads::GogLauncher::Heroic => iwads::Source::GogHeroic,
@@ -1404,6 +1590,137 @@ mod tests {
             ["alpha", "Beta", "Zebra", "a.wad", ".alpha", ".Hidden"]
         );
     }
+    #[test]
+    fn multiple_profiles_copy_defaults_rename_delete_and_remember() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        let command = |s: &mut Services, c| s.execute(c, &CancellationToken::new(), &mut |_| {});
+        let recipe = s.recipe("sigil").unwrap();
+        let mut first = s.profile(&recipe).unwrap();
+        first.skill = 5;
+        first.pistol_start = true;
+        first.set_component("compat", true);
+        first.overrides.insert("test_scalar".into(), 1);
+        first.iwad_variant = Some("test-variant".into());
+        first.touch(100);
+        command(&mut s, Command::Save(first.clone())).unwrap();
+        command(&mut s, Command::NewProfile("sigil".into(), true)).unwrap();
+        let second = s.profile(&recipe).unwrap();
+        assert_eq!(second.name, "Profile 2");
+        assert_eq!(second.skill, 5);
+        assert!(second.pistol_start);
+        assert_eq!(second.components, first.components);
+        assert_eq!(second.overrides, first.overrides);
+        assert_eq!(second.iwad_variant, first.iwad_variant);
+        assert_eq!(second.last_played, None);
+        assert_ne!(s.profiles.dirs(&second.id), s.profiles.dirs(&first.id));
+        command(&mut s, Command::NewProfile("sigil".into(), false)).unwrap();
+        let third = s.profile(&recipe).unwrap();
+        assert_eq!(third.name, "Profile 3");
+        assert_eq!(third.skill, 3);
+        assert!(!third.pistol_start);
+        command(
+            &mut s,
+            Command::RenameProfile(second.id.clone(), "Casual".into()),
+        )
+        .unwrap();
+        command(
+            &mut s,
+            Command::SelectProfile("sigil".into(), second.id.clone()),
+        )
+        .unwrap();
+        let restored = Services::open(env).unwrap();
+        assert_eq!(restored.profile(&recipe).unwrap().id, second.id);
+        let snapshot = restored.snapshot().unwrap();
+        let item = snapshot
+            .items
+            .iter()
+            .find(|i| i.recipe.id == "sigil")
+            .unwrap();
+        assert_eq!(item.profile.name, "Casual");
+        assert_eq!(item.last_played, Some(100));
+        assert_eq!(item.profiles.len(), 3);
+        assert_eq!(
+            restored
+                .effective_profile(&recipe, &LaunchOverrides::default())
+                .unwrap()
+                .id,
+            second.id
+        );
+        for selector in [&second.id, &"Casual".to_owned()] {
+            let overrides = LaunchOverrides {
+                profile: Some(selector.clone()),
+                ..Default::default()
+            };
+            assert_eq!(
+                s.effective_profile(&recipe, &overrides).unwrap().id,
+                second.id
+            );
+        }
+        let wrong = LaunchOverrides {
+            profile: Some("missing".into()),
+            ..Default::default()
+        };
+        assert!(s.effective_profile(&recipe, &wrong).is_err());
+        command(
+            &mut s,
+            Command::RenameProfile(third.id.clone(), "Casual".into()),
+        )
+        .unwrap();
+        let ambiguous = LaunchOverrides {
+            profile: Some("Casual".into()),
+            ..Default::default()
+        };
+        assert!(
+            s.effective_profile(&recipe, &ambiguous)
+                .unwrap_err()
+                .to_string()
+                .contains("ambiguous")
+        );
+        command(&mut s, Command::DeleteProfile(second.id)).unwrap();
+        command(&mut s, Command::DeleteProfile(third.id)).unwrap();
+        assert!(command(&mut s, Command::DeleteProfile(first.id)).is_err());
+        command(&mut s, Command::NewProfile("sigil".into(), false)).unwrap();
+        assert_eq!(s.profile(&recipe).unwrap().name, "Profile 2");
+    }
+
+    #[test]
+    fn new_profile_does_not_adopt_orphaned_runtime_data() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut s = Services::open(env(temp.path())).unwrap();
+        let orphan = s.profiles.dirs("sigil-profile-2");
+        fs::create_dir_all(&orphan.save).unwrap();
+        fs::write(orphan.save.join("old-save"), b"old run").unwrap();
+        s.execute(
+            Command::NewProfile("sigil".into(), false),
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+        .unwrap();
+        let profile = s.profile(&s.recipe("sigil").unwrap()).unwrap();
+        assert_eq!(profile.name, "Profile 2");
+        assert_eq!(profile.id, "sigil-profile-3");
+        assert!(orphan.save.join("old-save").exists());
+        assert!(!s.profiles.dirs(&profile.id).save.join("old-save").exists());
+    }
+
+    #[test]
+    fn schema_two_without_last_profiles_loads_and_persists_selection() {
+        let state = AppState::parse(
+            br#"{"schema_version":2,"folders":[],"recipes":{},"favorites":["sigil"]}"#,
+        )
+        .unwrap();
+        assert!(state.last_profiles.is_empty());
+        assert!(state.favorites.contains("sigil"));
+        let mut updated = state;
+        updated
+            .last_profiles
+            .insert("sigil".into(), "sigil-default".into());
+        let restored = AppState::parse(&serde_json::to_vec(&updated).unwrap()).unwrap();
+        assert_eq!(restored.last_profiles["sigil"], "sigil-default");
+    }
+
     #[test]
     fn startup_provisions_owned_paths_and_restores_the_default_profile() {
         let temp = tempfile::tempdir().unwrap();
