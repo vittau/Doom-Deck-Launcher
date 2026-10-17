@@ -16,9 +16,10 @@ Rather than invent a path, DDL treats the **launcher-recorded install directory*
 and looks for `*.wad` non-recursively in that directory and one level of its subfolders. The
 content identifier then decides. A wrong or empty directory simply yields no candidates.
 
-**Platform note:** the app-state `schema_version` moved **1 → 2** for the new setting (see
-R4); v1 files migrate on load. This is a `crates/ddl` change the coordinator asked to be
-sequenced with spec 015's app-state work.
+**Platform note:** the new setting is **additive inside app-state `schema_version` 1** (the
+coordinator asked not to bump it, to avoid colliding with spec 015, which owns the 1 → 2
+move). An existing `app.json` without the field loads as `false`; spec 015 folds the field
+into its schema 2 at merge.
 
 ## R1 — Research (A1)
 
@@ -83,9 +84,10 @@ ambiguous files stay ambiguous and are never auto-chosen. The source is shown in
 
 ## R4 — Opt-in generic roots
 
-`AppState` gained `search_standard_folders: bool` (`#[serde(default)]`, off), the schema
-moved to `APP_SCHEMA_VERSION = 2`, and `Services::open` migrates a v1 file (no field →
-`false`) and rejects anything else. A new `Command::SetSearchStandardFolders(bool)` persists
+`AppState` gained `search_standard_folders: bool` (`#[serde(default)]`, off) **inside schema
+1**: a file written before R4 has no field and loads as `false`; `Services::open` still
+rejects any version but 1 (spec 015 raises it to 2 and folds this field into its migration).
+A new `Command::SetSearchStandardFolders(bool)` persists
 the toggle (it takes the state lock like other mutations). The Settings → **IWAD folders**
 section gained one row (id `72`) built with the existing `Nodes::row` component: label
 "Search standard Linux folders", detail `On`/`Off`; the existing Add-folder/Rescan buttons
@@ -117,14 +119,14 @@ macOS arm64, repository toolchain. **361 tests passed, zero failures** across th
 `cargo test --workspace` — exit 0, result lines:
 
 ```text
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 89.21s   (ddl)
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.25s    (cli_help)
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s    (catalog_cli)
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s    (logo_assets)
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s    (ui_strings)
-test result: ok. 283 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s  (ddl-core)
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 77.54s   (ddl)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.23s    (cli_help)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s    (catalog_cli)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s    (logo_assets)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s    (ui_strings)
+test result: ok. 283 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s  (ddl-core)
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s    (probe bin)
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s   (dsda_launch)
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s   (dsda_launch)
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s    (doctests)
 ```
 
@@ -141,8 +143,10 @@ Tests added (12 ddl-core + 5 ddl + the headless render assertions):
   until enabled (then labelled `StandardFolder`).
 - `cli_exec::tests::iwad_scan_labels_a_gog_install_from_heroic` — the CLI prints
   `GOG via Heroic: …`.
-- `services::tests::app_state_migrates_from_v1_to_v2_and_persists_the_new_setting` — the
-  v1→v2 migration and default; the unknown-schema test now uses version 3.
+- `services::tests::an_existing_state_file_without_the_setting_loads_off_and_round_trips` —
+  a field-less state loads as `false`, the toggle persists, and the file stays at
+  `schema_version` 1; the unknown-schema test now uses version 3 (so it survives spec 015's
+  bump to 2).
 - The production headless journey (`headless_production.rs`) renders the Settings row,
   asserts it defaults to `Off`, toggles it (row detail becomes `On`) and toggles back.
 

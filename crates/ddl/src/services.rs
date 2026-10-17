@@ -120,9 +120,6 @@ fn install_error(error: ddl_core::library::InstallError) -> Problem {
     logged(kind, error)
 }
 
-/// The app-state schema this build writes (spec 021, R4 bumped it from 1).
-const APP_SCHEMA_VERSION: u32 = 2;
-
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct AppState {
@@ -130,14 +127,15 @@ struct AppState {
     folders: Vec<PathBuf>,
     recipes: BTreeMap<String, Recipe>,
     /// R4: also probe the generic DOOM folders and `DOOMWADDIR`/`DOOMWADPATH`.
-    /// Default off; a v1 state file has no field and migrates to `false`.
+    /// Default off. The field is additive inside schema 1, so an existing state
+    /// file without it loads as `false`; spec 015 folds it into its schema 2.
     #[serde(default)]
     search_standard_folders: bool,
 }
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            schema_version: APP_SCHEMA_VERSION,
+            schema_version: 1,
             folders: vec![],
             recipes: BTreeMap::new(),
             search_standard_folders: false,
@@ -267,7 +265,7 @@ impl Services {
             fs::create_dir_all(dir).map_err(|e| logged(Problem::Storage, e))?;
         }
         let state_path = paths.config.join("app.json");
-        let mut state: AppState = match fs::read(&state_path) {
+        let state: AppState = match fs::read(&state_path) {
             Ok(bytes) if bytes.len() <= 4 * 1024 * 1024 => {
                 serde_json::from_slice(&bytes).map_err(|e| logged(Problem::State, e))?
             }
@@ -279,13 +277,10 @@ impl Services {
                 ));
             }
         };
-        // Spec 021 R4 bumped the schema to 2 for `search_standard_folders`. A
-        // v1 file has no such field, so it loads with the default (`false`);
-        // anything else is rejected rather than guessed at.
-        match state.schema_version {
-            1 => state.schema_version = APP_SCHEMA_VERSION,
-            APP_SCHEMA_VERSION => {}
-            _ => return Err(Problem::State),
+        // Spec 021 R4's `search_standard_folders` is additive inside schema 1
+        // (absent = `false`); spec 015 owns the 1 -> 2 bump.
+        if state.schema_version != 1 {
+            return Err(Problem::State);
         }
         let catalog = Catalog::embedded();
         #[cfg(test)]
@@ -1472,11 +1467,11 @@ mod tests {
     }
 
     #[test]
-    fn app_state_migrates_from_v1_to_v2_and_persists_the_new_setting() {
+    fn an_existing_state_file_without_the_setting_loads_off_and_round_trips() {
         let temp = tempfile::tempdir().unwrap();
         let env = env(temp.path());
         fs::create_dir_all(&env.paths.config).unwrap();
-        // A pre-R4 v1 state has no `search_standard_folders` field.
+        // A state file written before R4 has no `search_standard_folders`.
         fs::write(
             env.paths.config.join("app.json"),
             br#"{"schema_version":1,"folders":[],"recipes":{}}"#,
@@ -1498,10 +1493,12 @@ mod tests {
                 .unwrap()
                 .snapshot()
                 .unwrap()
-                .search_standard_folders
+                .search_standard_folders,
+            "the setting round-trips"
         );
         let raw = fs::read_to_string(env.paths.config.join("app.json")).unwrap();
-        assert!(raw.contains("\"schema_version\": 2"), "{raw}");
+        assert!(raw.contains("\"schema_version\": 1"), "{raw}");
+        assert!(raw.contains("\"search_standard_folders\": true"), "{raw}");
     }
     #[test]
     fn unreadable_config_is_a_reset_notice_without_losing_the_catalog() {
