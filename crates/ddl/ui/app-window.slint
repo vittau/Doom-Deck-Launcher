@@ -28,6 +28,17 @@ component Cover inherits Image {
     horizontal-alignment: center;
     vertical-alignment: center;
 }
+component ArtCaption inherits Rectangle {
+    in property <string> label;
+    height: caption.preferred-height + 12px;
+    background: Tokens.deep;
+    border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
+    caption := Text {
+        x: 6px; y: 0px; width: parent.width - 12px; height: parent.height;
+        text: root.label; wrap: word-wrap; color: Tokens.text; font-size: Tokens.metadata;
+        vertical-alignment: center;
+    }
+}
 component Node inherits Rectangle {
     in property <ViewNode> item;
     in property <bool> focused;
@@ -57,17 +68,15 @@ component Node inherits Rectangle {
     if item.kind == 4: Rectangle {
         clip: true; border-radius: Tokens.card-radius;
         Cover { x: 0px; y: 0px; width: parent.width; height: parent.height; art: root.item.art; screenshot: root.item.screenshot; }
-        if root.item.h >= 80: Rectangle {
-            x: 8px; y: parent.height - (root.item.w < 300 ? 88px : 58px); width: parent.width - 16px; height: root.item.w < 300 ? 80px : 50px;
-            border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
-            background: Tokens.deep;
-            Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: root.item.screenshot != "" ? root.item.credit : WiringStrings.concept-art; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
+        if root.item.h >= 80: ArtCaption {
+            x: 8px; y: parent.height - self.height - 8px; width: parent.width - 16px;
+            label: root.item.screenshot != "" ? root.item.credit : WiringStrings.concept-art;
         }
     }
-    if item.kind == 16: Rectangle {
-        background: Tokens.deep; border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
-        Text { x: 6px; width: parent.width - 12px; text: root.item.label; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; wrap: word-wrap; }
+    if item.kind == 16: ArtCaption {
+        width: parent.width; height: parent.height; label: root.item.label;
     }
+
     if item.kind == 10 || item.kind == 11: Image {
         width: parent.width; height: parent.height;
         source: root.item.kind == 10 ? @image-url("assets/logo/full-name.svg") : @image-url("assets/logo/stacked.svg");
@@ -196,8 +205,8 @@ export component AppWindow inherits Window {
         x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
         clip: true;
         Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; horizontal-alignment: center; vertical-alignment: center; }
-        Rectangle { x: 8px; y: 30px; width: parent.width - 16px; height: 50px; background: Tokens.deep; border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
-            Text { x: 8px; width: parent.width - 16px; wrap: word-wrap; text: root.band-screenshot != "" ? root.band-credit : WiringStrings.concept-art; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
+        ArtCaption { x: 8px; y: parent.height - self.height - 8px; width: parent.width - 16px;
+            label: root.band-screenshot != "" ? root.band-credit : WiringStrings.concept-art;
         }
     }
     Text { x: 40px; y: 124px; width: root.art-band ? 784px : parent.width - 80px; height: 48px; text: root.heading; font-family: "Pirata One"; font-size: Tokens.page; color: Tokens.text; }

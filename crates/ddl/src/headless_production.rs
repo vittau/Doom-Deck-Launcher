@@ -438,13 +438,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         // Render-only community entry: no catalog or install-state mutation.
         let item = &mut r.snapshot.as_mut().unwrap().items[0];
         item.recipe.id = "community-without-art".into();
+        item.recipe.screenshots.clear();
         item.recipe.title = "Community map (render fixture)".into();
         item.recipe.authors = vec!["Render fixture — not catalog metadata".into()];
         r.sync(ui);
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 4));
         assert_eq!(ui.get_band_art(), 4);
         capture(window, "013-discover-fallback.png");
-        r.snapshot.as_mut().unwrap().items[0].recipe.id = "eviternity".into();
+        r.snapshot.as_mut().unwrap().items[0].recipe =
+            Catalog::embedded().recipe("eviternity").unwrap().clone();
         r.snapshot.as_mut().unwrap().items[0].recipe.title = "Eviternity (render fixture)".into();
         r.sync(ui);
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 3));
@@ -675,6 +677,12 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert_eq!(state.borrow().screen, Screen::Library);
     assert!(ui.get_nodes().iter().any(|n| n.id == 11));
     assert!(!ui.get_nodes().iter().any(|n| n.id == 12));
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .filter(|n| n.kind == 4)
+            .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
+    );
     capture(window, "010-library.png");
     // Spec 015, R5: X marks the focused installed mapset; Library shows the star and sorts it first.
     let marks = |ui: &AppWindow| ui.get_nodes().iter().filter(|n| n.kind == 12).count();
@@ -707,6 +715,12 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         [2, 2, 4, 3]
     );
     assert!(ui.get_nodes().iter().any(|n| n.id == 2 && n.y == 402.));
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .filter(|n| n.kind == 4)
+            .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
+    );
     capture(window, "010-home-continue.png");
     ui.invoke_clicked(1);
     assert_eq!(state.borrow().screen, Screen::Setup);
@@ -1366,6 +1380,157 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(selected_chip(ui), "All");
     assert!(ui.get_category_hint() && ui.get_favorite_hint());
     capture(window, "015-discover-all.png");
+
+    // Spec 023 R3/A2: every catalog card resolves to an embedded image and
+    // the localized caption. Capture each focused card so all thirteen are visible
+    // across the scroll positions, including the two bright-sky compositions.
+    for loaded in &catalog.recipes {
+        let recipe = &loaded.recipe;
+        let index = state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .position(|i| i.recipe.id == recipe.id)
+            .unwrap();
+        let (asset, caption) = crate::screenshots::presentation(ui, recipe);
+        assert!(
+            !asset.is_empty(),
+            "missing embedded screenshot for {}",
+            recipe.id
+        );
+        assert_eq!(
+            caption,
+            format!("Screenshot: {}", recipe.screenshots[0].credit)
+        );
+        let image = ui
+            .global::<crate::ScreenshotAssets>()
+            .invoke_image(asset.clone());
+        assert_eq!((image.size().width, image.size().height), (640, 360));
+        {
+            let mut r = state.borrow_mut();
+            r.focus = 10 + index as i32;
+            r.selected = index;
+            r.sync(ui);
+        }
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .any(|n| n.kind == 4 && n.screenshot == asset && n.credit == caption)
+        );
+        assert_eq!(ui.get_band_screenshot(), asset);
+        assert_eq!(ui.get_band_credit(), caption);
+        capture(window, &format!("023-discover-{}.png", recipe.id));
+        // The same first image and caption reach the detail composition.
+        press(window, Key::Return);
+        assert_eq!(state.borrow().screen, Screen::Detail);
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .any(|n| n.kind == 4 && n.screenshot == asset && n.credit == caption)
+        );
+        if matches!(recipe.id.as_str(), "ancient-aliens" | "auger-zenith") {
+            capture(window, &format!("023-detail-{}.png", recipe.id));
+        }
+        press(window, Key::Escape);
+    }
+    // Recipe order, rather than filesystem order, selects the image and credit.
+    let mut reordered = catalog.recipe("ancient-aliens").unwrap().clone();
+    reordered.screenshots.reverse();
+    let (asset, caption) = crate::screenshots::presentation(ui, &reordered);
+    assert_eq!(
+        asset,
+        format!("assets/screenshots/{}", reordered.screenshots[0].asset)
+    );
+    assert_eq!(
+        caption,
+        format!("Screenshot: {}", reordered.screenshots[0].credit)
+    );
+    // Bright white sky is the second bundled Ancient Aliens shot. A render-only
+    // reordered recipe stress-tests the identical caption plate on card/detail/band.
+    {
+        let mut r = state.borrow_mut();
+        let saved = r.snapshot.clone();
+        let index = r
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .position(|i| i.recipe.id == reordered.id)
+            .unwrap();
+        r.snapshot.as_mut().unwrap().items[index].recipe = reordered.clone();
+        r.selected = index;
+        r.focus = 10 + index as i32;
+        r.sync(ui);
+        capture(window, "023-discover-white-sky.png");
+        r.screen = Screen::Detail;
+        r.focus = 1;
+        r.sync(ui);
+        capture(window, "023-detail-white-sky.png");
+        r.snapshot = saved;
+        r.screen = Screen::Discover;
+        r.focus = 10;
+        r.selected = 0;
+        r.sync(ui);
+    }
+    reordered.screenshots[0].asset = "unbundled-new-release/01.jpg".into();
+    let (asset, caption) = crate::screenshots::presentation(ui, &reordered);
+    assert!(asset.is_empty() && caption.is_empty());
+
+    // Long credits also fit the narrower Home hero and history plate.
+    {
+        let mut r = state.borrow_mut();
+        let saved = r.snapshot.clone();
+        let item = r
+            .snapshot
+            .as_mut()
+            .unwrap()
+            .items
+            .iter_mut()
+            .find(|i| i.recipe.id == "back-to-saturn-x-e1")
+            .unwrap();
+        item.last_played = Some(1);
+        r.screen = Screen::Home;
+        r.focus = 1;
+        r.sync(ui);
+        capture(window, "023-home-long-credit.png");
+        r.snapshot = saved;
+        r.screen = Screen::Discover;
+        r.focus = 10;
+        r.selected = 0;
+        r.sync(ui);
+    }
+    // Absence of screenshot metadata must retain the cover and concept plaque,
+    // even when the recipe id has bundled assets.
+    {
+        let mut r = state.borrow_mut();
+        let saved = r.snapshot.clone();
+        r.snapshot.as_mut().unwrap().items[0]
+            .recipe
+            .screenshots
+            .clear();
+        r.focus = 10;
+        r.sync(ui);
+        assert!(ui.get_band_screenshot().is_empty());
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .find(|n| n.kind == 4)
+                .unwrap()
+                .screenshot
+                .is_empty()
+        );
+        assert_eq!(
+            ui.global::<crate::WiringStrings>().get_concept_art(),
+            "Original concept art"
+        );
+        capture(window, "023-discover-fallback.png");
+        r.snapshot = saved;
+        r.sync(ui);
+    }
 
     // Up from the grid reaches the strip; Left/Right switch the category as focus moves.
     press(window, Key::UpArrow);

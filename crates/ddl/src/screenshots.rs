@@ -9,7 +9,7 @@
 //!
 include!(concat!(env!("OUT_DIR"), "/screenshots.rs"));
 
-/// Asset paths relative to the `ui/` asset root for `recipe_id`, card first.
+/// Bundled paths under the `ui/` asset root, in deterministic filename order.
 #[must_use]
 pub fn for_recipe(recipe_id: &str) -> &'static [&'static str] {
     EMBEDDED_SCREENSHOTS
@@ -18,7 +18,7 @@ pub fn for_recipe(recipe_id: &str) -> &'static [&'static str] {
         .map_or(&[], |(_, assets)| *assets)
 }
 
-/// The card screenshot for `recipe_id`, if one is bundled.
+/// The first indexed screenshot; `presentation` follows the recipe metadata order.
 #[must_use]
 pub fn card(recipe_id: &str) -> Option<&'static str> {
     for_recipe(recipe_id).first().copied()
@@ -69,13 +69,14 @@ mod tests {
                 !assets.is_empty(),
                 "recipe `{id}` has no bundled screenshot"
             );
-            // The recipe reference and the directory index agree.
-            let declared: Vec<&str> = loaded
+            // The asset inventory agrees; metadata order is exercised by the UI test.
+            let mut declared: Vec<&str> = loaded
                 .recipe
                 .screenshots
                 .iter()
                 .map(|s| s.asset.as_str())
                 .collect();
+            declared.sort_unstable();
             assert_eq!(
                 assets
                     .iter()
