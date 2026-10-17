@@ -133,6 +133,27 @@ pub fn run_io(
             }
             Ok(())
         }
+        cli::Command::MapsetUninstall {
+            id,
+            delete_profiles,
+        } => {
+            let mut services = open(env)?;
+            let outcome = services.uninstall_mapset(&id, delete_profiles)?;
+            write!(
+                out,
+                "Uninstalled {} ({})",
+                outcome.id,
+                size_label(outcome.bytes)
+            )
+            .map_err(output_error)?;
+            if delete_profiles {
+                write!(out, "; deleted {} profile(s)", outcome.profiles).map_err(output_error)?;
+            }
+            if outcome.imported {
+                write!(out, "; removed imported components").map_err(output_error)?;
+            }
+            writeln!(out).map_err(output_error)
+        }
         cli::Command::MapsetInstall { id, components } => {
             let mut services = open(env)?;
             let mut progress = ProgressPrinter::default();
@@ -203,6 +224,22 @@ fn apply_iwad_seam(services: &mut Services) -> Result<(), CliFailure> {
 
 fn output_error(error: std::io::Error) -> CliFailure {
     CliFailure::message(format!("could not write output: {error}"))
+}
+
+/// IEC byte units for the one-line uninstall summary (spec 022, R5).
+fn size_label(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut amount = bytes as f64;
+    let mut unit = 0;
+    while amount >= 1024. && unit < UNITS.len() - 1 {
+        amount /= 1024.;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{amount:.1} {}", UNITS[unit])
+    }
 }
 
 /// The lowercase mode label for `ddl engine status`.

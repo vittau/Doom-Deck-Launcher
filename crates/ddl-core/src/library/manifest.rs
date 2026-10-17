@@ -97,6 +97,19 @@ impl InstallManifest {
             .find(|held| held.package.is_none() && held.component.as_deref() == Some(component))
     }
 
+    /// The size on disk of every file this install placed (spec 022, R2).
+    #[must_use]
+    pub fn installed_bytes(&self) -> u64 {
+        self.members.iter().map(|member| member.size).sum()
+    }
+
+    /// Whether a user-imported component (D-014) is part of this install; an
+    /// uninstall removes it too, so the confirm dialog says so (spec 022, R2).
+    #[must_use]
+    pub fn has_imports(&self) -> bool {
+        self.members.iter().any(|member| member.package.is_none())
+    }
+
     /// Loads a manifest from `path`.
     ///
     /// # Errors
@@ -247,6 +260,24 @@ mod tests {
         assert!(loaded.find_downloaded("free", "maps").is_some());
         assert!(loaded.find_downloaded("free", "other").is_none());
         assert!(loaded.find_imported("soundtrack").is_none());
+    }
+
+    #[test]
+    fn installed_size_and_imports_feed_the_uninstall_dialog() {
+        let mut manifest = manifest();
+        assert_eq!(manifest.installed_bytes(), 10);
+        assert!(!manifest.has_imports());
+        manifest.members.push(InstalledMember {
+            package: None,
+            member: None,
+            component: Some("soundtrack".to_owned()),
+            path: PathBuf::from("/tmp/sigil/imports/soundtrack/import.wad"),
+            size: 32,
+            sha256: "d".repeat(64),
+            keep: false,
+        });
+        assert_eq!(manifest.installed_bytes(), 42);
+        assert!(manifest.has_imports());
     }
 
     #[test]

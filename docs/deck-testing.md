@@ -69,6 +69,14 @@ the controller now work (gilrs).
 | C3 | DDL finds the DOOM + DOOM II Steam install and identifies its IWADs (`base/` and `rerelease/`) | Gaming | ⏳ | |
 | C4 | Saves for two profiles stay separate | Gaming | ⏳ | Spec 018: create two runs, change skill/components, save and screenshot in each; switch and Continue after restart; verify isolation and named delete confirmation (Needs Deck Validation) |
 
+## Uninstall (spec 022) — needs Deck validation
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| U1 | Detail → **Uninstall** → confirm with the checkbox **unchecked**: the mapset leaves Library; its profiles and saves survive a restart and reappear on reinstall | Gaming | ⏳ | Spec 022 A5; Cancel is focused first and starts the sheet |
+| U2 | Repeat with the checkbox **checked**: profiles and their saves/screenshots are gone after a restart | Gaming | ⏳ | A toggles the checkbox; no text entry |
+| U3 | An installed mapset that is no longer in the catalog still shows **Uninstall** on detail and removes cleanly | Gaming | ⏳ | spec 020 R5 |
+
 ## GOG and other stores (spec 021)
 
 Everything here is **Needs Deck Validation**: the paths come from the launchers' own upstream

@@ -166,6 +166,17 @@ impl Installer {
         let id = safe_component(id).ok_or(InstallError::NotInstalled)?;
         Ok(self.data_dir.join(LIBRARY_DIR).join(id).join("active.json"))
     }
+
+    /// `<data>/library/<id>`, the directory DDL owns for one recipe. Every
+    /// uninstall deletion is proven to stay inside it (spec 022, R3).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InstallError::NotInstalled`] when `id` is not a safe component.
+    pub fn library_dir(&self, id: &str) -> Result<PathBuf, InstallError> {
+        let id = safe_component(id).ok_or(InstallError::NotInstalled)?;
+        Ok(self.data_dir.join(LIBRARY_DIR).join(id))
+    }
     pub fn active(&self, id: &str) -> Result<Option<super::ActiveInstall>, InstallError> {
         let active = super::ActiveInstall::load(&self.active_path(id)?)?;
         if active.as_ref().is_some_and(|a| a.recipe.id != id) {
@@ -184,7 +195,8 @@ impl Installer {
     /// Returns [`InstallError`] when the record cannot be read.
     pub fn load_manifest(&self, recipe: &Recipe) -> Result<Option<InstallManifest>, InstallError> {
         if let Some(active) = self.active(&recipe.id)? {
-            return Ok(Some(active.manifest));
+            // Spec 022: a marked install is inactive even before its files go.
+            return Ok((!active.uninstalled).then_some(active.manifest));
         }
         Ok(InstallManifest::load_optional(
             &self.manifest_path(recipe)?,
@@ -332,7 +344,7 @@ impl Installer {
         if fs::symlink_metadata(&root).is_ok_and(|m| m.file_type().is_symlink()) {
             return Err(InstallError::NotInstalled);
         }
-        let mut path = root;
+        let mut path = root.clone();
         for c in components {
             path.push(c);
             match fs::symlink_metadata(&path) {
@@ -342,7 +354,130 @@ impl Installer {
                 _ => {}
             }
         }
+        // Spec 022 R3: prove the canonical target is still inside DDL's library
+        // before removing anything (a hardlink/bind alias cannot escape it).
+        let canonical_root = fs::canonicalize(&root).map_err(|e| io_error("resolve library", e))?;
+        let canonical = fs::canonicalize(&path).map_err(|e| io_error("resolve retired path", e))?;
+        if !canonical.starts_with(&canonical_root) {
+            return Err(InstallError::NotInstalled);
+        }
         fs::remove_dir_all(dir).map_err(|e| io_error("remove retired generation", e))
+    }
+
+    /// Marks an install inactive atomically and remembers nothing else: the
+    /// caller deletes the files immediately, and an interrupted deletion is
+    /// finished by [`Installer::finish_uninstall`] on the next start.
+    ///
+    /// This is the first half of spec 022 R3; it never touches profile data and
+    /// never deletes a file, so a crash here leaves "not installed", never a
+    /// half-install that could launch.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InstallError`] when the recipe id is unsafe or the record
+    /// cannot be written.
+    pub fn begin_uninstall(
+        &self,
+        recipe: &Recipe,
+        manifest: &InstallManifest,
+    ) -> Result<(), InstallError> {
+        let root = self.library_dir(&recipe.id)?;
+        if fs::symlink_metadata(&root).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(InstallError::UnsafePath {
+                detail: format!(
+                    "`{}` is a symlink, not an install directory",
+                    root.display()
+                ),
+            });
+        }
+        let mut active = match self.active(&recipe.id)? {
+            Some(active) => active,
+            None => super::ActiveInstall {
+                schema_version: 1,
+                recipe: recipe.clone(),
+                manifest: manifest.clone(),
+                previous_recipe: None,
+                pending_profiles: Vec::new(),
+                notices: Vec::new(),
+                retired_dirs: Vec::new(),
+                uninstalled: false,
+            },
+        };
+        active.uninstalled = true;
+        active.pending_profiles.clear();
+        active.notices.clear();
+        // A fresh generation list keeps the durable cleanup queue accurate.
+        active.retired_dirs.clear();
+        self.publish(&active)
+    }
+
+    /// Finishes a marked uninstall, deleting only directories inside
+    /// `<data>/library/<id>` (spec 022, R3). Idempotent and retryable: it
+    /// reports `true` only once the recipe directory is gone, so a crash or a
+    /// storage failure simply leaves the record for the next start.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InstallError`] on an I/O failure that is not "already gone".
+    pub fn finish_uninstall(&self, id: &str) -> Result<bool, InstallError> {
+        let Some(active) = self.active(id)? else {
+            // No publication record: nothing was marked for uninstall.
+            return Ok(false);
+        };
+        if !active.uninstalled {
+            return Ok(false);
+        }
+        let root = self.library_dir(id)?;
+        match fs::symlink_metadata(&root) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                return Err(InstallError::UnsafePath {
+                    detail: format!(
+                        "`{}` is a symlink, not an install directory",
+                        root.display()
+                    ),
+                });
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(true),
+            Err(e) => return Err(io_error("inspect install directory", e)),
+        }
+        let active_path = self.active_path(id)?;
+        for entry in fs::read_dir(&root)
+            .map_err(|e| io_error("list the install directory", e))?
+            .flatten()
+        {
+            let path = entry.path();
+            if path == active_path {
+                continue;
+            }
+            // `file_type()` never follows a symlink, so a link here is removed
+            // as a link rather than followed out of DDL's storage.
+            let file_type = entry
+                .file_type()
+                .map_err(|e| io_error("inspect install entry", e))?;
+            if file_type.is_dir() {
+                match self.remove_retired(&path) {
+                    Ok(()) => {}
+                    Err(InstallError::NotInstalled) => {
+                        tracing::warn!(path=%path.display(),"refusing to remove an unsafe install path");
+                        return Ok(false);
+                    }
+                    Err(error) => {
+                        tracing::warn!(%error, path=%path.display(),"install content cleanup deferred");
+                        return Ok(false);
+                    }
+                }
+            } else {
+                fs::remove_file(&path).map_err(|e| io_error("remove install file", e))?;
+            }
+        }
+        // Only when nothing else is left: remove the marker and the directory.
+        fs::remove_file(&active_path).map_err(|e| io_error("remove the active record", e))?;
+        match fs::remove_dir(&root) {
+            Ok(()) => Ok(true),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(true),
+            Err(e) => Err(io_error("remove the install directory", e)),
+        }
     }
 
     /// Add a selection to an unpublished generation before activation.
