@@ -102,9 +102,10 @@ the archive; there is no separate MIDI pack or alternate WAD.
 `MAP01`…`MAP32` and `DEMO1`–`DEMO3`. **Confirmed.**
 
 - **No `COMPLVL` lump** and **no `UMAPINFO` lump** are present. A ZDoom-style `MAPINFO` (4,464 B)
-  exists, but DSDA-Doom **removed ZDoom `MAPINFO` support in v0.30.0**, so it is inert here and the
-  complevel cannot come from a lump; it must be declared in the recipe. **Confirmed**
-  (`host-name` [v0.30.0 release notes] and the same rule recorded in `reference-eviternity.md` §4).
+  exists, but DSDA-Doom **removed ZDoom `MAPINFO` support in v0.30.0**
+  (<https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.0>, recorded in
+  `upstream-sources.md` §5.3), so it is inert here and the complevel cannot come from a lump; it
+  must be declared in the recipe. **Confirmed** (same rule recorded in `reference-eviternity.md` §4).
 - **One embedded `DEHACKED` lump** (2,687 bytes) beginning
   `Patch File for DeHackEd v3.0 … Doom version = 21 / Patch format = 6` (WhackEd4-authored).
   **Confirmed**
