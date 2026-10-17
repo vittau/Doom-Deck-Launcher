@@ -1,0 +1,74 @@
+# Confirmed bytes and release metadata: docs/research/reference-scythe.md §1–§7; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "scythe"
+title = "Scythe"
+authors = [
+  "Erik Alm",
+  "Kim \"Torn\" Bach (MAP31)",
+]
+release = "Final release; /idgames entry 2003-04-10"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/scythe"
+description = "DOOM II megawad: 32 vanilla-format maps in three ten-map runs plus two secret maps, with a custom soundtrack and sky graphics."
+permission = "Authors may not use the contents as a base for modification or reuse without agreement. Redistribution is permitted provided scythe.txt travels with the file, unmodified and intact, and no commercial use is made without the author's agreement. DDL downloads the unmodified archive and keeps the bundled credits file."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-scythe.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
+notes = "Confirmed archive/member identities and the absence of COMPLVL, DEHACKED and UMAPINFO/MAPINFO lumps. Proposed complevel 2 from the authors' 'runs with doom2.exe v1.9' statement; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and map selection."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/scythe"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/scythe.zip", "https://youfailit.net/pub/idgames/levels/doom2/megawads/scythe.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/megawads/scythe.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/megawads/scythe.zip"]
+size = 2086863
+sha256 = "a38246e005b4675d1f91474cd8dd93f4da016c4a22b1169dcede2608d72f6e99"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/scythe.zip"
+
+[[packages.members]]
+id = "maps"
+path = "SCYTHE.WAD"
+size = 6215556
+sha256 = "7d0ee3f9ac017255d2903504dab2d0ed32bfd39482b2cc5e102d26c4858871ff"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "scythe.txt"
+size = 5093
+sha256 = "65ed2c995c3504f6f0c9de3d4c34cc0b3e7ec713670927b19fca0f08c73267fa"
+keep = true
+
+[[components]]
+id = "main"
+label = "Scythe"
+description = "Main 32-map vanilla megawad with its own soundtrack and sky graphics."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
