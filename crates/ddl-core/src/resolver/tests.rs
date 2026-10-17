@@ -238,7 +238,14 @@ fn widescreen_status_bar_loads_last_after_the_mapset() {
     let config = config(data);
 
     let mut manifest = empty_manifest(&recipe);
-    let maps = add_member(data, &mut manifest, &recipe, "free", "maps", b"eviternity maps");
+    let maps = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "free",
+        "maps",
+        b"eviternity maps",
+    );
     let bar = add_member(
         data,
         &mut manifest,
@@ -280,7 +287,14 @@ fn iwad_status_bar_coexists_with_main_and_the_edition_replacement() {
 
     let mut manifest = empty_manifest(&recipe);
     let maps = add_member(data, &mut manifest, &recipe, "free", "maps", b"sigil main");
-    let compat = add_member(data, &mut manifest, &recipe, "free", "compat", b"sigil compat");
+    let compat = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "free",
+        "compat",
+        b"sigil compat",
+    );
     let bar = add_member(
         data,
         &mut manifest,

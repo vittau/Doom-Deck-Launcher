@@ -81,10 +81,17 @@ fn recipes_with_a_status_bar_default_it_on() {
         );
         // The default combination is legal and loads the bar last.
         let order = r.load_order(&["wide-status-bar"]).unwrap();
-        assert_eq!(order.files.last().unwrap().member.as_deref(), Some("statusbar"));
+        assert_eq!(
+            order.files.last().unwrap().member.as_deref(),
+            Some("statusbar")
+        );
     }
     for id in ["alien-vendetta", "auger-zenith", "eviternity-ii", "sunlust"] {
-        assert_eq!(recipe(id).default_components(), Vec::<String>::new(), "{id}");
+        assert_eq!(
+            recipe(id).default_components(),
+            Vec::<String>::new(),
+            "{id}"
+        );
     }
 }
 
@@ -131,10 +138,10 @@ fn every_semantic_rule_rejects_a_bad_recipe() {
         ("invalid recipe id", |r| r.id = "SIGIL".into()),
         ("file name", |r| r.id = "different".into()),
         ("identity/permission", |r| r.permission.clear()),
-        ("invalid release label", |r| r.release = "Final/version".into()),
         ("invalid release label", |r| {
-            r.release = r"WIP\build".into()
+            r.release = "Final/version".into()
         }),
+        ("invalid release label", |r| r.release = r"WIP\build".into()),
         ("missing authors", |r| r.authors.clear()),
         ("canonical page", |r| {
             r.page = "http://romero.com/sigil".into()
@@ -779,9 +786,7 @@ fn fetch_package_rejects_a_non_cosmetic_status_bar_member() {
     }
     let clean = wad_bytes(b"PWAD", &["STBAR"]);
     let package = bare_wad_package("widehud", "statusbar", &clean, "x.wad");
-    assert!(
-        fetch::fetch_package(&package, &hosts(), &mut Fake(clean.clone()), &["x.wad"]).is_ok()
-    );
+    assert!(fetch::fetch_package(&package, &hosts(), &mut Fake(clean.clone()), &["x.wad"]).is_ok());
     let dirty = wad_bytes(b"PWAD", &["DEHACKED", "MAPINFO", "STBAR"]);
     let package = bare_wad_package("widehud", "statusbar", &dirty, "x.wad");
     let error =
