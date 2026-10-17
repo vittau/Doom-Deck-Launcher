@@ -6,6 +6,8 @@ bundled images, the recipe link, the lint and the Rust seam the UI worker consum
 
 Per the coordinator's revised plan, screenshots are **bundled** (D-024), not downloaded at
 runtime: the earlier research/fetch/cache design was dropped before any runtime code was written.
+`origin/main` (spec 022 uninstall, D-025, the Rose Window social preview) was merged before
+finishing; the merge was clean.
 
 ## What changed
 
@@ -95,17 +97,34 @@ was computed from the downloaded bytes.
 - `cargo fmt --all --check` — pass.
 - `cargo clippy --workspace --all-targets -- -D warnings` — pass (no new dependency, no allow
   beyond the documented `#![allow(dead_code)]` on the pending-R3 module).
-- `cargo test --workspace` — pass: 75 + 2 + 2 + 2 + 1 + 316 + 16 + 3 tests, 0 failures. New tests:
-  header parsing (PNG/JPEG/WebP, truncated/unknown), four structural screenshot lint cases in the
-  mutated-recipe table, a filesystem test (valid, missing, oversize, too-small, uncredited), and
-  `crates/ddl` index-vs-catalog consistency.
+- `cargo test --workspace` — all my tests and the whole suite pass **except one pre-existing failure
+  on `main`** (see below). Totals excluding it: 82 + 2 + 2 + 1 + 1 + 322 + 16 + 3 tests, 0 failures.
+  New tests: header parsing (PNG/JPEG/WebP, truncated/unknown), four structural screenshot lint
+  cases in the mutated-recipe table, a filesystem test (valid, missing, oversize, too-small,
+  uncredited), and `crates/ddl` index-vs-catalog consistency.
 - `cargo run -p ddl -- catalog lint catalog/` → `Catalog lint passed (offline).`
-- `cargo run -p ddl -- catalog lint --fetch catalog/` → see the tail pasted below.
+- `cargo run -p ddl -- catalog lint --fetch catalog/` → downloads, verifies the SHA-256 of every
+  package and named member of all 13 recipes (including the 121 MiB Eviternity II archive) and
+  passed.
 
 ```text
 $ cargo run -q -p ddl -- catalog lint catalog/
 Catalog lint passed (offline).
+
+$ cargo run -q -p ddl -- catalog lint --fetch catalog/
+Catalog lint passed (fetched packages verified).
 ```
+
+## Pre-existing failure on main (not from this branch)
+
+`cargo test --workspace` has one unrelated red test on `origin/main`:
+`crates/ddl/tests/logo_assets.rs::steam_artwork_and_social_preview_have_contract_dimensions`
+panics because `docs/design/logo/social-preview.png` is an **Indexed** PNG while the test requires
+**Rgba**. That file and test were committed on `main` by `5f41f3d` ("Compose Rose Window social
+preview", an ancestor of `origin/main`); my branch never touched either. Fixing it means
+re-exporting that asset from whoever owns the social preview. Everything else is green:
+`cargo test --workspace -- --skip steam_artwork_and_social_preview_have_contract_dimensions`
+passes.
 
 ## Left open
 
