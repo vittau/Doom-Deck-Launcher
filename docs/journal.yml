@@ -381,3 +381,11 @@
     path separators in `release`. Paused WIP from 2026-10-16 finished on Codex after the opencode
     session kept running headless and had to be interrupted.
   refs: [docs/reports/017-widescreen-status-bars.md, docs/research/widescreen-statusbars.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-022: uninstalling a mapset removes its install files; a confirm-dialog checkbox (off by
+    default) also deletes its profiles and saves. Spec 022 written; starts after 020. e2e run
+    39065323300 passed with all 9 widescreen status-bar components installed and the bar last
+    in -file (spec 017 A4).
+  refs: [docs/specs/022-uninstall-mapset.md]
