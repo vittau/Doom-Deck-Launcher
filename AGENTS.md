@@ -12,6 +12,8 @@ official DSDA-Doom AppImage. License: GPL-3.0-or-later.
 | `docs/specs/NNN-*.md` | What to build: requirements and acceptance criteria. |
 | `docs/research/*.md` | Verified facts about DSDA-Doom, Steam, upstream sources — with links. |
 | `docs/status.md`, `docs/journal.yml` | Current state and changelog. Coordinator-owned. |
+| `docs/reports/NNN-*.md` | Worker reports per task: what changed, verification, open questions. |
+| `docs/steam-deck-guide.md` | End-user setup and troubleshooting (README links to it). |
 
 ## Orchestration
 
@@ -34,11 +36,12 @@ worker per task (own worktree and branch), reviews, merges and releases.
 ## Layout
 
 ```text
-crates/ddl-core/    pure logic, no UI deps (catalog, recipes, resolver, downloads, library,
-                    profiles, dsda_config, engines/dsda, platform, diagnostics)
+crates/ddl-core/    pure logic, no UI deps (catalog, resolver, downloads, library, iwads,
+                    profiles, dsda_config, engines/dsda, platform)
 crates/ddl/         binary `ddl`: Slint UI and app wiring
 docs/               decisions, specs, research, status, journal
-catalog/            one TOML recipe per mapset — community-contributed via PR (D-010)
+catalog/            one TOML recipe per mapset — community-contributed via PR (D-010);
+                    plus hosts.toml (download allowlist) and tags.toml (tag vocabulary)
 .github/workflows/  CI and releases (built in a Steam Linux Runtime SDK container)
 scripts/            developer and orchestration helpers
 ```

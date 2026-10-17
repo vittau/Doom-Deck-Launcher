@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M2 — `v0.0.4-cli` pre-release (Ember UI, logo, 4 mapsets, Konsole CLI, engine diagnosis); Linux e2e green; awaiting Deck validation  ·  **Updated:** 2026-10-16
+**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install and the Rose Compass logo; latest pre-release is still `v0.0.4-cli`; Deck validation pending  ·  **Updated:** 2026-10-17
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -23,7 +23,7 @@
 | Eviternity recipe (owner request) | `catalog/eviternity.toml`, `research/reference-eviternity.md` | Done — complevel 11 Proposed; needs Deck |
 | Wire UI to core: first run, install, play, settings | `specs/010-ui-wiring.md` | Done (A3 needs Deck) |
 | Visual identity v2 (DOOM-flavoured, D-020) + production polish | `specs/012-visual-identity-v2.md` | Done (A4 needs Deck) — Ember Cathedral in the production UI |
-| Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | Done (A4 needs Deck) — Ember Gate SVG logo; owner uploads `docs/design/logo/social-preview.png` in GitHub settings |
+| Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | Done (A4 needs Deck) — logo replaced by Rose Compass in spec 016 (D-023); owner uploads `docs/design/logo/social-preview.png` in GitHub settings |
 | Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | Done — e2e green on real network (run 38983844913): AppImage direct + extraction, 4 mapsets, D-011 argv |
 | Catalog batch: Scythe, Alien Vendetta, Sunlust, Ancient Aliens, Valiant, Going Down, BTSX E1/E2, Eviternity II | `catalog/*.toml` | **Done** — 13 recipes on `main`; catalog/member cap raised to 512 MiB for Eviternity II; e2e run 38987876930 |
 | Recipe tags, Discover categories, favorites | `specs/015-tags-categories-favorites.md` | **Done** (A4 needs Deck): 8 tags in `catalog/tags.toml`, all 13 recipes tagged (Cacowards evidence secondary — doomworld blocks automation), Discover strip with L2/R2, X favorites, app state schema 2 |
@@ -41,5 +41,5 @@
 | Multiple profiles per mapset (`deck-testing.md` C4) | 018 | **Done** (A5 needs Deck): picker on Play setup, new (copy/defaults), preset-name rename, guarded delete, remembered profile, Home/Library labels, `--profile` CLI; app state stays schema 2 |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | **Done**: typed change classification, silent metadata adoption, staged generations published by an atomic `library/<id>/active.json` rename, idempotent profile reconciliation, Update / Keep current (per recipe hash), removed-from-catalog badge, `ddl mapset status|update` |
-| Uninstall a mapset (owner decision D-022: checkbox to also delete profiles and saves) | 022 | Ready — starting (opencode, Codex window spent) |
-| GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). Follow-up: add the published GOG Final Doom hashes to `data/iwads.toml`. |
+| Uninstall a mapset (owner decision D-022: checkbox to also delete profiles and saves) | 022 | In progress (opencode; Codex window spent until 21:38) |
+| GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). GOG/id Anthology Final Doom hashes added to `data/iwads.toml`. |

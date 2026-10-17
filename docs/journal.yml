@@ -411,3 +411,14 @@
     Spec 016 phase B merged: Rose Compass replaces Ember Gate in the production SVG masters,
     window icon, Steam artwork, README and social preview; screenshots regenerated. Spec 016 done.
   refs: [docs/reports/016-readme-and-logo-v2.md]
+- date: 2026-10-17
+  type: docs
+  summary: >-
+    Orchestration docs refreshed for a successor orchestrator: routing fallback when Codex is
+    spent, brief checklist (briefs are lost between sessions), review-before-release, checks on
+    main after each merge and e2e after catalog/download changes, pause/resume with WIP branches,
+    new known stalls (headless opencode after terminal close, provider errors, Codex
+    terminal_handle_stale, run-use after a terminal change, Cloudflare-blocked sources), current
+    Run/repo ids. AGENTS.md layout corrected (no recipes/diagnostics modules; iwads added) and
+    status.md milestone line brought up to date.
+  refs: [docs/orchestration.md, AGENTS.md, docs/status.md]
