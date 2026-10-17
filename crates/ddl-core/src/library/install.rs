@@ -161,12 +161,31 @@ impl Installer {
         Ok(self.install_dir(recipe)?.join(MANIFEST_FILE))
     }
 
+    /// Stable publication path, independent of the current catalog release.
+    pub fn active_path(&self, id: &str) -> Result<PathBuf, InstallError> {
+        let id = safe_component(id).ok_or(InstallError::NotInstalled)?;
+        Ok(self.data_dir.join(LIBRARY_DIR).join(id).join("active.json"))
+    }
+    pub fn active(&self, id: &str) -> Result<Option<super::ActiveInstall>, InstallError> {
+        let active = super::ActiveInstall::load(&self.active_path(id)?)?;
+        if active.as_ref().is_some_and(|a| a.recipe.id != id) {
+            return Err(InstallError::NotInstalled);
+        }
+        Ok(active)
+    }
+    pub fn publish(&self, active: &super::ActiveInstall) -> Result<(), InstallError> {
+        active.save(&self.active_path(&active.recipe.id)?)?;
+        Ok(())
+    }
     /// Loads the install record for `recipe`, if it is installed.
     ///
     /// # Errors
     ///
     /// Returns [`InstallError`] when the record cannot be read.
     pub fn load_manifest(&self, recipe: &Recipe) -> Result<Option<InstallManifest>, InstallError> {
+        if let Some(active) = self.active(&recipe.id)? {
+            return Ok(Some(active.manifest));
+        }
         Ok(InstallManifest::load_optional(
             &self.manifest_path(recipe)?,
         )?)
@@ -199,13 +218,165 @@ impl Installer {
         cancel: &CancellationToken,
         progress: &mut dyn FnMut(crate::downloads::InstallProgress),
     ) -> Result<InstallManifest, InstallError> {
+        let dir = self.install_dir(recipe)?;
+        self.install_at(recipe, enabled, cancel, progress, &dir, None)
+    }
+
+    /// Build a verified immutable generation. Publication is a separate atomic
+    /// per-mapset active-record write, so failure cannot change the active install.
+    pub fn stage_update(
+        &self,
+        recipe: &Recipe,
+        enabled: &[&str],
+        previous: &InstallManifest,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+    ) -> Result<InstallManifest, InstallError> {
+        self.install_dir(recipe)?; // validate untrusted id and release
+        let root = self
+            .data_dir
+            .join(LIBRARY_DIR)
+            .join(&recipe.id)
+            .join("generations");
+        let dir = create_staging_dir(&root)?;
+        let result = (|| {
+            let mut manifest = self.install_at(recipe, enabled, cancel, progress, &dir, None)?;
+            manifest.installed_at = previous.installed_at;
+            // Retain surviving player imports; never fetch them.
+            for member in previous.members.iter().filter(|m| m.package.is_none()) {
+                let Some(id) = member.component.as_deref() else {
+                    continue;
+                };
+                if !recipe
+                    .components
+                    .iter()
+                    .any(|c| c.id == id && c.user_supplied)
+                {
+                    continue;
+                }
+                if !record_matches(member, cancel)? {
+                    return Err(InstallError::NotInstalled);
+                }
+                let component = safe_component(id).ok_or_else(|| InstallError::UnsafePath {
+                    detail: "unsafe imported component id".into(),
+                })?;
+                let dest = dir.join(IMPORT_DIR).join(component).join("import.wad");
+                fs::create_dir_all(dest.parent().unwrap())
+                    .map_err(|e| io_error("stage import directory", e))?;
+                fs::copy(&member.path, &dest).map_err(|e| io_error("stage imported file", e))?;
+                let mut staged = member.clone();
+                staged.path = dest;
+                manifest.members.push(staged);
+            }
+            self.verify_staged(&manifest, cancel)?;
+            manifest.save(&dir.join(MANIFEST_FILE))?;
+            Ok(manifest)
+        })();
+        if result.is_err() {
+            let _ = fs::remove_dir_all(&dir);
+        }
+        result
+    }
+
+    /// Recheck every staged member before the active-record publication.
+    pub fn verify_staged(
+        &self,
+        manifest: &InstallManifest,
+        cancel: &CancellationToken,
+    ) -> Result<(), InstallError> {
+        for member in &manifest.members {
+            if !record_matches(member, cancel)? {
+                return Err(InstallError::InvalidRecipe {
+                    detail: format!(
+                        "staged member failed size/SHA-256 verification: {}",
+                        member.path.display()
+                    ),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Locate the directory owned by a manifest, refusing paths outside this library.
+    pub fn manifest_dir(&self, manifest: &InstallManifest) -> Result<PathBuf, InstallError> {
+        let library = self.data_dir.join(LIBRARY_DIR);
+        let id = safe_component(&manifest.recipe_id).ok_or(InstallError::NotInstalled)?;
+        let root = library.join(id);
+        let dir = manifest
+            .members
+            .iter()
+            .find_map(|m| {
+                m.path
+                    .ancestors()
+                    .find(|p| p.starts_with(&root) && p.join(MANIFEST_FILE).is_file())
+            })
+            .ok_or(InstallError::NotInstalled)?;
+        Ok(dir.to_path_buf())
+    }
+
+    /// Best-effort callers can retry this after a crash. Never removes profile data.
+    pub fn remove_retired(&self, dir: &Path) -> Result<(), InstallError> {
+        let root = self.data_dir.join(LIBRARY_DIR);
+        let relative = dir
+            .strip_prefix(&root)
+            .map_err(|_| InstallError::NotInstalled)?;
+        let components: Vec<_> = relative.components().collect();
+        if !matches!(components.len(), 2 | 3)
+            || components
+                .iter()
+                .any(|c| !matches!(c, std::path::Component::Normal(_)))
+            || components.len() == 3 && components[1].as_os_str() != "generations"
+        {
+            return Err(InstallError::NotInstalled);
+        }
+        if fs::symlink_metadata(&root).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(InstallError::NotInstalled);
+        }
+        let mut path = root;
+        for c in components {
+            path.push(c);
+            match fs::symlink_metadata(&path) {
+                Ok(m) if m.file_type().is_symlink() => return Err(InstallError::NotInstalled),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+                Err(e) => return Err(io_error("inspect retired generation", e)),
+                _ => {}
+            }
+        }
+        fs::remove_dir_all(dir).map_err(|e| io_error("remove retired generation", e))
+    }
+
+    /// Add a selection to an unpublished generation before activation.
+    pub fn extend_install(
+        &self,
+        recipe: &Recipe,
+        enabled: &[&str],
+        manifest: &InstallManifest,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+    ) -> Result<InstallManifest, InstallError> {
+        let dir = self.manifest_dir(manifest)?;
+        self.install_at(recipe, enabled, cancel, progress, &dir, Some(manifest))
+    }
+
+    fn install_at(
+        &self,
+        recipe: &Recipe,
+        enabled: &[&str],
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(crate::downloads::InstallProgress),
+        install_dir: &Path,
+        held: Option<&InstallManifest>,
+    ) -> Result<InstallManifest, InstallError> {
         use crate::downloads::{InstallProgress, InstallStage};
         if cancel.is_cancelled() {
             return Err(InstallError::Download(crate::downloads::Error::Cancelled));
         }
-        let install_dir = self.install_dir(recipe)?;
+        let install_dir = install_dir.to_path_buf();
         let manifest_path = install_dir.join(MANIFEST_FILE);
-        let existing = InstallManifest::load_optional(&manifest_path)?;
+        let existing = match held {
+            Some(m) => Some(m.clone()),
+            None => InstallManifest::load_optional(&manifest_path)?,
+        };
         let recipe_sha256 = recipe_content_sha256(recipe)?;
         if let Some(held) = &existing
             && held.recipe_sha256 != recipe_sha256
@@ -308,6 +479,7 @@ impl Installer {
             install_dir.clone()
         };
 
+        let _staging_cleanup = StagingCleanup(fresh.then(|| base.clone()));
         for package in &needed_packages {
             let package_missing: Vec<&Member> = missing
                 .iter()
@@ -465,6 +637,32 @@ impl Installer {
         source: &Path,
         cancel: &CancellationToken,
     ) -> Result<ImportOutcome, InstallError> {
+        let dir = self.install_dir(recipe)?;
+        self.import_at(recipe, component_id, source, cancel, &dir, None)
+    }
+
+    /// Import into a published generation rather than a legacy release directory.
+    pub fn import_into_manifest(
+        &self,
+        recipe: &Recipe,
+        component_id: &str,
+        source: &Path,
+        cancel: &CancellationToken,
+        manifest: &InstallManifest,
+    ) -> Result<(ImportOutcome, InstallManifest), InstallError> {
+        let dir = self.manifest_dir(manifest)?;
+        let outcome = self.import_at(recipe, component_id, source, cancel, &dir, Some(manifest))?;
+        Ok((outcome, InstallManifest::load(&dir.join(MANIFEST_FILE))?))
+    }
+    fn import_at(
+        &self,
+        recipe: &Recipe,
+        component_id: &str,
+        source: &Path,
+        cancel: &CancellationToken,
+        install_dir: &Path,
+        held: Option<&InstallManifest>,
+    ) -> Result<ImportOutcome, InstallError> {
         check_cancel(cancel)?;
         let component = recipe
             .components
@@ -479,10 +677,13 @@ impl Installer {
             });
         }
 
-        let install_dir = self.install_dir(recipe)?;
         let manifest_path = install_dir.join(MANIFEST_FILE);
-        let mut manifest =
-            InstallManifest::load_optional(&manifest_path)?.ok_or(InstallError::NotInstalled)?;
+        let mut manifest = match held {
+            Some(m) => m.clone(),
+            None => {
+                InstallManifest::load_optional(&manifest_path)?.ok_or(InstallError::NotInstalled)?
+            }
+        };
 
         let metadata =
             fs::metadata(source).map_err(|error| io_error("read imported file", error))?;
@@ -642,6 +843,15 @@ fn copy_bare_wad(cached: &Path, dest_dir: &Path, member: &Member) -> Result<(), 
     Ok(())
 }
 
+struct StagingCleanup(Option<PathBuf>);
+impl Drop for StagingCleanup {
+    fn drop(&mut self) {
+        if let Some(path) = &self.0 {
+            let _ = fs::remove_dir_all(path);
+        }
+    }
+}
+
 /// Creates a unique staging directory under `library_root`.
 fn create_staging_dir(library_root: &Path) -> Result<PathBuf, InstallError> {
     fs::create_dir_all(library_root)
@@ -667,7 +877,7 @@ fn create_staging_dir(library_root: &Path) -> Result<PathBuf, InstallError> {
 /// This is what the install record pins (spec 009, R2). It is stable across
 /// whitespace and comment changes but changes whenever the recipe's meaning
 /// changes, so a catalog update is detected instead of silently applied.
-fn recipe_content_sha256(recipe: &Recipe) -> Result<String, InstallError> {
+pub fn recipe_content_sha256(recipe: &Recipe) -> Result<String, InstallError> {
     let text =
         toml::to_string(recipe).map_err(|error| InstallError::Serialize(error.to_string()))?;
     Ok(Sha256::of(text.as_bytes()).to_hex())

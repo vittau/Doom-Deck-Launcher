@@ -159,7 +159,7 @@ impl InstallManifest {
     }
 }
 
-fn temporary_path(path: &Path) -> PathBuf {
+pub(super) fn temporary_path(path: &Path) -> PathBuf {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
     let name = path
