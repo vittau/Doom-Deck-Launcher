@@ -425,7 +425,8 @@ lives (coordinator clarification, 2026-10-17).
 The second detail action is the spec 020 **Update** action and is rendered only when an update is
 available (with **Keep current** in the third slot); otherwise the column goes straight from the
 primary **Play setup** / **Install** action to the favorite, profile and Uninstall actions, so no
-label is ever repeated.
+label is ever repeated and no empty slot is left — the visible actions stack with a constant pitch
+and D-pad focus follows that list.
 
 The confirmation is the existing Ember sheet. It names the mapset and its installed size, and has
 one controller-toggleable checkbox, **“Also delete profiles and saves (N profiles)”**, which starts

@@ -1598,41 +1598,45 @@ impl Runtime {
                         if item.favorite {
                             b.favorite(316., 22.);
                         }
+                        // Actions are laid out from the visible ones so the
+                        // column never leaves an empty slot when the conditional
+                        // Update action is absent (spec 022 review fix 2).
+                        let updating = matches!(
+                            item.recipe_status,
+                            ddl_core::library::RecipeStatus::Update(_)
+                        );
+                        let installed = item.manifest.is_some();
+                        let mut action_y = 298.;
                         b.button(
                             1,
                             12.,
-                            298.,
+                            action_y,
                             360.,
-                            text(
-                                ui,
-                                if item.manifest.is_some() {
-                                    T::Setup
-                                } else {
-                                    T::Install
-                                },
-                            ),
+                            text(ui, if installed { T::Setup } else { T::Install }),
                             true,
                         );
-                        // Spec 022 review fix: the second action is only the
-                        // update. Without one the column previously repeated the
-                        // primary "Play setup" immediately below itself.
-                        if matches!(
-                            item.recipe_status,
-                            ddl_core::library::RecipeStatus::Update(_)
-                        ) {
-                            b.button(2, 12., 366., 360., text(ui, T::RecipeUpdateAction), false);
+                        action_y += 68.;
+                        // The second action is only the spec 020 update; the
+                        // primary is never repeated (review fix 1).
+                        if updating {
+                            b.button(
+                                2,
+                                12.,
+                                action_y,
+                                360.,
+                                text(ui, T::RecipeUpdateAction),
+                                false,
+                            );
+                            action_y += 68.;
                         }
                         b.button(
                             3,
                             12.,
-                            434.,
+                            action_y,
                             360.,
                             text(
                                 ui,
-                                if matches!(
-                                    item.recipe_status,
-                                    ddl_core::library::RecipeStatus::Update(_)
-                                ) {
+                                if updating {
                                     T::RecipeKeep
                                 } else if item.favorite {
                                     T::FavoriteRemoveButton
@@ -1642,18 +1646,20 @@ impl Runtime {
                             ),
                             false,
                         );
+                        action_y += 68.;
                         b.button(
                             4,
                             12.,
-                            502.,
+                            action_y,
                             360.,
                             value(ui, T::ActiveProfile, &item.profile.name),
                             false,
                         );
+                        action_y += 68.;
                         // R1: Uninstall is offered only for installed mapsets,
                         // including ones no longer in the catalog (spec 020 R5).
-                        if item.manifest.is_some() {
-                            b.button(5, 12., 570., 360., text(ui, T::Uninstall), false);
+                        if installed {
+                            b.button(5, 12., action_y, 360., text(ui, T::Uninstall), false);
                         }
                         b.panel(404., 12., 808., 478.);
                         b.label(

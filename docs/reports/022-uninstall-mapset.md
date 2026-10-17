@@ -50,7 +50,7 @@ screenshots will be deleted too." when checked. Confirming returns to Library wi
 | Item | Evidence |
 | --- | --- |
 | R1 / A2 | Detail id 5 is asserted present for an installed mapset and for a removed-catalog install (`recipe_changes_journey`); `action()` ignores all input while playing. |
-| R1 / review fix | `assert_detail_actions_unique` asserts unique labels and exactly one primary for the Current (`uninstall_journey`) and Update (`recipe_changes_journey`) states; the pre-existing duplicate was reproduced on `main` (`020-detail-removed.png`). |
+| R1 / review fix | `assert_detail_actions` asserts unique labels, one primary, and an even 68 px stack with no gap for the Current (`uninstall_journey`) and Update (`recipe_changes_journey`) states; the pre-existing duplicate was reproduced on `main` (`020-detail-removed.png`). |
 | R2 / A2 | `022-uninstall-confirm.png` (unchecked, Cancel focused, size and count) and `022-uninstall-delete-profiles.png` (checked, amber tick, delete consequence) inspected; the journey drives `UpArrow` + `Return` with real keys and asserts `art` 0 → 1 and that the sheet stays open. |
 | R3 / A1 | `uninstall_marks_inactive_first_and_removes_only_this_recipe` (mark makes `load_manifest` `None` while files remain, then the recipe dir goes and the neighbour/cache stay); `retired_cleanup_refuses_profile_paths_and_symlink_escapes` (traversal + symlink); `uninstall_never_follows_a_symlinked_directory_out_of_the_library`; `an_interrupted_uninstall_stays_inactive_and_is_finished_on_the_next_start` (crash between mark and delete, then startup completes it). |
 | R4 / A1 | `uninstall_keeps_profiles_by_default_and_a_reinstall_finds_them` (saves/shots survive, selection kept, reinstall reuses them); `uninstall_can_delete_profiles_and_saves_but_keeps_favorites`; `delete_fully_removes_the_document_and_runtime_dirs_without_a_last_profile_guard`; `delete_fully_refuses_a_symlinked_runtime_directory`. |
@@ -66,7 +66,7 @@ Inspected the off-screen 1280×800 PNGs under `target/headless/`:
 
 - `022-detail-uninstall.png`: the fifth detail action scrolled into view with its amber ring and
   the "A Uninstall" hint; the action column is Play setup → Add to favorites → Active profile →
-  Uninstall, each label once (see the review fix below).
+  Uninstall, each label once and stacked with no gap (see the review fixes below).
 - `022-uninstall-confirm.png`: title "Uninstall AUGER;ZENITH?", "Installed size: 24 B" (the
   synthetic fixture member), the unchecked checkbox with the profile count, the "profiles and saves
   are kept" line, and Cancel focused first with Uninstall separated to the right.
@@ -102,6 +102,23 @@ detail action labels are unique and that exactly one is primary.
 Re-rendered and inspected: `022-detail-uninstall.png` (single Play setup) and `020-detail-removed.png`
 (single Play setup) both drop the duplicate.
 
+### Follow-up: collapse the action column
+
+Hiding the conditional action left its slot empty, so the column had a 68 px gap between the
+primary action and the next one. The positions are now computed from the visible actions
+(`action_y` starts at 298 and advances by 68 only for the buttons actually drawn), so:
+
+- installed, no update → Play setup / Add to favorites / Active profile / Uninstall;
+- update available → Play setup / Update / Keep current / Active profile / Uninstall (the spec 020
+  layout is byte-for-byte the same positions as before);
+- not installed → Install / Add to favorites / Active profile.
+
+D-pad focus uses node geometry, so it follows the collapsed list automatically.
+`assert_detail_actions` now also asserts the actions are evenly stacked with no gap (even 68 px
+pitch from y=298) in both the Current and Update states. Re-rendered and inspected
+`022-detail-uninstall.png` (Play setup / Add to favorites / Active profile / Uninstall, contiguous)
+and `020-detail-update.png` (Play setup / Update / Keep current at 298/366/434, unchanged).
+
 ## Final verification
 
 All commands exited 0 on macOS arm64 after merging `main`; no external-network or physical Deck
@@ -113,7 +130,7 @@ cargo fmt --all --check
 
 cargo clippy --workspace --all-targets -- -D warnings
   Compiling ddl v0.0.4 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-022-uninstall/crates/ddl)
-  Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.43s
+  Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.22s
 
 cargo test --workspace
   ddl unit:       test result: ok. 81 passed; 0 failed

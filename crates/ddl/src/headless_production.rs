@@ -1235,14 +1235,16 @@ fn profiles_journey(
     assert!(store.dirs("auger-zenith-default").root.exists());
 }
 
-/// Spec 022 review fix: each Mapset detail action label must appear exactly once
-/// (an installed mapset used to show two "Play setup" buttons), with one primary.
-fn assert_detail_actions_unique(ui: &AppWindow) {
-    let actions: Vec<_> = ui
+/// Spec 022 review fixes: each Mapset detail action appears once, exactly one is
+/// primary, and the visible actions are stacked with no empty slot (a 68 px pitch
+/// from y=298 whether or not the conditional Update action is present).
+fn assert_detail_actions(ui: &AppWindow) {
+    let mut actions: Vec<_> = ui
         .get_nodes()
         .iter()
         .filter(|n| n.kind == 2 && (1..=5).contains(&n.id))
         .collect();
+    actions.sort_by(|a, b| a.y.total_cmp(&b.y));
     let labels: Vec<String> = actions.iter().map(|n| n.label.to_string()).collect();
     let unique: std::collections::BTreeSet<&String> = labels.iter().collect();
     assert_eq!(
@@ -1255,6 +1257,19 @@ fn assert_detail_actions_unique(ui: &AppWindow) {
         1,
         "exactly one primary detail action: {labels:?}"
     );
+    let ys: Vec<f32> = actions.iter().map(|n| n.y).collect();
+    assert_eq!(
+        ys.first().copied(),
+        Some(298.),
+        "the first action starts the column: {ys:?}"
+    );
+    for pair in ys.windows(2) {
+        assert_eq!(
+            pair[1] - pair[0],
+            68.,
+            "actions are evenly stacked with no gap: {ys:?}"
+        );
+    }
 }
 
 fn assert_profile_dirs(fake: &dsda::FakeEngineRunner, dirs: &ddl_core::profiles::ProfileDirs) {
@@ -1597,7 +1612,7 @@ pub(super) fn recipe_changes_journey(window: &MinimalSoftwareWindow, ui: &AppWin
     capture(window, "020-library-update.png");
     press(window, Key::Return);
     assert_eq!(state.borrow().screen, Screen::Detail);
-    assert_detail_actions_unique(ui);
+    assert_detail_actions(ui);
     assert!(
         ui.get_nodes()
             .iter()
@@ -1706,7 +1721,7 @@ pub(super) fn uninstall_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
         .find(|n| n.id == 5)
         .expect("an installed mapset offers Uninstall on detail");
     assert_eq!(action.label, "Uninstall");
-    assert_detail_actions_unique(ui);
+    assert_detail_actions(ui);
     capture(window, "022-detail-uninstall.png");
 
     press(window, Key::Return);
