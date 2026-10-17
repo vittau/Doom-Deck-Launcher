@@ -269,7 +269,13 @@ fn widescreen_status_bar_loads_last_after_the_mapset() {
     )
     .expect("resolve with the wide bar");
     // The single `-file` list is main first, the wide bar last (spec 017, R1).
-    assert_eq!(resolution.plan().files, vec![maps, bar.clone()]);
+    assert_eq!(resolution.plan().files, vec![maps.clone(), bar.clone()]);
+    let argv = resolution.plan().to_command();
+    assert_eq!(argv.iter().filter(|arg| *arg == "-file").count(), 1);
+    let files = argv.iter().position(|arg| arg == "-file").unwrap();
+    assert_eq!(argv[files + 1], maps.as_os_str());
+    assert_eq!(argv[files + 2], bar.as_os_str());
+    assert_eq!(argv[files + 3], "-complevel");
     let last = resolution.summary().content.last().expect("content");
     assert_eq!(last.position, 2);
     assert_eq!(last.label, "Widescreen status bar");

@@ -1487,10 +1487,6 @@ impl Services {
     }
 }
 
-/// The registry source for a GOG candidate's launcher (spec 021, R2).
-fn default_profile(recipe: &Recipe) -> Profile {
-    Profile::new(format!("{}-default", recipe.id), "Default", &recipe.id)
-}
 fn selected_profile(profiles: &[Profile], remembered: Option<&String>) -> Profile {
     profiles
         .iter()
@@ -1515,6 +1511,7 @@ fn is_numbered_profile(name: &str) -> bool {
         .is_some_and(|n| n >= 2)
 }
 
+/// The registry source for a GOG candidate's launcher (spec 021, R2).
 fn store_source(launcher: iwads::GogLauncher) -> iwads::Source {
     match launcher {
         iwads::GogLauncher::Heroic => iwads::Source::GogHeroic,
@@ -1606,6 +1603,8 @@ mod tests {
         let command = |s: &mut Services, c| s.execute(c, &CancellationToken::new(), &mut |_| {});
         let recipe = s.recipe("sigil").unwrap();
         let mut first = s.profile(&recipe).unwrap();
+        assert_eq!(first.components, ["wide-status-bar"]);
+        first.set_component("wide-status-bar", false);
         first.skill = 5;
         first.pistol_start = true;
         first.set_component("compat", true);
@@ -1628,6 +1627,7 @@ mod tests {
         assert_eq!(third.name, "Profile 3");
         assert_eq!(third.skill, 3);
         assert!(!third.pistol_start);
+        assert_eq!(third.components, ["wide-status-bar"]);
         command(
             &mut s,
             Command::RenameProfile(second.id.clone(), "Casual".into()),
