@@ -23,7 +23,7 @@ fn sha(bytes: &[u8]) -> String {
 
 #[test]
 fn reference_recipes_round_trip_and_lint_offline() {
-    for id in ["auger-zenith", "eviternity", "sigil", "sigil-ii"] {
+    for id in ["auger-zenith", "eviternity", "sigil", "sigil-ii", "sunlust"] {
         let r = recipe(id);
         assert_eq!(
             toml::from_str::<Recipe>(&toml::to_string_pretty(&r).unwrap()).unwrap(),
@@ -676,8 +676,11 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
     );
     let mut ids: Vec<&str> = catalog.ids().collect();
     ids.sort_unstable();
-    assert_eq!(ids, ["auger-zenith", "eviternity", "sigil", "sigil-ii"]);
-    for id in ["auger-zenith", "eviternity", "sigil", "sigil-ii"] {
+    assert_eq!(
+        ids,
+        ["auger-zenith", "eviternity", "sigil", "sigil-ii", "sunlust"]
+    );
+    for id in ["auger-zenith", "eviternity", "sigil", "sigil-ii", "sunlust"] {
         let loaded = catalog.get(id).expect("recipe present");
         assert!(loaded.file.ends_with(&format!("{id}.toml")));
         assert_eq!(loaded.sha256.len(), 64);
