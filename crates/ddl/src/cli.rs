@@ -50,6 +50,14 @@ pub enum HelpTopic {
     Launch,
     /// `ddl doctor --help`.
     Doctor,
+    /// `ddl catalog [--help]`.
+    Catalog,
+    /// `ddl catalog bundle --help`.
+    CatalogBundle,
+    /// `ddl catalog status --help`.
+    CatalogStatus,
+    /// `ddl catalog update --help`.
+    CatalogUpdate,
 }
 
 /// What the user asked `ddl` to do.
@@ -62,6 +70,25 @@ pub enum Command {
         paths: Vec<PathBuf>,
         fetch: bool,
     },
+    /// `ddl catalog bundle`: build one JSON catalog bundle (spec 019, R1).
+    CatalogBundle {
+        /// Where to write the bundle (`--out`).
+        out: PathBuf,
+        /// The catalog directory to bundle (`--catalog`, default `catalog`).
+        catalog: PathBuf,
+        /// The source-commit serial in UTC Unix seconds (`--serial`, default
+        /// `DDL_CATALOG_SERIAL`/`SOURCE_DATE_EPOCH`).
+        serial: Option<u64>,
+        /// The source commit (`--commit`, default `DDL_SOURCE_COMMIT`/`GITHUB_SHA`).
+        commit: Option<String>,
+        /// The oldest DDL allowed to consume the bundle (`--min-ddl-version`,
+        /// default this binary's version).
+        min_ddl_version: Option<String>,
+    },
+    /// `ddl catalog status`: the effective catalog's serial and source.
+    CatalogStatus,
+    /// `ddl catalog update`: fetch and accept a newer bundle now (spec 019, R5).
+    CatalogUpdate,
     /// `ddl engine status`: installed versions, the active one and its mode.
     EngineStatus,
     /// `ddl engine install`: the reviewed install path, optionally forcing the
@@ -174,6 +201,9 @@ pub fn help_for(topic: HelpTopic) -> String {
 
 Usage: {BIN} [OPTIONS]
        {BIN} catalog lint [--fetch] [PATHS...]
+       {BIN} catalog bundle --out <file> [--catalog <dir>] [--serial <unix>] [--commit <sha>] [--min-ddl-version <v>]
+       {BIN} catalog status
+       {BIN} catalog update
        {BIN} engine status
        {BIN} engine install [--version <V>] [--force-extract]
        {BIN} iwad scan [PATH...]
@@ -186,7 +216,7 @@ Usage: {BIN} [OPTIONS]
        {BIN} doctor
 
 Commands:
-  catalog lint  Validate catalog recipes (offline; --fetch verifies upstream bytes)
+  catalog       Lint recipes, build a bundle or fetch a catalog update
   engine        Install or inspect the DSDA-Doom engine
   iwad scan     Find and identify your IWAD files
   mapset        List, inspect, install or update mapsets
@@ -340,6 +370,62 @@ installed mapsets, DSDA config state and log location.
 Usage: {BIN} doctor
 "
         ),
+        HelpTopic::Catalog => format!(
+            "\
+{BIN} catalog: the recipe catalog
+
+Usage: {BIN} catalog lint [--fetch] [PATHS...]
+       {BIN} catalog bundle --out <file> [--catalog <dir>] [--serial <unix>] [--commit <sha>] [--min-ddl-version <v>]
+       {BIN} catalog status
+       {BIN} catalog update
+
+Commands:
+  lint    Validate catalog recipes (offline; --fetch verifies upstream bytes)
+  bundle  Lint, then write one JSON bundle for the CI catalog branch
+  status  Show the catalog DDL is using (built-in or updated) and its date
+  update  Fetch and accept a newer catalog bundle now
+"
+        ),
+        HelpTopic::CatalogBundle => format!(
+            "\
+{BIN} catalog bundle --out <file> [--catalog <dir>] [--serial <unix>] [--commit <sha>] [--min-ddl-version <v>]
+
+Lint the catalog directory and write one JSON bundle. It refuses to write on
+any lint error. The serial is the UTC Unix time of the source commit, so a
+release built from the same commit and the published bundle agree.
+
+Usage: {BIN} catalog bundle --out <file> [--catalog <dir>] [--serial <unix>] [--commit <sha>] [--min-ddl-version <v>]
+
+Options:
+      --out <file>           Where to write the bundle (required)
+      --catalog <dir>        Catalog directory to bundle (default: catalog)
+      --serial <unix>        Source-commit time in UTC seconds
+                             (default: DDL_CATALOG_SERIAL, then SOURCE_DATE_EPOCH)
+      --commit <sha>         Source commit (default: DDL_SOURCE_COMMIT, then GITHUB_SHA)
+      --min-ddl-version <v>  Oldest DDL allowed to consume the bundle
+                             (default: this binary's version)
+"
+        ),
+        HelpTopic::CatalogStatus => format!(
+            "\
+{BIN} catalog status
+
+Show the catalog DDL is using: the embedded catalog or a cached update, its
+serial date and the source commit. Never touches the network.
+
+Usage: {BIN} catalog status
+"
+        ),
+        HelpTopic::CatalogUpdate => format!(
+            "\
+{BIN} catalog update
+
+Fetch the published catalog bundle and accept it when it is newer than the one
+DDL has and every recipe passes the same lint CI runs. Progress goes to stderr.
+
+Usage: {BIN} catalog update
+"
+        ),
     }
 }
 
@@ -390,18 +476,46 @@ fn parse_global(args: &[OsString]) -> Result<Command, ParseError> {
 }
 
 fn parse_catalog(args: &[OsString]) -> Result<Command, ParseError> {
-    if !args.first().is_some_and(|arg| arg == "lint") {
-        return Err(ParseError::message(
-            "expected `catalog lint [--fetch] [paths]`",
-        ));
+    match args.first().and_then(|arg| arg.to_str()) {
+        Some("lint") => parse_catalog_lint(&args[1..]),
+        Some("bundle") => parse_catalog_bundle(&args[1..]),
+        Some("status") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CatalogStatus));
+            }
+            for arg in &args[1..] {
+                if arg != "--" {
+                    return Err(ParseError::unknown(&arg.to_string_lossy()));
+                }
+            }
+            Ok(Command::CatalogStatus)
+        }
+        Some("update") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CatalogUpdate));
+            }
+            for arg in &args[1..] {
+                if arg != "--" {
+                    return Err(ParseError::unknown(&arg.to_string_lossy()));
+                }
+            }
+            Ok(Command::CatalogUpdate)
+        }
+        _ if wants_help(args) => Ok(Command::Help(HelpTopic::Catalog)),
+        _ => Err(ParseError::message(
+            "expected `catalog lint [--fetch] [paths]`, `catalog bundle --out <file>`, `catalog status` or `catalog update`",
+        )),
     }
-    if wants_help(&args[1..]) {
-        return Ok(Command::Help(HelpTopic::Global));
+}
+
+fn parse_catalog_lint(args: &[OsString]) -> Result<Command, ParseError> {
+    if wants_help(args) {
+        return Ok(Command::Help(HelpTopic::Catalog));
     }
     let mut paths = Vec::new();
     let mut fetch = false;
     let mut positional = false;
-    for arg in &args[1..] {
+    for arg in args {
         if !positional && arg == "--" {
             positional = true;
         } else if !positional && arg == "--fetch" {
@@ -416,6 +530,57 @@ fn parse_catalog(args: &[OsString]) -> Result<Command, ParseError> {
         paths.push(PathBuf::from("catalog"));
     }
     Ok(Command::CatalogLint { paths, fetch })
+}
+
+fn parse_catalog_bundle(args: &[OsString]) -> Result<Command, ParseError> {
+    let mut out = None;
+    let mut catalog = None;
+    let mut serial = None;
+    let mut commit = None;
+    let mut min_ddl_version = None;
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if is_one_of(arg, &["-h", "--help"]) {
+            return Ok(Command::Help(HelpTopic::CatalogBundle));
+        } else if arg == "--out" {
+            out = Some(PathBuf::from(option_value(args, index, "--out")?));
+            index += 1;
+        } else if arg == "--catalog" {
+            catalog = Some(PathBuf::from(option_value(args, index, "--catalog")?));
+            index += 1;
+        } else if arg == "--serial" {
+            let raw = option_value(args, index, "--serial")?;
+            serial = Some(
+                raw.parse()
+                    .map_err(|_| ParseError::message("`--serial` must be a UTC Unix time"))?,
+            );
+            index += 1;
+        } else if arg == "--commit" {
+            commit = Some(option_value(args, index, "--commit")?.to_owned());
+            index += 1;
+        } else if arg == "--min-ddl-version" {
+            min_ddl_version = Some(option_value(args, index, "--min-ddl-version")?.to_owned());
+            index += 1;
+        } else {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        }
+        index += 1;
+    }
+    Ok(Command::CatalogBundle {
+        out: out.ok_or_else(|| ParseError::message("`catalog bundle` needs `--out <file>`"))?,
+        catalog: catalog.unwrap_or_else(|| PathBuf::from("catalog")),
+        serial,
+        commit,
+        min_ddl_version,
+    })
+}
+
+/// The UTF-8 value following `--flag` at `index`.
+fn option_value<'a>(args: &'a [OsString], index: usize, name: &str) -> Result<&'a str, ParseError> {
+    args.get(index + 1)
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| ParseError::message(format!("`{name}` needs a value")))
 }
 
 fn parse_engine(args: &[OsString]) -> Result<Command, ParseError> {
@@ -742,6 +907,85 @@ mod tests {
     }
 
     #[test]
+    fn catalog_bundle_parses_its_options_and_requires_out() {
+        assert_eq!(
+            parse_str(&["catalog", "bundle", "--out", "bundle.json"]),
+            Ok(Command::CatalogBundle {
+                out: "bundle.json".into(),
+                catalog: "catalog".into(),
+                serial: None,
+                commit: None,
+                min_ddl_version: None
+            })
+        );
+        assert_eq!(
+            parse_str(&[
+                "catalog",
+                "bundle",
+                "--out",
+                "/tmp/b.json",
+                "--catalog",
+                "c",
+                "--serial",
+                "1700000000",
+                "--commit",
+                "abc1234",
+                "--min-ddl-version",
+                "0.0.4"
+            ]),
+            Ok(Command::CatalogBundle {
+                out: "/tmp/b.json".into(),
+                catalog: "c".into(),
+                serial: Some(1_700_000_000),
+                commit: Some("abc1234".into()),
+                min_ddl_version: Some("0.0.4".into())
+            })
+        );
+        assert_eq!(
+            parse_str(&["catalog", "bundle", "--help"]),
+            Ok(Command::Help(HelpTopic::CatalogBundle))
+        );
+        for args in [
+            vec!["catalog", "bundle"],
+            vec!["catalog", "bundle", "--out"],
+            vec!["catalog", "bundle", "--out", "b", "--serial", "soon"],
+            vec!["catalog", "bundle", "--out", "b", "--nope"],
+        ] {
+            assert!(parse_str(&args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn catalog_status_and_update_parse() {
+        assert_eq!(
+            parse_str(&["catalog", "status"]),
+            Ok(Command::CatalogStatus)
+        );
+        assert_eq!(
+            parse_str(&["catalog", "update"]),
+            Ok(Command::CatalogUpdate)
+        );
+        assert_eq!(
+            parse_str(&["catalog", "status", "--help"]),
+            Ok(Command::Help(HelpTopic::CatalogStatus))
+        );
+        assert_eq!(
+            parse_str(&["catalog", "update", "--help"]),
+            Ok(Command::Help(HelpTopic::CatalogUpdate))
+        );
+        assert_eq!(
+            parse_str(&["catalog", "--help"]),
+            Ok(Command::Help(HelpTopic::Catalog))
+        );
+        for args in [
+            vec!["catalog", "status", "extra"],
+            vec!["catalog", "update", "--bad"],
+        ] {
+            assert!(parse_str(&args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
     fn no_arguments_runs_fullscreen() {
         assert_eq!(
             parse_str(&[]),
@@ -1041,6 +1285,10 @@ mod tests {
             HelpTopic::MapsetInstall,
             HelpTopic::Launch,
             HelpTopic::Doctor,
+            HelpTopic::Catalog,
+            HelpTopic::CatalogBundle,
+            HelpTopic::CatalogStatus,
+            HelpTopic::CatalogUpdate,
         ] {
             let text = help_for(topic);
             assert!(text.starts_with("ddl"), "{topic:?}: {text}");

@@ -1,13 +1,15 @@
 # Continuous integration for DoomDeckLauncher (spec 001, R6).
 #
-# Three jobs:
-#   * `checks`       - formatting, lints and unit tests on the GitHub-hosted
-#                      Ubuntu runner, mirroring the commands in `AGENTS.md`;
-#   * `catalog-lint` - offline recipe validation on every pull request;
-#   * `steamrt-build`- a release-mode build inside the same Steam Linux Runtime
-#                      SDK container the release uses, to prove the binary
-#                      actually links against SteamOS/Yocto-era libraries before
-#                      anyone downloads it.
+# Four jobs:
+#   * `checks`        - formatting, lints and unit tests on the GitHub-hosted
+#                       Ubuntu runner, mirroring the commands in `AGENTS.md`;
+#   * `catalog-lint`  - offline recipe validation on every pull request;
+#   * `catalog-bundle`- publishes the catalog bundle to the `catalog` branch on
+#                       a push to `main` that touches `catalog/**` (spec 019, R2);
+#   * `steamrt-build` - a release-mode build inside the same Steam Linux Runtime
+#                       SDK container the release uses, to prove the binary
+#                       actually links against SteamOS/Yocto-era libraries before
+#                       anyone downloads it.
 #
 # The container image is pinned by digest (see `docs/research/steam-runtime-build.md`).
 # The same digest is used by `.github/workflows/release.yml`; keep them in sync.
@@ -186,6 +188,122 @@ jobs:
 
       - name: Validate all recipes
         run: cargo run --locked -p ddl -- catalog lint catalog/
+
+  catalog-bundle:
+    name: Publish catalog bundle
+    # Only a push to `main` can publish; pull requests never write the branch.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Serialize bundle jobs instead of cancelling them. Each one commits on top
+    # of the previous `catalog` head; cancelling a run mid-push or racing two
+    # runs would produce a rejected non-fast-forward push, and the branch is
+    # never force-pushed (spec 019, R2).
+    concurrency:
+      group: catalog-bundle
+      cancel-in-progress: false
+    # The only job that writes to the repository; `contents: read` stays the
+    # workflow default and this job opts in (spec 019, R2).
+    permissions:
+      contents: write
+    steps:
+      # Full history so the changed-paths check can diff against the push base.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # `catalog/**` only: a Rust-only push must not republish the same bundle.
+      - name: Detect catalog changes
+        id: changes
+        run: |
+          set -euo pipefail
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$base" "${{ github.sha }}" -- catalog/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Install rustup only (`--default-toolchain none`): the exact channel and
+      # components come from `rust-toolchain.toml`, so CI can never drift from
+      # local development. No third-party toolchain action is used, which keeps
+      # the supply chain to `actions/*` and the official rustup script.
+      - name: Install the pinned Rust toolchain
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      # Cargo registry and build artifacts, keyed by the lockfile and toolchain pin, so an
+      # unchanged dependency tree is not recompiled on every push.
+      - name: Cache cargo registry and target
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: bundle-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            bundle-${{ runner.os }}-
+
+      # `ddl` links Slint (fontconfig) and gilrs (libudev) on Linux; same
+      # packages as the other jobs.
+      - name: Install system build dependencies
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
+
+      # Spec 019, R1/R3: the bundle's serial is the source commit's UTC Unix
+      # time, the same value `build.rs` bakes into a release built from this
+      # commit. `ddl catalog bundle` refuses to write on any lint error.
+      - name: Build the catalog bundle
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          echo "DDL_CATALOG_SERIAL=$(git log -1 --format=%ct "${GITHUB_SHA}")" >> "$GITHUB_ENV"
+          echo "DDL_SOURCE_COMMIT=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          cargo run --locked -p ddl -- catalog bundle --out "$RUNNER_TEMP/catalog.json"
+
+      # Orphan `catalog` branch, ordinary commits only: the branch holds exactly
+      # one file, `catalog.json`. The app reads it from
+      # raw.githubusercontent.com/vittau/Doom-Deck-Launcher/catalog/catalog.json.
+      - name: Commit the bundle to the catalog branch
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "ddl-catalog-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin catalog >/dev/null 2>&1; then
+            git fetch --depth=1 origin catalog
+            git checkout -B catalog FETCH_HEAD
+          else
+            git checkout --orphan catalog
+          fi
+          git rm -rf --quiet . >/dev/null 2>&1 || true
+          cp "$RUNNER_TEMP/catalog.json" catalog.json
+          git add -f catalog.json
+          if git diff --cached --quiet; then
+            echo "catalog.json is unchanged; nothing to publish"
+            exit 0
+          fi
+          git commit -m "catalog: update from ${GITHUB_SHA}"
+          # Ordinary, non-fast-forward-refusing push; never `--force`.
+          git push origin HEAD:catalog
 
   steamrt-build:
     name: Steam Runtime release build

@@ -229,6 +229,7 @@ impl Runtime {
             .as_ref()
             .map(|r| r.try_iter().collect())
             .unwrap_or_default();
+        let mut auto_check = false;
         for event in events {
             match event {
                 Event::Working => {}
@@ -245,6 +246,25 @@ impl Runtime {
                 Event::Updates(u) => {
                     self.updates = u;
                     self.updates_checked = true;
+                }
+                Event::Catalog(outcome) => {
+                    // Spec 019 R5: the manual action reports its result; an
+                    // automatic check stays quiet except when it updated.
+                    let automatic = matches!(
+                        self.pending,
+                        Some(Command::CatalogCheck { automatic: true })
+                    );
+                    match &outcome {
+                        services::CatalogOutcome::Updated { serial, .. } => {
+                            let date = ddl_core::catalog::serial_date(*serial)
+                                .unwrap_or_else(|| "unknown".into());
+                            ui.set_toast(value(ui, T::CatalogUpdated, date));
+                        }
+                        services::CatalogOutcome::Current { .. } if !automatic => {
+                            ui.set_toast(text(ui, T::CatalogCurrent));
+                        }
+                        _ => {}
+                    }
                 }
                 Event::EngineExit(outcome) => {
                     if !outcome.exit_status.is_clean() {
@@ -285,6 +305,9 @@ impl Runtime {
                                         Screen::Home
                                     };
                                     self.focus = 1;
+                                    // Spec 019 R5: check in the background once
+                                    // the UI is up, at most every 24 h.
+                                    auto_check = self.should_auto_check();
                                 }
                                 Some(Command::InstallEngine(_)) => {
                                     self.screen = self.return_to.0;
@@ -349,7 +372,24 @@ impl Runtime {
                 }
             }
         }
+        // Spec 019 R5: dispatched after the startup snapshot so the first frame
+        // never waits on the network.
+        if auto_check {
+            self.start(ui, Command::CatalogCheck { automatic: true });
+        }
         self.sync(ui);
+    }
+    /// Whether the automatic catalog check should run now (spec 019, R5):
+    /// production only, enabled, and at least 24 h since the last attempt.
+    fn should_auto_check(&self) -> bool {
+        if !self.env.is_production() {
+            return false;
+        }
+        let Some(snapshot) = &self.snapshot else {
+            return false;
+        };
+        snapshot.catalog.auto_update
+            && ddl_core::catalog::catalog_check_due(snapshot.catalog.last_check, now_unix_secs())
     }
     pub fn hotplug(&self, ui: &AppWindow, connected: bool) {
         if !self.playing {
@@ -859,6 +899,15 @@ impl Runtime {
                         ui,
                         Command::SetSearchStandardFolders(!s.search_standard_folders),
                     );
+                }
+            }
+            // Spec 019 R5: manual catalog check and the automatic toggle.
+            (Screen::Settings, 73) if self.settings_section == 0 => {
+                self.start(ui, Command::CatalogCheck { automatic: false })
+            }
+            (Screen::Settings, 74) if self.settings_section == 0 => {
+                if let Some(s) = &self.snapshot {
+                    self.start(ui, Command::SetCatalogAutoUpdate(!s.catalog.auto_update));
                 }
             }
             (Screen::Settings, 100..) => {
@@ -2277,6 +2326,7 @@ impl Runtime {
                 Screen::Settings => {
                     b.panel(12., 12., 312., 360.);
                     let height = match self.settings_section {
+                        0 => 700.,
                         1 => self
                             .snapshot
                             .as_ref()
@@ -2285,7 +2335,6 @@ impl Runtime {
                         // 478 like the Engine section so the spec 017 R6 widescreen
                         // status-bar credit under the version block stays inside
                         // the panel instead of spilling past its lower border.
-                        3 => 478.,
                         _ => 478.,
                     };
                     b.panel(348., 12., 864., height);
@@ -2374,6 +2423,33 @@ impl Runtime {
                                         20.,
                                     );
                                 }
+                                // Spec 019 R5: the catalog in use, the manual
+                                // check and the automatic toggle.
+                                b.label(
+                                    372.,
+                                    486.,
+                                    816.,
+                                    40.,
+                                    catalog_summary(ui, &s.catalog),
+                                    22.,
+                                );
+                                b.button(
+                                    73,
+                                    372.,
+                                    534.,
+                                    380.,
+                                    text(ui, T::CheckCatalogUpdates),
+                                    true,
+                                );
+                                b.row(
+                                    74,
+                                    372.,
+                                    600.,
+                                    816.,
+                                    text(ui, T::CatalogAutoUpdates),
+                                    text(ui, if s.catalog.auto_update { T::On } else { T::Off }),
+                                    true,
+                                );
                             }
                             1 => {
                                 // R4 opt-in, default off; the existing Ember
@@ -2666,6 +2742,7 @@ fn problem_copy(p: &Problem) -> T {
         Problem::State => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
         Problem::Update => T::UpdateError,
+        Problem::Catalog => T::ErrorCatalog,
         Problem::Checksum => T::ErrorChecksum,
         Problem::UnsafeArchive => T::ErrorArchive,
         Problem::Cancelled => T::ErrorCancelled,
@@ -2997,6 +3074,34 @@ fn display_title(recipe: &ddl_core::catalog::Recipe) -> &str {
     recipe.title.split(" (").next().unwrap_or(&recipe.title)
 }
 
+/// The wall clock, in UTC Unix seconds (spec 019 R5 throttle).
+fn now_unix_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0)
+}
+
+/// "Catalog: <serial date> (built-in | updated)" for Settings (spec 019, R5).
+/// A build that never learned its serial shows the source without a date.
+fn catalog_summary(ui: &AppWindow, info: &services::CatalogInfo) -> SharedString {
+    let state = text(
+        ui,
+        if info.updated {
+            T::CatalogUpdatedLabel
+        } else {
+            T::CatalogBuiltIn
+        },
+    );
+    match ddl_core::catalog::serial_date(info.serial) {
+        Some(date) => {
+            ui.global::<crate::WiringStrings>().set_other(state);
+            value(ui, T::CatalogSummary, date)
+        }
+        None => value(ui, T::CatalogSummarySimple, state),
+    }
+}
+
 /// IEC byte units preserve useful transfer precision without invented speed estimates.
 fn human_bytes(bytes: u64) -> String {
     const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
@@ -3160,6 +3265,14 @@ mod category_tests {
             config_version: String::new(),
             logs: PathBuf::new(),
             search_standard_folders: false,
+            catalog: crate::services::CatalogInfo {
+                serial: 0,
+                updated: false,
+                source_commit: String::new(),
+                fetched_at: None,
+                auto_update: true,
+                last_check: None,
+            },
         };
         assert_eq!(
             tag_labels(&s, recipe, 2, None),

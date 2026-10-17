@@ -215,5 +215,14 @@ export global WiringStrings {
     out property <string> favorite-remove-button: @tr("Remove from favorites");
     out property <string> update-error: @tr("Could not check for updates. Connect and Retry; installed engine preserved.");
     out property <string> search-standard-folders: @tr("Search standard Linux folders");
+    out property <string> error-catalog: @tr("Could not check for catalog updates. Your installed mapsets are safe. Connect and Retry.");
+    out property <string> catalog-summary: @tr("Catalog: {} ({})", root.value, root.other);
+    out property <string> catalog-summary-simple: @tr("Catalog: {}", root.value);
+    out property <string> check-catalog-updates: @tr("Check for catalog updates");
+    out property <string> catalog-auto-updates: @tr("Automatic catalog updates");
+    out property <string> catalog-updated: @tr("Catalog updated ({})", root.value);
+    out property <string> catalog-current: @tr("Catalog is up to date");
+    out property <string> catalog-built-in: @tr("built-in");
+    out property <string> catalog-updated-label: @tr("updated");
     out property <string> status-bar-credit: @tr("Widescreen status bars: doom_widehud by NightFright and contributors (GPL-3.0) — https://github.com/NightFright2k19/doom_widehud");
 }

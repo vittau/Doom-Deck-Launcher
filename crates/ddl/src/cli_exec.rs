@@ -198,6 +198,140 @@ pub fn run_io(
         }
         cli::Command::Run(_) | cli::Command::Help(_) | cli::Command::Version => Ok(()),
         cli::Command::CatalogLint { .. } => Ok(()),
+        cli::Command::CatalogBundle {
+            out: dest,
+            catalog,
+            serial,
+            commit,
+            min_ddl_version,
+        } => {
+            let serial = serial.unwrap_or_else(env_serial);
+            let commit = commit.unwrap_or_else(env_commit);
+            let min_ddl_version = min_ddl_version.unwrap_or_else(|| cli::VERSION.to_owned());
+            match ddl_core::catalog::build_bundle(&catalog, serial, &commit, &min_ddl_version) {
+                Ok(bundle) => {
+                    let mut json = serde_json::to_vec_pretty(&bundle).map_err(|error| {
+                        CliFailure::message(format!("could not serialize the bundle: {error}"))
+                    })?;
+                    json.push(b'\n');
+                    std::fs::write(&dest, &json).map_err(|error| {
+                        CliFailure::message(format!("could not write {}: {error}", dest.display()))
+                    })?;
+                    writeln!(
+                        out,
+                        "Wrote {} ({} recipes, serial {}{})",
+                        dest.display(),
+                        bundle.recipe_files().len(),
+                        serial,
+                        ddl_core::catalog::serial_date(serial)
+                            .map_or_else(String::new, |date| format!(", {date}"))
+                    )
+                    .map_err(output_error)
+                }
+                Err(errors) => {
+                    for error in &errors {
+                        writeln!(err, "{error}").map_err(output_error)?;
+                    }
+                    Err(CliFailure::message(format!(
+                        "catalog lint failed with {} error(s); no bundle was written",
+                        errors.len()
+                    )))
+                }
+            }
+        }
+        cli::Command::CatalogStatus => {
+            let services = open(env)?;
+            print_catalog_status(&services.catalog_status(), out)
+        }
+        cli::Command::CatalogUpdate => {
+            let mut services = open(env)?;
+            let outcome = services.catalog_update()?;
+            print_catalog_outcome(&outcome, out)
+        }
+    }
+}
+
+/// The bundle serial from the environment (spec 019, R1): the source commit's
+/// UTC Unix time, which CI sets, falling back to the reproducible-build epoch.
+fn env_serial() -> u64 {
+    ["DDL_CATALOG_SERIAL", "SOURCE_DATE_EPOCH"]
+        .iter()
+        .find_map(|key| std::env::var(key).ok())
+        .and_then(|value| value.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+/// The source commit from the environment, which CI sets.
+fn env_commit() -> String {
+    ["DDL_SOURCE_COMMIT", "GITHUB_SHA"]
+        .iter()
+        .find_map(|key| std::env::var(key).ok())
+        .unwrap_or_default()
+}
+
+/// One line for `ddl catalog status` (spec 019, R5).
+fn print_catalog_status(
+    info: &crate::services::CatalogInfo,
+    out: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    let date = ddl_core::catalog::serial_date(info.serial).unwrap_or_else(|| "unknown date".into());
+    if info.updated {
+        writeln!(
+            out,
+            "Catalog: updated {date} (serial {}, commit {}, fetched {})",
+            info.serial,
+            if info.source_commit.is_empty() {
+                "unknown"
+            } else {
+                &info.source_commit
+            },
+            info.fetched_at
+                .and_then(ddl_core::catalog::serial_date)
+                .unwrap_or_else(|| "unknown".into())
+        )
+        .map_err(output_error)?;
+    } else {
+        writeln!(out, "Catalog: built-in {date} (serial {})", info.serial).map_err(output_error)?;
+    }
+    writeln!(
+        out,
+        "Automatic checks: {} (last checked {})",
+        if info.auto_update { "on" } else { "off" },
+        info.last_check
+            .and_then(ddl_core::catalog::serial_date)
+            .unwrap_or_else(|| "never".into())
+    )
+    .map_err(output_error)
+}
+
+/// One line for `ddl catalog update` (spec 019, R5).
+fn print_catalog_outcome(
+    outcome: &crate::services::CatalogOutcome,
+    out: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    use crate::services::CatalogOutcome as O;
+    match outcome {
+        O::Updated {
+            serial,
+            source_commit,
+            dropped,
+        } => {
+            let date = ddl_core::catalog::serial_date(*serial).unwrap_or_else(|| "unknown".into());
+            write!(out, "Catalog updated to {date} (serial {serial}").map_err(output_error)?;
+            if !source_commit.is_empty() {
+                write!(out, ", commit {source_commit}").map_err(output_error)?;
+            }
+            if *dropped > 0 {
+                write!(out, ", {dropped} recipe(s) dropped by lint").map_err(output_error)?;
+            }
+            writeln!(out, ")").map_err(output_error)
+        }
+        O::Current { serial } => {
+            let date = ddl_core::catalog::serial_date(*serial).unwrap_or_else(|| "unknown".into());
+            writeln!(out, "Catalog is up to date ({date})").map_err(output_error)
+        }
+        O::Disabled => writeln!(out, "Automatic catalog updates are off").map_err(output_error),
+        O::NotDue => writeln!(out, "Checked less than 24 h ago").map_err(output_error),
     }
 }
 
@@ -567,6 +701,14 @@ exit 1
         bytes
     }
 
+    /// A real, lint-clean bundle built from this repository's `catalog/`.
+    fn repository_bundle(serial: u64) -> Vec<u8> {
+        let catalog = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
+        let bundle = ddl_core::catalog::build_bundle(&catalog, serial, "test-commit", "0.0.1")
+            .expect("the repository catalog lints");
+        serde_json::to_vec(&bundle).unwrap()
+    }
+
     fn fixture() -> Fixture {
         fixture_with_engine(APPIMAGE)
     }
@@ -587,9 +729,12 @@ exit 1
         let package = synthetic_package(&mut catalog.recipes[0].recipe);
         let package_for_server = package.clone();
         let engine_for_server = engine.as_bytes().to_vec();
+        let bundle_for_server = repository_bundle(1_700_000_000);
         let server = Server::start(move |request| {
             if request.target.contains("AppImage") {
                 Response::ok(engine_for_server.clone())
+            } else if request.target == "/catalog.json" {
+                Response::ok(bundle_for_server.clone())
             } else {
                 Response::ok(package_for_server.clone())
             }
@@ -609,6 +754,7 @@ exit 1
             api: api.clone(),
             catalog,
             engine_base: server.url(""),
+            catalog_url: server.url("/catalog.json"),
             reviewed,
             runner,
         });
@@ -1077,6 +1223,71 @@ exit 1
         drop(lock);
         // Releasing the lock lets the same command succeed.
         install_sigil(&fx, &[]);
+    }
+
+    #[test]
+    fn catalog_bundle_writes_a_lint_clean_bundle_and_refuses_a_bad_one() {
+        let fx = fixture();
+        let out = fx.env.home.join("bundle.json");
+        let catalog = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
+        let (text, _) = run(
+            &fx,
+            cli::Command::CatalogBundle {
+                out: out.clone(),
+                catalog: catalog.clone(),
+                serial: Some(1_700_000_000),
+                commit: Some("deadbeef".into()),
+                min_ddl_version: Some("0.0.1".into()),
+            },
+        )
+        .expect("bundle");
+        assert!(text.contains("Wrote "), "{text}");
+        let bundle: ddl_core::catalog::Bundle =
+            serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
+        assert_eq!(bundle.catalog_serial, 1_700_000_000);
+        assert_eq!(bundle.source_commit, "deadbeef");
+        assert_eq!(bundle.bundle_schema, ddl_core::catalog::BUNDLE_SCHEMA);
+        assert!(!bundle.recipe_files().is_empty());
+
+        // A catalog that does not lint never produces a file.
+        let empty = fx.env.home.join("empty-catalog");
+        std::fs::create_dir_all(&empty).unwrap();
+        let refused = run(
+            &fx,
+            cli::Command::CatalogBundle {
+                out: fx.env.home.join("never.json"),
+                catalog: empty,
+                serial: None,
+                commit: None,
+                min_ddl_version: None,
+            },
+        )
+        .unwrap_err();
+        assert!(refused.to_string().contains("lint failed"), "{refused}");
+        assert!(!fx.env.home.join("never.json").exists());
+    }
+
+    #[test]
+    fn catalog_status_and_update_report_and_persist_the_catalog() {
+        let fx = fixture();
+        let (before, _) = run(&fx, cli::Command::CatalogStatus).expect("status");
+        assert!(before.contains("Catalog: built-in"), "{before}");
+        assert!(before.contains("Automatic checks: on"), "{before}");
+        assert!(before.contains("last checked never"), "{before}");
+
+        let (updated, _) = run(&fx, cli::Command::CatalogUpdate).expect("update");
+        assert!(
+            updated.contains("Catalog updated to 2023-11-14"),
+            "{updated}"
+        );
+
+        let (after, _) = run(&fx, cli::Command::CatalogStatus).expect("status");
+        assert!(after.contains("Catalog: updated 2023-11-14"), "{after}");
+        assert!(after.contains("test-commit"), "{after}");
+
+        // A second manual check finds nothing newer.
+        let (again, _) = run(&fx, cli::Command::CatalogUpdate).expect("update");
+        assert!(again.contains("up to date"), "{again}");
     }
 
     /// A synthetic commercial WAD: an IWAD header plus MAP01..MAP32, which the
