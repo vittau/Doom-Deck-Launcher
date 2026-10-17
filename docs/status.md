@@ -26,7 +26,7 @@
 | Project logo, app icon and Steam artwork | `specs/013-logo-and-icons.md` | Done (A4 needs Deck) — Ember Gate SVG logo; owner uploads `docs/design/logo/social-preview.png` in GitHub settings |
 | Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | Done — e2e green on real network (run 38983844913): AppImage direct + extraction, 4 mapsets, D-011 argv |
 | Catalog batch: Scythe, Alien Vendetta, Sunlust, Ancient Aliens, Valiant, Going Down, BTSX E1/E2, Eviternity II | `catalog/*.toml` | **Done** — 13 recipes on `main`; catalog/member cap raised to 512 MiB for Eviternity II; e2e run 38987876930 |
-| Recipe tags, Discover categories, favorites | `specs/015-tags-categories-favorites.md` | Implemented; follow-up tagging batch B in progress (Sonnet), then merge |
+| Recipe tags, Discover categories, favorites | `specs/015-tags-categories-favorites.md` | **Done** (A4 needs Deck): 8 tags in `catalog/tags.toml`, all 13 recipes tagged (Cacowards evidence secondary — doomworld blocks automation), Discover strip with L2/R2, X favorites, app state schema 2 |
 | README revamp, Steam Deck guide, logo v2 | `specs/016-readme-and-logo-v2.md` | Ready — Codex after its 5-hour window resets |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md`, `research/dsda-engine.md` §7 | Linux host: direct FUSE works (CI); SteamOS 3.8 ships every engine library (glibc 2.41, pipewire-jack); must not run under a Steam Compatibility tool. Deck check pending |
@@ -37,8 +37,8 @@
 
 | Item | Spec | State |
 | --- | --- | --- |
-| Widescreen status bars (doom_widehud, GPL-3.0 since `eb3773ce9e`; credit NightFright and contributors) | 017 | Ready — starts after the catalog batch merges |
-| Multiple profiles per mapset (`deck-testing.md` C4) | 018 | Ready — starts after 015 merges (UI overlap) |
+| Widescreen status bars (doom_widehud, GPL-3.0 since `eb3773ce9e`; credit NightFright and contributors) | 017 | Ready — starting now (opencode) |
+| Multiple profiles per mapset (`deck-testing.md` C4) | 018 | Ready — Codex after its window resets (22:13) |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | Ready — after 018 |
 | GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). Follow-up: add the published GOG Final Doom hashes to `data/iwads.toml`. |

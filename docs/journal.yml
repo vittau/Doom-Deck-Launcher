@@ -332,3 +332,12 @@
     from 30 s to 300 s; a size-scaled download deadline replaces the fixed one next. e2e run
     38987876930 dispatched for all 13 recipes.
   refs: [docs/research/reference-eviternity-ii.md]
+- date: 2026-10-16
+  type: merge
+  summary: >-
+    Spec 015 merged: catalog/tags.toml (8 tags), tags + lint (unknown tags, Cacowards citation),
+    all 13 recipes tagged, Discover category strip (D-pad/L2/R2, session memory, empty Favorites),
+    X favorites persisted in app state schema 2 (migrates v1, keeps 021's setting). Review caught
+    BTSX E2's missing 2014 Cacoward. Also merged: GOG/id Anthology Final Doom IWAD hashes.
+    e2e run 38987876930 passed for all 13 recipes.
+  refs: [docs/reports/015-tags-categories-favorites.md]
