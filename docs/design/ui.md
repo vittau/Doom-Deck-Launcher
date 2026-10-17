@@ -414,3 +414,34 @@ selections produce a non-blocking notice. The frame, type, colors and focus ring
 components. A removed recipe shows “No longer in the catalog” in Library and detail; Play setup
 continues to use the installed snapshot. Metadata-only changes are adopted during startup without
 progress or a download. No uninstall action is added by this spec.
+
+## 10. Uninstalling a mapset (spec 022)
+
+Mapset detail offers **Uninstall** below the active-profile action for installed mapsets only —
+including installs no longer in the catalog (spec 020, R5) — and it is unreachable while the game
+runs. There is no separate Library shortcut: from Library, **A** opens detail, where the action
+lives (coordinator clarification, 2026-10-17).
+
+The second detail action is the spec 020 **Update** action and is rendered only when an update is
+available (with **Keep current** in the third slot); otherwise the column goes straight from the
+primary **Play setup** / **Install** action to the favorite, profile and Uninstall actions, so no
+label is ever repeated and no empty slot is left — the visible actions stack with a constant pitch
+and D-pad focus follows that list.
+
+The confirmation is the existing Ember sheet. It names the mapset and its installed size, and has
+one controller-toggleable checkbox, **“Also delete profiles and saves (N profiles)”**, which starts
+**unchecked** every time the sheet opens. **A** on the checkbox toggles it — no text entry — while
+**Cancel** is focused first, so **A** cancels immediately; **B** closes the sheet and keeps
+everything. Unchecked, the sheet states that only the install files are removed and profiles and
+saves are kept; checked, it states that profiles, saves and screenshots will be deleted too. When
+the install includes a user-imported component (D-014), the sheet also says imported components are
+deleted. Confirming runs the removal and returns to Library with a non-blocking toast.
+
+Removal is crash-safe and contained: the install record is marked inactive atomically **before** any
+file is deleted, so an interrupted uninstall is never a launchable half-install; only paths inside
+`<data>/library/<id>` are removed (canonicalised; symlinks are never followed out); leftovers are
+cleaned on the next start. With the checkbox, the mapset's profile documents are removed first and
+then their save/data/shot/run directories (spec 018 order). Favorites stay — they are a catalog
+preference — and the shared download cache and IWAD links are untouched. `ddl mapset uninstall <id>
+[--delete-profiles]` performs the same transaction headlessly and refuses while the UI holds the
+state lock.

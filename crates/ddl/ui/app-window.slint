@@ -76,11 +76,20 @@ component Node inherits Rectangle {
         background: Tokens.raised; border-radius: parent.height / 2; border-width: 1px; border-color: Tokens.line;
         Text { x: 10px; width: parent.width - 20px; text: root.item.label; color: Tokens.text; font-size: root.item.size * 1px; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
     }
+    if item.kind == 15: Rectangle {
+        Rectangle {
+            x: 16px; y: (parent.height - 28px) / 2; width: 28px; height: 28px;
+            background: Tokens.deep; border-width: 2px; border-radius: 6px;
+            border-color: root.item.art == 1 ? Tokens.focus : Tokens.line;
+            if root.item.art == 1: Image { x: 2px; y: 2px; width: 24px; height: 24px; source: @image-url("assets/ember/check.svg"); }
+        }
+        Text { x: 56px; y: 0px; width: parent.width - 72px; height: parent.height; text: root.item.label; color: Tokens.text; font-size: root.item.size * 1px; vertical-alignment: center; wrap: word-wrap; }
+    }
     if item.kind == 7: Image {
         x: 0px; y: 2px; width: 24px; height: 24px;
         source: root.item.tone == 2 ? @image-url("assets/ember/check.svg") : root.item.tone == 4 ? @image-url("assets/ember/cross.svg") : @image-url("assets/ember/pending.svg");
     }
-    if item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 10 && item.kind != 11 && item.kind != 12 && item.kind != 13 && item.kind != 14: Text {
+    if item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 10 && item.kind != 11 && item.kind != 12 && item.kind != 13 && item.kind != 14 && item.kind != 15: Text {
         x: item.kind == 7 ? 32px : item.kind == 8 ? 8px : item.kind == 0 ? 0px : 16px;
         y: item.kind == 7 || item.kind == 0 ? 0px : item.kind == 9 ? 4px : 8px;
         width: parent.width - (item.kind == 0 ? 0px : item.kind == 8 ? 16px : 32px);

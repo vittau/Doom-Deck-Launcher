@@ -662,6 +662,7 @@ fn active_record_round_trips_and_rejects_unknown_manifest_versions() {
         pending_profiles: vec![],
         notices: vec![],
         retired_dirs: vec![],
+        uninstalled: false,
     };
     let temp = TempDir::new().unwrap();
     let path = temp.path().join("active.json");
@@ -674,4 +675,92 @@ fn active_record_round_trips_and_rejects_unknown_manifest_versions() {
         ActiveInstall::load(&path),
         Err(ManifestError::UnsupportedSchema(99))
     ));
+}
+
+/// Installs `fixture(id)` from a loopback server, returning the installer.
+fn installed_fixture(id: &str, data: &TempDir, cache: &TempDir) -> (Installer, Recipe, Vec<u8>) {
+    let f = fixture(id, "http://127.0.0.1/placeholder");
+    let bytes = zip_bytes(&[("main.wad", &f.main), ("credits.txt", &f.credits)]);
+    let served = bytes.clone();
+    let server = Server::start(move |_| Response::ok(served.clone()));
+    let mut recipe = f.recipe;
+    recipe.packages[0].urls = vec![server.url("/package")];
+    recipe.packages[0].size = bytes.len() as u64;
+    recipe.packages[0].sha256 = sha(&bytes);
+    let installer = installer(data, cache);
+    installer.install(&recipe, &[]).expect("install");
+    (installer, recipe, bytes)
+}
+
+#[test]
+fn uninstall_marks_inactive_first_and_removes_only_this_recipe() {
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let (installer, recipe, _bytes) = installed_fixture("uninstall-test", &data, &cache);
+    let manifest = installer
+        .load_manifest(&recipe)
+        .unwrap()
+        .expect("installed");
+    // A neighbouring mapset and the download cache must never be touched.
+    let neighbour = data.path().join("library/other/1.0");
+    std::fs::create_dir_all(&neighbour).unwrap();
+    std::fs::write(neighbour.join("keep"), b"keep").unwrap();
+    let cached = std::fs::read_dir(cache.path()).unwrap().count();
+
+    installer.begin_uninstall(&recipe, &manifest).unwrap();
+    // The mark is atomic and immediate: the install is already inactive ...
+    assert_eq!(installer.load_manifest(&recipe).unwrap(), None);
+    assert!(installer.active(&recipe.id).unwrap().unwrap().uninstalled);
+    // ... but nothing has been deleted yet.
+    assert!(manifest.members.iter().all(|m| m.path.is_file()));
+
+    assert!(installer.finish_uninstall(&recipe.id).unwrap());
+    assert!(!installer.library_dir(&recipe.id).unwrap().exists());
+    assert_eq!(std::fs::read(neighbour.join("keep")).unwrap(), b"keep");
+    assert_eq!(std::fs::read_dir(cache.path()).unwrap().count(), cached);
+    // Finishing again is a no-op once the record is gone.
+    assert!(!installer.finish_uninstall(&recipe.id).unwrap());
+}
+
+#[cfg(unix)]
+#[test]
+fn uninstall_never_follows_a_symlinked_directory_out_of_the_library() {
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let (installer, recipe, _bytes) = installed_fixture("unlink-test", &data, &cache);
+    let manifest = installer
+        .load_manifest(&recipe)
+        .unwrap()
+        .expect("installed");
+    let outside = data.path().join("outside");
+    std::fs::create_dir_all(&outside).unwrap();
+    std::fs::write(outside.join("sentinel"), b"safe").unwrap();
+    std::os::unix::fs::symlink(&outside, data.path().join("library/unlink-test/escape")).unwrap();
+
+    installer.begin_uninstall(&recipe, &manifest).unwrap();
+    assert!(installer.finish_uninstall(&recipe.id).unwrap());
+    // The link is removed as a link; its target is untouched.
+    assert_eq!(std::fs::read(outside.join("sentinel")).unwrap(), b"safe");
+    assert!(!data.path().join("library/unlink-test").exists());
+}
+
+#[test]
+fn uninstall_refuses_records_whose_recipe_id_is_unsafe() {
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache);
+    let recipe = fixture("safe", "https://example.invalid/maps.zip").recipe;
+    let manifest = InstallManifest {
+        schema_version: SCHEMA_VERSION,
+        recipe_id: recipe.id.clone(),
+        release: recipe.release.clone(),
+        recipe_sha256: super::install::recipe_content_sha256(&recipe).unwrap(),
+        installed_at: 1,
+        packages: vec![],
+        members: vec![],
+    };
+    assert!(installer.library_dir("../escape").is_err());
+    assert!(installer.begin_uninstall(&recipe, &manifest).is_ok());
+    assert!(installer.finish_uninstall(&recipe.id).unwrap());
+    assert!(!data.path().join("library/safe").exists());
 }

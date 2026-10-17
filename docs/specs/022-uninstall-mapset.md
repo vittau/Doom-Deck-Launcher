@@ -38,10 +38,10 @@ Bulk uninstall. Uninstalling the engine or IWADs. Clearing the download cache.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R3, R4) — core tests: path containment (traversal and symlink escapes rejected),
+- [x] **A1** (R3, R4) — core tests: path containment (traversal and symlink escapes rejected),
   crash between mark and delete, kept vs deleted profiles, reinstall finds kept profiles.
-- [ ] **A2** (R1, R2) — headless renders: dialog unchecked and checked; navigation test toggles
+- [x] **A2** (R1, R2) — headless renders: dialog unchecked and checked; navigation test toggles
   the checkbox with the controller; focus starts on Cancel.
-- [ ] **A3** (R5) — CLI tests.
-- [ ] **A4** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** (R5) — CLI tests.
+- [x] **A4** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A5** — *Needs Deck Validation:* uninstall from Gaming Mode.

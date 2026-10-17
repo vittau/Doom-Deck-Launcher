@@ -254,6 +254,8 @@ pub enum Command {
     RemoveFolder(PathBuf),
     Install(String),
     UpdateMapset(String),
+    /// Spec 022: remove an installed mapset; the flag also deletes its profiles.
+    Uninstall(String, bool),
     KeepCurrent(String),
     Save(Profile),
     SelectProfile(String, String),
@@ -412,6 +414,9 @@ impl Services {
         progress: &mut dyn FnMut(InstallProgress),
     ) -> Result<InstallManifest, ddl_core::library::InstallError> {
         if let Some(mut active) = self.installer.active(&recipe.id)? {
+            // A reinstall after an interrupted uninstall adopts the record and
+            // makes it active again (spec 022, R3).
+            active.uninstalled = false;
             let previous = active.manifest.clone();
             let mut manifest = self
                 .installer
@@ -470,6 +475,7 @@ impl Services {
                     pending_profiles: vec![],
                     notices: vec![],
                     retired_dirs: vec![],
+                    uninstalled: false,
                 });
                 active.recipe = new;
                 active.manifest = manifest;
@@ -485,6 +491,9 @@ impl Services {
         let Some(mut active) = self.active(id)? else {
             return Ok(());
         };
+        if active.uninstalled {
+            return Ok(());
+        }
         let Some(old) = active.previous_recipe.as_ref() else {
             return Ok(());
         };
@@ -514,6 +523,11 @@ impl Services {
             let Ok(Some(mut active)) = self.active(&id) else {
                 continue;
             };
+            if active.uninstalled {
+                // Spec 022: uninstalls are finished by `finish_uninstalls`, which
+                // also drops the record; never treat them as a retired generation.
+                continue;
+            }
             if active.retired_dirs.is_empty() {
                 continue;
             }
@@ -528,6 +542,29 @@ impl Services {
                 tracing::warn!(%error, "retired cleanup queue retained");
             }
         }
+    }
+    /// Finishes uninstalls interrupted between the atomic mark and the delete
+    /// (spec 022, R3). A mapset whose record is already gone is left alone.
+    fn finish_uninstalls(&mut self) -> Result<(), Problem> {
+        let mut removed = Vec::new();
+        for id in self.installed_ids() {
+            match self.installer.finish_uninstall(&id) {
+                Ok(true) => removed.push(id),
+                Ok(false) => {
+                    tracing::warn!(mapset = id, "uninstall cleanup deferred to the next start");
+                }
+                Err(error) => {
+                    tracing::warn!(%error, mapset = id, "uninstall cleanup deferred to the next start");
+                }
+            }
+        }
+        if !removed.is_empty() {
+            for id in removed {
+                self.state.recipes.remove(&id);
+            }
+            self.save()?;
+        }
+        Ok(())
     }
     fn update_mapset_inner(
         &mut self,
@@ -636,6 +673,7 @@ impl Services {
             pending_profiles,
             notices,
             retired_dirs,
+            uninstalled: false,
         };
         progress(InstallProgress::stage(
             ddl_core::downloads::InstallStage::Commit,
@@ -674,6 +712,104 @@ impl Services {
             )));
         }
         self.update_mapset_inner(id, &CancellationToken::new(), progress)
+            .map_err(|e| CliFailure::message(e.to_string()))
+    }
+
+    /// Marks an install inactive atomically, then deletes its files; when
+    /// `delete_profiles` is set the mapset's profile documents and their
+    /// save/data/shot/run dirs go too (spec 022, R3/R4).
+    ///
+    /// Profile documents are removed before their runtime directories (spec 018
+    /// order). A failure to finish deleting files still leaves the mapset
+    /// "not installed"; the next start retries the leftovers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Problem::State`] when the mapset is not installed or its record
+    /// is unreadable, and [`Problem::Storage`] on a filesystem failure.
+    fn uninstall_mapset_inner(
+        &mut self,
+        id: &str,
+        delete_profiles: bool,
+    ) -> Result<UninstallOutcome, Problem> {
+        let recipe = self.recipe(id)?;
+        let manifest = self
+            .manifest(&recipe)
+            .map_err(install_error)?
+            .ok_or(Problem::State)?;
+        let profiles: Vec<Profile> = self
+            .profiles
+            .list()
+            .map_err(|e| logged(Problem::State, e))?
+            .into_iter()
+            .filter(|p| p.recipe_id == id)
+            .collect();
+        // R3: make the install inactive atomically before touching any file.
+        self.installer
+            .begin_uninstall(&recipe, &manifest)
+            .map_err(install_error)?;
+        let mut deleted_profiles = 0;
+        if delete_profiles {
+            for profile in &profiles {
+                match self.profiles.delete_fully(&profile.id) {
+                    Ok(()) => deleted_profiles += 1,
+                    Err(error) => {
+                        tracing::warn!(%error, profile = profile.id, "profile deletion deferred");
+                    }
+                }
+            }
+            // R4: clear the remembered profile only when its profiles are deleted.
+            self.state.last_profiles.remove(id);
+        }
+        match self.installer.finish_uninstall(id) {
+            Ok(true) => {
+                self.state.recipes.remove(id);
+            }
+            Ok(false) => {
+                tracing::warn!(mapset = id, "uninstall cleanup deferred to the next start");
+            }
+            Err(error) => {
+                tracing::warn!(%error, mapset = id, "uninstall cleanup deferred to the next start");
+            }
+        }
+        self.save()?;
+        Ok(UninstallOutcome {
+            id: recipe.id,
+            bytes: manifest.installed_bytes(),
+            profiles: deleted_profiles,
+            imported: manifest.has_imports(),
+        })
+    }
+
+    /// `ddl mapset uninstall <id> [--delete-profiles]`: the same transaction the
+    /// UI uses, refusing while another DDL process holds the state lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown or uninstalled mapset, a busy
+    /// state lock or a filesystem failure.
+    pub fn uninstall_mapset(
+        &mut self,
+        id: &str,
+        delete_profiles: bool,
+    ) -> Result<UninstallOutcome, CliFailure> {
+        let _lock = self.lock_cli()?;
+        if self.catalog.recipe(id).is_none() && !self.state.recipes.contains_key(id) {
+            return Err(CliFailure::message(format!(
+                "no catalog recipe with id `{id}`"
+            )));
+        }
+        let recipe = self
+            .recipe(id)
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        if self
+            .manifest(&recipe)
+            .map_err(|e| CliFailure::message(e.to_string()))?
+            .is_none()
+        {
+            return Err(CliFailure::message(format!("`{id}` is not installed")));
+        }
+        self.uninstall_mapset_inner(id, delete_profiles)
             .map_err(|e| CliFailure::message(e.to_string()))
     }
     pub fn mapset_status(
@@ -859,6 +995,7 @@ impl Services {
                 }
 
                 self.cleanup_retired();
+                self.finish_uninstalls()?;
                 self.adopt_metadata()?;
                 for id in self.installed_ids() {
                     self.reconcile_install(&id)?;
@@ -945,6 +1082,9 @@ impl Services {
             }
             Command::UpdateMapset(id) => {
                 self.update_mapset_inner(&id, cancel, &mut |p| emit(Event::Progress(p)))?;
+            }
+            Command::Uninstall(id, delete_profiles) => {
+                self.uninstall_mapset_inner(&id, delete_profiles)?;
             }
             Command::KeepCurrent(id) => {
                 let recipe = self.catalog.recipe(&id).ok_or(Problem::State)?;
@@ -1452,8 +1592,20 @@ pub struct MapsetRow {
     pub installed: bool,
 }
 
-/// The result of `ddl iwad scan` (spec 014, R1).
+/// The result of uninstalling a mapset (spec 022, R2/R3).
 #[derive(Debug, Clone)]
+pub struct UninstallOutcome {
+    /// Recipe id.
+    pub id: String,
+    /// Bytes the install occupied, for the CLI's one-line summary.
+    pub bytes: u64,
+    /// Profiles deleted with it (zero when they were kept).
+    pub profiles: usize,
+    /// Whether a user-imported component (D-014) was removed too.
+    pub imported: bool,
+}
+
+/// The result of `ddl iwad scan` (spec 014, R1).#[derive(Debug, Clone)]
 pub struct ScanReport {
     /// The current registry entry for every candidate file (identified or ambiguous).
     pub entries: Vec<RegistryEntry>,
@@ -2642,3 +2794,7 @@ pub fn choose_exclusive_component(
 #[cfg(test)]
 #[path = "recipe_change_tests.rs"]
 pub(crate) mod recipe_change_tests;
+
+#[cfg(test)]
+#[path = "uninstall_tests.rs"]
+pub(crate) mod uninstall_tests;

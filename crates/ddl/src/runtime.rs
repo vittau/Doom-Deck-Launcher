@@ -58,6 +58,8 @@ enum Sheet {
     Profiles,
     ProfileNames,
     DeleteProfile(String, String),
+    /// Spec 022: the uninstall confirm carries the focused recipe id.
+    Uninstall(String),
 }
 pub struct Runtime {
     env: Environment,
@@ -85,6 +87,8 @@ pub struct Runtime {
     review_return: (Screen, i32),
     settings_section: usize,
     advanced: bool,
+    /// Spec 022 R2: the uninstall checkbox is unchecked every time the sheet opens.
+    uninstall_delete_profiles: bool,
     /// Discover category, remembered for the session (spec 015, R4).
     category: Category,
     /// First strip chip drawn when the strip is wider than the grid.
@@ -121,6 +125,7 @@ impl Runtime {
             review_return: (Screen::FirstRun, 2),
             settings_section: 0,
             advanced: false,
+            uninstall_delete_profiles: false,
             category: Category::All,
             strip_start: 0,
             updates: vec![],
@@ -159,6 +164,8 @@ impl Runtime {
     }
     fn show_sheet(&mut self, sheet: Sheet) {
         self.invoking = self.focus;
+        // R2: the checkbox always starts unchecked.
+        self.uninstall_delete_profiles = false;
         self.focus = if matches!(sheet, Sheet::Profiles) {
             if self.item().is_some_and(|i| {
                 i.profiles.len() > 1 && i.profiles.last().is_some_and(|p| p.id != i.profile.id)
@@ -318,6 +325,12 @@ impl Runtime {
                                     self.focus = 50;
                                     self.history.pop();
                                 }
+                                Some(Command::Uninstall(id, _)) => {
+                                    ui.set_toast(value(ui, T::Uninstalled, &id));
+                                    self.screen = Screen::Library;
+                                    self.focus = 10;
+                                    self.history.clear();
+                                }
                                 _ => {}
                             }
                         }
@@ -377,15 +390,24 @@ impl Runtime {
         }
         if self.sheet.is_some() {
             match action {
-                Action::Left => self.focus = 900,
-                Action::Right => self.focus = 901,
+                Action::Up | Action::Down | Action::Left | Action::Right => {
+                    let saved =
+                        std::mem::replace(&mut self.nodes, ui.get_sheet_nodes().iter().collect());
+                    self.move_focus(action);
+                    self.nodes = saved;
+                }
                 Action::Back => {
                     self.sheet = None;
                     self.focus = self.invoking;
                 }
+                // R2: the uninstall checkbox is toggled with the controller.
+                Action::Confirm if self.focus == 902 => {
+                    self.uninstall_delete_profiles = !self.uninstall_delete_profiles;
+                }
                 Action::Confirm => {
                     let sheet = self.sheet.take().unwrap();
                     let confirm = self.focus == 901;
+                    let delete_profiles = self.uninstall_delete_profiles;
                     self.focus = self.invoking;
                     if confirm {
                         match sheet {
@@ -396,6 +418,9 @@ impl Runtime {
                             Sheet::Component(id) => self.toggle(ui, &id),
                             Sheet::DeleteProfile(id, _) => {
                                 self.start(ui, Command::DeleteProfile(id))
+                            }
+                            Sheet::Uninstall(id) => {
+                                self.start(ui, Command::Uninstall(id, delete_profiles));
                             }
                             Sheet::Profiles | Sheet::ProfileNames => {}
                         }
@@ -619,6 +644,13 @@ impl Runtime {
                     // Materialise an implicit Default before any management action.
                     self.start(ui, Command::Save(item.profile.clone()));
                     self.show_sheet(Sheet::Profiles);
+                }
+            }
+            (Screen::Detail, 5) => {
+                if let Some(item) = self.item()
+                    && item.manifest.is_some()
+                {
+                    self.show_sheet(Sheet::Uninstall(item.recipe.id.clone()));
                 }
             }
             (Screen::Detail, 2) => {
@@ -1094,6 +1126,64 @@ impl Runtime {
         }
         ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
     }
+    /// Spec 022 R2: the uninstall confirm in the existing Ember sheet, with a
+    /// controller-toggleable checkbox, installed size and profile/import facts.
+    fn uninstall_sheet(&self, ui: &AppWindow) {
+        let Some(item) = self.item() else {
+            return;
+        };
+        ui.set_sheet_title(value(ui, T::UninstallConfirm, display_title(&item.recipe)));
+        let bytes = item
+            .manifest
+            .as_ref()
+            .map_or(0, ddl_core::library::InstallManifest::installed_bytes);
+        let imported = item
+            .manifest
+            .as_ref()
+            .is_some_and(ddl_core::library::InstallManifest::has_imports);
+        let mut b = Nodes::new(ui);
+        b.label(
+            32.,
+            104.,
+            656.,
+            32.,
+            value(ui, T::UninstallSize, human_bytes(bytes)),
+            22.,
+        );
+        b.checkbox(
+            902,
+            32.,
+            144.,
+            656.,
+            if item.profiles.len() == 1 {
+                text(ui, T::UninstallProfilesOne)
+            } else {
+                value(ui, T::UninstallProfiles, item.profiles.len())
+            },
+            self.uninstall_delete_profiles,
+        );
+        if imported {
+            b.label(32., 212., 656., 32., text(ui, T::UninstallImported), 20.);
+        }
+        b.label(
+            32.,
+            252.,
+            656.,
+            34.,
+            text(
+                ui,
+                if self.uninstall_delete_profiles {
+                    T::UninstallDeletes
+                } else {
+                    T::UninstallKeeps
+                },
+            ),
+            20.,
+        );
+        b.button(900, 32., 312., 304., text(ui, T::Cancel), false);
+        b.button(901, 368., 312., 304., text(ui, T::Uninstall), false);
+        ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
+    }
     fn move_focus(&mut self, direction: Action) {
         if self.focus < 0 && self.root() {
             match direction {
@@ -1134,7 +1224,7 @@ impl Runtime {
             .min_by(|a, b| a.1.total_cmp(&b.1))
         {
             self.focus = next.0;
-        } else if direction == Action::Up && self.root() {
+        } else if direction == Action::Up && self.root() && self.sheet.is_none() {
             self.remembered[self.tab_index()] = self.focus;
             self.focus = -(self.tab_index() as i32) - 1;
         }
@@ -1508,50 +1598,45 @@ impl Runtime {
                         if item.favorite {
                             b.favorite(316., 22.);
                         }
+                        // Actions are laid out from the visible ones so the
+                        // column never leaves an empty slot when the conditional
+                        // Update action is absent (spec 022 review fix 2).
+                        let updating = matches!(
+                            item.recipe_status,
+                            ddl_core::library::RecipeStatus::Update(_)
+                        );
+                        let installed = item.manifest.is_some();
+                        let mut action_y = 298.;
                         b.button(
                             1,
                             12.,
-                            298.,
+                            action_y,
                             360.,
-                            text(
-                                ui,
-                                if item.manifest.is_some() {
-                                    T::Setup
-                                } else {
-                                    T::Install
-                                },
-                            ),
+                            text(ui, if installed { T::Setup } else { T::Install }),
                             true,
                         );
-                        b.button(
-                            2,
-                            12.,
-                            366.,
-                            360.,
-                            text(
-                                ui,
-                                if matches!(
-                                    item.recipe_status,
-                                    ddl_core::library::RecipeStatus::Update(_)
-                                ) {
-                                    T::RecipeUpdateAction
-                                } else {
-                                    T::Setup
-                                },
-                            ),
-                            false,
-                        );
+                        action_y += 68.;
+                        // The second action is only the spec 020 update; the
+                        // primary is never repeated (review fix 1).
+                        if updating {
+                            b.button(
+                                2,
+                                12.,
+                                action_y,
+                                360.,
+                                text(ui, T::RecipeUpdateAction),
+                                false,
+                            );
+                            action_y += 68.;
+                        }
                         b.button(
                             3,
                             12.,
-                            434.,
+                            action_y,
                             360.,
                             text(
                                 ui,
-                                if matches!(
-                                    item.recipe_status,
-                                    ddl_core::library::RecipeStatus::Update(_)
-                                ) {
+                                if updating {
                                     T::RecipeKeep
                                 } else if item.favorite {
                                     T::FavoriteRemoveButton
@@ -1561,14 +1646,21 @@ impl Runtime {
                             ),
                             false,
                         );
+                        action_y += 68.;
                         b.button(
                             4,
                             12.,
-                            502.,
+                            action_y,
                             360.,
                             value(ui, T::ActiveProfile, &item.profile.name),
                             false,
                         );
+                        action_y += 68.;
+                        // R1: Uninstall is offered only for installed mapsets,
+                        // including ones no longer in the catalog (spec 020 R5).
+                        if installed {
+                            b.button(5, 12., action_y, 360., text(ui, T::Uninstall), false);
+                        }
                         b.panel(404., 12., 808., 478.);
                         b.label(
                             428.,
@@ -2433,12 +2525,16 @@ impl Runtime {
                 560.
             } else if matches!(self.sheet, Some(Sheet::DeleteProfile(..))) {
                 340.
+            } else if matches!(self.sheet, Some(Sheet::Uninstall(_))) {
+                420.
             } else {
                 300.
             },
         );
         if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
             self.profile_sheet(ui);
+        } else if matches!(self.sheet, Some(Sheet::Uninstall(_))) {
+            self.uninstall_sheet(ui);
         } else if let Some(sheet) = &self.sheet {
             let (title, safe, confirm) = match sheet {
                 Sheet::Quit => (T::QuitConfirm, T::KeepPlaying, T::Quit),
@@ -2447,7 +2543,7 @@ impl Runtime {
                 Sheet::Remove(_) => (T::RemoveConfirm, T::Cancel, T::Remove),
                 Sheet::Component(_) => (T::CompatConfirm, T::Keep, T::UseVariant),
                 Sheet::DeleteProfile(..) => (T::DeleteProfileConfirm, T::Cancel, T::DeleteProfile),
-                Sheet::Profiles | Sheet::ProfileNames => unreachable!(),
+                Sheet::Profiles | Sheet::ProfileNames | Sheet::Uninstall(_) => unreachable!(),
             };
             ui.set_sheet_title(if let Sheet::DeleteProfile(_, name) = sheet {
                 value(ui, title, name)
@@ -2701,6 +2797,13 @@ impl Nodes {
         );
         self.nodes.last_mut().unwrap().tone = tone;
         self.nodes.last_mut().unwrap().size = 22.;
+    }
+    /// A controller-toggleable checkbox (spec 022, R2): the Ember row shape
+    /// with an amber tick when `checked`.
+    fn checkbox(&mut self, id: i32, x: f32, y: f32, w: f32, label: SharedString, checked: bool) {
+        self.push(id, x, y, w, 56., 15, label, Default::default(), true, false);
+        self.nodes.last_mut().unwrap().size = 22.;
+        self.nodes.last_mut().unwrap().art = i32::from(checked);
     }
     fn choice(&mut self, id: i32, x: f32, y: f32, w: f32, label: SharedString, selected: bool) {
         self.push(

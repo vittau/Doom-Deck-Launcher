@@ -216,8 +216,53 @@ impl ProfileStore {
         {
             return Err(ProfileError::Parse("cannot delete the last profile".into()));
         }
+        self.delete_and_data(id)
+    }
+
+    /// Deletes a profile and its runtime directories without the last-profile
+    /// guard (spec 022 R4): uninstalling a mapset removes every one of its
+    /// profiles. The document goes first, then the save/data/shot/run dirs,
+    /// exactly as spec 018 orders them.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProfileError`] when the id is unsafe or a filesystem operation
+    /// fails. Deleting an already-missing profile is not an error.
+    pub fn delete_fully(&self, id: &str) -> Result<(), ProfileError> {
+        self.path(id)?; // reject an unsafe id before touching any path
+        if self.load_optional(id)?.is_none() {
+            // No document: nothing owned, but any orphan runtime dirs are removed.
+            return self.remove_runtime_dirs(id);
+        }
+        self.delete_and_data(id)
+    }
+
+    /// Document first, then runtime directories (spec 018, R4).
+    fn delete_and_data(&self, id: &str) -> Result<(), ProfileError> {
         self.delete(id)?;
-        match fs::remove_dir_all(self.dirs(id).root) {
+        self.remove_runtime_dirs(id)
+    }
+
+    /// Removes `<data>/profiles/<id>`, proven to stay inside DDL's profile root
+    /// and refusing a symlinked directory (spec 022, R3 containment).
+    fn remove_runtime_dirs(&self, id: &str) -> Result<(), ProfileError> {
+        let root = self.dirs(id).root;
+        match fs::symlink_metadata(&root) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                return Err(ProfileError::UnsafeId(id.to_owned()));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(ProfileError::Io(error)),
+        }
+        let base = self.data_dir.join(DATA_DIR);
+        if let Ok(base) = fs::canonicalize(&base)
+            && let Ok(canonical) = fs::canonicalize(&root)
+            && !canonical.starts_with(&base)
+        {
+            return Err(ProfileError::UnsafeId(id.to_owned()));
+        }
+        match fs::remove_dir_all(&root) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
             Err(e) => Err(e.into()),
@@ -324,6 +369,42 @@ mod tests {
         assert!(store.delete_with_data("p1").is_err());
         assert!(!store.path("p1").unwrap().exists());
         assert!(store.load("p2").is_ok());
+    }
+
+    #[test]
+    fn delete_fully_removes_the_document_and_runtime_dirs_without_a_last_profile_guard() {
+        let temp = TempDir::new().unwrap();
+        let store = ProfileStore::new(temp.path().join("config"), temp.path().join("data"));
+        store.save(&Profile::new("p1", "Default", "map")).unwrap();
+        fs::write(store.dirs("p1").save.join("save.dsg"), b"save").unwrap();
+        // Unlike `delete_with_data`, the last profile may go.
+        store.delete_fully("p1").unwrap();
+        assert!(!store.path("p1").unwrap().exists());
+        assert!(!store.dirs("p1").root.exists());
+        // Unknown and unsafe ids are handled without touching anything outside.
+        store.delete_fully("missing").unwrap();
+        assert!(matches!(
+            store.delete_fully("../escape"),
+            Err(ProfileError::UnsafeId(_))
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_fully_refuses_a_symlinked_runtime_directory() {
+        let temp = TempDir::new().unwrap();
+        let store = ProfileStore::new(temp.path().join("config"), temp.path().join("data"));
+        store.save(&Profile::new("p1", "Default", "map")).unwrap();
+        let outside = temp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("sentinel"), b"safe").unwrap();
+        fs::remove_dir_all(store.dirs("p1").root).unwrap();
+        std::os::unix::fs::symlink(&outside, store.dirs("p1").root).unwrap();
+        assert!(matches!(
+            store.delete_fully("p1"),
+            Err(ProfileError::UnsafeId(_))
+        ));
+        assert_eq!(fs::read(outside.join("sentinel")).unwrap(), b"safe");
     }
 
     #[test]

@@ -38,6 +38,10 @@ fn every_subcommand_help_exits_zero_and_prints_usage() {
         (&["mapset", "status", "--help"], "ddl mapset status [<id>]"),
         (&["mapset", "update", "--help"], "ddl mapset update <id>"),
         (
+            &["mapset", "uninstall", "--help"],
+            "ddl mapset uninstall <id> [--delete-profiles]",
+        ),
+        (
             &["mapset", "install", "--help"],
             "ddl mapset install <id> [--with <component>...]",
         ),
@@ -67,6 +71,7 @@ fn unknown_subcommands_are_usage_errors() {
         &["iwad"],
         &["mapset", "install"],
         &["mapset", "update"],
+        &["mapset", "uninstall"],
         &["mapset", "status", "extra", "extra"],
         &["launch"],
         &["doctor", "extra"],

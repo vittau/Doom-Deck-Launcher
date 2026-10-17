@@ -1,8 +1,8 @@
 # 019 — Catalog updates without a DDL release
 
-**Status:** Draft — waiting for an owner decision (see Open questions)  ·  **Milestone:** M3  ·  **Depends on:** 002, 006, 015
+**Status:** Ready · **Decision:** D-025  ·  **Milestone:** M3  ·  **Depends on:** 002, 006, 015
 **Backlog item:** "Catalog updates without a DDL release" — D-019 left fetching updates to a
-separate decision. This draft proposes one; nothing is built until the owner accepts it.
+separate decision: D-025 (owner answers 2026-10-17).
 
 ## Goal
 
@@ -16,14 +16,16 @@ release, with the same validation CI applies, and the embedded catalog stays the
   `source_commit`, `min_ddl_version`, and every recipe, `tags.toml` and `hosts.toml` as their
   TOML text keyed by file name. It runs lint first and refuses to write on any lint error.
 - **R2** — **Publishing (CI):** a job in `ci.yml`, on push to `main` that touches `catalog/**`,
-  builds the bundle in the existing build job and uploads it (`gh release upload --clobber`) as
-  `catalog.json` to a pre-release named `catalog` whose tag is created once and **never moved**.
-  The coordinator creates that release; the workflow only replaces the asset. Document it in
-  `docs/orchestration.md`-style maintainer notes (in the spec report).
+  builds the bundle and commits it as the single file `catalog.json` to a dedicated branch
+  `catalog` (orphan history, ordinary commits, never force-pushed; `contents: write` for that job
+  only). The app reads
+  `https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/catalog/catalog.json`. No GitHub
+  release is involved. Document the branch in `docs/orchestration.md`-style maintainer notes in
+  the report.
 - **R3** — **Fetch and validate (core):** `ddl-core` fetches
-  `https://github.com/vittau/Doom-Deck-Launcher/releases/download/catalog/catalog.json` with the
-  existing download stack (timeout, ≤ 2 MiB bound, HTTPS only, redirects only to the allowlisted
-  GitHub asset hosts). It accepts the bundle only if: `bundle_schema` is known; `min_ddl_version`
+  `https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/catalog/catalog.json` with the
+  existing download stack (timeout, ≤ 2 MiB bound, HTTPS only; `raw.githubusercontent.com` is
+  already an allowlisted host). It accepts the bundle only if: `bundle_schema` is known; `min_ddl_version`
   ≤ the running version; `catalog_serial` > the embedded catalog's serial (from `build.rs`); every
   recipe passes the same lint as CI; **hosts are taken from the embedded `hosts.toml`**, so a
   remote recipe naming a host the binary does not allow is dropped (with a diagnostic), not
@@ -55,11 +57,11 @@ the bundle. Recipe-change handling for installed mapsets (spec 020).
 - [ ] **A4** (R2) — workflow change reviewed; first upload verified by the coordinator after merge.
 - [ ] **A5** — fmt, clippy `-D warnings`, tests green.
 
-## Open questions (owner — direction-setting, so not decided autonomously)
+## Decisions (owner answers 2026-10-17 → D-025)
 
-- **Q1** — Should DDL fetch catalog data from the network at all between releases, and
-  automatically (once per 24 h, default on) or only on a manual "Check for updates"?
-- **Q2** — Trust model: is HTTPS from this repository's GitHub release asset enough (the same
-  trust as the release binary itself), or must the bundle be signed (e.g. minisign) first?
-- **Q3** — Publishing: a permanent `catalog` pre-release whose asset CI replaces on every catalog
-  merge — acceptable in the repo's Releases page?
+- **Q1 → automatic:** check automatically (at most every 24 h, background, silent on failure),
+  plus the manual "Check for updates" and an opt-out toggle.
+- **Q2 → HTTPS from GitHub is enough for now** (the same trust as the release binary); signing
+  (minisign) stays a later hardening step.
+- **Q3 → no fixed pre-release:** the owner found it confusing and it would clutter Releases; the
+  bundle lives on a CI-maintained `catalog` branch instead (R2).

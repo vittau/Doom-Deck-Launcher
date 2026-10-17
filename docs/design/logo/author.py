@@ -74,7 +74,10 @@ save('library-capsule.svg',600,900,group(art,-300,0)+path('M90 370H510V680H90Z',
 save('wide-capsule.svg',920,430,group(art,0,-240,.767)+path('M40 50H650V370H40Z',DARK)+group(mark,64,90,.9)+group(ddl,320,130,1.3)+group(name,320,268,.8))
 save('hero.svg',3840,1240,group(art,0,-800,3.2))
 save('steam-logo.svg',1280,720,group(mark,465,30,1.37)+group(ddl,443.75,404,2.5)+group(name,(1280-nw*2)/2,618,2))
-save('social-preview.svg',1280,640,group(art,0,-245,1.067)+path('M70 90H1210V550H70Z',DARK)+group(mark,108,156,1.25)+group(ddl,500,180,2.8)+group(name,500,460,1.55))
+# Social scenes have their own original raster layers and outlined copy.
+# Rebuild after the production masters above, never restore the old scenery.
+import runpy
+runpy.run_path(str(OUT/'author-social.py'), run_name='__main__')
 # Contact sheet is itself vector, including labels and dark/light backgrounds.
 body=''
 for row,bg in enumerate([DARK,'#F8EAD5']):
