@@ -5,12 +5,20 @@
 //! here. [`Catalog::embedded`] loads the recipes compiled into the binary and
 //! validates them with the spec 002 model, skipping invalid ones with a logged
 //! reason.
+pub mod bundle;
 mod fetch;
 mod image;
 mod lint;
 mod loader;
 mod model;
+pub mod remote;
 
+pub use bundle::{
+    AcceptedBundle, BUNDLE_SCHEMA, Bundle, BundleRejection, CHECK_INTERVAL_SECS, CachedBundle,
+    DEFAULT_MIN_DDL_VERSION, LoadedCache, MAX_BUNDLE_BYTES, accept_bundle, build_bundle,
+    cache_path, catalog_check_due, embedded_serial, load_cache, parse_bundle, serial_date,
+    store_cache,
+};
 pub use fetch::{Fetch, HttpsFetch, check_package};
 pub use image::{
     ImageError, ImageFormat, MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_PIXELS, MIN_SCREENSHOT_HEIGHT,
@@ -22,6 +30,7 @@ pub use lint::{
 };
 pub use loader::{Catalog, LoadedRecipe, SkippedRecipe};
 pub use model::*;
+pub use remote::{BUNDLE_URL, CatalogUpdateError, HttpsRemoteFetch, RemoteFetch, load_remote};
 
 #[cfg(test)]
 mod tests;

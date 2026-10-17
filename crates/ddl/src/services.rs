@@ -30,6 +30,8 @@ pub enum Problem {
     State,
     Network,
     Update,
+    /// Spec 019: the catalog update check failed.
+    Catalog,
     Checksum,
     UnsafeArchive,
     Cancelled,
@@ -51,6 +53,7 @@ impl fmt::Display for Problem {
             Self::State => f.write_str("could not read DDL's saved state"),
             Self::Network => f.write_str("a network request failed"),
             Self::Update => f.write_str("the update check failed"),
+            Self::Catalog => f.write_str("the catalog update check failed"),
             Self::Checksum => f.write_str("a downloaded file failed its checksum"),
             Self::UnsafeArchive => f.write_str("an archive was refused as unsafe"),
             Self::Cancelled => f.write_str("cancelled"),
@@ -123,6 +126,14 @@ fn install_error(error: ddl_core::library::InstallError) -> Problem {
     logged(kind, error)
 }
 
+/// The wall clock, in UTC Unix seconds (spec 019 R5 throttle).
+fn now_unix_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0)
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct AppState {
@@ -143,11 +154,23 @@ struct AppState {
     /// schema 1 (absent loads as `false`); schema 2 carries it unchanged.
     #[serde(default)]
     search_standard_folders: bool,
+    /// Spec 019 R5: check for catalog updates automatically. Additive, default
+    /// on, so an older app-state file keeps working and gains the default.
+    #[serde(default = "default_true")]
+    catalog_auto_update: bool,
+    /// Spec 019 R5: UTC Unix seconds of the last catalog check attempt (success
+    /// or failure), so a failed check still throttles to once per 24 h.
+    #[serde(default)]
+    catalog_last_check: Option<u64>,
 }
 /// Current `app.json` schema. 1 → 2 added `favorites` (spec 015) and kept spec
 /// 021's additive `search_standard_folders`; a schema 1 file is migrated in
 /// memory on load and written as schema 2 by the next save.
 const STATE_SCHEMA: u32 = 2;
+/// Additive booleans default on (spec 019 R5: automatic catalog updates).
+fn default_true() -> bool {
+    true
+}
 impl Default for AppState {
     fn default() -> Self {
         Self {
@@ -158,6 +181,8 @@ impl Default for AppState {
             last_profiles: BTreeMap::new(),
             kept_recipes: BTreeMap::new(),
             search_standard_folders: false,
+            catalog_auto_update: true,
+            catalog_last_check: None,
         }
     }
 }
@@ -234,10 +259,31 @@ pub struct Snapshot {
     pub folders: Vec<PathBuf>,
     /// R4: whether DDL probes the generic DOOM roots (default off).
     pub search_standard_folders: bool,
+    /// Spec 019 R5: the catalog in use and its automatic-update settings.
+    pub catalog: CatalogInfo,
     pub config_notice: bool,
     pub config_usable: bool,
     pub config_version: String,
     pub logs: PathBuf,
+}
+/// The catalog the app is using, for Settings and `ddl catalog status`
+/// (spec 019, R5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogInfo {
+    /// The effective catalog's serial (UTC Unix seconds); `0` when the build
+    /// never learned it (the embedded catalog only).
+    pub serial: u64,
+    /// Whether the catalog came from the cache (an accepted update) rather than
+    /// the binary.
+    pub updated: bool,
+    /// The source commit of an updated catalog (empty for the embedded one).
+    pub source_commit: String,
+    /// When an updated catalog was fetched, UTC Unix seconds.
+    pub fetched_at: Option<u64>,
+    /// Whether automatic checks are enabled (spec 019 R5, default on).
+    pub auto_update: bool,
+    /// The last automatic/manual check attempt, UTC Unix seconds.
+    pub last_check: Option<u64>,
 }
 #[derive(Debug, Clone)]
 pub struct Directory {
@@ -272,6 +318,13 @@ pub enum Command {
     Import(String, String, PathBuf),
     /// R4: persist the "Search standard Linux folders" setting.
     SetSearchStandardFolders(bool),
+    /// Spec 019 R5: fetch a catalog update; `automatic` is the background check
+    /// (throttled, silent on failure) versus the manual Settings/CLI action.
+    CatalogCheck {
+        automatic: bool,
+    },
+    /// Spec 019 R5: persist the "Automatic catalog updates" toggle.
+    SetCatalogAutoUpdate(bool),
 }
 
 impl Command {
@@ -292,8 +345,32 @@ pub enum Event {
     Playing,
     Directory(Directory),
     Updates(Vec<String>),
+    /// Spec 019 R5: the result of a catalog check.
+    Catalog(CatalogOutcome),
     Finished(Result<Box<Snapshot>, Problem>),
     EngineExit(dsda::LaunchOutcome),
+}
+/// What a catalog check did (spec 019, R5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatalogOutcome {
+    /// A newer bundle was accepted and cached.
+    Updated {
+        /// The accepted bundle's serial.
+        serial: u64,
+        /// Its source commit.
+        source_commit: String,
+        /// Recipes dropped during validation, if any.
+        dropped: usize,
+    },
+    /// No newer bundle: DDL already has the newest (or the remote is not newer).
+    Current {
+        /// The effective catalog's serial.
+        serial: u64,
+    },
+    /// The automatic check is switched off.
+    Disabled,
+    /// The automatic check ran less than 24 h ago.
+    NotDue,
 }
 /// Test overrides are inert unless explicitly provided by the headless tests.
 #[derive(Clone)]
@@ -308,6 +385,8 @@ pub struct TestEnvironment {
     pub api: std::sync::Arc<dsda::CannedApi>,
     pub catalog: Catalog,
     pub engine_base: String,
+    /// Spec 019 R3: the bundle URL a test drives instead of GitHub.
+    pub catalog_url: String,
     pub reviewed: dsda::ReviewedList,
     pub runner: std::sync::Arc<dyn EngineRunner + Send + Sync>,
 }
@@ -315,12 +394,41 @@ pub struct TestEnvironment {
 pub struct Services {
     env: Environment,
     catalog: Catalog,
+    catalog_origin: CatalogOrigin,
+    /// The hosts a catalog fetch may contact. Fixed when the app opens from the
+    /// binary's own allowlist, so accepting a bundle can never widen it
+    /// (spec 019 R3: remote changes to the hosts allowlist are out of scope).
+    catalog_allowlist: HostAllowlist,
     state: AppState,
     registry: Registry,
     config: DsdaConfigManager,
     installer: Installer,
     engine: EngineManager,
     profiles: ProfileStore,
+}
+/// Where the effective catalog came from (spec 019, R4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CatalogOrigin {
+    serial: u64,
+    updated: bool,
+    source_commit: String,
+    fetched_at: Option<u64>,
+}
+
+impl Environment {
+    /// Whether this is a production run (no test seam installed). The automatic
+    /// catalog check is dispatched only in production; tests drive the command
+    /// themselves with a loopback URL (spec 019, A3).
+    pub(crate) fn is_production(&self) -> bool {
+        #[cfg(test)]
+        {
+            self.test.is_none()
+        }
+        #[cfg(not(test))]
+        {
+            true
+        }
+    }
 }
 impl Services {
     pub fn open(env: Environment) -> Result<Self, Problem> {
@@ -342,6 +450,31 @@ impl Services {
         let catalog = Catalog::embedded();
         #[cfg(test)]
         let catalog = env.test.as_ref().map_or(catalog, |t| t.catalog.clone());
+        // The catalog fetch may only contact the binary's own allowlist. It is
+        // captured here, before any cached bundle can replace `catalog`, so
+        // accepting a bundle can never widen it (spec 019, R3).
+        let catalog_allowlist = HostAllowlist::new(catalog.hosts.downloads.clone());
+        // Spec 019 R4: load the newer of embedded vs cached by serial. A corrupt
+        // cache is ignored and logged, never fatal.
+        let embedded_serial = ddl_core::catalog::embedded_serial();
+        let mut catalog_origin = CatalogOrigin {
+            serial: embedded_serial,
+            updated: false,
+            source_commit: String::new(),
+            fetched_at: None,
+        };
+        let catalog = match ddl_core::catalog::load_cache(&paths.data) {
+            Some(loaded) if loaded.bundle.catalog_serial > embedded_serial => {
+                catalog_origin = CatalogOrigin {
+                    serial: loaded.bundle.catalog_serial,
+                    updated: true,
+                    source_commit: loaded.bundle.source_commit.clone(),
+                    fetched_at: Some(loaded.fetched_at),
+                };
+                loaded.catalog
+            }
+            _ => catalog,
+        };
         let installer = Installer::new(
             &paths.data,
             &paths.cache,
@@ -383,6 +516,8 @@ impl Services {
         Ok(Self {
             env,
             catalog,
+            catalog_origin,
+            catalog_allowlist,
             state,
             registry,
             config,
@@ -965,8 +1100,134 @@ impl Services {
                 && fs::read_to_string(self.config.active_path()).is_ok(),
             config_version: config.map_or_else(String::new, |s| s.template_version),
             logs: self.env.paths.state.join("logs"),
+            catalog: self.catalog_info(),
         })
     }
+
+    /// The catalog in use and its automatic-update settings (spec 019, R5).
+    #[must_use]
+    pub fn catalog_info(&self) -> CatalogInfo {
+        CatalogInfo {
+            serial: self.catalog_origin.serial,
+            updated: self.catalog_origin.updated,
+            source_commit: self.catalog_origin.source_commit.clone(),
+            fetched_at: self.catalog_origin.fetched_at,
+            auto_update: self.state.catalog_auto_update,
+            last_check: self.state.catalog_last_check,
+        }
+    }
+
+    /// The bundle URL a run fetches: GitHub in production, the fixture's
+    /// loopback URL under test (spec 019, R3).
+    fn catalog_url(&self) -> String {
+        #[cfg(test)]
+        if let Some(test) = &self.env.test {
+            return test.catalog_url.clone();
+        }
+        ddl_core::catalog::BUNDLE_URL.to_owned()
+    }
+
+    /// The bundle transport: the real download stack, relaxed to loopback HTTP
+    /// only in tests (spec 019, R3).
+    fn remote_fetch(&self) -> Box<dyn ddl_core::catalog::RemoteFetch> {
+        #[cfg(test)]
+        if self.env.test.is_some() {
+            return Box::new(
+                ddl_core::catalog::HttpsRemoteFetch::new(&self.env.paths.cache)
+                    .allow_http_for_tests(),
+            );
+        }
+        Box::new(ddl_core::catalog::HttpsRemoteFetch::new(
+            &self.env.paths.cache,
+        ))
+    }
+
+    /// Checks for a newer catalog bundle (spec 019, R3–R5).
+    ///
+    /// An automatic check honours the opt-out toggle and the 24 h throttle and
+    /// records the attempt before touching the network, so a failed check still
+    /// throttles; the caller swallows its error (silent on failure). A manual
+    /// check always runs.
+    fn catalog_check(
+        &mut self,
+        automatic: bool,
+        cancel: &CancellationToken,
+    ) -> Result<CatalogOutcome, Problem> {
+        let now = now_unix_secs();
+        if automatic && !self.state.catalog_auto_update {
+            return Ok(CatalogOutcome::Disabled);
+        }
+        if automatic && !ddl_core::catalog::catalog_check_due(self.state.catalog_last_check, now) {
+            return Ok(CatalogOutcome::NotDue);
+        }
+        if cancel.is_cancelled() {
+            return Err(Problem::Cancelled);
+        }
+        // Record the attempt first: "at most once per 24 h" must hold even when
+        // the check fails (offline Deck).
+        self.state.catalog_last_check = Some(now);
+        self.save()?;
+
+        // Never let a bundle walk the catalog backwards: the floor is the
+        // effective catalog's serial, which is at least the embedded one.
+        let floor = self
+            .catalog_origin
+            .serial
+            .max(ddl_core::catalog::embedded_serial());
+        let allowlist = self.catalog_allowlist.clone();
+        let url = self.catalog_url();
+        let result = {
+            let mut fetch = self.remote_fetch();
+            ddl_core::catalog::load_remote(
+                fetch.as_mut(),
+                &url,
+                &allowlist,
+                ddl_core::catalog::EMBEDDED_HOSTS,
+                floor,
+                crate::cli::VERSION,
+            )
+        };
+        match result {
+            Ok(accepted) => {
+                for skipped in accepted.dropped() {
+                    tracing::warn!(file = %skipped.file, reason = %skipped.reason, "catalog bundle recipe dropped");
+                }
+                if accepted.catalog.recipes.is_empty() {
+                    tracing::warn!(
+                        "catalog bundle carried no usable recipe; keeping the current catalog"
+                    );
+                    return Ok(CatalogOutcome::Current {
+                        serial: self.catalog_origin.serial,
+                    });
+                }
+                ddl_core::catalog::store_cache(&self.env.paths.data, &accepted.bundle, now)
+                    .map_err(|error| logged(Problem::Storage, error))?;
+                let serial = accepted.serial();
+                let source_commit = accepted.bundle.source_commit.clone();
+                let dropped = accepted.dropped().len();
+                self.catalog = accepted.catalog;
+                self.catalog_origin = CatalogOrigin {
+                    serial,
+                    updated: true,
+                    source_commit: source_commit.clone(),
+                    fetched_at: Some(now),
+                };
+                Ok(CatalogOutcome::Updated {
+                    serial,
+                    source_commit,
+                    dropped,
+                })
+            }
+            // "Not newer" is a normal outcome for a manual check, not a failure.
+            Err(ddl_core::catalog::CatalogUpdateError::Rejected(
+                ddl_core::catalog::BundleRejection::NotNewer { .. },
+            )) => Ok(CatalogOutcome::Current {
+                serial: self.catalog_origin.serial,
+            }),
+            Err(error) => Err(logged(Problem::Catalog, error)),
+        }
+    }
+
     pub fn execute(
         &mut self,
         command: Command,
@@ -1045,6 +1306,20 @@ impl Services {
             Command::SetSearchStandardFolders(enabled) => {
                 self.state.search_standard_folders = enabled;
                 self.save()?;
+            }
+            Command::SetCatalogAutoUpdate(enabled) => {
+                self.state.catalog_auto_update = enabled;
+                self.save()?;
+            }
+            Command::CatalogCheck { automatic } => {
+                match self.catalog_check(automatic, cancel) {
+                    Ok(outcome) => emit(Event::Catalog(outcome)),
+                    // Spec 019 R5: an automatic check is silent on failure.
+                    Err(problem) if automatic => {
+                        tracing::warn!(?problem, "automatic catalog check failed");
+                    }
+                    Err(problem) => return Err(problem),
+                }
             }
             Command::RemoveFolder(path) => {
                 self.state.folders.retain(|p| p != &path);
@@ -1659,6 +1934,25 @@ impl Services {
     fn lock_cli(&self) -> Result<StateLock, CliFailure> {
         StateLock::acquire(&self.env.paths.config)
             .map_err(|error| CliFailure::message(error.to_string()))
+    }
+
+    /// `ddl catalog status`: the catalog in use, its serial date and source.
+    /// Reads only local state, never the network.
+    #[must_use]
+    pub fn catalog_status(&self) -> CatalogInfo {
+        self.catalog_info()
+    }
+
+    /// `ddl catalog update`: fetch and accept a newer bundle now (spec 019, R5).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for a busy state lock, a fetch/rejection failure
+    /// or a filesystem failure.
+    pub fn catalog_update(&mut self) -> Result<CatalogOutcome, CliFailure> {
+        let _lock = self.lock_cli()?;
+        self.catalog_check(false, &CancellationToken::new())
+            .map_err(|problem| CliFailure::message(problem.to_string()))
     }
 
     /// `ddl engine status`: installed versions, the active one and its mode.
@@ -2491,12 +2785,18 @@ mod tests {
         let snapshot = s.snapshot().unwrap();
         assert_eq!(snapshot.folders, std::slice::from_ref(&folder));
         assert!(snapshot.items.iter().all(|i| !i.favorite));
+        // Spec 019 R5: the additive fields default on/absent for an old file.
+        assert!(snapshot.catalog.auto_update);
+        assert_eq!(snapshot.catalog.last_check, None);
+        assert!(!snapshot.catalog.updated);
         // The next save writes schema 2 with the old data and the new field.
         favorite(&mut s, "sigil-ii").unwrap();
         let state = state_file(&env);
         assert_eq!(state["schema_version"], 2);
         assert_eq!(state["favorites"], serde_json::json!(["sigil-ii"]));
         assert_eq!(state["folders"], serde_json::json!([folder]));
+        assert_eq!(state["catalog_auto_update"], serde_json::json!(true));
+        assert_eq!(state["catalog_last_check"], serde_json::Value::Null);
         assert!(Services::open(env).is_ok());
     }
     #[test]
@@ -2798,3 +3098,161 @@ pub(crate) mod recipe_change_tests;
 #[cfg(test)]
 #[path = "uninstall_tests.rs"]
 pub(crate) mod uninstall_tests;
+
+#[cfg(test)]
+mod catalog_tests {
+    use super::*;
+    use ddl_core::catalog::Bundle;
+    use ddl_core::downloads::test_http::{Response, Server};
+    use ddl_core::engines::dsda;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// A real, lint-clean bundle built from this repository's `catalog/`.
+    fn bundle_json(serial: u64) -> Vec<u8> {
+        let catalog = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
+        let bundle = ddl_core::catalog::build_bundle(&catalog, serial, "test-commit", "0.0.1")
+            .expect("the repository catalog lints");
+        serde_json::to_vec(&bundle).unwrap()
+    }
+
+    fn environment(root: &Path, catalog_url: String) -> Environment {
+        let home = root.join("home");
+        fs::create_dir_all(&home).unwrap();
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .unwrap();
+        let mut catalog = Catalog::embedded();
+        catalog.hosts.downloads.push("127.0.0.1".into());
+        Environment {
+            paths,
+            home,
+            test: Some(Arc::new(TestEnvironment {
+                api: Arc::new(dsda::CannedApi::new()),
+                catalog,
+                engine_base: String::new(),
+                catalog_url,
+                reviewed: dsda::ReviewedList::embedded(),
+                runner: Arc::new(dsda::FakeEngineRunner::new(dsda::LaunchExit::Clean)),
+            })),
+        }
+    }
+
+    fn run(s: &mut Services, command: Command) -> Result<(), Problem> {
+        s.execute(command, &CancellationToken::new(), &mut |_| {})
+    }
+
+    #[test]
+    fn a_newer_bundle_is_accepted_cached_and_loaded_next_start() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = hits.clone();
+        let server = Server::start(move |_r| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::ok(served.clone())
+        });
+        let env = environment(temp.path(), server.url("/catalog.json"));
+        let mut s = Services::open(env.clone()).unwrap();
+        assert!(!s.catalog_info().updated);
+        run(&mut s, Command::CatalogCheck { automatic: false }).unwrap();
+        let info = s.catalog_info();
+        assert!(info.updated, "the accepted bundle is the catalog in use");
+        assert_eq!(info.serial, 500);
+        assert_eq!(info.source_commit, "test-commit");
+        assert!(info.fetched_at.is_some());
+        assert!(ddl_core::catalog::cache_path(&env.paths.data).is_file());
+        assert!(s.catalog.recipe("sigil").is_some(), "accepted recipes load");
+
+        // R4: a later start loads the newer cached catalog.
+        let reopened = Services::open(env).unwrap();
+        let info = reopened.catalog_info();
+        assert!(info.updated);
+        assert_eq!(info.serial, 500);
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn automatic_checks_are_throttled_opted_out_and_manual_always_runs() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = hits.clone();
+        let server = Server::start(move |_r| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::ok(served.clone())
+        });
+        let env = environment(temp.path(), server.url("/catalog.json"));
+        let mut s = Services::open(env).unwrap();
+
+        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+        assert!(s.catalog_info().last_check.is_some());
+        assert!(s.catalog_info().auto_update, "on by default");
+
+        // Within 24 h nothing is fetched again (the attempt above is "now").
+        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 1, "throttled");
+
+        // Opt-out wins over the throttle.
+        run(&mut s, Command::SetCatalogAutoUpdate(false)).unwrap();
+        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 1, "opted out");
+
+        // A fake clock: pretend the last attempt was more than a day ago.
+        run(&mut s, Command::SetCatalogAutoUpdate(true)).unwrap();
+        s.state.catalog_last_check =
+            Some(now_unix_secs() - ddl_core::catalog::CHECK_INTERVAL_SECS - 1);
+        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 2, "due after 24 h");
+
+        // The manual action ignores both the toggle and the throttle.
+        run(&mut s, Command::SetCatalogAutoUpdate(false)).unwrap();
+        run(&mut s, Command::CatalogCheck { automatic: false }).unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 3, "manual always checks");
+    }
+
+    #[test]
+    fn an_automatic_failure_is_silent_and_still_throttles() {
+        let temp = tempfile::tempdir().unwrap();
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = hits.clone();
+        let server = Server::start(move |_r| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::status(503, "offline")
+        });
+        let env = environment(temp.path(), server.url("/catalog.json"));
+        let mut s = Services::open(env).unwrap();
+        run(&mut s, Command::CatalogCheck { automatic: true })
+            .expect("an automatic failure is swallowed");
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+        assert!(
+            s.catalog_info().last_check.is_some(),
+            "the attempt throttles"
+        );
+        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 1, "no retry within 24 h");
+
+        // The manual action surfaces the failure instead of hiding it.
+        assert!(run(&mut s, Command::CatalogCheck { automatic: false }).is_err());
+    }
+
+    #[test]
+    fn a_corrupt_or_older_cache_never_replaces_the_embedded_catalog() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = environment(temp.path(), String::new());
+        let cache = ddl_core::catalog::cache_path(&env.paths.data);
+        fs::create_dir_all(cache.parent().unwrap()).unwrap();
+        fs::write(&cache, b"{ not json").unwrap();
+        let s = Services::open(env.clone()).unwrap();
+        assert!(!s.catalog_info().updated, "corrupt cache ignored");
+        assert!(s.catalog.recipe("sigil").is_some());
+
+        // A well-formed cache with serial 0 is not newer than the embedded one.
+        let bundle: Bundle = serde_json::from_slice(&bundle_json(0)).unwrap();
+        ddl_core::catalog::store_cache(&env.paths.data, &bundle, 7).unwrap();
+        let s = Services::open(env).unwrap();
+        assert!(!s.catalog_info().updated, "an equal serial is not newer");
+    }
+}

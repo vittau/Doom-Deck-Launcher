@@ -127,9 +127,12 @@ pub struct Progress {
 pub struct DownloadRequest {
     /// Primary URL followed by mirrors. Tried in order.
     pub urls: Vec<String>,
-    /// The SHA-256 the file must have. Always known for DDL's sources (D-007,
-    /// D-010), and the cache key.
-    pub expected_sha256: Sha256,
+    /// The SHA-256 the file must have. Always known for DDL's reviewed sources
+    /// (D-007, D-010), and the cache key. `None` for a document fetched without
+    /// a published hash (spec 019, R3: the catalog bundle), in which case there
+    /// is no pin to verify against and no stable cache key to look up, so the
+    /// transfer is never reused as if it were verified.
+    pub expected_sha256: Option<Sha256>,
     /// The exact expected size, when known. Exceeding it aborts the transfer.
     pub expected_size: Option<u64>,
     /// Hard upper bound on the response size, mirroring the recipe/engine cap.
@@ -149,7 +152,22 @@ impl DownloadRequest {
     ) -> Self {
         Self {
             urls: vec![url.into()],
-            expected_sha256,
+            expected_sha256: Some(expected_sha256),
+            expected_size: None,
+            max_size,
+            allowed_hosts,
+        }
+    }
+
+    /// A request with no SHA-256 pin, for a document whose exact bytes DDL
+    /// cannot know ahead of time (spec 019, R3: the catalog bundle). Scheme,
+    /// host, redirect, size and timeout policy are identical to [`Self::new`];
+    /// only the integrity pin and the cache lookup are absent.
+    #[must_use]
+    pub fn unpinned(url: impl Into<String>, max_size: u64, allowed_hosts: HostAllowlist) -> Self {
+        Self {
+            urls: vec![url.into()],
+            expected_sha256: None,
             expected_size: None,
             max_size,
             allowed_hosts,
@@ -313,8 +331,12 @@ impl Fetcher {
             return Err(Error::InvalidUrl { url: String::new() });
         }
 
-        let cache_path = self.downloads_dir.join(request.expected_sha256.to_hex());
-        if let Some(hit) = self.cached(&cache_path, request, progress)? {
+        let cache_path = request
+            .expected_sha256
+            .map(|hash| (self.downloads_dir.join(hash.to_hex()), hash));
+        if let Some((path, expected)) = &cache_path
+            && let Some(hit) = self.cached(path, request, *expected, progress)?
+        {
             return Ok(hit);
         }
 
@@ -325,15 +347,23 @@ impl Fetcher {
             }
             match self.transfer(url, request, cancel, progress) {
                 Ok(transfer) => {
-                    if transfer.sha256 != request.expected_sha256 {
+                    if let Some(expected) = request.expected_sha256
+                        && transfer.sha256 != expected
+                    {
                         last = Some(Error::HashMismatch {
-                            expected: request.expected_sha256,
+                            expected,
                             actual: transfer.sha256,
                         });
                         continue;
                     }
-                    transfer.temp.persist(&cache_path)?;
-                    return Ok(cache_path);
+                    // A pinned transfer lands on its expected cache key; an
+                    // unpinned document is stored by the hash of what arrived.
+                    let destination = cache_path.as_ref().map_or_else(
+                        || self.downloads_dir.join(transfer.sha256.to_hex()),
+                        |(path, _)| path.clone(),
+                    );
+                    transfer.temp.persist(&destination)?;
+                    return Ok(destination);
                 }
                 Err(error @ Error::Cancelled) => return Err(error),
                 Err(error) => last = Some(error),
@@ -343,12 +373,38 @@ impl Fetcher {
         Err(last.expect("urls is non-empty"))
     }
 
-    /// Returns the cached path when it exists and re-hashes to the expected
-    /// value; otherwise `None` (removing a stale file). Spec 006, R3.
+    /// Downloads a small document whose exact bytes are not known ahead of
+    /// time and returns them (spec 019, R3: the catalog bundle).
+    ///
+    /// It runs through the same hardened path as [`Fetcher::download`] —
+    /// HTTPS-only, host allowlist on every hop, redirect limit, size-scaled
+    /// deadline and a hard size cap — but with no SHA-256 pin, so the caller
+    /// must treat the bytes as untrusted input. The bytes are still stored in
+    /// the content-addressed cache.
+    ///
+    /// # Errors
+    ///
+    /// See [`Error`].
+    pub fn download_document(
+        &self,
+        url: impl Into<String>,
+        max_size: u64,
+        allowed_hosts: HostAllowlist,
+        cancel: &CancellationToken,
+    ) -> Result<Vec<u8>, Error> {
+        let request = DownloadRequest::unpinned(url, max_size, allowed_hosts);
+        let mut quiet = |_progress: Progress| {};
+        let path = self.download(&request, cancel, &mut quiet)?;
+        fs::read(&path).map_err(|error| io_error("read downloaded document", error))
+    }
+
+    /// Returns the cached path when it exists and re-hashes to `expected`;
+    /// otherwise `None` (removing a stale file). Spec 006, R3.
     fn cached(
         &self,
         path: &Path,
         request: &DownloadRequest,
+        expected: Sha256,
         progress: &mut dyn FnMut(Progress),
     ) -> Result<Option<PathBuf>, Error> {
         let metadata = match fs::metadata(path) {
@@ -366,7 +422,7 @@ impl Fetcher {
             let _ = fs::remove_file(path);
             return Ok(None);
         }
-        if hash_file(path)? == request.expected_sha256 {
+        if hash_file(path)? == expected {
             progress(Progress {
                 downloaded: size,
                 total: Some(size),
@@ -1232,6 +1288,68 @@ mod tests {
             }
             other => panic!("expected TooSlow, got {other}"),
         }
+        assert_no_temp_files(dir.path());
+    }
+
+    #[test]
+    fn unpinned_document_is_fetched_without_a_hash_pin() {
+        let body = b"bundle bytes".to_vec();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::ok(served.clone())
+        });
+        let dir = TestDir::new("document");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+
+        let bytes = fetcher
+            .download_document(
+                server.url("/catalog.json"),
+                4096,
+                allow(&[&server]),
+                &cancel,
+            )
+            .expect("document download");
+        assert_eq!(bytes, body);
+
+        // Without a pin there is no cache key to look up, so a second fetch
+        // reaches the server again rather than reusing a verified file.
+        let again = fetcher
+            .download_document(
+                server.url("/catalog.json"),
+                4096,
+                allow(&[&server]),
+                &cancel,
+            )
+            .expect("second document download");
+        assert_eq!(again, body);
+        assert_eq!(requests.load(Ordering::SeqCst), 2);
+        assert_no_temp_files(dir.path());
+    }
+
+    #[test]
+    fn unpinned_document_respects_the_size_cap() {
+        let body = vec![3u8; 4096];
+        let served = body.clone();
+        let server = Server::start(move |_req| Response::ok(served.clone()));
+        let dir = TestDir::new("document-cap");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let error = fetcher
+            .download_document(
+                server.url("/catalog.json"),
+                1024,
+                allow(&[&server]),
+                &cancel,
+            )
+            .expect_err("size cap");
+        assert!(
+            matches!(error, Error::SizeExceeded { limit: 1024, .. }),
+            "{error}"
+        );
         assert_no_temp_files(dir.path());
     }
 

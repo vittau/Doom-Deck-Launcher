@@ -8,7 +8,9 @@
 //! runtime "catalog missing" failure mode for no benefit).
 //!
 //! The generated file defines `EMBEDDED_HOSTS`, `EMBEDDED_TAGS` (the spec 015
-//! tag vocabulary) and `EMBEDDED_RECIPES`, consumed by `catalog::Catalog::embedded`.
+//! tag vocabulary), `EMBEDDED_RECIPES` and `EMBEDDED_SERIAL` (the catalog
+//! serial, spec 019 R1/R3), consumed by `catalog::Catalog::embedded` and
+//! `catalog::bundle`.
 
 use std::env;
 use std::fs;
@@ -21,6 +23,23 @@ fn main() {
     let dest = out.join("embedded_catalog.rs");
 
     println!("cargo:rerun-if-changed={}", catalog.display());
+
+    // Spec 019, R1/R3: the embedded catalog's serial is the UTC Unix time of
+    // the source commit the catalog was built from. CI sets
+    // `DDL_CATALOG_SERIAL` (`git log -1 --format=%ct`) for the catalog-bundle
+    // job, so the published bundle and the release built from the same commit
+    // agree; `SOURCE_DATE_EPOCH` is honoured as the reproducible-build
+    // convention. Without either (a local or developer build) the serial is
+    // `0`, meaning "unknown": every real published serial is then newer, which
+    // is the safe direction — a development binary accepts the first bundle it
+    // can reach instead of pinning itself to a serial it never learned.
+    println!("cargo:rerun-if-env-changed=DDL_CATALOG_SERIAL");
+    println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
+    let serial = ["DDL_CATALOG_SERIAL", "SOURCE_DATE_EPOCH"]
+        .iter()
+        .find_map(|key| env::var(key).ok())
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .unwrap_or(0);
 
     let hosts = catalog.join("hosts.toml");
     if hosts.is_file() {
@@ -88,6 +107,10 @@ fn main() {
         ));
     }
     code.push_str("];\n");
+    code.push_str(&format!(
+        "/// Spec 019 R1/R3: UTC Unix time of the source commit, or 0 when unknown.\n\
+         pub const EMBEDDED_SERIAL: u64 = {serial};\n"
+    ));
 
     fs::write(&dest, code).expect("write embedded catalog module");
 }

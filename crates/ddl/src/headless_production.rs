@@ -262,6 +262,9 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             Response::ok(auger_package.clone())
         } else if request.target == "/wide.wad" {
             Response::ok(wide_bytes.clone())
+        } else if request.target == "/catalog.json" {
+            // The journey never triggers a catalog check; a 404 keeps it honest.
+            Response::status(404, "no catalog in this fixture")
         } else {
             pg.wait();
             Response::ok(package_body.clone())
@@ -297,6 +300,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         catalog,
         reviewed,
         engine_base: server.url(""),
+        catalog_url: server.url("/catalog.json"),
         runner: Arc::new(GatedRunner {
             gate: play_gate.clone(),
             fake: fake.clone(),
@@ -735,6 +739,63 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .any(|n| n.label == "Check when you are ready. No update check has run.")
     );
     capture(window, "010-settings.png");
+    // Spec 019 R5/A3: the catalog rows render headlessly and the automatic
+    // toggle persists (default on).
+    let catalog_row = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == 74)
+        .expect("the automatic-catalog-updates row renders");
+    assert_eq!(catalog_row.label, "Automatic catalog updates");
+    assert_eq!(catalog_row.detail, "On");
+    let catalog_summary = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.label.starts_with("Catalog:"))
+        .expect("the catalog summary renders");
+    assert!(
+        catalog_summary.label.contains("built-in"),
+        "{}",
+        catalog_summary.label
+    );
+    assert_eq!(
+        ui.get_nodes()
+            .iter()
+            .find(|n| n.id == 73)
+            .expect("the manual catalog check renders")
+            .label,
+        "Check for catalog updates"
+    );
+    ui.invoke_clicked(74);
+    idle(&state);
+    assert!(
+        !state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .catalog
+            .auto_update
+    );
+    assert_eq!(
+        ui.get_nodes().iter().find(|n| n.id == 74).unwrap().detail,
+        "Off"
+    );
+    ui.invoke_clicked(74);
+    idle(&state);
+    assert!(
+        state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .catalog
+            .auto_update
+    );
+    assert_eq!(
+        ui.get_nodes().iter().find(|n| n.id == 74).unwrap().detail,
+        "On"
+    );
     for (focus, name) in [
         (2, "010-settings-folders.png"),
         (3, "010-settings-config.png"),

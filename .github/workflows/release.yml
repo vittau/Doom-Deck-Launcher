@@ -68,8 +68,18 @@ jobs:
 
       # Identical to the build in `ci.yml`: whatever CI proved must be what we
       # ship. `--locked` pins the reviewed dependency versions from Cargo.lock.
+      # Spec 019, R1/R3: export the catalog serial so `build.rs` bakes a real
+      # `EMBEDDED_SERIAL` into the released binary — the same UTC commit time the
+      # `catalog` bundle is built from (see `.github/workflows/ci.yml`). Without
+      # it the serial would be 0 and a cached bundle would always win the
+      # embedded-vs-cached comparison.
       - name: Build ddl in release mode
-        run: cargo build --release --locked -p ddl
+        run: |
+          set -euo pipefail
+          serial="$(git log -1 --format=%ct)"
+          export DDL_CATALOG_SERIAL="$serial"
+          echo "catalog serial: $serial"
+          cargo build --release --locked -p ddl
 
       # A tag could in principle point at a commit CI never saw, so smoke test
       # again here. Both flags exit before a window is created.
