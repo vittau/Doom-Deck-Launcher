@@ -47,7 +47,7 @@ the controller now work (gilrs).
 | F7 | Missing IWAD (e.g. no Ultimate DOOM): Play disabled with the reason and **Add IWAD folder** | Gaming | ⏳ | |
 | F9 | **0.0.3:** Ember Cathedral look is readable at arm's length; screens render without lag (S3) | Gaming | ⏳ | spec 012 A4 |
 | F10 | **0.0.3:** Eviternity installs (≈50 MB) and plays at complevel 11 (MAP01, music, DEHACKED changes active) | Gaming | ⏳ | complevel Proposed |
-| F11 | **0.0.3:** Steam artwork from `ddl/art/` set by hand per the README looks right in the library | Gaming | ⏳ | spec 013 A4 |
+| F11 | **0.0.3:** Steam artwork from `ddl/art/` set by hand per the [Steam Deck guide](steam-deck-guide.md#make-it-look-native-in-steam) looks right in the library | Gaming | ⏳ | spec 013 A4 |
 | F8 | Logs: `~/.local/state/ddl/logs/ddl.log` exists; attach it to any ❌ | Desktop | ⏳ | path shown in Settings → Diagnostics |
 
 ## Engine (specs 003, 004)
@@ -96,7 +96,9 @@ layout.
 | M5 | AUGER;ZENITH with AlternateBlaster add-on: new pistol sound and muzzle flash | Gaming | ⏳ | |
 | M6 | Pistol start toggle resets inventory each map | Gaming | ⏳ | |
 
-## Input and Steam Input (README-only setup)
+## Input and Steam Input (manual setup)
+
+Follow the [controller layouts](steam-deck-guide.md#recommended-steam-deck-controller-setup).
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
