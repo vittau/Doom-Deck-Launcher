@@ -22,6 +22,11 @@ pub struct ActiveInstall {
     pub notices: Vec<String>,
     #[serde(default)]
     pub retired_dirs: Vec<PathBuf>,
+    /// Spec 022: an uninstall marks the install inactive atomically before any
+    /// file is deleted, so a crash can never leave a launchable half-install.
+    /// A startup sweep finishes the deletion and drops this record.
+    #[serde(default)]
+    pub uninstalled: bool,
 }
 impl ActiveInstall {
     pub fn load(path: &Path) -> Result<Option<Self>, ManifestError> {
