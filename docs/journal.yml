@@ -389,3 +389,9 @@
     39065323300 passed with all 9 widescreen status-bar components installed and the bar last
     in -file (spec 017 A4).
   refs: [docs/specs/022-uninstall-mapset.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-023: the owner picked the Rose Compass logo (octagonal rose window / compass around an
+    ember). Spec 016 phase B applies it everywhere spec 013 placed the logo.
+  refs: [docs/design/logo-v2/rose-compass/]
