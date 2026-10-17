@@ -300,3 +300,17 @@
     SteamOS 3.8.0's manifest confirms every engine library (glibc 2.41, pipewire-jack, mesa,
     libglvnd). Pre-release v0.0.4-cli.
   refs: [docs/specs/014-cli-and-linux-e2e.md, docs/reports/014-cli-and-linux-e2e.md, "https://github.com/vittau/Doom-Deck-Launcher/actions/runs/38983844913"]
+- date: 2026-10-16
+  type: decision
+  summary: >-
+    doom_widehud is now GPL-3.0 (author's commit eb3773ce9e, in reply to issue #6; credit
+    requested). Widescreen status bars are unblocked; spec 017 follows the catalog batch.
+  refs: ["https://github.com/NightFright2k19/doom_widehud/issues/6", docs/research/widescreen-statusbars.md]
+- date: 2026-10-16
+  type: spec
+  summary: >-
+    Backlog turned into specs 017 (widescreen status bars), 018 (multiple profiles), 019 (catalog
+    updates without a release — draft, owner decision pending), 020 (recipe changes after
+    install) and 021 (GOG IWAD paths). Order: 021 now; 017 after the catalog batch; 018 after
+    015; 020 after 018.
+  refs: [docs/specs/017-widescreen-status-bars.md, docs/specs/018-multiple-profiles.md, docs/specs/019-catalog-updates.md, docs/specs/020-recipe-change-after-install.md, docs/specs/021-gog-iwad-paths.md]

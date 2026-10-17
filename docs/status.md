@@ -27,17 +27,18 @@
 | Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | Done — e2e green on real network (run 38983844913): AppImage direct + extraction, 4 mapsets, D-011 argv |
 | Catalog batch: Scythe, Alien Vendetta, Sunlust, Ancient Aliens, Valiant, Going Down, BTSX E1/E2, Eviternity II | `catalog/*.toml` | In progress (2× opencode) |
 | Recipe tags, Discover categories, favorites | `specs/015-tags-categories-favorites.md` | In progress (Sonnet fallback; Codex budget low) |
+| README revamp, Steam Deck guide, logo v2 | `specs/016-readme-and-logo-v2.md` | Ready — Codex after its 5-hour window resets |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md`, `research/dsda-engine.md` §7 | Linux host: direct FUSE works (CI); SteamOS 3.8 ships every engine library (glibc 2.41, pipewire-jack); must not run under a Steam Compatibility tool. Deck check pending |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
 | Steam Input handoff, gyro-as-mouse, strict-mode demos | — | Needs Deck Validation |
 
-## Backlog — next major release (owner-requested or deferred; each needs a spec first)
+## Backlog — next major release (owner said go 2026-10-16; specs written)
 
-| Item | Notes |
-| --- | --- |
-| **Widescreen status bars** (owner request 2026-10-16) | Research done (`research/widescreen-statusbars.md`): DSDA v0.30.1 draws a wide `STBAR` automatically; the collection has **no licence** (blocker for auto-download); covers only Eviternity of our 4 mapsets (+ IWAD bars). Proposed path: `user_supplied` component matched by SHA-256 (D-014), or written permission from the author. **Deferred by the owner (2026-10-16)**: permission asked in https://github.com/NightFright2k19/doom_widehud/issues/6 — follow up there before any spec. |
-| Multiple profiles per mapset | UI shows one Default profile today (spec 010); `deck-testing.md` C4. |
-| Catalog change after install | What the UI shows when an installed mapset's recipe changes upstream. |
-| Catalog updates without a DDL release | D-019 embeds the catalog; fetching updates is a separate decision. |
-| GOG IWAD paths | After the Steam paths are validated on the Deck (spec 007). |
+| Item | Spec | State |
+| --- | --- | --- |
+| Widescreen status bars (doom_widehud, GPL-3.0 since `eb3773ce9e`; credit NightFright and contributors) | 017 | Ready — starts after the catalog batch merges |
+| Multiple profiles per mapset (`deck-testing.md` C4) | 018 | Ready — starts after 015 merges (UI overlap) |
+| Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
+| Recipe changes after install | 020 | Ready — after 018 |
+| GOG and other store IWAD paths | 021 | Ready — in progress |
