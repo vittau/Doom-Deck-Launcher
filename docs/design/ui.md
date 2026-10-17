@@ -126,8 +126,7 @@ A's verb describes the focused action (“Import”, “Toggle”, “Choose fol
 “Play” when focus is elsewhere. Disabled actions display why in the content; no hidden shortcuts.
 Sheets trap focus; B cancels, returns to the invoking control and discards uncommitted changes.
 Controller picker: breadcrumb, storage roots, parent row, directory/file list, “Use this folder”
-or “Import file”, B parent then cancel at root. No text entry needed; optional profile renaming
-uses an on-screen keyboard, with generated “Profile 2” names available without typing.
+or “Import file”, B parent then cancel at root. No text entry needed; profile renaming uses D-pad preset names; no text entry or on-screen keyboard is required (spec 018).
 
 Before launching, store screen, mapset/install/profile id, control id, scroll and current options.
 Show “Game running — return here when you exit” while the child owns input; do not interpret
@@ -214,8 +213,18 @@ Load-order editor: every enabled row numbered, required/dependency constraints e
 enters move mode; up/down selects a valid position, A commits, B cancels. Invalid positions are
 marked “Required order”; cannot silently turn a verified recipe into an arbitrary permutation.
 Where recipe has one valid ordering (both worked examples), rows are inspectable but locked;
-the editor says why. Profiles save independent choices; New profile clones current settings,
-Delete profile confirms and does not delete installed files. Unverified overrides visibly remove
+the editor says why. Profiles save independent choices. The named profile row opens a framed picker; Mapset detail
+also offers the active profile below Favorite. **D-pad** moves between actions; **A** on Previous /
+Next switches the active profile immediately (no wrap), remembered per mapset. **New — copy
+settings** clones the current options; **New — defaults** starts with default options. Both select
+“Profile 2”, “Profile 3”, … using the first free number and keep saves separate. **Rename profile**
+opens D-pad presets: Default, Casual, UV, Pistol start, Co-op, Speedrun, and the first free Profile N.
+**Delete profile** opens a confirmation naming the profile and saying its saves and screenshots
+will be deleted. Cancel is initially focused; **Right, A** confirms; **B** cancels and returns to
+the invoking profile control. The last profile cannot be deleted. The profile document is deleted
+before its runtime directories; installed mapset files are retained. **B** closes either picker
+without another action; switching is saved immediately. L1/R1 remain inactive within these sheets.
+Home Continue shows and launches the remembered profile; Library shows the profile count. Unverified overrides visibly remove
 verified confidence. Effective order updates immediately after each change.
 
 Loading “Checking launch requirements…” blocks Play until resolver completes; empty/no profile
