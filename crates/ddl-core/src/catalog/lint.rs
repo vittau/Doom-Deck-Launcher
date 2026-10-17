@@ -14,6 +14,10 @@ use url::Url;
 pub(crate) const MAX_BYTES: u64 = 512 * 1024 * 1024;
 pub(crate) const MAX_RECIPE_BYTES: u64 = 1024 * 1024;
 
+/// Repository-relative directory holding the bundled screenshots (spec 023,
+/// D-024). A recipe's `[[screenshots]]` `asset` is relative to this directory.
+pub const SCREENSHOTS_DIR: &str = "crates/ddl/ui/assets/screenshots";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub file: PathBuf,
@@ -125,6 +129,12 @@ pub fn check_status_bar_lumps(names: &[String]) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// Whether `asset` is a safe relative screenshot path with an accepted image
+/// extension (spec 023, R2).
+pub(crate) fn screenshot_asset(asset: &str) -> bool {
+    safe_path(asset) && !asset.contains("!/") && super::image::accepted_asset_extension(asset)
 }
 
 pub(crate) fn checked_url(s: &str, allowed: &[String]) -> Result<Url, String> {
@@ -249,6 +259,22 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
             image.permission.trim().is_empty(),
             "missing image permission",
             "state permission to use the image",
+        );
+    }
+    let mut screenshot_assets = HashSet::new();
+    for (i, s) in r.screenshots.iter().enumerate() {
+        let key = format!("screenshots.{i}");
+        issue(
+            format!("{key}.asset"),
+            !screenshot_asset(&s.asset) || !screenshot_assets.insert(&s.asset),
+            "invalid or duplicate screenshot asset",
+            "use a unique relative path like <id>/01.jpg with a .jpg/.jpeg/.png/.webp extension",
+        );
+        issue(
+            format!("{key}.credit"),
+            s.credit.trim().is_empty(),
+            "missing screenshot credit",
+            "credit the mapset authors or who took the screenshot",
         );
     }
     let mut variants = HashSet::new();
@@ -831,6 +857,137 @@ fn cosmetic_member_paths<'a>(r: &'a Recipe, package: &'a Package) -> Vec<&'a str
         .collect()
 }
 
+/// Checks each referenced screenshot exists on disk, is a PNG/JPEG/WebP within
+/// the size and dimension bounds, and has a `SOURCES.toml` entry with a credit
+/// and source URL (spec 023, R1/R2). Offline and filesystem-bound: used only by
+/// `lint_paths`, which has real paths, never by the embedded loader.
+fn validate_screenshots(r: &Recipe, recipe_path: &Path) -> Vec<Violation> {
+    use super::image::{
+        MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_PIXELS, MIN_SCREENSHOT_HEIGHT, MIN_SCREENSHOT_WIDTH,
+        image_info,
+    };
+    if r.screenshots.is_empty() {
+        return Vec::new();
+    }
+    // `<catalog>/<id>.toml` -> repository root -> screenshots directory.
+    let root = recipe_path
+        .parent()
+        .and_then(Path::parent)
+        .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
+        .join(SCREENSHOTS_DIR);
+    // A synthetic or partial tree (unit tests, a catalog fragment) has no
+    // screenshots directory; the structural rules still apply, but there is
+    // nothing on disk to inspect. The shipped catalog always has it, so CI
+    // checks every committed image.
+    if !root.is_dir() {
+        return Vec::new();
+    }
+    let mut errors = Vec::new();
+    for (i, s) in r.screenshots.iter().enumerate() {
+        let key = format!("screenshots.{i}");
+        let full = root.join(&s.asset);
+        let bytes = match read_screenshot(&full) {
+            Ok(bytes) => bytes,
+            Err(reason) => {
+                errors.push(Violation {
+                    key: format!("{key}.asset"),
+                    message: reason,
+                    hint: format!(
+                        "commit the image under {SCREENSHOTS_DIR}/{id}",
+                        id = s.asset.rsplit_once('/').map_or("", |(dir, _)| dir)
+                    ),
+                });
+                continue;
+            }
+        };
+        let mut asset_issue = |message: String, hint: &str| {
+            errors.push(Violation {
+                key: format!("{key}.asset"),
+                message,
+                hint: hint.into(),
+            });
+        };
+        if bytes.len() as u64 > MAX_SCREENSHOT_BYTES {
+            asset_issue(
+                format!(
+                    "screenshot `{}` is {} bytes, over the {} byte limit",
+                    s.asset,
+                    bytes.len(),
+                    MAX_SCREENSHOT_BYTES
+                ),
+                "resize the image to 640x360 JPEG (spec 023, R1)",
+            );
+        }
+        match image_info(&bytes) {
+            Ok((_, width, height)) => {
+                if width < MIN_SCREENSHOT_WIDTH || height < MIN_SCREENSHOT_HEIGHT {
+                    asset_issue(
+                        format!(
+                            "screenshot `{}` is {width}x{height}, smaller than {MIN_SCREENSHOT_WIDTH}x{MIN_SCREENSHOT_HEIGHT}",
+                            s.asset
+                        ),
+                        "use a card-sized image at least 640x360",
+                    );
+                } else if u64::from(width) * u64::from(height) > MAX_SCREENSHOT_PIXELS {
+                    asset_issue(
+                        format!(
+                            "screenshot `{}` is {width}x{height}, too many pixels",
+                            s.asset
+                        ),
+                        "use a card-sized image; DDL rejects decompression-bomb dimensions",
+                    );
+                }
+            }
+            Err(error) => asset_issue(
+                format!("screenshot `{}`: {error}", s.asset),
+                "commit a PNG, JPEG or WebP image",
+            ),
+        }
+        match sources_entry(&full) {
+            Some(source) if !source.credit.trim().is_empty() && !source.source_url.trim().is_empty() => {}
+            _ => errors.push(Violation {
+                key: format!("{key}.asset"),
+                message: format!(
+                    "screenshot `{}` has no SOURCES.toml entry with a credit and source URL",
+                    s.asset
+                ),
+                hint: format!(
+                    "add a [[screenshot]] entry to {SCREENSHOTS_DIR}/{}/SOURCES.toml (spec 023, R1)",
+                    s.asset.rsplit_once('/').map_or("", |(dir, _)| dir)
+                ),
+            }),
+        }
+    }
+    errors
+}
+
+/// Reads at most one byte more than the screenshot cap, so an oversized file is
+/// detected without reading it whole.
+fn read_screenshot(path: &Path) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    let file = fs::File::open(path).map_err(|error| format!("missing screenshot: {error}"))?;
+    let mut bytes = Vec::new();
+    file.take(super::image::MAX_SCREENSHOT_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("unreadable screenshot: {error}"))?;
+    Ok(bytes)
+}
+
+/// The `SOURCES.toml` entry matching `asset`'s file name, when present.
+fn sources_entry(asset_path: &Path) -> Option<ScreenshotSource> {
+    let dir = asset_path.parent()?;
+    let file = asset_path.file_name()?.to_str()?;
+    let text = read_text(&dir.join("SOURCES.toml")).ok()?;
+    let sources: ScreenshotSources = toml::from_str(&text).ok()?;
+    if sources.schema_version != 1 {
+        return None;
+    }
+    sources
+        .screenshot
+        .into_iter()
+        .find(|entry| entry.file == file)
+}
+
 /// Lints directories or individual recipes. Hosts are supplied explicitly so
 /// callers/tests need not depend on cwd. Network occurs only with `Some(fetch)`.
 pub fn lint_paths(
@@ -940,6 +1097,7 @@ pub fn lint_paths(
         };
         let mut violations = validate(&r, &path, &hosts);
         violations.extend(validate_tags(&r, &vocabulary));
+        violations.extend(validate_screenshots(&r, &path));
         let valid = violations.is_empty();
         for v in violations {
             errors.push(diag(&path, line_for(&text, &v.key), v.message, &v.hint));

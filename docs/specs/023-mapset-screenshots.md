@@ -41,9 +41,9 @@ Runtime screenshot downloads. User-supplied images. Videos.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2, R4) — all 13 recipes have at least one screenshot with source/credit;
+- [x] **A1** (R1, R2, R4) — all 13 recipes have at least one screenshot with source/credit;
   lint tests for missing asset, oversize, missing credit; CONTRIBUTING updated.
 - [ ] **A2** (R3) — headless renders: Discover (all cards with screenshots), detail and art band
   with the credit caption.
-- [ ] **A3** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A4** — *Needs Deck Validation:* screenshots look sharp on the Deck panel.

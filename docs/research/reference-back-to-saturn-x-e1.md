@@ -192,3 +192,19 @@ unmodified. Redistribution is permitted under the terms above; reuse as a base i
   third episode is part of this recipe.
 - **Canonical page unread.** The Doomworld entry was Cloudflare-blocked from this host; a
   contributor with browser access could confirm there is no newer official build.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/back-to-saturn-x-e1/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+The screenshots are hosted by the project lead on `esselfortium.net` and were linked from the E1 release thread; the author's site is reachable directly.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://esselfortium.net/images/btsx/e1_1.png> | <https://www.doomworld.com/vb/thread/62529> | Back to Saturn X team | 1280x700 (`e1_1.png`) |
+
+**Why representative:** The E1 shots show the mapset's red-sky tech-base exteriors and the OTEX texture set in play.

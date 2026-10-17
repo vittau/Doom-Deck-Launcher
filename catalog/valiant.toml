@@ -10,6 +10,16 @@ description = "DOOM II megawad: 32 MBF-format maps across five themed episodes, 
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided Valiant.txt travels with the file, unmodified and intact; the author states permission was obtained from the original authors of any included resources. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["classics", "cacowards", "megawad"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/valiant/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "valiant/01.jpg"
+credit = "Paul \"skillsaw\" DeBruyne"
+[[screenshots]]
+asset = "valiant/02.jpg"
+credit = "Paul \"skillsaw\" DeBruyne"
+
 [base_game]
 game = "doom2"
 variants = []

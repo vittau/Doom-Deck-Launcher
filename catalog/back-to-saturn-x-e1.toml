@@ -10,6 +10,16 @@ description = "DOOM II: 27 vanilla-compatible maps (MAP01–MAP25, MAP31–MAP32
 permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."
 tags = ["classics", "cacowards", "community-projects"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/back-to-saturn-x-e1/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "back-to-saturn-x-e1/01.jpg"
+credit = "Back to Saturn X team (Sarah \"Esselfortium\" Mancuso et al.)"
+[[screenshots]]
+asset = "back-to-saturn-x-e1/02.jpg"
+credit = "Back to Saturn X team (Sarah \"Esselfortium\" Mancuso et al.)"
+
 [base_game]
 game = "doom2"
 variants = []

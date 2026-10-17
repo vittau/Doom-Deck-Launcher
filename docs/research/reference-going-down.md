@@ -167,3 +167,19 @@ graphics credits (Plums: city sky texture; obsidian: dehacked help) are listed i
   author's intent without it must be confirmed on the Deck (**Needs Deck Validation**).
 - **Going Down: Turbo (2024).** A separate official remaster with its own `/idgames` entry; it
   would be its own recipe, out of scope here.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/going-down/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+The screenshots are the author's own in the mapset's release thread (`doomworld.com/vb/thread/65955`); Doomworld blocks automation, so the thread was read from an earlier Wayback Machine snapshot and the images fetched from their original `mediafire.com` URLs.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <http://www.mediafire.com/convkey/24f9/new6i797i9dcwcs4g.jpg> | <https://www.doomworld.com/vb/thread/65955> | Cyriak Harris (mouldy) | 515x269 (`new6i797i9dcwcs4g.jpg`) |
+
+**Why representative:** They show recognisable Going Down interiors (the office/library start of the descent).

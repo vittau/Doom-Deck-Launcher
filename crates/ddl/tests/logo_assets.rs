@@ -14,11 +14,12 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
         ("social-preview.png", 1280, 640, false),
         ("contact-sheet.png", 900, 720, false),
     ] {
-        let mut reader = png::Decoder::new(std::io::BufReader::new(
+        let mut decoder = png::Decoder::new(std::io::BufReader::new(
             std::fs::File::open(root.join(file)).unwrap(),
-        ))
-        .read_info()
-        .unwrap();
+        ));
+        // The social preview is indexed to stay under GitHub's 1 MB limit; compare as RGBA.
+        decoder.set_transformations(png::Transformations::ALPHA);
+        let mut reader = decoder.read_info().unwrap();
         let mut pixels = vec![0; reader.output_buffer_size().unwrap()];
         let info = reader.next_frame(&mut pixels).unwrap();
         assert_eq!((info.width, info.height), (width, height), "{file}");

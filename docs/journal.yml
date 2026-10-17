@@ -453,3 +453,20 @@
     HTTPS from GitHub is enough for now, and the bundle lives on a CI-maintained `catalog` branch
     instead of a fixed pre-release (owner found that confusing). Spec 019 now Ready.
   refs: [docs/specs/019-catalog-updates.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Social preview v2: the owner found the old background too random. The new 1280×640 preview
+    sets the Rose Compass in a carved bronze cathedral wall ("Rose Window"); two alternatives
+    (Threshold portal, relief atlas) are kept under `social-preview-variants/`. Generated
+    layers and prompts are committed; export `--check` reproduces the PNGs.
+  refs: [docs/design/logo/SOCIAL-PREVIEW-REPORT.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 023 phase A merged: 23 in-game screenshots (640×360 JPEG, ≤ 73 KB) bundled for all 13
+    recipes with SOURCES.toml (source, credit, retrieval date, permission text), an optional
+    `[[screenshots]]` recipe field with offline lint (magic bytes, size, dimensions, credit), and a
+    build-time index for the UI. Phase B (UI) dispatched to Codex. Also fixed the logo-asset test,
+    which rejected the indexed (under-1-MB) social preview merged earlier.
+  refs: [docs/reports/023-mapset-screenshots.md]

@@ -23,6 +23,16 @@ description = "DOOM II megawad: 32 maps (six 5-map chapters plus two secret maps
 permission = "Licensed CC BY-NC-ND 4.0. DDL downloads the unmodified archive from its canonical /idgames source; no modification, repackaging or commercial use, and the bundled credits and changelog are kept intact and unedited. See the kept text members for the full terms and resource credits."
 tags = ["classics", "cacowards", "community-projects", "megawad"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/eviternity/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "eviternity/01.jpg"
+credit = "Eviternity team (Joshua \"Dragonfly\" O'Sullivan et al.)"
+[[screenshots]]
+asset = "eviternity/02.jpg"
+credit = "Eviternity team (Joshua \"Dragonfly\" O'Sullivan et al.)"
+
 [base_game]
 game = "doom2"
 variants = []

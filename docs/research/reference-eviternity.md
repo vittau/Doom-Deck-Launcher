@@ -193,3 +193,19 @@ ownership; `[[images]]` remain lint-only metadata today.
   PrBoom+ needs a Deck run (**Needs Deck Validation**).
 - **DSDArchive divergence.** Why the DSDArchive copy carries a shorter `Eviternity.txt` is unknown;
   DDL excludes it as a mirror, but a future review could document the difference.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/eviternity/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+The official release screenshots are hosted on the project lead's site `www.dfdoom.com` and were linked from the mapset's release thread (`doomworld.com/vb/thread/103425`); dfdoom.com is reachable directly.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://www.dfdoom.com/wp-content/uploads/2018/12/evi-post-04.jpg> | <https://www.doomworld.com/vb/thread/103425> | Eviternity team | 1896x1042 (`evi-post-04.jpg`) |
+
+**Why representative:** The shots are in-game views of Eviternity's golden-lit tech base, not the title screen or box art.

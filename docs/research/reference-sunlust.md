@@ -177,3 +177,19 @@ unmodified. Redistribution is permitted under the terms above; reuse as a base i
   any exists.
 - **`M_DOOM`/`extra_info` credit chain.** `sunlust_extra_info.txt` references "gothictx or
   cc4-tex" and other resource credits; the recipe keeps the file so those credits ship intact.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/sunlust/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+The screenshots are the authors' own in the mapset's release thread (`doomworld.com/forum/topic/68089`); Doomworld blocks automation, so the thread was read from its Wayback Machine snapshot and the images fetched from their original `i.imgur.com` URLs.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://i.imgur.com/MEFlz2d.png> | <https://www.doomworld.com/forum/topic/68089-sunlust-on-idgames/> | Ribbiks & Dannebubinga | 1440x900 (`MEFlz2d.png`) |
+
+**Why representative:** The shot shows a recognisable Sunlust marble arena with its monster composition, not the title screen.

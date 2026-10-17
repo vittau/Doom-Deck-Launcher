@@ -195,3 +195,19 @@ context, and should be ignored if using a port such as zdoom."*
 - **`Alien Vendetta: Black Label` (2016).** A separate official two-level expansion on the AV
   website, not part of this `/idgames` package and not on an allowlisted host, so it is out of
   scope for this recipe.
+
+
+## Screenshots (spec 023, D-024)
+
+Bundled under `crates/ddl/ui/assets/screenshots/alien-vendetta/`; the `SOURCES.toml` beside the
+images records each file's source URL, source page, credit, original size, retrieval date
+and any permission text found. Retrieved 2026-10-17; each file is a 640x360 JPEG card crop
+of the original below.
+
+Reachable directly on the mapset's own site (`doom2.net/av`), which hosts an official screenshots page; no Wayback round-trip was needed.
+
+| Asset | Source image URL | Source page | Credit | Original |
+| --- | --- | --- | --- | --- |
+| `01.jpg` | <https://doom2.net/av/images/av01.png> | <https://doom2.net/av/screens.html> | Alien Vendetta team | 1280x800 (`av01.png`) |
+
+**Why representative:** The official Alien Vendetta shots show recognisable in-game views of the mapset's early maps (a nukage-flooded tech base and a marble interior), not the title screen.

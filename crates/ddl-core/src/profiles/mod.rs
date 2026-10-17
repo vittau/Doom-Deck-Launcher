@@ -50,6 +50,7 @@ pub(crate) fn test_recipe() -> crate::catalog::Recipe {
         page: "https://example.invalid/page".to_owned(),
         description: "Test recipe.".to_owned(),
         permission: "Test.".to_owned(),
+        screenshots: Vec::new(),
         images: Vec::new(),
         base_game: BaseGame {
             game: Game::Doom,

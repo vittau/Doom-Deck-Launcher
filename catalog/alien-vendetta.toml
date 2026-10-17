@@ -24,6 +24,16 @@ description = "DOOM II megawad: 32 vanilla-format maps by a team of authors, wit
 permission = "Authors may not use the levels as a base for new levels, and the AV-specific graphics may not be reused. Redistribution is permitted provided AV.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits and changelog files."
 tags = ["classics", "community-projects", "megawad"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/alien-vendetta/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "alien-vendetta/01.jpg"
+credit = "Alien Vendetta team (Anders Johnsen et al.)"
+[[screenshots]]
+asset = "alien-vendetta/02.jpg"
+credit = "Alien Vendetta team (Anders Johnsen et al.)"
+
 [base_game]
 game = "doom2"
 variants = []
