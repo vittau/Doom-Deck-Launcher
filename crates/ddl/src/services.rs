@@ -1502,7 +1502,7 @@ mod tests {
         // Loading alone leaves the old file as written.
         assert_eq!(state_file(&env)["schema_version"], 1);
         let snapshot = s.snapshot().unwrap();
-        assert_eq!(snapshot.folders, [folder.clone()]);
+        assert_eq!(snapshot.folders, std::slice::from_ref(&folder));
         assert!(snapshot.items.iter().all(|i| !i.favorite));
         // The next save writes schema 2 with the old data and the new field.
         favorite(&mut s, "sigil-ii").unwrap();
