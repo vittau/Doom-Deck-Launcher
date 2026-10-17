@@ -541,10 +541,12 @@ fn recipe_change_categories_and_combinations() {
     assert_eq!(classify(&manifest, &old, None), RecipeStatus::Removed);
     let mut new = old.clone();
     new.authors.push("Another author".into());
+    new.compatibility.engine.status = VerificationStatus::Verified;
     new.tags.push("test".into());
     new.packages[0]
         .urls
         .push("https://mirror.invalid/maps.zip".into());
+    new.packages[0].members.reverse();
     assert_eq!(
         classify(&manifest, &old, Some(&new)),
         RecipeStatus::MetadataOnly
@@ -638,4 +640,37 @@ fn retired_cleanup_refuses_profile_paths_and_symlink_escapes() {
         );
     }
     assert_eq!(std::fs::read(save.join("save.dsg")).unwrap(), b"save");
+}
+
+#[test]
+fn active_record_round_trips_and_rejects_unknown_manifest_versions() {
+    let recipe = fixture("active", "https://example.invalid/maps.zip").recipe;
+    let active = ActiveInstall {
+        schema_version: 1,
+        manifest: InstallManifest {
+            schema_version: SCHEMA_VERSION,
+            recipe_id: recipe.id.clone(),
+            release: recipe.release.clone(),
+            recipe_sha256: recipe_content_sha256(&recipe).unwrap(),
+            installed_at: 1,
+            packages: vec![],
+            members: vec![],
+        },
+        recipe,
+        previous_recipe: None,
+        pending_profiles: vec![],
+        notices: vec![],
+        retired_dirs: vec![],
+    };
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("active.json");
+    active.save(&path).unwrap();
+    assert_eq!(ActiveInstall::load(&path).unwrap(), Some(active.clone()));
+    let mut bad = active;
+    bad.manifest.schema_version = 99;
+    bad.save(&path).unwrap();
+    assert!(matches!(
+        ActiveInstall::load(&path),
+        Err(ManifestError::UnsupportedSchema(99))
+    ));
 }

@@ -253,20 +253,18 @@ impl Runtime {
                         Ok(snapshot) => {
                             self.snapshot = Some(*snapshot);
                             self.problem = None;
-                            if let Some(Command::UpdateMapset(id)) = &command {
-                                if let Some(item) = self
+                            if let Some(Command::UpdateMapset(id)) = &command
+                                && let Some(item) = self
                                     .snapshot
                                     .as_ref()
                                     .and_then(|s| s.items.iter().find(|i| &i.recipe.id == id))
-                                {
-                                    if !item.update_notice.is_empty() {
-                                        ui.set_toast(value(
-                                            ui,
-                                            T::RecipeNotice,
-                                            item.update_notice.join(" · "),
-                                        ));
-                                    }
-                                }
+                                && !item.update_notice.is_empty()
+                            {
+                                ui.set_toast(value(
+                                    ui,
+                                    T::RecipeNotice,
+                                    item.update_notice.join(" · "),
+                                ));
                             }
                             match command {
                                 Some(Command::Startup) => {

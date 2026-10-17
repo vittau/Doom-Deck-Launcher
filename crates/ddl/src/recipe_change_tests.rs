@@ -227,12 +227,13 @@ fn failed_download_member_verification_cancellation_and_publication_keep_old_ins
         if kind == 2 {
             cancel.cancel();
         }
-        if kind == 3 {
-            // A directory at the atomic replacement target makes rename fail reliably.
-            fs::create_dir(s.installer.active_path("auger-zenith").unwrap()).unwrap();
-        }
+        let active_path = s.installer.active_path("auger-zenith").unwrap();
         assert!(
-            s.update_mapset_inner("auger-zenith", &cancel, &mut |_| {
+            s.update_mapset_inner("auger-zenith", &cancel, &mut |p| {
+                // Inject failure at the actual publication point, after staging.
+                if kind == 3 && p.stage == ddl_core::downloads::InstallStage::Commit {
+                    fs::create_dir(&active_path).unwrap();
+                }
                 if kind == 5 {
                     cancel.cancel();
                 }
@@ -420,4 +421,23 @@ fn removed_catalog_install_launches_through_the_fake_engine() {
             .exit_status,
         dsda::LaunchExit::Clean
     ));
+}
+
+#[test]
+fn cli_update_errors_explain_unknown_and_uninstalled_mapsets() {
+    let (_temp, _server, env, _hits) = setup();
+    let mut s = Services::open(env).unwrap();
+    assert!(
+        s.update_mapset("auger-zenith", &mut |_| {})
+            .unwrap_err()
+            .to_string()
+            .contains("ddl mapset install auger-zenith")
+    );
+    assert!(
+        s.update_mapset("missing", &mut |_| {})
+            .unwrap_err()
+            .to_string()
+            .contains("not in the catalog")
+    );
+    assert!(s.mapset_status(Some("missing")).is_err());
 }

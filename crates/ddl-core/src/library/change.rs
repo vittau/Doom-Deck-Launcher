@@ -82,18 +82,22 @@ pub fn classify(
     if installed == new {
         return RecipeStatus::Current;
     }
-    let mut changes = Changes::default();
-    changes.content = manifest.release != new.release
+    let content_changed = manifest.release != new.release
         || content(installed) != content(new)
         || manifest.packages.iter().any(|held| {
             !new.packages
                 .iter()
                 .any(|p| p.id == held.id && p.sha256 == held.sha256 && p.size == held.size)
         });
-    changes.launch = installed.base_game != new.base_game
+    let launch_changed = installed.base_game != new.base_game
         || installed.compatibility.complevel != new.compatibility.complevel
-        || installed.compatibility.engine != new.compatibility.engine
+        || installed.compatibility.engine.range != new.compatibility.engine.range
         || installed.compatibility.runtime.warp != new.compatibility.runtime.warp;
+    let mut changes = Changes {
+        content: content_changed,
+        launch: launch_changed,
+        ..Changes::default()
+    };
     for c in &installed.components {
         match new.components.iter().find(|n| n.id == c.id) {
             None if c.optional => changes.removed_components.push(c.id.clone()),
@@ -123,16 +127,15 @@ pub fn classify(
         RecipeStatus::MetadataOnly
     }
 }
-fn content(
-    recipe: &Recipe,
-) -> Vec<(
-    &str,
-    &str,
+type PackageIdentity<'a> = (
+    &'a str,
+    &'a str,
     u64,
     crate::catalog::PackageKind,
-    &[crate::catalog::Member],
-)> {
-    recipe
+    std::collections::BTreeMap<&'a str, &'a crate::catalog::Member>,
+);
+fn content(recipe: &Recipe) -> Vec<PackageIdentity<'_>> {
+    let mut packages: Vec<_> = recipe
         .packages
         .iter()
         .map(|p| {
@@ -141,10 +144,12 @@ fn content(
                 p.sha256.as_str(),
                 p.size,
                 p.kind,
-                p.members.as_slice(),
+                p.members.iter().map(|m| (m.id.as_str(), m)).collect(),
             )
         })
-        .collect()
+        .collect();
+    packages.sort_by_key(|p| p.0);
+    packages
 }
 
 /// Preserve existing choices, drop removed ones, and apply defaults only to new add-ons.

@@ -509,10 +509,10 @@ fn parse_mapset(args: &[OsString]) -> Result<Command, ParseError> {
                 return Err(ParseError::unknown(&args[2].to_string_lossy()));
             }
             let id = args.get(1).map(|s| s.to_string_lossy().into_owned());
-            if let Some(id) = &id {
-                if id.starts_with('-') {
-                    return Err(ParseError::unknown(id));
-                }
+            if let Some(id) = &id
+                && id.starts_with('-')
+            {
+                return Err(ParseError::unknown(id));
             }
             if update {
                 Ok(Command::MapsetUpdate {

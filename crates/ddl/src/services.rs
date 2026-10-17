@@ -179,10 +179,10 @@ impl AppState {
 struct UnpublishedGeneration(Option<PathBuf>);
 impl Drop for UnpublishedGeneration {
     fn drop(&mut self) {
-        if let Some(path) = &self.0 {
-            if let Err(error) = fs::remove_dir_all(path) {
-                tracing::warn!(%error, path=%path.display(), "unpublished generation cleanup deferred");
-            }
+        if let Some(path) = &self.0
+            && let Err(error) = fs::remove_dir_all(path)
+        {
+            tracing::warn!(%error, path=%path.display(), "unpublished generation cleanup deferred");
         }
     }
 }
@@ -656,6 +656,23 @@ impl Services {
         progress: &mut dyn FnMut(InstallProgress),
     ) -> Result<InstallManifest, CliFailure> {
         let _lock = self.lock_cli()?;
+        if self.catalog.recipe(id).is_none() {
+            return Err(CliFailure::message(format!(
+                "`{id}` is not in the catalog; an installed copy can still be launched"
+            )));
+        }
+        let recipe = self
+            .recipe(id)
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        if self
+            .manifest(&recipe)
+            .map_err(|e| CliFailure::message(e.to_string()))?
+            .is_none()
+        {
+            return Err(CliFailure::message(format!(
+                "`{id}` is not installed; use `ddl mapset install {id}`"
+            )));
+        }
         self.update_mapset_inner(id, &CancellationToken::new(), progress)
             .map_err(|e| CliFailure::message(e.to_string()))
     }
@@ -739,12 +756,12 @@ impl Services {
             if profiles.is_empty() {
                 profiles.push(default_profile(&recipe));
             }
-            if let Some(active) = self.active(&recipe.id)? {
-                if let Some(old) = &active.previous_recipe {
-                    for profile in &mut profiles {
-                        if active.pending_profiles.contains(&profile.id) {
-                            reconcile_profile(profile, old, &active.recipe);
-                        }
+            if let Some(active) = self.active(&recipe.id)?
+                && let Some(old) = &active.previous_recipe
+            {
+                for profile in &mut profiles {
+                    if active.pending_profiles.contains(&profile.id) {
+                        reconcile_profile(profile, old, &active.recipe);
                     }
                 }
             }

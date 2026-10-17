@@ -42,6 +42,11 @@ impl ActiveInstall {
         if held.schema_version != 1 {
             return Err(ManifestError::UnsupportedSchema(held.schema_version));
         }
+        if held.manifest.schema_version != super::SCHEMA_VERSION {
+            return Err(ManifestError::UnsupportedSchema(
+                held.manifest.schema_version,
+            ));
+        }
         if held.recipe.id != held.manifest.recipe_id || held.recipe.release != held.manifest.release
         {
             return Err(ManifestError::Parse(
