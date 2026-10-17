@@ -8,6 +8,7 @@ release = "1.0.1 (2020-08-13)"
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e2"
 description = "DOOM II: vanilla-compatible Episode 2 (map slots MAP01–MAP27 and MAP31) with a custom texture set and MIDI music; the release splits its content across two WADs that must be loaded together, and bundles a MAP20 patch for old ports."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."
+tags = ["classics", "community-projects"]
 
 [base_game]
 game = "doom2"
@@ -31,7 +32,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-back-to-saturn-x-e2.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
-notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Complevel 2 is the authors' explicit value ('PRBOOM USERS USE COMPLEVEL 2 OR MAP20 WILL BREAK'); no gameplay test performed."
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Complevel 2 is the authors' explicit value ('PRBOOM USERS USE COMPLEVEL 2 OR MAP20 WILL BREAK'); no gameplay test performed. Tags: classics = release 1.0.1 dated 2020-08-13, over five years before this review; community-projects = release text credits \"Esselfortium and a lot of wonderful people\" (docs/research/reference-back-to-saturn-x-e2.md, Confirmed quoted). No Cacoward could be confirmed for this episode (DoomWiki's Back to Saturn X page mentions a 2014 Cacoward without naming the episode; web search could not settle it and doomworld.com blocks automated fetches), so it is not tagged cacowards. Not tagged megawad or episode: 27 levels (map slots MAP01–MAP27 and MAP31) is under 30 and over 9."
 limitations = ["Needs Deck Validation: IWAD/complevel, two-WAD load order, gameplay and audio.", "The canonical Doomworld page is Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror.", "The bundled map20_for_old_ports.zip is a genuine official component but is deliberately not offered: it is documented for old Boom/ZDoom-derived ports and is NOT vanilla compatible, and DSDA-Doom with complevel 2 does not need it.", "The separate btsx_e2.deh is for vanilla/Chocolate Doom and is intentionally not loaded: DSDA-Doom reads the embedded DEHACKED lump of btsx_e2a.wad."]
 
 [[packages]]
