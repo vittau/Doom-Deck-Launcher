@@ -1,0 +1,24 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (640x360 JPEG).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://doom2.net/av/images/av01.png"
+source_page = "https://doom2.net/av/screens.html"
+credit = "the Alien Vendetta team"
+original_size = "1280x800"
+retrieved = "2026-10-17"
+permission = "Published by the Alien Vendetta team on the official page (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."
+
+[[screenshot]]
+file = "02.jpg"
+source_url = "https://doom2.net/av/images/av05.png"
+source_page = "https://doom2.net/av/screens.html"
+credit = "the Alien Vendetta team"
+original_size = "1280x800"
+retrieved = "2026-10-17"
+permission = "Published by the Alien Vendetta team on the official page (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."
