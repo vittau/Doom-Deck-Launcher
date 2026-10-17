@@ -29,6 +29,7 @@ fn reference_recipes_round_trip_and_lint_offline() {
         "back-to-saturn-x-e1",
         "back-to-saturn-x-e2",
         "eviternity",
+        "eviternity-ii",
         "sigil",
         "sigil-ii",
         "sunlust",
@@ -693,6 +694,7 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
             "back-to-saturn-x-e1",
             "back-to-saturn-x-e2",
             "eviternity",
+            "eviternity-ii",
             "sigil",
             "sigil-ii",
             "sunlust"
@@ -704,6 +706,7 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
         "back-to-saturn-x-e1",
         "back-to-saturn-x-e2",
         "eviternity",
+        "eviternity-ii",
         "sigil",
         "sigil-ii",
         "sunlust",

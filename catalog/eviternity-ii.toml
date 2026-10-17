@@ -1,0 +1,102 @@
+# Confirmed bytes and release metadata: docs/research/reference-eviternity-ii.md §1–§8; gathered 2026-10-16.
+# Complevel value is confirmed by the WAD's own COMPLVL lump (mbf21); the recipe keeps the DDL
+# convention that a complevel stays Proposed until it is exercised on the Deck.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "eviternity-ii"
+title = "Eviternity II (Final version)"
+authors = [
+  "Joshua \"Dragonfly\" O'Sullivan (project lead)",
+  "Tristan Clark",
+  "Ben \"Bauul\" Mansell",
+  "Kevin \"Velvetic\" Martins",
+  "James \"an_mutt\" Collins",
+  "Roberto \"DMPhobos\" Madera Muñoz",
+  "Brian \"Bri\" Irving",
+  "Álvaro \"Guardsoul\" González Sierra",
+  "Henry \"Aurelius\" Koivula",
+  "Alex \"Scotty\" Scott",
+  "Derek \"Afterglow\" MacDonald",
+  "Philip \"Liberation\" Brown",
+  "Ola \"Ukiro\" Björling",
+  "Seongbae \"antares031\" Park",
+]
+release = "Final version (2024-09-30)"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternityii"
+description = "DOOM II: 37-map MBF21 megawad (MAP01–MAP37) with an updated OTEX texture set, MIDI music, an embedded DEHACKED patch and a COMPLVL lump that declares mbf21."
+permission = "Without prior written consent the authors do not permit using this WAD or its assets as a base or resource for other projects. DDL downloads the unmodified archive from its canonical /idgames source; it does not modify, repackage or reuse the content, and keeps the bundled readme, credits and changelog members intact. See the kept text members for the full terms and resource credits."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "mbf21"
+complevel = 21
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# UMAPINFO defines the chapter episodes, so the in-game episode/map menu selects the map; no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-eviternity-ii.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
+notes = "Confirmed archive/member identities, the COMPLVL lump (mbf21), the embedded MBF21 DEHACKED lump and the UMAPINFO lump. Proposed complevel 21 (MBF21); the value is the authors' own declaration, but the recipe stays Proposed until Deck-tested per CONTRIBUTING. No gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and UMAPINFO episodes.", "The canonical Doomworld page is Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror.", "The 293,081,691-byte WAD exceeds the former 256 MiB catalog cap; the cap was raised to 512 MiB (lint.rs MAX_BYTES and install.rs MAX_MEMBER_BYTES) so this member can be verified and installed."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternityii"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/eviternityii.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/megawads/eviternityii.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/eviternityii.zip"]
+size = 121166110
+sha256 = "0fb738712c9007e8c238b6a88fb57842148ef3d6036a17f9a82c9949f131e9c9"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/eviternityii.zip"
+
+[[packages.members]]
+id = "maps"
+path = "Eviternity II.wad"
+size = 293081691
+sha256 = "3127fbc96579960c2fcadb22b09bdd50693357d864674ef5ea271120f461759a"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "Credits.txt"
+size = 8248
+sha256 = "51bbdeb3bb74f9384d90b59a48bb4ae786686923906f5e6ef2cabb44ae90dead"
+keep = true
+
+[[packages.members]]
+id = "changelog"
+path = "EVITERNITY II - Final Version - CHANGELOG.txt"
+size = 44358
+sha256 = "67af7bdde67c1358d80ee4301e9ba51e56603fca72a2c028fc3f6b39a0df5d34"
+keep = true
+
+[[packages.members]]
+id = "readme"
+path = "eviternityii.txt"
+size = 6477
+sha256 = "977ede13d7558fa3e848f708ce57ed59d4512d8d3bd0889d24e75295b29cfeb3"
+keep = true
+
+[[components]]
+id = "main"
+label = "Eviternity II"
+description = "Main 37-map MBF21 megawad with an updated OTEX texture set, MIDI music and an embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
