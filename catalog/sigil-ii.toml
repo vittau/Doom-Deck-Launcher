@@ -10,6 +10,13 @@ description = "Episode 6 for DOOM with a free MIDI soundtrack by James Paddock."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
 tags = ["featured", "episode", "challenging"]
 
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/sigil-ii/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "sigil-ii/01.jpg"
+credit = "John Romero"
+
 [base_game]
 game = "doom"
 variants = ["doom-1.9ud"]
