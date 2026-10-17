@@ -104,9 +104,11 @@ Nested inside `map20_for_old_ports.zip`: `m20patch.wad` (1,604,511 B, `82be584c6
 
 ## 4. WAD inspection (read-only, no execution)
 
-- `btsx_e2a.wad`: **PWAD**, 27,856,614 bytes, **2,822 lumps**, 29 map markers (MAP01–MAP27,
-  MAP31, plus the co-op alternate `MAP16C`), `DEMO1`–`DEMO3`, a **`DEHACKED` lump (4,426 bytes)**,
-  a ZDoom-style `MAPINFO`/`ZMAPINFO` and a `GAMEINFO`. **Confirmed**
+- `btsx_e2a.wad`: **PWAD**, 27,856,614 bytes, **2,822 lumps**, **30 map markers**: `MAP01`–`MAP28`,
+  the secret `MAP31`, and the co-op alternate `MAP16C` (the release text lists `Map # :
+  MAP01-MAP27, MAP31` and `New levels : 27`; see §8 about `MAP27`/`MAP28`). It also has
+  `DEMO1`–`DEMO3`, a **`DEHACKED` lump (4,426 bytes)**, a ZDoom-style `MAPINFO`/`ZMAPINFO` and a
+  `GAMEINFO`. **Confirmed**
 - `btsx_e2b.wad`: **PWAD**, 40,471,797 bytes, **2,047 lumps**, **no maps**; it carries the custom
   texture resources, `PLAYPAL`/`COLORMAP` and 31 `D_*` music lumps. **Confirmed**
 - **No `COMPLVL`** and **no `UMAPINFO`** lump. DSDA-Doom **removed ZDoom `MAPINFO` support in
@@ -142,7 +144,8 @@ applies the embedded patch automatically, and the recipe must **not** add a sepa
 - **Load order:** `btsx_e2a.wad` then `btsx_e2b.wad`. The release also notes an alternate co-op
   MAP16 (`MAP16C`) is included inside the main WAD, not as a separate file. **Confirmed**
 - **Warp/episode notes:** a single continuous DOOM II mapset with no `UMAPINFO`, so no `-warp` is
-  prescribed. **Proposed.**
+  prescribed. The release text names the alternate co-op map (`MAP16C`) as the only non-linear
+  slot. **Proposed.**
 - **The bundled `map20_for_old_ports.zip` (genuine official optional component):** its README
   states *"DO NOT LOAD THIS PATCH IN VANILLA!"* and *"This patch should ONLY be used if your source
   port doesn't support the optimized blockmap used in the mainline version of MAP20."* It is needed
@@ -191,6 +194,11 @@ unmodified. Redistribution is permitted under the terms above; reuse as a base i
 
 ## 8. Open questions
 
+- **`MAP27`/`MAP28` markers.** The WAD carries `MAP01`–`MAP28` while the release text lists
+  `MAP01-MAP27, MAP31` and `New levels : 27`; `MAP27` and `MAP28` appear only as map markers in
+  `btsx_e2a.wad` and are not described in the release map listing. They are inside the single
+  WAD that the recipe loads, so the recipe is unaffected; a contributor could confirm their status
+  from the authors.
 - **Complevel 2 vs limit-removing.** The release targets vanilla Doom2.exe/Chocolate Doom;
   whether every map is safe in a pure vanilla *play* target on DSDA-Doom needs a Deck run
   (**Needs Deck Validation**).
