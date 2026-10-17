@@ -62,7 +62,7 @@ are shown in the complete example. Optional fields and constraints:
 
 | Table | Optional fields / accepted values |
 | --- | --- |
-| Root | `images` (`[[images]]`: `path`, `permission`) |
+| Root | `images` (`[[images]]`: `path`, `permission`); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)) |
 | `base_game` | `game`: `doom`, `doom2`, `tnt`, `plutonia`; `variants` defaults empty (any variant of that game). IDs refer to the known-IWAD table; currently lowercase letters, digits, dots and hyphens. The runtime must block Play without a matching IWAD; that gate is outside catalog lint. |
 | `packages` | `kind`: `zip` or bare `wad`; optional canonical `idgames_path`; `urls`: primary followed by mirrors. Bare WADs name one member with identical package/member size/hash. |
 | `packages.members` | `keep` defaults false; unique `id` and `path` within a package. All members have exact positive `size` and `sha256`. |
@@ -72,6 +72,35 @@ are shown in the complete example. Optional fields and constraints:
 | `compatibility.engine` | Semantic version requirement `range`, evidence `status`. Include the exact evidence version; a range is only as strong as its evidence status. |
 | `compatibility.runtime` | Optional typed `warp = [episode, map]` (or `[map]`, or `[]`; up to two integers 0–99) and `pistol_start = true/false` (player profile suggestion only). No arbitrary flags or shell strings. |
 | `verification` | Real `YYYY-MM-DD` date, semantic engine version. `inspected` lists what was inspected; nonempty when status is inspected. `limitations` can be empty only when there are no known limitations. |
+
+### Tags
+
+`catalog/tags.toml` is the reviewed vocabulary: per tag an `id`, an English `label`, a
+short `description` and an `order` (the position of its Discover category). A recipe lists
+the tags it earns in an optional root key, before the first table:
+
+```toml
+tags = ["episode", "cacowards"]
+```
+
+Lint rejects unknown and repeated tags. Every tag is a claim and needs evidence in
+`[verification]` (`notes` or `inspected`) — never tag from memory:
+
+| Tag | Evidence to record |
+| --- | --- |
+| `featured` | Why the maintainers feature it (for example a required reference recipe, D-010). |
+| `beginner-friendly` | A quoted statement from the authors or a reviewed source about gentle difficulty. |
+| `classics` | A release date at least five years old plus a cited sign of lasting recognition. |
+| `cacowards` | **Required by lint:** link that year's page, `https://www.doomworld.com/cacowards/<year>/`, and say winner or runner-up. Say if you could not read the page and relied on a secondary source. |
+| `community-projects` | The credited team (for example a Doomer Boards Project's contributors list). |
+| `megawad` | At least 30 maps, counted from the WAD or the authors' map list. |
+| `episode` | Nine maps or fewer, counted the same way. |
+| `challenging` | A quoted statement from the authors or a reviewed source aimed at experienced players. |
+
+Discover shows a category for each tag that at least one recipe uses, in `order`, between
+"All" and "Favorites". To propose a new tag, add its `[[tags]]` entry to `catalog/tags.toml` in
+the same pull request that first uses it; give it a unique lowercase `id`, a unique `order`,
+an English `label` and a one-sentence `description` of the rule a recipe must meet.
 
 ### Copy-paste template and annotated example
 
