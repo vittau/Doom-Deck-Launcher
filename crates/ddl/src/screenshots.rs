@@ -7,14 +7,9 @@
 //! painted covers reach the UI as `@image-url` assets: the UI draws the screen
 //! itself and captions it with the recipe's `credit` (spec 023, R3).
 //!
-//! `EMBEDDED_SCREENSHOTS` and [`card`] are the seam the UI wiring (spec 023, R3)
-//! consumes; until then they are exercised only by the test below so the index
-//! can never drift from the committed catalog.
-#![allow(dead_code)]
-
 include!(concat!(env!("OUT_DIR"), "/screenshots.rs"));
 
-/// Asset paths relative to the `ui/` asset root for `recipe_id`, card first.
+/// Bundled paths under the `ui/` asset root, in deterministic filename order.
 #[must_use]
 pub fn for_recipe(recipe_id: &str) -> &'static [&'static str] {
     EMBEDDED_SCREENSHOTS
@@ -23,10 +18,35 @@ pub fn for_recipe(recipe_id: &str) -> &'static [&'static str] {
         .map_or(&[], |(_, assets)| *assets)
 }
 
-/// The card screenshot for `recipe_id`, if one is bundled.
+/// The first indexed screenshot; `presentation` follows the recipe metadata order.
 #[must_use]
 pub fn card(recipe_id: &str) -> Option<&'static str> {
     for_recipe(recipe_id).first().copied()
+}
+
+/// Resolve only bundled assets, preserving the recipe's order and credit. Updated
+/// community recipes without a bundled image retain the painted fallback offline.
+pub fn presentation(
+    ui: &crate::AppWindow,
+    recipe: &ddl_core::catalog::Recipe,
+) -> (slint::SharedString, slint::SharedString) {
+    let Some(first) = recipe.screenshots.first() else {
+        return Default::default();
+    };
+    let path = format!("assets/screenshots/{}", first.asset);
+    let bundled =
+        card(&recipe.id) == Some(path.as_str()) || for_recipe(&recipe.id).contains(&path.as_str());
+    if !bundled {
+        return Default::default();
+    }
+    (
+        path.into(),
+        crate::wiring_copy::value(
+            ui,
+            crate::wiring_copy::Text::ScreenshotCredit,
+            &first.credit,
+        ),
+    )
 }
 
 #[cfg(test)]
@@ -49,13 +69,14 @@ mod tests {
                 !assets.is_empty(),
                 "recipe `{id}` has no bundled screenshot"
             );
-            // The recipe reference and the directory index agree.
-            let declared: Vec<&str> = loaded
+            // The asset inventory agrees; metadata order is exercised by the UI test.
+            let mut declared: Vec<&str> = loaded
                 .recipe
                 .screenshots
                 .iter()
                 .map(|s| s.asset.as_str())
                 .collect();
+            declared.sort_unstable();
             assert_eq!(
                 assets
                     .iter()

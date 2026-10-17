@@ -143,3 +143,142 @@ passes.
    a trivial conflict against the spec 022 worker at worst.
 2. I ticked **A1** and **A3** in `docs/specs/023-mapset-screenshots.md`; **A2** (UI) and **A4**
    (Deck) are left for their owners.
+
+## Phase B — show bundled screenshots in the UI
+
+**Status:** R3 / A2 complete; final fmt, clippy and workspace tests pass. A4 remains open.
+
+### Implementation (R3)
+
+- Home (hero and history), Discover and Library cards, mapset detail, and the art band now
+  resolve the recipe's **first declared screenshot** and show `Screenshot: <credit>`. Images
+  use `image-fit: cover` with explicit horizontal/vertical centre alignment. No runtime
+  network or filesystem image loading is needed. Detail keeps the same first image; a
+  carousel or additional controller action would add little value here.
+- **Review fix — compact credits:** captions use the unchanged `Tokens.metadata` (20 px)
+  on a slim 28 px, 90%-opaque near-black plate with a thin bronze border. Plates hug the text,
+  sit at the image's bottom-left (bottom-right in the band), and elide long text on one line.
+  Detail alone enables the full credit and may wrap to two lines. Images narrower than 160 px,
+  including Home history thumbnails, have no caption; the separate history credit row was
+  removed and Home's original hero/history spacing restored. The painted fallback uses the
+  same compact treatment.
+- Missing screenshot metadata, unknown/unbundled assets, and future recipes without bundled
+  files retain the painted cover and `Original concept art` caption. Existing catalog updates
+  cannot turn an arbitrary remote asset path into a filesystem image load.
+- Both caption strings live in `ui/wiring-strings.slint` and use `@tr`; the screenshot credit
+  is formatted through the existing Rust `wiring_copy::value` path. The temporary module-wide
+  `allow(dead_code)` in `screenshots.rs` is removed.
+- `docs/design/ui.md` describes the screenshot and fallback treatment. No catalog, screenshot
+  JPEG, source manifest, Settings or catalog-update implementation was edited.
+
+### Embedding choice
+
+`build.rs` extends phase A's sorted directory index with an **OUT_DIR-generated Slint global**,
+imported as `@screenshots` using Slint's library-path configuration. Its deterministic lookup
+maps the indexed asset paths to literal `@image-url` expressions. Slint's existing
+`EmbedResourcesKind::EmbedFiles` embeds and decodes the images using the support already in the
+application; Rust sends the checked asset key and translated credit through `ViewNode` and the
+band properties. Recipe metadata, rather than directory order, chooses the first image. The
+lookup includes the remaining bundled shots so reordering a recipe works without another
+hand-maintained mapping. Generated files are only rewritten when their contents change to
+avoid retriggering Cargo through the generated Slint import.
+
+**New dependencies: none.** In particular, no additional image-decoding crate was added.
+
+### Requirement coverage
+
+The existing off-screen software-renderer journey now asserts that all thirteen embedded
+recipes resolve to a 640×360 Slint image, the exact translated caption, and matching card,
+detail and art-band properties. It writes one focused Discover render per recipe, covering
+all scroll positions, plus bright-sky, long Home credit and metadata-absent fallback fixtures.
+It also checks recipe screenshot reordering and an unbundled asset fallback. Existing Home
+and Library journeys assert their large image nodes carry screenshots and captions; tiny Home
+images keep their screenshots but no credit label, and no separate caption row remains. Only
+detail image nodes enable full-credit wrapping. These are
+render-only recipe mutations; no live catalog or user state is changed.
+
+### Headless visual review (A2)
+
+Off-screen PNGs are under `target/headless/` (not committed). I inspected all thirteen cards
+across the focused Discover renders, including these full rows:
+
+- `023-discover-ancient-aliens.png` — Alien Vendetta, Ancient Aliens, AUGER;ZENITH.
+- `023-discover-back-to-saturn-x-e1.png` — both Back to Saturn X episodes, Eviternity.
+- `023-discover-eviternity-ii.png` — Eviternity II, Going Down, Scythe.
+- `023-discover-sigil.png` — SIGIL, SIGIL II, Sunlust.
+- `023-discover-valiant.png` — Valiant.
+
+I also inspected the detail/band compositions (`010-mapset-detail.png`,
+`023-detail-ancient-aliens.png`, `023-detail-auger-zenith.png`), Home and Library cards
+(`010-home-continue.png`, `010-library.png`), and `023-discover-fallback.png`. The explicit
+`023-discover-white-sky.png` / `023-detail-white-sky.png` fixture reorders Ancient Aliens' two
+shots so its white-cloud image stress-tests the same plate; shipped recipes still use their
+first declared shot. `023-home-long-credit.png` checks the longer Back to Saturn X credit on
+the narrow hero (elided), the band (elided), and the history thumbnail (no caption).
+`023-detail-back-to-saturn-x-e1.png` retains the full long credit in the two-line detail plate.
+Captions remain readable against the bright sky, neon/fire and dark scenes; compact labels
+leave more of each screenshot visible.
+
+No visible window was opened and no screen was captured. All images came from Slint's
+software renderer. A2 is ticked; A4 remains **Needs Deck Validation**.
+
+### Final verification
+
+Validated on macOS arm64. Phase B merged `main` at `aca466b` cleanly; the compact-caption
+review fix stays on the same task branch. Linux CI and the physical Deck were not run here.
+No new dependencies were added. The targeted headless journey passed before the full checks:
+
+```text
+$ cargo test -p ddl fixture_screens_navigation_and_focus_render_headlessly
+test headless::fixture_screens_navigation_and_focus_render_headlessly ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 81 filtered out; finished in 103.82s
+```
+
+All **430 tests** pass: 82 launcher tests, 7 launcher integration tests, 322 core tests,
+16 process/smoke tests and 3 doctests. The existing headless journey contains the new screenshot
+assertions and render fixtures, so no second UI platform runs concurrently in the test process.
+Command tails:
+
+```text
+$ cargo fmt --all --check
+(exit 0; no output)
+
+$ cargo clippy --workspace --all-targets -- -D warnings
+    Compiling ddl v0.0.4 (.../crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.32s
+
+$ cargo test --workspace
+...
+test result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 124.35s
+...
+test result: ok. 322 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s
+...
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+...
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+README images were regenerated with the documented spec 016 R5 command and all four were
+visually inspected. They also byte-match the optimized PNGs from the independent final
+workspace run (`DDL_HEADLESS_DIR="$PWD/target/headless/compact-workspace" cargo test --workspace`):
+
+```text
+$ python3 scripts/readme-screenshots.py
+...
+docs/screenshots/home.png: 1280x800, 361,528 bytes
+docs/screenshots/discover.png: 1280x800, 557,175 bytes
+docs/screenshots/play-setup.png: 1280x800, 344,886 bytes
+docs/screenshots/mapset-detail.png: 1280x800, 570,902 bytes
+```
+
+### Remaining observations
+
+- Physical Deck sharpness/readability is still A4, outside this phase's acceptance.
+- Existing long mapset titles can clip in Home/Discover text slots (visible in the Back to
+  Saturn X render fixture); screenshot credits now elide intentionally except on detail, where
+  the full credit wraps to two lines. This predates R3
+  and was left outside the screenshot change.
+- Proposed documentation follow-up outside this task's ownership: the guide's FAQ
+  (`docs/steam-deck-guide.md`, “Are the screenshots actual gameplay?”) still calls the card
+  images original mood art. It should distinguish the off-screen launcher UI captures from
+  their now-real, credited in-game mapset images.

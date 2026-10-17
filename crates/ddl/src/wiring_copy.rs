@@ -3,6 +3,7 @@ use crate::{AppWindow, WiringStrings};
 use slint::ComponentHandle;
 #[derive(Clone, Copy)]
 pub enum Text {
+    ScreenshotCredit,
     RecipeUpdate,
     RecipeRemoved,
     RecipeUpdateAction,
@@ -221,6 +222,7 @@ pub enum Text {
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
     match key {
+        Text::ScreenshotCredit => s.get_screenshot_credit(),
         Text::RecipeUpdate => s.get_recipe_update(),
         Text::RecipeRemoved => s.get_recipe_removed(),
         Text::RecipeUpdateAction => s.get_recipe_update_action(),

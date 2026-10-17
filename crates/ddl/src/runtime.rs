@@ -1339,6 +1339,11 @@ impl Runtime {
             self.item()
         };
         ui.set_band_art(band_item.map_or(4, |i| art(&i.recipe.id)));
+        let (image, credit) = band_item.map_or_else(Default::default, |i| {
+            crate::screenshots::presentation(ui, &i.recipe)
+        });
+        ui.set_band_screenshot(image);
+        ui.set_band_credit(credit);
         ui.set_subtitle(text(
             ui,
             if self.playing {
@@ -1416,7 +1421,7 @@ impl Runtime {
                     b.panel(12., 12., 784., 478.);
                     b.panel(828., 12., 384., 478.);
                     if let Some(item) = latest {
-                        b.art(36., 36., 240., 300., art(&item.recipe.id));
+                        b.recipe_art(ui, 36., 36., 240., 300., &item.recipe);
                         b.label(
                             308.,
                             56.,
@@ -1462,7 +1467,7 @@ impl Runtime {
                         }
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
-                            b.art(x, 400., 56., 66., art(&i.recipe.id));
+                            b.recipe_art(ui, x, 400., 56., 66., &i.recipe);
                             b.label(
                                 x + 72.,
                                 400.,
@@ -1523,7 +1528,7 @@ impl Runtime {
                             let x = 12. + 408. * (visible % 3) as f32;
                             let y = 12. + top + 438. * (visible / 3) as f32;
                             b.card(10 + i as i32, x, y, 384., 410.);
-                            b.art(x + 16., y + 16., 352., 142., art(&item.recipe.id));
+                            b.recipe_art(ui, x + 16., y + 16., 352., 142., &item.recipe);
                             if item.favorite {
                                 b.favorite(x + 316., y + 26.);
                             }
@@ -1643,7 +1648,8 @@ impl Runtime {
                 }
                 Screen::Detail => {
                     if let Some(item) = self.item() {
-                        b.art(12., 12., 360., 262., art(&item.recipe.id));
+                        b.recipe_art(ui, 12., 12., 360., 262., &item.recipe);
+                        b.nodes.last_mut().unwrap().full_credit = true;
                         if item.favorite {
                             b.favorite(316., 22.);
                         }
@@ -2806,6 +2812,9 @@ impl Nodes {
             size: 22.,
             tone: 0,
             art: 0,
+            screenshot: Default::default(),
+            credit: Default::default(),
+            full_credit: false,
         });
     }
     fn panel(&mut self, x: f32, y: f32, w: f32, h: f32) {
@@ -2840,6 +2849,25 @@ impl Nodes {
             false,
         );
         self.nodes.last_mut().unwrap().art = art;
+    }
+    fn recipe_art(
+        &mut self,
+        ui: &AppWindow,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        recipe: &ddl_core::catalog::Recipe,
+    ) {
+        self.art(x, y, w, h, art(&recipe.id));
+        let (image, credit) = crate::screenshots::presentation(ui, recipe);
+        let node = self.nodes.last_mut().unwrap();
+        node.screenshot = image;
+        node.credit = if w >= 160. {
+            credit
+        } else {
+            Default::default()
+        };
     }
     fn label(&mut self, x: f32, y: f32, w: f32, h: f32, label: SharedString, size: f32) {
         self.push(-999, x, y, w, h, 0, label, Default::default(), false, false);
