@@ -359,3 +359,14 @@
     and 018 were started on Codex and stopped before any change. 019 waits for the owner; 020
     after 018.
   refs: [docs/status.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 016 phase A merged: README cut to 66 lines with four headless screenshots, details moved
+    to docs/steam-deck-guide.md, screenshot command reproduces PNGs byte for byte, three vector
+    logo concepts (Cinder Key, Rose Compass, Ember Folio) await the owner's pick. Spec 018 merged:
+    multiple profiles per mapset (picker, copy/defaults, preset rename, guarded delete — file
+    first, then dirs, never the last — remembered profile preselected by Continue, --profile in
+    the CLI); app state stays schema 2 with an additive last_profiles map. Owner: Codex first
+    today.
+  refs: [docs/reports/016-readme-and-logo-v2.md, docs/reports/018-multiple-profiles.md]

@@ -27,7 +27,7 @@
 | Headless CLI + real-network Linux e2e job | `specs/014-cli-and-linux-e2e.md` | Done — e2e green on real network (run 38983844913): AppImage direct + extraction, 4 mapsets, D-011 argv |
 | Catalog batch: Scythe, Alien Vendetta, Sunlust, Ancient Aliens, Valiant, Going Down, BTSX E1/E2, Eviternity II | `catalog/*.toml` | **Done** — 13 recipes on `main`; catalog/member cap raised to 512 MiB for Eviternity II; e2e run 38987876930 |
 | Recipe tags, Discover categories, favorites | `specs/015-tags-categories-favorites.md` | **Done** (A4 needs Deck): 8 tags in `catalog/tags.toml`, all 13 recipes tagged (Cacowards evidence secondary — doomworld blocks automation), Discover strip with L2/R2, X favorites, app state schema 2 |
-| README revamp, Steam Deck guide, logo v2 | `specs/016-readme-and-logo-v2.md` | Ready — brief written; started and stopped unworked 2026-10-16 (session paused); dispatch next session |
+| README revamp, Steam Deck guide, logo v2 | `specs/016-readme-and-logo-v2.md` | Phase A **done** (README 66 lines, `docs/steam-deck-guide.md`, reproducible screenshots, 3 logo concepts in `docs/design/logo-v2/`); **owner logo pick pending**, then phase B (R2) applies it |
 | README manual Steam Input guide | `specs/011-readme-steam-input.md` | Done (A3 needs Deck) |
 | AppImage on Deck (FUSE vs extract) | `deck-testing.md`, `research/dsda-engine.md` §7 | Linux host: direct FUSE works (CI); SteamOS 3.8 ships every engine library (glibc 2.41, pipewire-jack); must not run under a Steam Compatibility tool. Deck check pending |
 | UI shell: design system, navigation, gilrs gamepad, screens on fixtures | `specs/008-ui-shell.md` | Done (A6 needs Deck) |
@@ -38,7 +38,7 @@
 | Item | Spec | State |
 | --- | --- | --- |
 | Widescreen status bars (doom_widehud, GPL-3.0 since `eb3773ce9e`; credit NightFright and contributors) | 017 | **Paused (WIP)** — branch `vittau/spec-017-widehud` (pushed): 5 mapset bars + 4 IWAD bars, hosts, cosmetic-only and `release` lint, credits, e2e; handoff in `docs/reports/017-widescreen-status-bars.md` on that branch. Left: A3 headless render, research coverage table, full fmt/clippy/test |
-| Multiple profiles per mapset (`deck-testing.md` C4) | 018 | Ready — started and stopped unworked 2026-10-16 (owner paused the session); dispatch next session |
+| Multiple profiles per mapset (`deck-testing.md` C4) | 018 | **Done** (A5 needs Deck): picker on Play setup, new (copy/defaults), preset-name rename, guarded delete, remembered profile, Home/Library labels, `--profile` CLI; app state stays schema 2 |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | Ready — after 018 |
 | GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). Follow-up: add the published GOG Final Doom hashes to `data/iwads.toml`. |
