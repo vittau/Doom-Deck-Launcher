@@ -505,6 +505,13 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     // Spec 017: the widescreen status bar is default-on, so SIGIL launches two
     // content files, the mapset then the bar.
     assert!(ui.get_nodes().iter().any(|n| n.label == "2 content files"));
+    let bar_toggle = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.label == "Widescreen status bar")
+        .expect("the optional bar toggle appears on Play setup");
+    assert_eq!(bar_toggle.detail, "On");
+    assert!(bar_toggle.actionable);
     assert!(
         ui.get_nodes()
             .iter()
@@ -738,6 +745,27 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         capture(window, name);
         if focus == 4 {
             assert!(ui.get_nodes().iter().any(|n| n.kind == 10));
+            let credit = ui
+                .get_nodes()
+                .iter()
+                .find(|n| n.label.starts_with("Widescreen status bars:"))
+                .expect("About credits the status-bar collection");
+            assert!(
+                credit
+                    .label
+                    .contains("NightFright and contributors (GPL-3.0)")
+            );
+            assert!(
+                credit
+                    .label
+                    .contains("https://github.com/NightFright2k19/doom_widehud")
+            );
+            let panel = ui
+                .get_nodes()
+                .iter()
+                .find(|n| n.kind == 1 && n.x == 348.)
+                .unwrap();
+            assert!(credit.y + credit.h + 24. <= panel.y + panel.h);
             capture(window, "013-about.png");
         }
     }
