@@ -47,7 +47,7 @@ while True:
             parts.append(f"{name}:READ_FAIL({type(e).__name__})"); continue
         blob = "\n".join(tail)
         digest = hashlib.sha1(blob.encode()).hexdigest()
-        state = "working" if WORK.search("\n".join(tail[-6:])) else "IDLE"
+        state = "working" if WORK.search("\n".join(tail[-8:])) else "IDLE"
         if last.get(name) == digest: state += "+UNCHANGED"
         last[name] = digest
         errs = sorted({m.group(1).lower() for l in tail[-12:] if "Tip:" not in l for m in [ERR.search(l)] if m})
