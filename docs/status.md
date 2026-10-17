@@ -40,6 +40,6 @@
 | Widescreen status bars (doom_widehud, GPL-3.0; credited in About/README/recipes) | 017 | **Done** (A4 e2e run 39065323300 passed, A6 needs Deck): 5 mapset bars (Ancient Aliens, BTSX E1/E2, Eviternity, Valiant) + Doom/Doom II IWAD bar for SIGIL, SIGIL II, Going Down, Scythe; default on; cosmetic-only and `release` lint. Residual risk: the Eviternity bar derives from CC BY-NC-ND art (DDL only downloads it from upstream; research §4) |
 | Multiple profiles per mapset (`deck-testing.md` C4) | 018 | **Done** (A5 needs Deck): picker on Play setup, new (copy/defaults), preset-name rename, guarded delete, remembered profile, Home/Library labels, `--profile` CLI; app state stays schema 2 |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
-| Recipe changes after install | 020 | Ready — after 018 |
-| Uninstall a mapset (owner decision D-022: checkbox to also delete profiles and saves) | 022 | Ready — after 020 (shares library and UI code) |
+| Recipe changes after install | 020 | **Done**: typed change classification, silent metadata adoption, staged generations published by an atomic `library/<id>/active.json` rename, idempotent profile reconciliation, Update / Keep current (per recipe hash), removed-from-catalog badge, `ddl mapset status|update` |
+| Uninstall a mapset (owner decision D-022: checkbox to also delete profiles and saves) | 022 | Ready — starting (opencode, Codex window spent) |
 | GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). Follow-up: add the published GOG Final Doom hashes to `data/iwads.toml`. |

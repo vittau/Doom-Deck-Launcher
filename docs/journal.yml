@@ -395,3 +395,13 @@
     D-023: the owner picked the Rose Compass logo (octagonal rose window / compass around an
     ember). Spec 016 phase B applies it everywhere spec 013 placed the logo.
   refs: [docs/design/logo-v2/rose-compass/]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 020 merged: recipe changes after install are classified (metadata, launch, content,
+    components, removed); metadata-only changes are adopted silently; Update stages a verified
+    generation and publishes it with one atomic rename of library/<id>/active.json, then
+    reconciles profiles idempotently and retires the old generation (crash-safe cleanup queue);
+    Keep current is remembered per recipe hash in app state (schema 2, additive). 411 tests.
+    Found and fixed in the spec: DDL had no uninstall flow (now spec 022 / D-022).
+  refs: [docs/reports/020-recipe-change-after-install.md]
