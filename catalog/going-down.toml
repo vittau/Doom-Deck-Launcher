@@ -1,0 +1,71 @@
+# Confirmed bytes and release metadata: docs/research/reference-going-down.md §1–§8; gathered 2026-10-16.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "going-down"
+title = "Going Down"
+authors = ["Cyriak Harris (mouldy)"]
+release = "Final version (third bug-fix); /idgames entry 2014-11-02, current ZIP built 2015-08-21"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gd"
+description = "DOOM II megawad: 32 BOOM-format maps, one floor of a UAC tower each, with an embedded DEHACKED patch and the author's own MIDI soundtrack."
+permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided gd.txt travels with the file, unmodified and intact; the author states permission was obtained from the original authors of any included resources. DDL downloads the unmodified archive and keeps the bundled credits file."
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = 9
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-16"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-going-down.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; author's release text"]
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the inert ZDoom-style MAPINFO (removed from DSDA-Doom in v0.30.0); no COMPLVL or UMAPINFO lump. Complevel 9 is the author's own stated value; no gameplay test performed."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The embedded ZDoom MAPINFO (music/cluster names) is inert under DSDA-Doom v0.30.1; confirm the in-game music selection on the Deck."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gd"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/gd.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/megawads/gd.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/gd.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/gd.zip"]
+size = 8832905
+sha256 = "48accac85af296534565e4c6cbc4cb7312e70756012c327b3d7c1c14c9872dc9"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/gd.zip"
+
+[[packages.members]]
+id = "maps"
+path = "gd.wad"
+size = 25359070
+sha256 = "b352de5b133156a4af0a3f55e2647fa85c69795e94eb2e28adc2f1c58576b9b6"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "gd.txt"
+size = 4634
+sha256 = "3d3fae1b348e2e59258935b879f33ecf9f3c7b41e223b643455bf9a52fc6da11"
+keep = true
+
+[[components]]
+id = "main"
+label = "Going Down"
+description = "Main 32-map BOOM megawad with an embedded DEHACKED patch and the author's MIDI soundtrack."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
