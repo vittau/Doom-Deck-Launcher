@@ -350,3 +350,12 @@
     nothing is only abandoned when that deadline expires (a blocking read also delays Cancel);
     revisit with a socket-level idle timeout if Deck testing shows hung downloads.
   refs: [crates/ddl-core/src/downloads/fetch.rs]
+- date: 2026-10-16
+  type: status
+  summary: >-
+    Session paused by the owner. Spec 017 (widescreen status bars) stopped mid-way and committed
+    as WIP on the pushed branch vittau/spec-017-widehud with a handoff report (5 mapset bars, 4
+    IWAD bars, lint rules, credits; render test, coverage table and full checks left). Specs 016
+    and 018 were started on Codex and stopped before any change. 019 waits for the owner; 020
+    after 018.
+  refs: [docs/status.md]
