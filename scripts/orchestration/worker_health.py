@@ -9,7 +9,8 @@ rate-limit usage read from ~/.codex/sessions. Meant to run under a Claude Code M
 import json, subprocess, sys, time, hashlib, re, glob, os
 WORKERS = dict(a.split("=", 1) for a in sys.argv[1:])  # name=handle
 ERR = re.compile(r"(error|usage limit|rate limit|update available|HTTP [45]\d\d|Session location unavailable|Provider request failed|exceeded|panicked|not supported|Allow OpenCode|Permission required|Do you want to|approve|enter submit)", re.I)
-WORK = re.compile(r"(esc interrupt|esc to interrupt|• Working)")
+# Codex / opencode footers, and Claude Code's spinner line ("✻ Slithering… (50s · ↓ 5k tokens)").
+WORK = re.compile(r"(esc interrupt|esc to interrupt|• Working|…\s*\(\d+[smh])")
 last = {}
 CTX = re.compile(r"(Context \d+% used|[\d.]+K \(\d+%\) · \$[\d.]+)")
 def codex_limits():
