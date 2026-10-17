@@ -37,7 +37,7 @@
 
 | Item | Spec | State |
 | --- | --- | --- |
-| Widescreen status bars (doom_widehud, GPL-3.0 since `eb3773ce9e`; credit NightFright and contributors) | 017 | **Paused (WIP)** — branch `vittau/spec-017-widehud` (pushed): 5 mapset bars + 4 IWAD bars, hosts, cosmetic-only and `release` lint, credits, e2e; handoff in `docs/reports/017-widescreen-status-bars.md` on that branch. Left: A3 headless render, research coverage table, full fmt/clippy/test |
+| Widescreen status bars (doom_widehud, GPL-3.0; credited in About/README/recipes) | 017 | **Done** (A4 e2e running, A6 needs Deck): 5 mapset bars (Ancient Aliens, BTSX E1/E2, Eviternity, Valiant) + Doom/Doom II IWAD bar for SIGIL, SIGIL II, Going Down, Scythe; default on; cosmetic-only and `release` lint. Residual risk: the Eviternity bar derives from CC BY-NC-ND art (DDL only downloads it from upstream; research §4) |
 | Multiple profiles per mapset (`deck-testing.md` C4) | 018 | **Done** (A5 needs Deck): picker on Play setup, new (copy/defaults), preset-name rename, guarded delete, remembered profile, Home/Library labels, `--profile` CLI; app state stays schema 2 |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | Ready — after 018 |
