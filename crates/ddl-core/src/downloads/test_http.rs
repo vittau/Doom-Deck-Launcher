@@ -28,6 +28,10 @@ pub struct Response {
     pub reason: String,
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
+    /// When set, the body is written as `(chunk_size, delay)` pieces, sleeping
+    /// `delay` before each piece, instead of in one write. Lets a test model a
+    /// slow-but-steady link or a server that stalls after the headers.
+    pub trickle: Option<(usize, Duration)>,
 }
 
 impl Response {
@@ -43,6 +47,7 @@ impl Response {
             reason: reason.to_owned(),
             headers: Vec::new(),
             body: Vec::new(),
+            trickle: None,
         }
     }
 
@@ -62,6 +67,13 @@ impl Response {
     #[must_use]
     pub fn with_body(mut self, body: impl Into<Vec<u8>>) -> Self {
         self.body = body.into();
+        self
+    }
+
+    /// Sends the body in `chunk`-byte pieces, waiting `delay` before each one.
+    #[must_use]
+    pub fn trickle(mut self, chunk: usize, delay: Duration) -> Self {
+        self.trickle = Some((chunk, delay));
         self
     }
 }
@@ -165,11 +177,27 @@ where
         write!(out, "{name}: {value}\r\n")?;
     }
     out.extend_from_slice(b"\r\n");
-    out.extend_from_slice(&response.body);
 
     let mut stream = stream;
     stream.write_all(&out)?;
     stream.flush()?;
+
+    // Trickled bodies model a slow link (or a stall when the first delay is
+    // long): the headers land immediately, then each piece is sent after a
+    // pause. Everything else goes out in one write.
+    match response.trickle {
+        Some((chunk, delay)) => {
+            for piece in response.body.chunks(chunk.max(1)) {
+                thread::sleep(delay);
+                stream.write_all(piece)?;
+                stream.flush()?;
+            }
+        }
+        None => {
+            stream.write_all(&response.body)?;
+            stream.flush()?;
+        }
+    }
 
     // Give the client a moment to read before the socket closes. Closing while
     // response bytes are still in flight lets the kernel deliver a clean FIN;

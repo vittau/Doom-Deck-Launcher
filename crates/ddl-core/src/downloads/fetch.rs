@@ -13,7 +13,8 @@
 //!   against the caller's [`HostAllowlist`]. The one documented exception is
 //!   GitHub's signed asset host, which appears only as a redirect target.
 //! - **Bounded.** At most [`MAX_REDIRECTS`] redirects, a connect timeout, a
-//!   read timeout, a hard maximum size and an optional exact expected size.
+//!   response-header timeout, a size-scaled body deadline (see `body_deadline`),
+//!   a hard maximum size and an optional exact expected size.
 //! - **Verified.** The body is streamed to a temporary file while SHA-256 is
 //!   computed; a mismatch is reported with both hashes.
 //! - **Cached.** A verified file is stored as `downloads/<sha256>` and reused;
@@ -28,7 +29,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256 as Sha256Digest};
 use ureq::Agent;
@@ -53,6 +54,63 @@ pub const DEFAULT_REDIRECT_EXCEPTIONS: &[&str] = &["release-assets.githubusercon
 /// Read size while streaming a body. The progress callback fires once per read,
 /// so a larger buffer means fewer, coarser updates.
 const READ_BUFFER: usize = 64 * 1024;
+
+/// Connect timeout. An unreachable host should fail fast.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Deadline for receiving the response *headers*. Separate from the body so a
+/// server that accepts a connection and then says nothing does not tie up the
+/// worker forever.
+const RESPONSE_HEADERS_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Fixed part of a body deadline. Covers connection setup, TLS, redirects and
+/// the first byte, so even a tiny file gets a real chance.
+pub const BODY_DEADLINE_BASE: Duration = Duration::from_secs(60);
+
+/// Minimum sustained throughput a body must keep, in bytes per second
+/// (64 KiB/s). Below this the transfer is treated as stalled, not merely slow.
+pub const MIN_SUSTAINED_RATE: u64 = 64 * 1024;
+
+/// Ceiling on the size-scaled body deadline (6 h), so a hostile `expected_size`
+/// or `max_size` cannot turn the deadline into an infinite wait.
+pub const MAX_BODY_DEADLINE: Duration = Duration::from_secs(6 * 60 * 60);
+
+/// The knobs behind [`body_deadline`]. Production uses [`Self::default`];
+/// tests shrink all three so a deadline can fire in milliseconds.
+#[derive(Debug, Clone, Copy)]
+struct DeadlinePolicy {
+    base: Duration,
+    min_rate: u64,
+    max: Duration,
+}
+
+impl Default for DeadlinePolicy {
+    fn default() -> Self {
+        Self {
+            base: BODY_DEADLINE_BASE,
+            min_rate: MIN_SUSTAINED_RATE,
+            max: MAX_BODY_DEADLINE,
+        }
+    }
+}
+
+/// The total receive-body deadline for a transfer of `size` bytes:
+/// `base + size / min_rate`, clamped to `max` (6 h in production).
+///
+/// A *total* deadline is the right shape for a download the user can cancel:
+/// it stops a stalled or hostile server without punishing a slow-but-steady
+/// link, because the budget grows with the number of bytes still to come. At
+/// the 512 MiB cap this allows ~2.3 h (≈ 64 KiB/s), so Eviternity II's 121 MiB
+/// archive gets ~33 min — far more than the fixed 300 s it replaced.
+///
+/// `size` is the exact `expected_size` when the caller knows it, otherwise the
+/// request's hard `max_size`; both come from the recipe/engine cap. Sizes are
+/// saturated, never overflowed.
+#[must_use]
+fn body_deadline(policy: DeadlinePolicy, size: u64) -> Duration {
+    let transfer = Duration::from_secs(size / policy.min_rate.max(1));
+    policy.base.saturating_add(transfer).min(policy.max)
+}
 
 /// Progress of one transfer, reported to the caller's callback.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,6 +180,7 @@ pub struct Fetcher {
     agent: Agent,
     downloads_dir: PathBuf,
     redirect_exceptions: Vec<String>,
+    deadlines: DeadlinePolicy,
     #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
 }
@@ -129,22 +188,27 @@ pub struct Fetcher {
 impl Fetcher {
     /// Creates a fetcher writing into `<cache_dir>/downloads` (spec 006, R3).
     ///
-    /// The receive-body timeout is a *total* deadline for the response body
-    /// (ureq's `timeout_recv_body` is total, not idle). It must clear the largest
-    /// package DDL accepts: at the 512 MiB cap this 300 s bound still needs only
-    /// ~1.7 MiB/s, and Eviternity II's 121 MiB archive comfortably fits at
-    /// ~3 MiB/s. The connect timeout stays short so an unreachable host fails fast.
+    /// Connect and response-header timeouts are short so an unreachable or
+    /// silent server fails fast. The **body** deadline is not fixed: it is
+    /// derived per request from the expected size by `body_deadline`
+    /// (`base + size / 64 KiB/s`, capped at 6 h). A fixed total deadline would
+    /// abort a large archive on weak Wi-Fi even though it was still
+    /// progressing; the user can always cancel, and the size-scaled deadline
+    /// still stops a genuinely stalled server.
     #[must_use]
     pub fn new(cache_dir: impl Into<PathBuf>) -> Self {
-        Self::with_timeouts(cache_dir, Duration::from_secs(15), Duration::from_secs(300))
+        Self::with_timeouts(cache_dir, CONNECT_TIMEOUT, RESPONSE_HEADERS_TIMEOUT)
     }
 
-    /// Creates a fetcher with explicit connect and read timeouts.
+    /// Creates a fetcher with explicit connect and response-header timeouts.
+    ///
+    /// The body deadline is still size-scaled; to shrink it (tests) use the
+    /// `with_deadline_policy` test constructor.
     #[must_use]
     pub fn with_timeouts(
         cache_dir: impl Into<PathBuf>,
         connect_timeout: Duration,
-        read_timeout: Duration,
+        response_timeout: Duration,
     ) -> Self {
         let mut builder = Agent::config_builder()
             .user_agent(concat!("DoomDeckLauncher/", env!("CARGO_PKG_VERSION")))
@@ -156,7 +220,9 @@ impl Fetcher {
             // A binary download must be the server's bytes, not an encoding.
             .accept_encoding(AutoHeaderValue::None)
             .timeout_connect(Some(connect_timeout))
-            .timeout_recv_body(Some(read_timeout));
+            // Header receipt is bounded here; the body gets its own
+            // size-scaled deadline per request (see `transfer`).
+            .timeout_recv_response(Some(response_timeout));
         // Production is HTTPS-only. Tests relax the transport to reach a
         // loopback HTTP server; the scheme policy is still exercised directly.
         #[cfg(not(any(test, feature = "test-support")))]
@@ -176,9 +242,24 @@ impl Fetcher {
                 .iter()
                 .map(|host| (*host).to_owned())
                 .collect(),
+            deadlines: DeadlinePolicy::default(),
             #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
         }
+    }
+
+    /// Replaces the size-scaling constants behind the body deadline. Test-only:
+    /// production uses [`Fetcher::new`]'s defaults, which keep tests under two
+    /// seconds while this lets them fire a deadline in milliseconds.
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_deadline_policy(mut self, base: Duration, min_rate: u64, max: Duration) -> Self {
+        self.deadlines = DeadlinePolicy {
+            base,
+            min_rate,
+            max,
+        };
+        self
     }
 
     /// Replaces the redirect exception list (defaults to
@@ -204,6 +285,13 @@ impl Fetcher {
     pub fn allow_http_for_tests(mut self) -> Self {
         self.allow_http_for_tests = true;
         self
+    }
+
+    /// The body deadline for `request`: size-scaled from the exact expected
+    /// size when it is known, otherwise from the request's hard size cap.
+    fn body_deadline_for(&self, request: &DownloadRequest) -> Duration {
+        let size = request.expected_size.unwrap_or(request.max_size);
+        body_deadline(self.deadlines, size)
     }
 
     /// Downloads `request`, returning the path of the verified cached file.
@@ -299,12 +387,23 @@ impl Fetcher {
         progress: &mut dyn FnMut(Progress),
     ) -> Result<Transfer, Error> {
         let mut current = parse_uri(url)?;
+        // One body deadline for the whole transfer, derived from the size we
+        // expect (or the request's hard cap when it is unknown). Every redirect
+        // hop gets the same budget; only one hop ever streams a body.
+        let deadline = self.body_deadline_for(request);
         let mut redirects: u32 = 0;
         loop {
             self.check_target(&current, &request.allowed_hosts, redirects > 0)?;
+            // ureq 3.4.2 exposes `timeout_recv_body` per request through
+            // `RequestBuilder::config()`; it is a *total* budget for the body,
+            // not restarted per read. See
+            // <https://docs.rs/ureq/3.4.2/ureq/config/struct.ConfigBuilder.html#method.timeout_recv_body>.
             let response = self
                 .agent
                 .get(current.clone())
+                .config()
+                .timeout_recv_body(Some(deadline))
+                .build()
                 .call()
                 .map_err(|error| map_ureq(error, current.to_string()))?;
             let status = response.status();
@@ -395,6 +494,9 @@ impl Fetcher {
         let mut hasher = Sha256Digest::new();
         let mut downloaded: u64 = 0;
         let mut buffer = vec![0u8; READ_BUFFER];
+        // Wall clock for the "too slow" message. The transport enforces the
+        // actual deadline; this only reports how long the body ran.
+        let started = Instant::now();
 
         progress(Progress {
             downloaded: 0,
@@ -406,9 +508,27 @@ impl Fetcher {
             if cancel.is_cancelled() {
                 return Err(Error::Cancelled);
             }
-            let read = reader.read(&mut buffer).map_err(|error| Error::Network {
-                url: url.to_string(),
-                detail: error.to_string(),
+            // Stall detection: ureq 3.4.2 has no per-read idle hook — the only
+            // body timeout available is the total `timeout_recv_body` set per
+            // request above, and a blocking read cannot be interrupted from
+            // this thread. Rather than leak a watchdog thread per transfer
+            // that could not unblock the read anyway, a fully silent server is
+            // given up when the size-scaled deadline expires, and that failure
+            // is reported as `TooSlow` below.
+            let read = reader.read(&mut buffer).map_err(|error| {
+                if is_ureq_timeout(&error) {
+                    Error::TooSlow {
+                        url: url.to_string(),
+                        downloaded,
+                        total,
+                        elapsed: started.elapsed(),
+                    }
+                } else {
+                    Error::Network {
+                        url: url.to_string(),
+                        detail: error.to_string(),
+                    }
+                }
             })?;
             if read == 0 {
                 break;
@@ -577,9 +697,11 @@ fn map_ureq(error: ureq::Error, url: String) -> Error {
         Ureq::BadUri(detail) => Error::InvalidUrl {
             url: format!("{url} ({detail})"),
         },
-        Ureq::Timeout(_) => Error::Network {
+        // Connect/response-header timeouts: the body has its own deadline and
+        // is reported as `Error::TooSlow` from the read loop.
+        Ureq::Timeout(timeout) => Error::Network {
             url,
-            detail: "request timed out".to_owned(),
+            detail: format!("request timed out ({timeout})"),
         },
         Ureq::HostNotFound => Error::Network {
             url,
@@ -617,6 +739,18 @@ fn io_error(context: &str, error: std::io::Error) -> Error {
         context: context.to_owned(),
         detail: error.to_string(),
     }
+}
+
+/// Whether an `io::Error` from ureq's body reader wraps
+/// [`ureq::Error::Timeout`]. ureq's handler maps its typed error into
+/// `std::io::Error` via `into_io` (`io::Error::other`), so the ureq error is
+/// recoverable through `get_ref().downcast_ref()`. Confirmed against ureq
+/// 3.4.2 (`run.rs`, `impl io::Read for BodyHandler`).
+fn is_ureq_timeout(error: &std::io::Error) -> bool {
+    error
+        .get_ref()
+        .and_then(|inner| inner.downcast_ref::<ureq::Error>())
+        .is_some_and(|error| matches!(error, ureq::Error::Timeout(_)))
 }
 
 #[cfg(test)]
@@ -963,6 +1097,142 @@ mod tests {
         // With the seam on, loopback HTTP is accepted; the production refusal
         // is covered by `refuses_plain_http`.
         fetcher.check_target(&target, &allowed, false).unwrap();
+    }
+
+    #[test]
+    fn body_deadline_is_base_plus_size_over_min_rate() {
+        let policy = DeadlinePolicy::default();
+        // Even an empty body gets the base.
+        assert_eq!(body_deadline(policy, 0), BODY_DEADLINE_BASE);
+        // Eviternity II's 121 MiB archive: 60 s + 121 MiB / 64 KiB/s ≈ 33 min.
+        let eviternity = 121 * 1024 * 1024;
+        assert_eq!(
+            body_deadline(policy, eviternity),
+            BODY_DEADLINE_BASE + Duration::from_secs(eviternity / MIN_SUSTAINED_RATE)
+        );
+        // The 512 MiB cap is about 2.3 h, still under the 6 h ceiling.
+        let cap = 512 * 1024 * 1024;
+        assert!(body_deadline(policy, cap) < MAX_BODY_DEADLINE);
+        assert_eq!(
+            body_deadline(policy, cap),
+            BODY_DEADLINE_BASE + Duration::from_secs(cap / MIN_SUSTAINED_RATE)
+        );
+    }
+
+    #[test]
+    fn body_deadline_clamps_to_the_maximum() {
+        let policy = DeadlinePolicy::default();
+        // A gigantic (or hostile) size cannot buy an unbounded wait.
+        assert_eq!(body_deadline(policy, u64::MAX), MAX_BODY_DEADLINE);
+        // A 1 TiB cap would otherwise ask for ~194 days.
+        let one_tib = 1024 * 1024 * 1024 * 1024;
+        assert_eq!(body_deadline(policy, one_tib), MAX_BODY_DEADLINE);
+    }
+
+    #[test]
+    fn body_deadline_for_prefers_expected_size_over_the_cap() {
+        let dir = TestDir::new("deadline-size");
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_deadline_policy(Duration::from_secs(1), 1000, Duration::from_secs(10));
+        let hosts = HostAllowlist::new(["127.0.0.1"]);
+        let hash = Sha256::of(b"x");
+
+        // expected_size wins, even though max_size is much larger.
+        let with_size =
+            DownloadRequest::new("https://h/file", hash, 1_000_000, hosts.clone()).with_size(5000);
+        assert_eq!(
+            fetcher.body_deadline_for(&with_size),
+            Duration::from_secs(6)
+        );
+
+        // Unknown size falls back to the request's hard cap.
+        let unknown = DownloadRequest::new("https://h/file", hash, 5000, hosts.clone());
+        assert_eq!(fetcher.body_deadline_for(&unknown), Duration::from_secs(6));
+
+        // ...and the cap is clamped.
+        let clamped = DownloadRequest::new("https://h/file", hash, 20_000, hosts);
+        assert_eq!(fetcher.body_deadline_for(&clamped), Duration::from_secs(10));
+    }
+
+    #[test]
+    fn slow_but_steady_transfer_survives_a_deadline_a_fixed_one_would_fail() {
+        // 64 KiB sent as four 16 KiB pieces, 150 ms apart: the whole body takes
+        // ~600 ms, far longer than a fixed 50 ms deadline but well inside the
+        // size-scaled one.
+        let body = vec![0xAB; 64 * 1024];
+        let body_len = body.len() as u64;
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            Response::ok(served.clone()).trickle(16 * 1024, Duration::from_millis(150))
+        });
+        let dir = TestDir::new("slow-steady");
+        let hash = Sha256::of(&body);
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]));
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        // A near-zero scaling term makes the deadline ≈ the base (50 ms), which
+        // this transfer cannot meet: it fails, proving the deadline is real.
+        let fixed_short = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_deadline_policy(Duration::from_millis(50), 1 << 40, Duration::from_secs(60));
+        let error = fixed_short
+            .download(&request, &cancel, &mut progress)
+            .expect_err("fixed short deadline fails");
+        assert!(matches!(error, Error::TooSlow { .. }), "{error}");
+
+        // The same transfer succeeds when the deadline scales with its size:
+        // 50 ms + 64 KiB / 64 KiB/s = 1050 ms > 600 ms.
+        let scaled = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_deadline_policy(
+                Duration::from_millis(50),
+                MIN_SUSTAINED_RATE,
+                Duration::from_secs(60),
+            );
+        let path = scaled
+            .download(&request, &cancel, &mut progress)
+            .expect("size-scaled deadline allows slow but steady");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+    }
+
+    #[test]
+    fn a_stalled_transfer_is_aborted_with_the_deadline_error() {
+        // Headers arrive, then the server says nothing for much longer than the
+        // deadline: the read blocks and the body budget expires.
+        let body = vec![9u8; 32 * 1024];
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            Response::ok(served.clone()).trickle(32 * 1024, Duration::from_secs(10))
+        });
+        let dir = TestDir::new("stalled");
+        let hash = Sha256::of(&body);
+        let request = DownloadRequest::new(
+            server.url("/file"),
+            hash,
+            body.len() as u64,
+            allow(&[&server]),
+        );
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_deadline_policy(Duration::from_millis(100), 1 << 40, Duration::from_secs(60));
+
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("stalled transfer is aborted");
+        match error {
+            Error::TooSlow {
+                downloaded, total, ..
+            } => {
+                assert_eq!(downloaded, 0, "no body bytes arrived");
+                assert_eq!(total, Some(body.len() as u64));
+            }
+            other => panic!("expected TooSlow, got {other}"),
+        }
+        assert_no_temp_files(dir.path());
     }
 
     fn assert_no_temp_files(root: &Path) {

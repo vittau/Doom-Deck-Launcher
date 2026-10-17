@@ -6,6 +6,7 @@
 //! member name, or a violated safety limit. The UI renders [`std::fmt::Display`].
 
 use std::fmt;
+use std::time::Duration;
 
 use super::hash::Sha256;
 
@@ -54,6 +55,18 @@ pub enum Error {
     TooManyRedirects { limit: u32, url: String },
     /// A connect, TLS or read failure.
     Network { url: String, detail: String },
+    /// The transfer did not finish within its size-scaled body deadline
+    /// (`fetch::body_deadline`), i.e. it sustained less than the minimum rate
+    /// for long enough that the whole transfer ran out of budget.
+    TooSlow {
+        url: String,
+        /// Bytes received before the deadline fired.
+        downloaded: u64,
+        /// Announced or expected total, when known.
+        total: Option<u64>,
+        /// How long the body was read before giving up.
+        elapsed: Duration,
+    },
     /// The server answered with a non-success status.
     HttpStatus { url: String, status: u16 },
     /// The transfer exceeded an allowed size.
@@ -99,6 +112,24 @@ impl fmt::Display for Error {
                 write!(f, "gave up after {limit} redirects while fetching {url}")
             }
             Self::Network { url, detail } => write!(f, "network error for {url}: {detail}"),
+            Self::TooSlow {
+                url,
+                downloaded,
+                total,
+                elapsed,
+            } => {
+                let after = elapsed.as_secs_f64();
+                match total {
+                    Some(total) => write!(
+                        f,
+                        "download too slow: {downloaded} of {total} bytes after {after:.1}s; check your connection and try again ({url})"
+                    ),
+                    None => write!(
+                        f,
+                        "download too slow: {downloaded} bytes after {after:.1}s; check your connection and try again ({url})"
+                    ),
+                }
+            }
             Self::HttpStatus { url, status } => {
                 write!(f, "server returned HTTP {status} for {url}")
             }
@@ -182,5 +213,31 @@ mod tests {
         }
         .to_string();
         assert!(message.contains("compression ratio"));
+    }
+
+    #[test]
+    fn too_slow_names_progress_and_suggests_a_retry() {
+        let with_total = Error::TooSlow {
+            url: "https://example.invalid/pkg.zip".to_owned(),
+            downloaded: 1024,
+            total: Some(4096),
+            elapsed: Duration::from_secs(90),
+        }
+        .to_string();
+        assert!(with_total.contains("1024 of 4096 bytes"), "{with_total}");
+        assert!(with_total.contains("90.0s"), "{with_total}");
+        assert!(with_total.contains("check your connection"), "{with_total}");
+
+        let without_total = Error::TooSlow {
+            url: "https://example.invalid/pkg.zip".to_owned(),
+            downloaded: 7,
+            total: None,
+            elapsed: Duration::from_millis(500),
+        }
+        .to_string();
+        assert!(
+            without_total.contains("7 bytes after 0.5s"),
+            "{without_total}"
+        );
     }
 }
