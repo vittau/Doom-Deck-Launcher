@@ -461,3 +461,12 @@
     (Threshold portal, relief atlas) are kept under `social-preview-variants/`. Generated
     layers and prompts are committed; export `--check` reproduces the PNGs.
   refs: [docs/design/logo/SOCIAL-PREVIEW-REPORT.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 023 phase A merged: 23 in-game screenshots (640×360 JPEG, ≤ 73 KB) bundled for all 13
+    recipes with SOURCES.toml (source, credit, retrieval date, permission text), an optional
+    `[[screenshots]]` recipe field with offline lint (magic bytes, size, dimensions, credit), and a
+    build-time index for the UI. Phase B (UI) dispatched to Codex. Also fixed the logo-asset test,
+    which rejected the indexed (under-1-MB) social preview merged earlier.
+  refs: [docs/reports/023-mapset-screenshots.md]
