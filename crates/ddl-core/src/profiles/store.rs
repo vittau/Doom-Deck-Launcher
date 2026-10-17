@@ -114,6 +114,9 @@ impl ProfileStore {
         }
         let profile: Profile =
             serde_json::from_str(&text).map_err(|error| ProfileError::Parse(error.to_string()))?;
+        if profile.id != id {
+            return Err(ProfileError::UnsafeId(profile.id));
+        }
         if profile.schema_version != SCHEMA_VERSION {
             return Err(ProfileError::UnsupportedSchema(profile.schema_version));
         }
@@ -196,6 +199,31 @@ impl ProfileStore {
         Ok(profiles)
     }
 
+    /// Deletes a profile and its runtime directories, refusing the last profile
+    /// for a recipe. The document is removed first: a failed document removal
+    /// must never destroy saves. A later directory failure leaves only orphan data.
+    ///
+    /// # Errors
+    /// Returns an error for the last profile or a failed filesystem operation.
+    pub fn delete_with_data(&self, id: &str) -> Result<(), ProfileError> {
+        let profile = self.load(id)?;
+        if self
+            .list()?
+            .iter()
+            .filter(|p| p.recipe_id == profile.recipe_id)
+            .count()
+            <= 1
+        {
+            return Err(ProfileError::Parse("cannot delete the last profile".into()));
+        }
+        self.delete(id)?;
+        match fs::remove_dir_all(self.dirs(id).root) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     /// Deletes the profile document for `id`, reporting whether it existed.
     /// Runtime directories are left in place so no save files are destroyed.
     ///
@@ -262,6 +290,40 @@ mod tests {
         assert!(store.delete("p1").expect("delete"));
         assert!(!store.delete("p1").expect("already gone"));
         assert!(store.list().expect("list").is_empty());
+    }
+
+    #[test]
+    fn destructive_delete_guards_last_and_removes_only_its_data() {
+        let temp = TempDir::new().unwrap();
+        let store = ProfileStore::new(temp.path().join("config"), temp.path().join("data"));
+        store.save(&Profile::new("p1", "Default", "map")).unwrap();
+        fs::write(store.dirs("p1").save.join("save.dsg"), b"save").unwrap();
+        assert!(store.delete_with_data("p1").is_err());
+        assert!(store.dirs("p1").save.join("save.dsg").exists());
+        store.save(&Profile::new("p2", "Casual", "map")).unwrap();
+        store.delete_with_data("p1").unwrap();
+        assert!(!store.path("p1").unwrap().exists());
+        assert!(!store.dirs("p1").root.exists());
+        assert!(store.dirs("p2").root.exists());
+    }
+
+    #[test]
+    fn document_failure_preserves_data_and_directory_failure_leaves_no_document() {
+        let temp = TempDir::new().unwrap();
+        let store = ProfileStore::new(temp.path().join("config"), temp.path().join("data"));
+        store.save(&Profile::new("p1", "Default", "map")).unwrap();
+        store.save(&Profile::new("p2", "Casual", "map")).unwrap();
+        // Missing document stops before touching data.
+        store.delete("p1").unwrap();
+        assert!(store.delete_with_data("p1").is_err());
+        assert!(store.dirs("p1").root.exists());
+        store.save(&Profile::new("p1", "Default", "map")).unwrap();
+        // A file where a directory should be reliably fails even as root.
+        fs::remove_dir_all(store.dirs("p1").root).unwrap();
+        fs::write(store.dirs("p1").root, b"unremovable as directory").unwrap();
+        assert!(store.delete_with_data("p1").is_err());
+        assert!(!store.path("p1").unwrap().exists());
+        assert!(store.load("p2").is_ok());
     }
 
     #[test]
