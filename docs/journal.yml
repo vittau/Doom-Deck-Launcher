@@ -446,3 +446,10 @@
     start; `ddl mapset uninstall`. Review also caught a pre-existing duplicate "Play setup" button
     on detail (from 020) and the gap it left; the action column now collapses.
   refs: [docs/reports/022-uninstall-mapset.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-025: catalog updates without a release — automatic check (≤ 24 h, opt-out, manual button),
+    HTTPS from GitHub is enough for now, and the bundle lives on a CI-maintained `catalog` branch
+    instead of a fixed pre-release (owner found that confusing). Spec 019 now Ready.
+  refs: [docs/specs/019-catalog-updates.md]
