@@ -41,4 +41,5 @@
 | Multiple profiles per mapset (`deck-testing.md` C4) | 018 | **Done** (A5 needs Deck): picker on Play setup, new (copy/defaults), preset-name rename, guarded delete, remembered profile, Home/Library labels, `--profile` CLI; app state stays schema 2 |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | Ready — after 018 |
+| Uninstall a mapset (found missing while writing spec 020) | — | Needs a spec: remove install files, keep or offer to delete profiles/saves |
 | GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). Follow-up: add the published GOG Final Doom hashes to `data/iwads.toml`. |
