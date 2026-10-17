@@ -67,7 +67,7 @@ the controller now work (gilrs).
 | C1 | Change a DSDA menu option, quit, relaunch from DDL: it persists | Gaming | ⏳ | |
 | C2 | A standalone DSDA install's config (`~/.dsda-doom/` or `~/.local/share/dsda-doom/`) is untouched | Desktop | ⏳ | |
 | C3 | DDL finds the DOOM + DOOM II Steam install and identifies its IWADs (`base/` and `rerelease/`) | Gaming | ⏳ | |
-| C4 | Saves for two profiles stay separate | Gaming | ⏳ | UI has one Default profile per mapset for now (spec 010); later spec |
+| C4 | Saves for two profiles stay separate | Gaming | ⏳ | Spec 018: create two runs, change skill/components, save and screenshot in each; switch and Continue after restart; verify isolation and named delete confirmation (Needs Deck Validation) |
 
 ## GOG and other stores (spec 021)
 

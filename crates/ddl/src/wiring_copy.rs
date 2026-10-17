@@ -5,6 +5,7 @@ use slint::ComponentHandle;
 pub enum Text {
     ActiveProfile,
     ProfileCount,
+    SingleProfile,
     PreviousProfile,
     NextProfile,
     CopyProfile,
@@ -195,6 +196,7 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     match key {
         Text::ActiveProfile => s.get_active_profile(),
         Text::ProfileCount => s.get_profile_count(),
+        Text::SingleProfile => s.get_single_profile(),
         Text::PreviousProfile => s.get_previous_profile(),
         Text::NextProfile => s.get_next_profile(),
         Text::CopyProfile => s.get_copy_profile(),

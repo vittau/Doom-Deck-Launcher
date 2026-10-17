@@ -1022,7 +1022,7 @@ impl Runtime {
                 96.,
                 656.,
                 32.,
-                value(ui, T::ProfileCount, item.profiles.len()),
+                profile_count(ui, item.profiles.len()),
                 22.,
             );
             let index = item
@@ -1405,7 +1405,7 @@ impl Runtime {
                                         },
                                     )
                                 } else {
-                                    value(ui, T::ProfileCount, item.profiles.len())
+                                    profile_count(ui, item.profiles.len())
                                 },
                                 20.,
                             );
@@ -1577,7 +1577,7 @@ impl Runtime {
                             36.,
                             632.,
                             value(ui, T::ActiveProfile, &item.profile.name),
-                            value(ui, T::ProfileCount, item.profiles.len()),
+                            profile_count(ui, item.profiles.len()),
                             false,
                         );
                         let mut y = 128.;
@@ -2349,8 +2349,10 @@ impl Runtime {
         ui.set_sheet_height(
             if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
                 560.
-            } else {
+            } else if matches!(self.sheet, Some(Sheet::DeleteProfile(..))) {
                 340.
+            } else {
+                300.
             },
         );
         if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
@@ -2371,8 +2373,13 @@ impl Runtime {
                 text(ui, title)
             });
             let mut b = Nodes::new(ui);
-            b.button(900, 32., 228., 304., text(ui, safe), false);
-            b.button(901, 368., 228., 304., text(ui, confirm), false);
+            let button_y = if matches!(sheet, Sheet::DeleteProfile(..)) {
+                228.
+            } else {
+                180.
+            };
+            b.button(900, 32., button_y, 304., text(ui, safe), false);
+            b.button(901, 368., button_y, 304., text(ui, confirm), false);
             ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
         }
         if self.sheet.is_some() {
@@ -2385,6 +2392,13 @@ impl Runtime {
                 ui.set_a_hint(n.label.clone());
             }
         }
+    }
+}
+fn profile_count(ui: &AppWindow, count: usize) -> SharedString {
+    if count == 1 {
+        text(ui, T::SingleProfile)
+    } else {
+        value(ui, T::ProfileCount, count)
     }
 }
 /// Vocabulary labels of a recipe's tags in `order`, at most `limit`; ids the

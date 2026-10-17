@@ -618,8 +618,10 @@ impl Services {
                     .ok_or(Problem::State)?;
                 let suffix = (2..)
                     .find(|n| {
-                        !all.iter()
-                            .any(|p| p.id == format!("{recipe_id}-profile-{n}"))
+                        let id = format!("{recipe_id}-profile-{n}");
+                        !all.iter().any(|p| p.id == id)
+                            && self.profiles.path(&id).is_ok_and(|p| !p.exists())
+                            && !self.profiles.dirs(&id).root.exists()
                     })
                     .ok_or(Problem::State)?;
                 let mut profile = if copy {
@@ -1338,7 +1340,8 @@ impl Services {
     }
 
     /// `ddl launch` without `--dry-run`: launch through the same run guard as
-    /// the UI. The override selection is not saved.
+    /// the UI. The selected profile and play history are remembered; per-launch
+    /// option overrides are not saved.
     ///
     /// # Errors
     ///
@@ -1597,6 +1600,9 @@ mod tests {
         let mut first = s.profile(&recipe).unwrap();
         first.skill = 5;
         first.pistol_start = true;
+        first.set_component("compat", true);
+        first.overrides.insert("test_scalar".into(), 1);
+        first.iwad_variant = Some("test-variant".into());
         first.touch(100);
         command(&mut s, Command::Save(first.clone())).unwrap();
         command(&mut s, Command::NewProfile("sigil".into(), true)).unwrap();
@@ -1604,6 +1610,9 @@ mod tests {
         assert_eq!(second.name, "Profile 2");
         assert_eq!(second.skill, 5);
         assert!(second.pistol_start);
+        assert_eq!(second.components, first.components);
+        assert_eq!(second.overrides, first.overrides);
+        assert_eq!(second.iwad_variant, first.iwad_variant);
         assert_eq!(second.last_played, None);
         assert_ne!(s.profiles.dirs(&second.id), s.profiles.dirs(&first.id));
         command(&mut s, Command::NewProfile("sigil".into(), false)).unwrap();
@@ -1674,6 +1683,26 @@ mod tests {
         assert!(command(&mut s, Command::DeleteProfile(first.id)).is_err());
         command(&mut s, Command::NewProfile("sigil".into(), false)).unwrap();
         assert_eq!(s.profile(&recipe).unwrap().name, "Profile 2");
+    }
+
+    #[test]
+    fn new_profile_does_not_adopt_orphaned_runtime_data() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut s = Services::open(env(temp.path())).unwrap();
+        let orphan = s.profiles.dirs("sigil-profile-2");
+        fs::create_dir_all(&orphan.save).unwrap();
+        fs::write(orphan.save.join("old-save"), b"old run").unwrap();
+        s.execute(
+            Command::NewProfile("sigil".into(), false),
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+        .unwrap();
+        let profile = s.profile(&s.recipe("sigil").unwrap()).unwrap();
+        assert_eq!(profile.name, "Profile 2");
+        assert_eq!(profile.id, "sigil-profile-3");
+        assert!(orphan.save.join("old-save").exists());
+        assert!(!s.profiles.dirs(&profile.id).save.join("old-save").exists());
     }
 
     #[test]
