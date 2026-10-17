@@ -1053,6 +1053,8 @@ impl Builder<'_> {
             tone,
             size,
             art: 0,
+            screenshot: Default::default(),
+            credit: Default::default(),
             primary,
             actionable,
         });

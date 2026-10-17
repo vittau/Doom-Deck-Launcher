@@ -1,13 +1,16 @@
 import "assets/InterVariable.ttf";
 import "assets/Barlow-Regular.ttf";
 import "assets/PirataOne-Regular.ttf";
+import { ScreenshotAssets } from "@screenshots";
+export { ScreenshotAssets } from "@screenshots";
+import { WiringStrings } from "wiring-strings.slint";
 import { Tokens } from "tokens.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
 export struct ViewNode {
     id: int, x: float, y: float, w: float, h: float,
     kind: int, label: string, detail: string, tone: int, size: float, art: int,
-    primary: bool, actionable: bool,
+    primary: bool, actionable: bool, screenshot: string, credit: string,
 }
 component Frame inherits Rectangle {
     background: transparent;
@@ -19,7 +22,8 @@ component Frame inherits Rectangle {
 }
 component Cover inherits Image {
     in property <int> art;
-    source: art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : art == 3 ? @image-url("assets/ember/eviternity.png") : art == 0 ? @image-url("assets/ember/sigil.png") : @image-url("assets/ember/fallback.png");
+    in property <string> screenshot;
+    source: screenshot != "" ? ScreenshotAssets.image(screenshot) : art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : art == 3 ? @image-url("assets/ember/eviternity.png") : art == 0 ? @image-url("assets/ember/sigil.png") : @image-url("assets/ember/fallback.png");
     image-fit: cover;
 }
 component Node inherits Rectangle {
@@ -50,11 +54,12 @@ component Node inherits Rectangle {
     }
     if item.kind == 4: Rectangle {
         clip: true; border-radius: Tokens.card-radius;
-        Cover { x: 0px; y: 0px; width: parent.width; height: parent.height; art: root.item.art; }
+        Cover { x: 0px; y: 0px; width: parent.width; height: parent.height; art: root.item.art; screenshot: root.item.screenshot; }
         if root.item.h >= 80: Rectangle {
-            x: 8px; y: parent.height - (root.item.w < 240 ? 64px : 36px); width: parent.width - 16px; height: root.item.w < 240 ? 56px : 28px;
+            x: 8px; y: parent.height - (root.item.w < 240 ? 88px : 58px); width: parent.width - 16px; height: root.item.w < 240 ? 80px : 50px;
+            border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
             background: Tokens.deep;
-            Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+            Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: root.item.screenshot != "" ? root.item.credit : WiringStrings.concept-art; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
         }
     }
     if item.kind == 10 || item.kind == 11: Image {
@@ -140,6 +145,8 @@ export component AppWindow inherits Window {
     in property <bool> input-locked: false;
     in property <bool> art-band;
     in property <int> band-art;
+    in property <string> band-screenshot;
+    in property <string> band-credit;
     in property <string> heading;
     in property <string> subtitle;
     in property <string> a-hint: @tr("Open");
@@ -182,9 +189,9 @@ export component AppWindow inherits Window {
     if root.art-band: Rectangle {
         x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
         clip: true;
-        Image { width: parent.width; height: parent.height; source: root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; }
-        Rectangle { x: 168px; y: 60px; width: 232px; height: 28px; background: Tokens.deep;
-            Text { x: 8px; text: @tr("Original concept art"); color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+        Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; }
+        Rectangle { x: 8px; y: 30px; width: parent.width - 16px; height: 50px; background: Tokens.deep; border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
+            Text { x: 8px; width: parent.width - 16px; wrap: word-wrap; text: root.band-screenshot != "" ? root.band-credit : WiringStrings.concept-art; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
         }
     }
     Text { x: 40px; y: 124px; width: root.art-band ? 784px : parent.width - 80px; height: 48px; text: root.heading; font-family: "Pirata One"; font-size: Tokens.page; color: Tokens.text; }

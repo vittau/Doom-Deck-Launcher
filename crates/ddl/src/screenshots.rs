@@ -7,11 +7,6 @@
 //! painted covers reach the UI as `@image-url` assets: the UI draws the screen
 //! itself and captions it with the recipe's `credit` (spec 023, R3).
 //!
-//! `EMBEDDED_SCREENSHOTS` and [`card`] are the seam the UI wiring (spec 023, R3)
-//! consumes; until then they are exercised only by the test below so the index
-//! can never drift from the committed catalog.
-#![allow(dead_code)]
-
 include!(concat!(env!("OUT_DIR"), "/screenshots.rs"));
 
 /// Asset paths relative to the `ui/` asset root for `recipe_id`, card first.
@@ -27,6 +22,31 @@ pub fn for_recipe(recipe_id: &str) -> &'static [&'static str] {
 #[must_use]
 pub fn card(recipe_id: &str) -> Option<&'static str> {
     for_recipe(recipe_id).first().copied()
+}
+
+/// Resolve only bundled assets, preserving the recipe's order and credit. Updated
+/// community recipes without a bundled image retain the painted fallback offline.
+pub fn presentation(
+    ui: &crate::AppWindow,
+    recipe: &ddl_core::catalog::Recipe,
+) -> (slint::SharedString, slint::SharedString) {
+    let Some(first) = recipe.screenshots.first() else {
+        return Default::default();
+    };
+    let path = format!("assets/screenshots/{}", first.asset);
+    let bundled =
+        card(&recipe.id) == Some(path.as_str()) || for_recipe(&recipe.id).contains(&path.as_str());
+    if !bundled {
+        return Default::default();
+    }
+    (
+        path.into(),
+        crate::wiring_copy::value(
+            ui,
+            crate::wiring_copy::Text::ScreenshotCredit,
+            &first.credit,
+        ),
+    )
 }
 
 #[cfg(test)]
