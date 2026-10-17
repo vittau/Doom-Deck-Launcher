@@ -1578,7 +1578,7 @@ impl Runtime {
                             632.,
                             value(ui, T::ActiveProfile, &item.profile.name),
                             profile_count(ui, item.profiles.len()),
-                            false,
+                            true,
                         );
                         let mut y = 128.;
                         for (index, c) in item.recipe.components.iter().enumerate() {

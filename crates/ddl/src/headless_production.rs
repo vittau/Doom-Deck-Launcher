@@ -1100,18 +1100,13 @@ fn profiles_journey(
     assert_eq!(ui.get_focused(), 60);
     let store = ddl_core::profiles::ProfileStore::new(&env.paths.config, &env.paths.data);
     assert!(store.load(&copied.id).is_ok());
-    // Play and Home Continue both use Casual's actual isolated save directory.
+    // Play and Home Continue both use Casual's actual isolated runtime directories.
+    let before_play = fake.launches().len();
     ui.invoke_clicked(50);
     idle(state);
     state.borrow_mut().neutral_poll(true);
-    assert!(
-        fake.launches()
-            .last()
-            .unwrap()
-            .argv
-            .iter()
-            .any(|a| a == store.dirs(&copied.id).save.as_os_str())
-    );
+    assert_eq!(fake.launches().len(), before_play + 1);
+    assert_profile_dirs(fake, &store.dirs(&copied.id));
     {
         let mut r = state.borrow_mut();
         r.screen = Screen::Home;
@@ -1120,17 +1115,22 @@ fn profiles_journey(
     }
     assert!(ui.get_nodes().iter().any(|n| n.label.contains("Casual")));
     capture(window, "018-home-continue.png");
-    press(window, Key::Return);
+    let before_continue = fake.launches().len();
+    press(window, Key::Return); // Continue opens setup, preserving the established flow.
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(ui.get_focused(), 50);
+    assert_eq!(
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .profile
+            .id,
+        copied.id
+    );
+    assert_eq!(fake.launches().len(), before_continue);
+    press(window, Key::Return); // Play the remembered profile.
     idle(state);
     state.borrow_mut().neutral_poll(true);
-    assert!(
-        fake.launches()
-            .last()
-            .unwrap()
-            .argv
-            .iter()
-            .any(|a| a == store.dirs(&copied.id).save.as_os_str())
-    );
+    assert_eq!(fake.launches().len(), before_continue + 1);
+    assert_profile_dirs(fake, &store.dirs(&copied.id));
     // Library shows the count using the same snapshot.
     {
         let mut r = state.borrow_mut();
@@ -1158,6 +1158,22 @@ fn profiles_journey(
     assert!(store.load_optional(&copied.id).unwrap().is_none());
     assert!(!store.dirs(&copied.id).root.exists());
     assert!(store.dirs("auger-zenith-default").root.exists());
+}
+
+fn assert_profile_dirs(fake: &dsda::FakeEngineRunner, dirs: &ddl_core::profiles::ProfileDirs) {
+    let launches = fake.launches();
+    let args = &launches.last().unwrap().argv;
+    for (flag, path) in [
+        ("-save", &dirs.save),
+        ("-data", &dirs.data),
+        ("-shotdir", &dirs.shots),
+    ] {
+        assert!(
+            args.windows(2)
+                .any(|pair| pair[0] == flag && pair[1] == path.as_os_str()),
+            "{flag}: {args:?}"
+        );
+    }
 }
 
 fn press_char(window: &MinimalSoftwareWindow, text: &str) {
