@@ -680,7 +680,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert!(
         ui.get_nodes()
             .iter()
-            .filter(|n| n.kind == 4)
+            .filter(|n| n.kind == 4 && n.w >= 160.)
             .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
     );
     capture(window, "010-library.png");
@@ -718,9 +718,16 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert!(
         ui.get_nodes()
             .iter()
-            .filter(|n| n.kind == 4)
+            .filter(|n| n.kind == 4 && n.w >= 160.)
             .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
     );
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .filter(|n| n.kind == 4 && n.w < 160.)
+            .all(|n| n.credit.is_empty())
+    );
+    assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
     capture(window, "010-home-continue.png");
     ui.invoke_clicked(1);
     assert_eq!(state.borrow().screen, Screen::Setup);
@@ -1415,11 +1422,10 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             r.selected = index;
             r.sync(ui);
         }
-        assert!(
-            ui.get_nodes()
-                .iter()
-                .any(|n| n.kind == 4 && n.screenshot == asset && n.credit == caption)
-        );
+        assert!(ui.get_nodes().iter().any(|n| n.kind == 4
+            && n.screenshot == asset
+            && n.credit == caption
+            && !n.full_credit));
         assert_eq!(ui.get_band_screenshot(), asset);
         assert_eq!(ui.get_band_credit(), caption);
         capture(window, &format!("023-discover-{}.png", recipe.id));
@@ -1427,11 +1433,15 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         press(window, Key::Return);
         assert_eq!(state.borrow().screen, Screen::Detail);
         assert!(
-            ui.get_nodes()
-                .iter()
-                .any(|n| n.kind == 4 && n.screenshot == asset && n.credit == caption)
+            ui.get_nodes().iter().any(|n| n.kind == 4
+                && n.screenshot == asset
+                && n.credit == caption
+                && n.full_credit)
         );
-        if matches!(recipe.id.as_str(), "ancient-aliens" | "auger-zenith") {
+        if matches!(
+            recipe.id.as_str(),
+            "ancient-aliens" | "auger-zenith" | "back-to-saturn-x-e1"
+        ) {
             capture(window, &format!("023-detail-{}.png", recipe.id));
         }
         press(window, Key::Escape);
@@ -1480,7 +1490,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     let (asset, caption) = crate::screenshots::presentation(ui, &reordered);
     assert!(asset.is_empty() && caption.is_empty());
 
-    // Long credits also fit the narrower Home hero and history plate.
+    // Long Home credits elide on the hero; tiny history thumbnails omit captions.
     {
         let mut r = state.borrow_mut();
         let saved = r.snapshot.clone();
@@ -1496,6 +1506,19 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.screen = Screen::Home;
         r.focus = 1;
         r.sync(ui);
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .filter(|n| n.kind == 4 && n.w >= 160.)
+                .all(|n| !n.full_credit && !n.credit.is_empty())
+        );
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .filter(|n| n.kind == 4 && n.w < 160.)
+                .all(|n| n.credit.is_empty())
+        );
+        assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
         capture(window, "023-home-long-credit.png");
         r.snapshot = saved;
         r.screen = Screen::Discover;

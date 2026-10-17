@@ -1372,7 +1372,7 @@ impl Runtime {
                     b.panel(12., 12., 784., 478.);
                     b.panel(828., 12., 384., 478.);
                     if let Some(item) = latest {
-                        b.recipe_art(ui, 36., 36., 240., 260., &item.recipe);
+                        b.recipe_art(ui, 36., 36., 240., 300., &item.recipe);
                         b.label(
                             308.,
                             56.,
@@ -1408,7 +1408,7 @@ impl Runtime {
                         b.label(36., 160., 720., 80., text(ui, T::NoHistory), 22.);
                         b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), true);
                     }
-                    b.label(36., 310., 720., 32., text(ui, T::Recent), 26.);
+                    b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
                     if let Some(s) = &self.snapshot {
                         let mut recent: Vec<_> =
                             s.items.iter().filter(|i| i.last_played.is_some()).collect();
@@ -1418,30 +1418,16 @@ impl Runtime {
                         }
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
-                            b.recipe_art(ui, x, 354., 56., 66., &i.recipe);
+                            b.recipe_art(ui, x, 400., 56., 66., &i.recipe);
                             b.label(
                                 x + 72.,
-                                354.,
+                                400.,
                                 270.,
                                 32.,
                                 display_title(&i.recipe).into(),
                                 26.,
                             );
-                            b.label(x + 72., 390., 270., 30., i.profile.name.clone().into(), 20.);
-                            let (_, credit) = crate::screenshots::presentation(ui, &i.recipe);
-                            b.label(
-                                x,
-                                422.,
-                                334.,
-                                50.,
-                                if credit.is_empty() {
-                                    ui.global::<crate::WiringStrings>().get_concept_art()
-                                } else {
-                                    credit
-                                },
-                                20.,
-                            );
-                            b.nodes.last_mut().unwrap().kind = 16;
+                            b.label(x + 72., 436., 270., 30., i.profile.name.clone().into(), 20.);
                         }
                         b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
                         b.check(
@@ -1614,6 +1600,7 @@ impl Runtime {
                 Screen::Detail => {
                     if let Some(item) = self.item() {
                         b.recipe_art(ui, 12., 12., 360., 262., &item.recipe);
+                        b.nodes.last_mut().unwrap().full_credit = true;
                         if item.favorite {
                             b.favorite(316., 22.);
                         }
@@ -2750,6 +2737,7 @@ impl Nodes {
             art: 0,
             screenshot: Default::default(),
             credit: Default::default(),
+            full_credit: false,
         });
     }
     fn panel(&mut self, x: f32, y: f32, w: f32, h: f32) {
@@ -2798,7 +2786,11 @@ impl Nodes {
         let (image, credit) = crate::screenshots::presentation(ui, recipe);
         let node = self.nodes.last_mut().unwrap();
         node.screenshot = image;
-        node.credit = credit;
+        node.credit = if w >= 160. {
+            credit
+        } else {
+            Default::default()
+        };
     }
     fn label(&mut self, x: f32, y: f32, w: f32, h: f32, label: SharedString, size: f32) {
         self.push(-999, x, y, w, h, 0, label, Default::default(), false, false);

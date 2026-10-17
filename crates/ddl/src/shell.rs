@@ -509,6 +509,7 @@ impl Shell {
             }
             Screen::Detail => {
                 b.art(40., 230., 360., 330., m.art);
+                b.nodes.last_mut().unwrap().full_credit = true;
                 b.button(
                     30,
                     40.,
@@ -1055,6 +1056,7 @@ impl Builder<'_> {
             art: 0,
             screenshot: Default::default(),
             credit: Default::default(),
+            full_credit: false,
             primary,
             actionable,
         });
