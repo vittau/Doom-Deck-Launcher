@@ -45,6 +45,7 @@ pub enum HelpTopic {
     MapsetInstall,
     MapsetStatus,
     MapsetUpdate,
+    MapsetUninstall,
     /// `ddl launch --help`.
     Launch,
     /// `ddl doctor --help`.
@@ -82,6 +83,13 @@ pub enum Command {
     },
     MapsetUpdate {
         id: String,
+    },
+    /// `ddl mapset uninstall`: remove an installed mapset (spec 022, R5).
+    MapsetUninstall {
+        /// Recipe id.
+        id: String,
+        /// Also delete the mapset's profiles and their saves (`--delete-profiles`).
+        delete_profiles: bool,
     },
     /// `ddl mapset install`: install a recipe, optionally enabling components.
     MapsetInstall {
@@ -172,6 +180,7 @@ Usage: {BIN} [OPTIONS]
        {BIN} mapset list
        {BIN} mapset status [<id>]
        {BIN} mapset update <id>
+       {BIN} mapset uninstall <id> [--delete-profiles]
        {BIN} mapset install <id> [--with <component>...]
        {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
        {BIN} doctor
@@ -268,6 +277,7 @@ Usage: {BIN} iwad scan [PATH...]
 Usage: {BIN} mapset list
        {BIN} mapset status [<id>]
        {BIN} mapset update <id>
+       {BIN} mapset uninstall <id> [--delete-profiles]
        {BIN} mapset install <id> [--with <component>...]
 
 Commands:
@@ -275,6 +285,7 @@ Commands:
   install  Install a mapset, optionally enabling components
   status   Classify changes to installed recipes
   update   Apply a recipe update safely
+  uninstall  Remove an installed mapset and its files
 "
         ),
         HelpTopic::MapsetList => format!(
@@ -288,6 +299,7 @@ Usage: {BIN} mapset list
         ),
         HelpTopic::MapsetStatus => format!("{BIN} mapset status [<id>]\n\nPrint installed recipe change classifications and summaries.\n\nUsage: {BIN} mapset status [<id>]\n"),
         HelpTopic::MapsetUpdate => format!("{BIN} mapset update <id>\n\nStage, verify and atomically activate a catalog update; preserve profiles and saves.\nProgress goes to stderr.\n\nUsage: {BIN} mapset update <id>\n"),
+        HelpTopic::MapsetUninstall => format!("{BIN} mapset uninstall <id> [--delete-profiles]\n\nRemove an installed mapset. By default only its install files are deleted; --delete-profiles\nalso deletes the mapset's profiles and their saves, screenshots and data.\n\nUsage: {BIN} mapset uninstall <id> [--delete-profiles]\n\nOptions:\n      --delete-profiles  Also delete the mapset's profiles and saves\n"),
         HelpTopic::MapsetInstall => format!(
             "\
 {BIN} mapset install <id> [--with <component>...]
@@ -524,11 +536,38 @@ fn parse_mapset(args: &[OsString]) -> Result<Command, ParseError> {
             }
         }
         Some("install") => parse_mapset_install(&args[1..]),
+        Some("uninstall") => parse_mapset_uninstall(&args[1..]),
         _ if wants_help(args) => Ok(Command::Help(HelpTopic::Mapset)),
         _ => Err(ParseError::message(
-            "expected `mapset list`, `mapset status [<id>]`, `mapset install <id>` or `mapset update <id>`",
+            "expected `mapset list`, `mapset status [<id>]`, `mapset install <id>`, `mapset update <id>` or `mapset uninstall <id>`",
         )),
     }
+}
+
+fn parse_mapset_uninstall(args: &[OsString]) -> Result<Command, ParseError> {
+    let mut id = None;
+    let mut delete_profiles = false;
+    let mut positional = false;
+    for arg in args {
+        if !positional && arg == "--" {
+            positional = true;
+        } else if !positional && is_one_of(arg, &["-h", "--help"]) {
+            return Ok(Command::Help(HelpTopic::MapsetUninstall));
+        } else if !positional && arg == "--delete-profiles" {
+            delete_profiles = true;
+        } else if !positional && arg.to_string_lossy().starts_with('-') {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        } else if id.is_none() {
+            id = Some(arg.to_string_lossy().into_owned());
+        } else {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        }
+    }
+    let id = id.ok_or_else(|| ParseError::message("`mapset uninstall` needs a recipe id"))?;
+    Ok(Command::MapsetUninstall {
+        id,
+        delete_profiles,
+    })
 }
 
 fn parse_mapset_install(args: &[OsString]) -> Result<Command, ParseError> {
@@ -1046,6 +1085,37 @@ mod recipe_change_tests {
             vec!["mapset", "status", "--bad"],
         ] {
             assert!(parse_args(&args).is_err());
+        }
+    }
+
+    #[test]
+    fn mapset_uninstall_parses_the_optional_profile_flag() {
+        assert_eq!(
+            parse_args(&["mapset", "uninstall", "sigil"]),
+            Ok(Command::MapsetUninstall {
+                id: "sigil".into(),
+                delete_profiles: false
+            })
+        );
+        assert_eq!(
+            parse_args(&["mapset", "uninstall", "--delete-profiles", "sigil"]),
+            Ok(Command::MapsetUninstall {
+                id: "sigil".into(),
+                delete_profiles: true
+            })
+        );
+        assert_eq!(
+            parse_args(&["mapset", "uninstall", "sigil", "--help"]),
+            Ok(Command::Help(HelpTopic::MapsetUninstall))
+        );
+        assert!(help_for(HelpTopic::MapsetUninstall).contains("--delete-profiles"));
+        for args in [
+            vec!["mapset", "uninstall"],
+            vec!["mapset", "uninstall", "sigil", "extra"],
+            vec!["mapset", "uninstall", "--bad", "sigil"],
+            vec!["mapset", "uninstall", "sigil", "--with", "compat"],
+        ] {
+            assert!(parse_args(&args).is_err(), "{args:?}");
         }
     }
 }
