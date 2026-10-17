@@ -405,3 +405,9 @@
     Keep current is remembered per recipe hash in app state (schema 2, additive). 411 tests.
     Found and fixed in the spec: DDL had no uninstall flow (now spec 022 / D-022).
   refs: [docs/reports/020-recipe-change-after-install.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 016 phase B merged: Rose Compass replaces Ember Gate in the production SVG masters,
+    window icon, Steam artwork, README and social preview; screenshots regenerated. Spec 016 done.
+  refs: [docs/reports/016-readme-and-logo-v2.md]

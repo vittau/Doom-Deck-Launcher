@@ -1,6 +1,6 @@
 # 016 — README revamp, Steam Deck guide and logo v2
 
-**Status:** Ready  ·  **Milestone:** M2  ·  **Depends on:** 013, 014
+**Status:** Done  ·  **Milestone:** M2  ·  **Depends on:** 013, 014
 **Owner request (2026-10-16):** "Melhora o README.md: menos verboso; logo melhorado/novo; bote
 screenshots. Quebra os pontos sobre controle do Deck, customização… em outro md, e aponta pra
 ele. Pode ser em docs."
