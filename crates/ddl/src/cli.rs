@@ -234,10 +234,12 @@ Commands:
             "\
 {BIN} iwad scan [PATH...]
 
-Discover IWADs in the Steam libraries and in each PATH (which is added to
-DDL's folders), then print every identified file with its variant, game and
-SHA-256. Ambiguous files are listed with their candidates and are never
-chosen automatically. DDL never downloads IWADs.
+Discover IWADs in the Steam libraries, in GOG installs recorded by Heroic or
+minigalaxy, and in each PATH (which is added to DDL's folders), then print
+every identified file with its source, variant, game and SHA-256. Generic
+DOOM folders are only searched when enabled in Settings. Ambiguous files are
+listed with their candidates and are never chosen automatically. DDL never
+downloads IWADs.
 
 Usage: {BIN} iwad scan [PATH...]
 "

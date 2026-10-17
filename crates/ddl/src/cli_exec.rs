@@ -233,9 +233,12 @@ fn print_iwad_scan(
             }
             None => "unresolved".to_owned(),
         };
+        // Spec 021 R3: name the source discovered from ("GOG via Heroic",
+        // "Steam", …).
         writeln!(
             out,
-            "{} ({}) sha256={}",
+            "{}: {} ({}) sha256={}",
+            entry.source.label(),
             entry.path.display(),
             identification,
             entry.sha256
@@ -331,7 +334,8 @@ fn print_doctor(report: &DoctorReport, out: &mut dyn Write) -> Result<(), CliFai
         for entry in &report.iwads {
             writeln!(
                 out,
-                "  {} ({})",
+                "  [{}] {} ({})",
+                entry.source.label(),
                 entry.path.display(),
                 entry.variant.as_deref().unwrap_or("ambiguous")
             )
@@ -732,6 +736,28 @@ exit 1
             out.contains("unrecognized:") && out.contains("junk.wad"),
             "{out}"
         );
+    }
+
+    #[test]
+    fn iwad_scan_labels_a_gog_install_from_heroic() {
+        let fx = fixture();
+        let install = fx.env.home.join("Games/Heroic/DOOM + DOOM II/base");
+        std::fs::create_dir_all(&install).unwrap();
+        std::fs::write(install.join("doom2.wad"), commercial_wad()).unwrap();
+        let record = fx.env.home.join(".config/heroic/gog_store/installed.json");
+        std::fs::create_dir_all(record.parent().unwrap()).unwrap();
+        std::fs::write(
+            &record,
+            format!(
+                "{{\"installed\":[{{\"install_path\":\"{}\"}}]}}",
+                install.parent().unwrap().display()
+            ),
+        )
+        .unwrap();
+
+        let (out, _) = run(&fx, cli::Command::IwadScan { paths: vec![] }).expect("scan");
+        assert!(out.contains("GOG via Heroic: "), "{out}");
+        assert!(out.contains("doom2.wad"), "{out}");
     }
 
     #[test]

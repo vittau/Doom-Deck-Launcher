@@ -33,6 +33,35 @@ pub enum Source {
     UserFolder,
     /// A file the user pointed DDL at directly.
     Manual,
+    /// A GOG install recorded by Heroic Games Launcher (spec 021, R2).
+    #[serde(rename = "gog_heroic")]
+    GogHeroic,
+    /// A GOG install directory from minigalaxy's setting (spec 021, R2).
+    #[serde(rename = "gog_minigalaxy")]
+    GogMinigalaxy,
+    /// A GOG offline installer's default folder (spec 021, R2).
+    #[serde(rename = "gog_offline")]
+    GogOffline,
+    /// A generic root, only when "Search standard Linux folders" is on
+    /// (spec 021, R4).
+    #[serde(rename = "standard_folder")]
+    StandardFolder,
+}
+
+impl Source {
+    /// The label shown in the IWAD list and `ddl iwad scan` (spec 021, R3).
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Source::Steam => "Steam",
+            Source::UserFolder => "User folder",
+            Source::Manual => "Manual",
+            Source::GogHeroic => "GOG via Heroic",
+            Source::GogMinigalaxy => "GOG via minigalaxy",
+            Source::GogOffline => "GOG offline installer",
+            Source::StandardFolder => "Standard folder",
+        }
+    }
 }
 
 /// A file modification time, as whole seconds plus nanoseconds since the Unix
@@ -426,6 +455,28 @@ mod tests {
             size: metadata.len(),
             mtime: FileTime::from_metadata(&metadata).expect("mtime"),
             source: Source::UserFolder,
+        }
+    }
+
+    #[test]
+    fn store_sources_keep_stable_names_and_labels() {
+        for (source, name, label) in [
+            (Source::Steam, "steam", "Steam"),
+            (Source::UserFolder, "userfolder", "User folder"),
+            (Source::Manual, "manual", "Manual"),
+            (Source::GogHeroic, "gog_heroic", "GOG via Heroic"),
+            (
+                Source::GogMinigalaxy,
+                "gog_minigalaxy",
+                "GOG via minigalaxy",
+            ),
+            (Source::GogOffline, "gog_offline", "GOG offline installer"),
+            (Source::StandardFolder, "standard_folder", "Standard folder"),
+        ] {
+            let json = serde_json::to_string(&source).expect("serialize");
+            assert_eq!(json, format!("\"{name}\""), "wire name for {source:?}");
+            assert_eq!(serde_json::from_str::<Source>(&json).unwrap(), source);
+            assert_eq!(source.label(), label);
         }
     }
 

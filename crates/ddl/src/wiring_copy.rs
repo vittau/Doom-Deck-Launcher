@@ -163,6 +163,7 @@ pub enum Text {
     CancelPending,
     Shortcuts,
     Recognized,
+    SearchStandardFolders,
 }
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
@@ -327,6 +328,7 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::CancelPending => s.get_cancel_pending(),
         Text::Shortcuts => s.get_shortcuts(),
         Text::Recognized => s.get_recognized(),
+        Text::SearchStandardFolders => s.get_search_standard_folders(),
     }
 }
 pub fn value(ui: &AppWindow, key: Text, value: impl ToString) -> slint::SharedString {

@@ -670,6 +670,14 @@ impl Runtime {
                     self.start(ui, Command::InstallEngine(version.clone()));
                 }
             }
+            (Screen::Settings, 72) if self.settings_section == 1 => {
+                if let Some(s) = &self.snapshot {
+                    self.start(
+                        ui,
+                        Command::SetSearchStandardFolders(!s.search_standard_folders),
+                    );
+                }
+            }
             (Screen::Settings, 100..) => {
                 if self.settings_section == 1
                     && let Some(path) = self
@@ -1584,13 +1592,20 @@ impl Runtime {
                                 30.,
                             );
                             for (i, e) in s.iwads.iter().enumerate() {
+                                // R3: name the source ("GOG via Heroic",
+                                // "Steam") next to the identified file.
                                 b.row(
                                     -1,
                                     36.,
                                     100. + i as f32 * 112.,
                                     1152.,
-                                    e.variant.clone().unwrap_or_default().into(),
-                                    e.path.display().to_string().into(),
+                                    e.source.label().into(),
+                                    format!(
+                                        "{} · {}",
+                                        e.variant.clone().unwrap_or_else(|| "unresolved".into()),
+                                        e.path.display()
+                                    )
+                                    .into(),
                                     false,
                                 );
                             }
@@ -1650,9 +1665,10 @@ impl Runtime {
                 Screen::Settings => {
                     b.panel(12., 12., 312., 360.);
                     let height = match self.settings_section {
-                        1 => self.snapshot.as_ref().map_or(240., |s| {
-                            (144. + s.folders.len().max(1) as f32 * 112.).max(240.)
-                        }),
+                        1 => self
+                            .snapshot
+                            .as_ref()
+                            .map_or(316., |s| (316. + s.folders.len() as f32 * 112.).max(316.)),
                         2 => 280.,
                         3 => 382.,
                         _ => 478.,
@@ -1745,16 +1761,34 @@ impl Runtime {
                                 }
                             }
                             1 => {
-                                b.button(70, 372., 36., 380., text(ui, T::AddFolder), true);
-                                b.button(71, 776., 36., 412., text(ui, T::Rescan), false);
+                                // R4 opt-in, default off; the existing Ember
+                                // row component shows the current state.
+                                b.row(
+                                    72,
+                                    372.,
+                                    36.,
+                                    816.,
+                                    text(ui, T::SearchStandardFolders),
+                                    text(
+                                        ui,
+                                        if s.search_standard_folders {
+                                            T::On
+                                        } else {
+                                            T::Off
+                                        },
+                                    ),
+                                    true,
+                                );
+                                b.button(70, 372., 128., 380., text(ui, T::AddFolder), true);
+                                b.button(71, 776., 128., 412., text(ui, T::Rescan), false);
                                 if s.folders.is_empty() {
-                                    b.label(372., 128., 816., 84., text(ui, T::NoFolders), 22.);
+                                    b.label(372., 220., 816., 84., text(ui, T::NoFolders), 22.);
                                 }
                                 for (i, p) in s.folders.iter().enumerate() {
                                     b.row(
                                         100 + i as i32,
                                         372.,
-                                        128. + i as f32 * 112.,
+                                        220. + i as f32 * 112.,
                                         816.,
                                         text(ui, T::Remove),
                                         p.display().to_string().into(),
