@@ -11,6 +11,7 @@ release = "Final release; idgames entry 2003-04-10"
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/scythe"
 description = "DOOM II megawad: 32 vanilla-format maps in three ten-map runs plus two secret maps, with a custom soundtrack and sky graphics."
 permission = "Authors may not use the contents as a base for modification or reuse without agreement. Redistribution is permitted provided scythe.txt travels with the file, unmodified and intact, and no commercial use is made without the author's agreement. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["classics", "megawad"]
 
 [base_game]
 game = "doom2"
@@ -34,7 +35,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-scythe.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text"]
-notes = "Confirmed archive/member identities and the absence of COMPLVL, DEHACKED and UMAPINFO/MAPINFO lumps. Proposed complevel 2 from the authors' 'runs with doom2.exe v1.9' statement; no gameplay test performed."
+notes = "Confirmed archive/member identities and the absence of COMPLVL, DEHACKED and UMAPINFO/MAPINFO lumps. Proposed complevel 2 from the authors' 'runs with doom2.exe v1.9' statement; no gameplay test performed. Tags: classics = released 2003-04-08, over five years before this review, and named on Doomworld's 2003 top-WADs list per DoomWiki (secondary); megawad = 32 maps (docs/research/reference-scythe.md). No Cacoward found for this original release (its sequel Scythe 2 won in 2005), so it is not tagged cacowards."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and map selection."]
 
 [[packages]]

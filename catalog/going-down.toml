@@ -8,6 +8,7 @@ release = "Final version (third bug-fix), 2015-08-21; idgames entry 2014-11-02"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gd"
 description = "DOOM II megawad: 32 BOOM-format maps, one floor of a UAC tower each, with an embedded DEHACKED patch and the author's own MIDI soundtrack."
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided gd.txt travels with the file, unmodified and intact; the author states permission was obtained from the original authors of any included resources. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["classics", "megawad"]
 
 [base_game]
 game = "doom2"
@@ -31,7 +32,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-going-down.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; author's release text"]
-notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the inert ZDoom-style MAPINFO (removed from DSDA-Doom in v0.30.0); no COMPLVL or UMAPINFO lump. Complevel 9 is the author's own stated value; no gameplay test performed."
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the inert ZDoom-style MAPINFO (removed from DSDA-Doom in v0.30.0); no COMPLVL or UMAPINFO lump. Complevel 9 is the author's own stated value; no gameplay test performed. Tags: classics = first complete release 2014-09-14, over five years before this review; megawad = 32 maps (gd.txt, docs/research/reference-going-down.md). DoomWiki links this release from its Cacowards 2014 page, but the award category could not be confirmed (doomworld.com blocks automated fetches), so it is not tagged cacowards."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The embedded ZDoom MAPINFO (music/cluster names) is inert under DSDA-Doom v0.30.1; confirm the in-game music selection on the Deck."]
 
 [[packages]]
