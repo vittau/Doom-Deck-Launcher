@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Rose Compass logo, real mapset screenshots and catalog updates without a release; latest pre-release is `v0.0.5-screens`; Deck validation pending  ·  **Updated:** 2026-10-17
+**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Rose Compass logo, real mapset screenshots and catalog updates without a release; latest pre-release is `v0.0.5-screens.1`; Deck validation pending  ·  **Updated:** 2026-10-17
 
 | Item | Spec / output | State |
 | --- | --- | --- |
