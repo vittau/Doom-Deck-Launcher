@@ -25,6 +25,8 @@ component Cover inherits Image {
     in property <string> screenshot;
     source: screenshot != "" ? ScreenshotAssets.image(screenshot) : art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : art == 3 ? @image-url("assets/ember/eviternity.png") : art == 0 ? @image-url("assets/ember/sigil.png") : @image-url("assets/ember/fallback.png");
     image-fit: cover;
+    horizontal-alignment: center;
+    vertical-alignment: center;
 }
 component Node inherits Rectangle {
     in property <ViewNode> item;
@@ -56,11 +58,15 @@ component Node inherits Rectangle {
         clip: true; border-radius: Tokens.card-radius;
         Cover { x: 0px; y: 0px; width: parent.width; height: parent.height; art: root.item.art; screenshot: root.item.screenshot; }
         if root.item.h >= 80: Rectangle {
-            x: 8px; y: parent.height - (root.item.w < 240 ? 88px : 58px); width: parent.width - 16px; height: root.item.w < 240 ? 80px : 50px;
+            x: 8px; y: parent.height - (root.item.w < 300 ? 88px : 58px); width: parent.width - 16px; height: root.item.w < 300 ? 80px : 50px;
             border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
             background: Tokens.deep;
             Text { x: 6px; width: parent.width - 12px; wrap: word-wrap; text: root.item.screenshot != "" ? root.item.credit : WiringStrings.concept-art; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
         }
+    }
+    if item.kind == 16: Rectangle {
+        background: Tokens.deep; border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
+        Text { x: 6px; width: parent.width - 12px; text: root.item.label; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; wrap: word-wrap; }
     }
     if item.kind == 10 || item.kind == 11: Image {
         width: parent.width; height: parent.height;
@@ -94,7 +100,7 @@ component Node inherits Rectangle {
         x: 0px; y: 2px; width: 24px; height: 24px;
         source: root.item.tone == 2 ? @image-url("assets/ember/check.svg") : root.item.tone == 4 ? @image-url("assets/ember/cross.svg") : @image-url("assets/ember/pending.svg");
     }
-    if item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 10 && item.kind != 11 && item.kind != 12 && item.kind != 13 && item.kind != 14 && item.kind != 15: Text {
+    if item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 10 && item.kind != 11 && item.kind != 12 && item.kind != 13 && item.kind != 14 && item.kind != 15 && item.kind != 16: Text {
         x: item.kind == 7 ? 32px : item.kind == 8 ? 8px : item.kind == 0 ? 0px : 16px;
         y: item.kind == 7 || item.kind == 0 ? 0px : item.kind == 9 ? 4px : 8px;
         width: parent.width - (item.kind == 0 ? 0px : item.kind == 8 ? 16px : 32px);
@@ -189,7 +195,7 @@ export component AppWindow inherits Window {
     if root.art-band: Rectangle {
         x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
         clip: true;
-        Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; }
+        Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; horizontal-alignment: center; vertical-alignment: center; }
         Rectangle { x: 8px; y: 30px; width: parent.width - 16px; height: 50px; background: Tokens.deep; border-width: 1px; border-color: Tokens.steel-edge; border-radius: 4px;
             Text { x: 8px; width: parent.width - 16px; wrap: word-wrap; text: root.band-screenshot != "" ? root.band-credit : WiringStrings.concept-art; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; }
         }

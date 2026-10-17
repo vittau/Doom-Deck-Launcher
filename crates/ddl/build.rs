@@ -89,7 +89,7 @@ fn write_screenshot_index() -> PathBuf {
     code.push_str("];\n");
 
     let out = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("screenshots.rs");
-    fs::write(&out, code).expect("write $OUT_DIR/screenshots.rs");
+    write_if_changed(&out, &code);
 
     // Literal URLs let Slint embed/decode the assets with its existing image support.
     // Selection still follows the recipe's declared first asset, not directory order.
@@ -107,6 +107,14 @@ fn write_screenshot_index() -> PathBuf {
     }
     lookup.push_str("        return @image-url(\"\");\n    }\n}\n");
     let path = out.with_file_name("screenshots.slint");
-    fs::write(&path, lookup).expect("write screenshot Slint lookup");
+    write_if_changed(&path, &lookup);
     path
+}
+
+// The compiler tracks the generated Slint import. Preserve its mtime when the
+// lookup is unchanged so it does not retrigger the build on every cargo command.
+fn write_if_changed(path: &std::path::Path, contents: &str) {
+    if fs::read_to_string(path).ok().as_deref() != Some(contents) {
+        fs::write(path, contents).expect("write generated screenshot index");
+    }
 }

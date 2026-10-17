@@ -1372,7 +1372,7 @@ impl Runtime {
                     b.panel(12., 12., 784., 478.);
                     b.panel(828., 12., 384., 478.);
                     if let Some(item) = latest {
-                        b.recipe_art(ui, 36., 36., 240., 300., &item.recipe);
+                        b.recipe_art(ui, 36., 36., 240., 260., &item.recipe);
                         b.label(
                             308.,
                             56.,
@@ -1408,7 +1408,7 @@ impl Runtime {
                         b.label(36., 160., 720., 80., text(ui, T::NoHistory), 22.);
                         b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), true);
                     }
-                    b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
+                    b.label(36., 310., 720., 32., text(ui, T::Recent), 26.);
                     if let Some(s) = &self.snapshot {
                         let mut recent: Vec<_> =
                             s.items.iter().filter(|i| i.last_played.is_some()).collect();
@@ -1418,22 +1418,22 @@ impl Runtime {
                         }
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
-                            b.recipe_art(ui, x, 400., 56., 66., &i.recipe);
+                            b.recipe_art(ui, x, 354., 56., 66., &i.recipe);
                             b.label(
                                 x + 72.,
-                                400.,
+                                354.,
                                 270.,
                                 32.,
                                 display_title(&i.recipe).into(),
                                 26.,
                             );
-                            b.label(x + 72., 436., 270., 30., i.profile.name.clone().into(), 20.);
+                            b.label(x + 72., 390., 270., 30., i.profile.name.clone().into(), 20.);
                             let (_, credit) = crate::screenshots::presentation(ui, &i.recipe);
                             b.label(
                                 x,
-                                466.,
+                                422.,
                                 334.,
-                                24.,
+                                50.,
                                 if credit.is_empty() {
                                     ui.global::<crate::WiringStrings>().get_concept_art()
                                 } else {
@@ -1441,6 +1441,7 @@ impl Runtime {
                                 },
                                 20.,
                             );
+                            b.nodes.last_mut().unwrap().kind = 16;
                         }
                         b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
                         b.check(
