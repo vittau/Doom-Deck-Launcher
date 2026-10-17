@@ -41,4 +41,4 @@
 | Multiple profiles per mapset (`deck-testing.md` C4) | 018 | Ready — starts after 015 merges (UI overlap) |
 | Catalog updates without a DDL release | 019 | **Draft — waiting for the owner** (fetch policy, trust model, publishing; spec Q1–Q3) |
 | Recipe changes after install | 020 | Ready — after 018 |
-| GOG and other store IWAD paths | 021 | Ready — in progress |
+| GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). Follow-up: add the published GOG Final Doom hashes to `data/iwads.toml`. |
