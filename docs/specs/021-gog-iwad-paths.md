@@ -38,9 +38,9 @@ a Deck route uses them. Epic/Bethesda.net.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1) — research section committed with links.
-- [ ] **A2** (R2, R3) — tests with fixture launcher records and temp homes: found, missing,
+- [x] **A1** (R1) — research section committed with links.
+- [x] **A2** (R2, R3) — tests with fixture launcher records and temp homes: found, missing,
   garbled, Flatpak; source label in scan output.
-- [ ] **A3** (R4) — opt-in default-off test; Settings row headless render.
-- [ ] **A4** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** (R4) — opt-in default-off test; Settings row headless render.
+- [x] **A4** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A5** — *Needs Deck Validation:* a GOG install via Heroic is found on the Deck.

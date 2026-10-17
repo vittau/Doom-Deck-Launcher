@@ -69,6 +69,22 @@ the controller now work (gilrs).
 | C3 | DDL finds the DOOM + DOOM II Steam install and identifies its IWADs (`base/` and `rerelease/`) | Gaming | ⏳ | |
 | C4 | Saves for two profiles stay separate | Gaming | ⏳ | UI has one Default profile per mapset for now (spec 010); later spec |
 
+## GOG and other stores (spec 021)
+
+Everything here is **Needs Deck Validation**: the paths come from the launchers' own upstream
+source (`docs/research/iwad-identification.md` §4.1), but only a real Deck confirms the exact
+layout.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| G1 | A GOG *DOOM + DOOM II* installed through **Heroic** is found automatically; the IWAD list names it "GOG via Heroic" (spec 021 A5) | Gaming | ⏳ | Covers R2/R3; note the install path |
+| G2 | A GOG game installed with the **offline installer** under `~/GOG Games/…` is found | Gaming | ⏳ | default folder per GOG support |
+| G3 | A game installed with **minigalaxy** (`install_dir` in `~/.config/minigalaxy/config.json`) is found | Gaming | ⏳ | |
+| G4 | **Search standard Linux folders** is off by default; turning it on in Settings → IWAD folders finds a WAD placed in `~/.local/share/games/doom` (or `$DOOMWADDIR`) after a Rescan | Gaming | ⏳ | covers R4 |
+| G5 | `./ddl iwad scan` prints each file's source label ("Steam", "GOG via Heroic", …) | Desktop | ⏳ | covers R3 |
+| G6 | **Flatpak Heroic** (`~/.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store/installed.json`) is read; also note whether Flatpak paths are reachable from DDL's sandbox-less install | Gaming | ⏳ | |
+| G7 | A GOG game installed through **Lutris** is *not* auto-found (Lutris uses a SQLite DB); **Add IWAD folder** reaches it | Gaming | ⏳ | open question 10; whether to add SQLite |
+
 ## Reference mapsets
 
 | # | Check | Mode | Result | Notes |
