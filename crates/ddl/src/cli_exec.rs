@@ -758,6 +758,7 @@ exit 1
             catalog_url: server.url("/catalog.json"),
             reviewed,
             runner,
+            engine_response_timeout: None,
         });
         Fixture {
             env: Environment {
