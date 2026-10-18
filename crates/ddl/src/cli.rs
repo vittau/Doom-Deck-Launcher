@@ -58,6 +58,157 @@ pub enum HelpTopic {
     CatalogStatus,
     /// `ddl catalog update --help`.
     CatalogUpdate,
+    /// `ddl custom --help`.
+    Custom,
+    /// `ddl custom list --help`.
+    CustomList,
+    /// `ddl custom show --help`.
+    CustomShow,
+    /// `ddl custom create --help`.
+    CustomCreate,
+    /// `ddl custom add-file --help`.
+    CustomAddFile,
+    /// `ddl custom move --help`.
+    CustomMove,
+    /// `ddl custom remove-file --help`.
+    CustomRemoveFile,
+    /// `ddl custom delete --help`.
+    CustomDelete,
+    /// `ddl profile --help`.
+    Profile,
+    /// `ddl profile extras --help`.
+    ProfileExtras,
+}
+
+/// Which of a setup's two ordered groups a CLI command addresses (spec 026, R3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroupArg {
+    /// WAD/ZIP files, sent as the `-file` list.
+    Files,
+    /// DEH/BEX patches, sent as the `-deh` list.
+    Patches,
+}
+
+impl GroupArg {
+    /// Parses `files` or `patches`.
+    fn parse(value: &str) -> Option<Self> {
+        match value {
+            "files" => Some(Self::Files),
+            "patches" => Some(Self::Patches),
+            _ => None,
+        }
+    }
+}
+
+/// `ddl custom …` (spec 026, R7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CustomCommand {
+    /// `ddl custom list`.
+    List,
+    /// `ddl custom show <id>`.
+    Show {
+        /// Setup id.
+        id: String,
+    },
+    /// `ddl custom create <name> --iwad <variant> | --iwad-file <path>`.
+    Create {
+        /// Friendly name.
+        name: String,
+        /// Explicit id (`--id`).
+        id: Option<String>,
+        /// Identified IWAD variant (`--iwad`).
+        iwad: Option<String>,
+        /// User file whose header is `IWAD` (`--iwad-file`).
+        iwad_file: Option<std::path::PathBuf>,
+        /// `auto` or a reviewed number (`--complevel`).
+        compatibility: Option<String>,
+    },
+    /// `ddl custom add-file <id> <path...>`.
+    AddFile {
+        /// Setup id.
+        id: String,
+        /// Files to append, routed by content.
+        paths: Vec<std::path::PathBuf>,
+    },
+    /// `ddl custom move <id> <files|patches> <from> <to>`.
+    Move {
+        /// Setup id.
+        id: String,
+        /// Group addressed.
+        group: GroupArg,
+        /// Source index.
+        from: usize,
+        /// Destination index.
+        to: usize,
+    },
+    /// `ddl custom remove-file <id> <files|patches> <index>`.
+    RemoveFile {
+        /// Setup id.
+        id: String,
+        /// Group addressed.
+        group: GroupArg,
+        /// Index to drop.
+        index: usize,
+    },
+    /// `ddl custom delete <id> [--delete-profiles]`.
+    Delete {
+        /// Setup id.
+        id: String,
+        /// Also delete its profiles and saves (D-022 checkbox).
+        delete_profiles: bool,
+    },
+}
+
+/// `ddl profile extras …` (spec 026, R5/R7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProfileExtrasCommand {
+    /// List the selected profile's extras.
+    List {
+        /// Recipe id.
+        recipe: String,
+        /// Profile name or id (`--profile`).
+        profile: Option<String>,
+    },
+    /// Append user files to the selected profile.
+    Add {
+        /// Recipe id.
+        recipe: String,
+        /// Profile name or id (`--profile`).
+        profile: Option<String>,
+        /// Files to append.
+        paths: Vec<std::path::PathBuf>,
+    },
+    /// Remove one extra from a group.
+    Remove {
+        /// Recipe id.
+        recipe: String,
+        /// Profile name or id (`--profile`).
+        profile: Option<String>,
+        /// Group addressed.
+        group: GroupArg,
+        /// Index within the group.
+        index: usize,
+    },
+    /// Reorder one extra inside a group.
+    Move {
+        /// Recipe id.
+        recipe: String,
+        /// Profile name or id (`--profile`).
+        profile: Option<String>,
+        /// Group addressed.
+        group: GroupArg,
+        /// Source index within the group.
+        from: usize,
+        /// Destination index within the group.
+        to: usize,
+    },
+    /// Drop every extra from the selected profile.
+    Clear {
+        /// Recipe id.
+        recipe: String,
+        /// Profile name or id (`--profile`).
+        profile: Option<String>,
+    },
 }
 
 /// What the user asked `ddl` to do.
@@ -139,7 +290,13 @@ pub enum Command {
         skill: Option<u8>,
         /// Reset to a pistol start on every map (`--pistol-start`).
         pistol_start: bool,
+        /// Re-record changed user files instead of blocking (spec 026, R4).
+        accept_changes: bool,
     },
+    /// `ddl custom …`: player-made setups (spec 026, R7).
+    Custom(CustomCommand),
+    /// `ddl profile extras …`: extra files on a catalog profile (spec 026, R7).
+    ProfileExtras(ProfileExtrasCommand),
     /// `ddl doctor`: one paste-friendly diagnostic report.
     Doctor,
     /// Print [`version_line`] and exit successfully.
@@ -212,7 +369,19 @@ Usage: {BIN} [OPTIONS]
        {BIN} mapset update <id>
        {BIN} mapset uninstall <id> [--delete-profiles]
        {BIN} mapset install <id> [--with <component>...]
-       {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
+       {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start] [--accept-changes]
+       {BIN} custom list
+       {BIN} custom show <id>
+       {BIN} custom create <name> [--id <id>] (--iwad <variant> | --iwad-file <path>) [--complevel auto|<n>]
+       {BIN} custom add-file <id> <path>...
+       {BIN} custom move <id> <files|patches> <from> <to>
+       {BIN} custom remove-file <id> <files|patches> <index>
+       {BIN} custom delete <id> [--delete-profiles]
+       {BIN} profile extras <recipe> [--profile <name|id>] list
+       {BIN} profile extras <recipe> [--profile <name|id>] add <path>...
+       {BIN} profile extras <recipe> [--profile <name|id>] move <files|patches> <from> <to>
+       {BIN} profile extras <recipe> [--profile <name|id>] remove <files|patches> <index>
+       {BIN} profile extras <recipe> [--profile <name|id>] clear
        {BIN} doctor
 
 Commands:
@@ -220,7 +389,9 @@ Commands:
   engine        Install or inspect the DSDA-Doom engine
   iwad scan     Find and identify your IWAD files
   mapset        List, inspect, install or update mapsets
-  launch        Resolve a mapset; without --dry-run, run it
+  launch        Resolve a mapset or custom setup; without --dry-run, run it
+  custom        Create and edit player-made setups from local files
+  profile       Edit a mapset profile's extra files
   doctor        Print a paste-friendly diagnostic report
 
 Options:
@@ -343,14 +514,14 @@ Usage: {BIN} mapset install <id> [--with <component>...]
         ),
         HelpTopic::Launch => format!(
             "\
-{BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
+{BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start] [--accept-changes]
 
-Resolve a mapset exactly as the UI's Play does. With --dry-run it prints the
-argv (one argument per line) and the working directory, or the typed blocker
-with its explanation. Without --dry-run it starts DSDA-Doom through the same
-run guard as the UI.
+Resolve a mapset — or a custom setup — exactly as the UI's Play does. With
+--dry-run it prints the argv (one argument per line) and the working directory,
+or the typed blocker with its explanation. Without --dry-run it starts
+DSDA-Doom through the same run guard as the UI.
 
-Usage: {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start]
+Usage: {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start] [--accept-changes]
 
 Options:
       --dry-run        Print the launch plan instead of starting the engine
@@ -358,6 +529,7 @@ Options:
       --skill <1-5>    Starting skill
       --profile <name|id>  Select a saved profile
       --pistol-start   Reset to a pistol start on every map
+      --accept-changes Re-record user files that changed since DDL read them
 "
         ),
         HelpTopic::Doctor => format!(
@@ -427,6 +599,133 @@ DDL has and every recipe passes the same lint CI runs. Progress goes to stderr.
 Usage: {BIN} catalog update
 "
         ),
+        HelpTopic::Custom => format!(
+            "\
+{BIN} custom: player-made setups from local files
+
+Usage: {BIN} custom list
+       {BIN} custom show <id>
+       {BIN} custom create <name> [--id <id>] (--iwad <variant> | --iwad-file <path>) [--complevel auto|<n>]
+       {BIN} custom add-file <id> <path>...
+       {BIN} custom move <id> <files|patches> <from> <to>
+       {BIN} custom remove-file <id> <files|patches> <index>
+       {BIN} custom delete <id> [--delete-profiles]
+
+Commands:
+  list         List every custom setup
+  show         Show one setup and check that its files are still usable
+  create       Create a setup (an identified IWAD or a file whose header is IWAD)
+  add-file     Append files, routed by content to the WAD/ZIP or DEH/BEX list
+  move         Reorder one entry inside a group
+  remove-file  Drop one entry; the file on disk is never deleted
+  delete       Remove DDL's record, optionally with its profiles and saves
+
+Custom setups are not verified by DDL and are labelled `Custom -- not verified`.
+"
+        ),
+        HelpTopic::CustomList => format!(
+            "\
+{BIN} custom list
+
+List every custom setup with its id, name, IWAD and file counts.
+
+Usage: {BIN} custom list
+"
+        ),
+        HelpTopic::CustomShow => format!(
+            "\
+{BIN} custom show <id>
+
+Show one custom setup and check each user file against its recorded size and
+SHA-256, naming any file that is missing or changed.
+
+Usage: {BIN} custom show <id>
+"
+        ),
+        HelpTopic::CustomCreate => format!(
+            "\
+{BIN} custom create <name> [--id <id>] (--iwad <variant> | --iwad-file <path>) [--complevel auto|<n>]
+
+Create a custom setup. --iwad names an identified IWAD variant from `ddl iwad
+scan`; --iwad-file names a file whose header is IWAD. --complevel defaults to
+auto (no -complevel, DSDA-Doom decides).
+
+Usage: {BIN} custom create <name> [--id <id>] (--iwad <variant> | --iwad-file <path>) [--complevel auto|<n>]
+"
+        ),
+        HelpTopic::CustomAddFile => format!(
+            "\
+{BIN} custom add-file <id> <path>...
+
+Append one or more user files to a setup. Each file's kind is detected from its
+content; WAD/ZIP go to the -file list, DEH/BEX to the -deh list, in the order
+given. Accepted extensions are .wad, .lmp, .zip, .deh and .bex.
+
+Usage: {BIN} custom add-file <id> <path>...
+"
+        ),
+        HelpTopic::CustomMove => format!(
+            "\
+{BIN} custom move <id> <files|patches> <from> <to>
+
+Move one entry within a setup's -file or -deh list, keeping the rest in order.
+
+Usage: {BIN} custom move <id> <files|patches> <from> <to>
+"
+        ),
+        HelpTopic::CustomRemoveFile => format!(
+            "\
+{BIN} custom remove-file <id> <files|patches> <index>
+
+Remove one entry from a setup's -file or -deh list. The file on disk is never
+deleted.
+
+Usage: {BIN} custom remove-file <id> <files|patches> <index>
+"
+        ),
+        HelpTopic::CustomDelete => format!(
+            "\
+{BIN} custom delete <id> [--delete-profiles]
+
+Remove a custom setup's record. --delete-profiles also deletes the setup's
+profiles and their saves. Your own files are never touched.
+
+Usage: {BIN} custom delete <id> [--delete-profiles]
+
+Options:
+      --delete-profiles  Also delete the setup's profiles and saves
+"
+        ),
+        HelpTopic::Profile => format!(
+            "\
+{BIN} profile: edit a mapset profile's extra files
+
+Usage: {BIN} profile extras <recipe> [--profile <name|id>] list
+       {BIN} profile extras <recipe> [--profile <name|id>] add <path>...
+       {BIN} profile extras <recipe> [--profile <name|id>] move <files|patches> <from> <to>
+       {BIN} profile extras <recipe> [--profile <name|id>] remove <files|patches> <index>
+       {BIN} profile extras <recipe> [--profile <name|id>] clear
+"
+        ),
+        HelpTopic::ProfileExtras => format!(
+            "\
+{BIN} profile extras <recipe> [--profile <name|id>] <list|add|move|remove|clear>
+
+Extra files are layered after the recipe's own verified files: recipe files in
+recipe order, then the extras. A profile with extras is labelled `Custom -- not
+verified`. Changing extras on a profile that has saves can make those saves
+unloadable, so DDL warns.
+
+Usage: {BIN} profile extras <recipe> [--profile <name|id>] list
+       {BIN} profile extras <recipe> [--profile <name|id>] add <path>...
+       {BIN} profile extras <recipe> [--profile <name|id>] move <files|patches> <from> <to>
+       {BIN} profile extras <recipe> [--profile <name|id>] remove <files|patches> <index>
+       {BIN} profile extras <recipe> [--profile <name|id>] clear
+
+Options:
+      --profile <name|id>  Select a saved profile (default: the active one)
+"
+        ),
     }
 }
 
@@ -453,6 +752,8 @@ where
         Some("iwad") => parse_iwad(&args[1..]),
         Some("mapset") => parse_mapset(&args[1..]),
         Some("launch") => parse_launch(&args[1..]),
+        Some("custom") => parse_custom(&args[1..]),
+        Some("profile") => parse_profile(&args[1..]),
         Some("doctor") => parse_doctor(&args[1..]),
         _ => parse_global(&args),
     }
@@ -776,6 +1077,7 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
     let mut components = Vec::new();
     let mut skill = None;
     let mut pistol_start = false;
+    let mut accept_changes = false;
     let mut positional = false;
     let mut index = 0;
     while index < args.len() {
@@ -786,6 +1088,8 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
             return Ok(Command::Help(HelpTopic::Launch));
         } else if !positional && arg == "--dry-run" {
             dry_run = true;
+        } else if !positional && arg == "--accept-changes" {
+            accept_changes = true;
         } else if !positional && arg == "--pistol-start" {
             pistol_start = true;
         } else if !positional && arg == "--profile" {
@@ -842,7 +1146,311 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
         components,
         skill,
         pistol_start,
+        accept_changes,
     })
+}
+
+fn parse_custom(args: &[OsString]) -> Result<Command, ParseError> {
+    match args.first().and_then(|arg| arg.to_str()) {
+        Some("list") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CustomList));
+            }
+            reject_extra_positionals(&args[1..])?;
+            Ok(Command::Custom(CustomCommand::List))
+        }
+        Some("show") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CustomShow));
+            }
+            Ok(Command::Custom(CustomCommand::Show {
+                id: one_id(&args[1..], "`custom show <id>`")?,
+            }))
+        }
+        Some("create") => parse_custom_create(&args[1..]),
+        Some("add-file") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CustomAddFile));
+            }
+            let words = positionals(&args[1..])?;
+            let (id, paths) = words
+                .split_first()
+                .ok_or_else(|| ParseError::message("`custom add-file` needs a setup id"))?;
+            if paths.is_empty() {
+                return Err(ParseError::message(
+                    "`custom add-file` needs at least one file path",
+                ));
+            }
+            Ok(Command::Custom(CustomCommand::AddFile {
+                id: id.clone(),
+                paths: paths.iter().map(PathBuf::from).collect(),
+            }))
+        }
+        Some("move") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CustomMove));
+            }
+            let words = positionals(&args[1..])?;
+            let [id, group, from, to] = words.as_slice() else {
+                return Err(ParseError::message(
+                    "`custom move` needs `<id> <files|patches> <from> <to>`",
+                ));
+            };
+            Ok(Command::Custom(CustomCommand::Move {
+                id: id.clone(),
+                group: parse_group(group)?,
+                from: parse_index(from)?,
+                to: parse_index(to)?,
+            }))
+        }
+        Some("remove-file") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::CustomRemoveFile));
+            }
+            let words = positionals(&args[1..])?;
+            let [id, group, index] = words.as_slice() else {
+                return Err(ParseError::message(
+                    "`custom remove-file` needs `<id> <files|patches> <index>`",
+                ));
+            };
+            Ok(Command::Custom(CustomCommand::RemoveFile {
+                id: id.clone(),
+                group: parse_group(group)?,
+                index: parse_index(index)?,
+            }))
+        }
+        Some("delete") => {
+            let mut id = None;
+            let mut delete_profiles = false;
+            let mut positional = false;
+            for arg in &args[1..] {
+                if !positional && arg == "--" {
+                    positional = true;
+                } else if !positional && is_one_of(arg, &["-h", "--help"]) {
+                    return Ok(Command::Help(HelpTopic::CustomDelete));
+                } else if !positional && arg == "--delete-profiles" {
+                    delete_profiles = true;
+                } else if !positional && arg.to_string_lossy().starts_with('-') {
+                    return Err(ParseError::unknown(&arg.to_string_lossy()));
+                } else if id.is_none() {
+                    id = Some(arg.to_string_lossy().into_owned());
+                } else {
+                    return Err(ParseError::unknown(&arg.to_string_lossy()));
+                }
+            }
+            Ok(Command::Custom(CustomCommand::Delete {
+                id: id.ok_or_else(|| ParseError::message("`custom delete` needs a setup id"))?,
+                delete_profiles,
+            }))
+        }
+        _ if wants_help(args) => Ok(Command::Help(HelpTopic::Custom)),
+        _ => Err(ParseError::message(
+            "expected `custom list`, `custom show <id>`, `custom create <name>`, `custom add-file <id> <path>`, `custom move <id> <group> <from> <to>`, `custom remove-file <id> <group> <index>` or `custom delete <id>`",
+        )),
+    }
+}
+
+fn parse_custom_create(args: &[OsString]) -> Result<Command, ParseError> {
+    let mut name = None;
+    let mut id = None;
+    let mut iwad = None;
+    let mut iwad_file = None;
+    let mut compatibility = None;
+    let mut positional = false;
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if !positional && arg == "--" {
+            positional = true;
+        } else if !positional && is_one_of(arg, &["-h", "--help"]) {
+            return Ok(Command::Help(HelpTopic::CustomCreate));
+        } else if !positional && arg == "--id" {
+            id = Some(option_value(args, index, "--id")?.to_owned());
+            index += 1;
+        } else if !positional && arg == "--iwad" {
+            iwad = Some(option_value(args, index, "--iwad")?.to_owned());
+            index += 1;
+        } else if !positional && arg == "--iwad-file" {
+            iwad_file = Some(PathBuf::from(option_value(args, index, "--iwad-file")?));
+            index += 1;
+        } else if !positional && arg == "--complevel" {
+            compatibility = Some(option_value(args, index, "--complevel")?.to_owned());
+            index += 1;
+        } else if !positional && arg.to_string_lossy().starts_with('-') {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        } else if name.is_none() {
+            name = Some(arg.to_string_lossy().into_owned());
+        } else {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        }
+        index += 1;
+    }
+    let name = name.ok_or_else(|| ParseError::message("`custom create` needs a name"))?;
+    match (&iwad, &iwad_file) {
+        (None, None) => {
+            return Err(ParseError::message(
+                "`custom create` needs `--iwad <variant>` or `--iwad-file <path>`",
+            ));
+        }
+        (Some(_), Some(_)) => {
+            return Err(ParseError::message(
+                "`custom create` takes `--iwad` or `--iwad-file`, not both",
+            ));
+        }
+        _ => {}
+    }
+    Ok(Command::Custom(CustomCommand::Create {
+        name,
+        id,
+        iwad,
+        iwad_file,
+        compatibility,
+    }))
+}
+
+fn parse_profile(args: &[OsString]) -> Result<Command, ParseError> {
+    match args.first().and_then(|arg| arg.to_str()) {
+        Some("extras") => parse_profile_extras(&args[1..]),
+        _ if wants_help(args) => Ok(Command::Help(HelpTopic::Profile)),
+        _ => Err(ParseError::message(
+            "expected `profile extras <recipe> ...`",
+        )),
+    }
+}
+
+fn parse_profile_extras(args: &[OsString]) -> Result<Command, ParseError> {
+    let mut profile = None;
+    let mut rest: Vec<String> = Vec::new();
+    let mut positional = false;
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if !positional && arg == "--" {
+            positional = true;
+        } else if !positional && is_one_of(arg, &["-h", "--help"]) {
+            return Ok(Command::Help(HelpTopic::ProfileExtras));
+        } else if !positional && arg == "--profile" {
+            profile = Some(option_value(args, index, "--profile")?.to_owned());
+            index += 1;
+        } else if !positional && arg.to_string_lossy().starts_with('-') {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        } else {
+            rest.push(arg.to_string_lossy().into_owned());
+        }
+        index += 1;
+    }
+    let (recipe, after_recipe) = rest
+        .split_first()
+        .ok_or_else(|| ParseError::message("`profile extras` needs a recipe id"))?;
+    let (action, action_args) = after_recipe
+        .split_first()
+        .ok_or_else(|| ParseError::message("`profile extras` needs an action"))?;
+    let command = match action.as_str() {
+        "list" if action_args.is_empty() => ProfileExtrasCommand::List {
+            recipe: recipe.clone(),
+            profile,
+        },
+        "clear" if action_args.is_empty() => ProfileExtrasCommand::Clear {
+            recipe: recipe.clone(),
+            profile,
+        },
+        "add" => {
+            if action_args.is_empty() {
+                return Err(ParseError::message(
+                    "`profile extras add` needs at least one file path",
+                ));
+            }
+            ProfileExtrasCommand::Add {
+                recipe: recipe.clone(),
+                profile,
+                paths: action_args.iter().map(PathBuf::from).collect(),
+            }
+        }
+        "move" => {
+            let [group, from, to] = action_args else {
+                return Err(ParseError::message(
+                    "`profile extras move` needs `<files|patches> <from> <to>`",
+                ));
+            };
+            ProfileExtrasCommand::Move {
+                recipe: recipe.clone(),
+                profile,
+                group: parse_group(group)?,
+                from: parse_index(from)?,
+                to: parse_index(to)?,
+            }
+        }
+        "remove" => {
+            let [group, index] = action_args else {
+                return Err(ParseError::message(
+                    "`profile extras remove` needs `<files|patches> <index>`",
+                ));
+            };
+            ProfileExtrasCommand::Remove {
+                recipe: recipe.clone(),
+                profile,
+                group: parse_group(group)?,
+                index: parse_index(index)?,
+            }
+        }
+        _ => {
+            return Err(ParseError::message(
+                "expected `profile extras <recipe> [--profile <name|id>] <list|add|move|remove|clear>`",
+            ));
+        }
+    };
+    Ok(Command::ProfileExtras(command))
+}
+
+/// Parses `files` or `patches`.
+fn parse_group(value: &str) -> Result<GroupArg, ParseError> {
+    GroupArg::parse(value).ok_or_else(|| {
+        ParseError::message(format!(
+            "`{value}` is not a group; use `files` or `patches`"
+        ))
+    })
+}
+
+/// Parses a non-negative index.
+fn parse_index(value: &str) -> Result<usize, ParseError> {
+    value
+        .parse()
+        .map_err(|_| ParseError::message(format!("`{value}` is not a valid index")))
+}
+
+/// Every non-option argument, honouring a `--` separator.
+fn positionals(args: &[OsString]) -> Result<Vec<String>, ParseError> {
+    let mut positional = false;
+    let mut words = Vec::new();
+    for arg in args {
+        if !positional && arg == "--" {
+            positional = true;
+        } else if !positional && arg.to_string_lossy().starts_with('-') {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        } else {
+            words.push(arg.to_string_lossy().into_owned());
+        }
+    }
+    Ok(words)
+}
+
+/// Rejects any positional argument at all.
+fn reject_extra_positionals(args: &[OsString]) -> Result<(), ParseError> {
+    for arg in args {
+        if arg != "--" {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        }
+    }
+    Ok(())
+}
+
+/// Exactly one positional id.
+fn one_id(args: &[OsString], usage: &str) -> Result<String, ParseError> {
+    let words = positionals(args)?;
+    match words.as_slice() {
+        [id] => Ok(id.clone()),
+        _ => Err(ParseError::message(format!("{usage} takes exactly one id"))),
+    }
 }
 
 fn parse_doctor(args: &[OsString]) -> Result<Command, ParseError> {
@@ -1184,7 +1792,8 @@ mod tests {
                 profile: None,
                 components: vec![],
                 skill: None,
-                pistol_start: false
+                pistol_start: false,
+                accept_changes: false
             })
         );
         assert_eq!(
@@ -1203,7 +1812,8 @@ mod tests {
                 profile: None,
                 components: vec!["alternate-blaster".into()],
                 skill: Some(4),
-                pistol_start: true
+                pistol_start: true,
+                accept_changes: false
             })
         );
         assert!(parse_str(&["launch"]).is_err());
@@ -1290,6 +1900,16 @@ mod tests {
             HelpTopic::CatalogBundle,
             HelpTopic::CatalogStatus,
             HelpTopic::CatalogUpdate,
+            HelpTopic::Custom,
+            HelpTopic::CustomList,
+            HelpTopic::CustomShow,
+            HelpTopic::CustomCreate,
+            HelpTopic::CustomAddFile,
+            HelpTopic::CustomMove,
+            HelpTopic::CustomRemoveFile,
+            HelpTopic::CustomDelete,
+            HelpTopic::Profile,
+            HelpTopic::ProfileExtras,
         ] {
             let text = help_for(topic);
             assert!(text.starts_with("ddl"), "{topic:?}: {text}");
@@ -1366,5 +1986,228 @@ mod recipe_change_tests {
         ] {
             assert!(parse_args(&args).is_err(), "{args:?}");
         }
+    }
+}
+
+#[cfg(test)]
+mod local_content_tests {
+    use super::*;
+
+    fn parse_args(args: &[&str]) -> Result<Command, ParseError> {
+        parse(args.iter().map(OsString::from))
+    }
+
+    #[test]
+    fn custom_subcommands_parse_into_typed_commands() {
+        assert_eq!(
+            parse_args(&["custom", "list"]),
+            Ok(Command::Custom(CustomCommand::List))
+        );
+        assert_eq!(
+            parse_args(&["custom", "show", "my-setup"]),
+            Ok(Command::Custom(CustomCommand::Show {
+                id: "my-setup".into()
+            }))
+        );
+        assert_eq!(
+            parse_args(&[
+                "custom",
+                "create",
+                "My Setup",
+                "--iwad",
+                "doom2-1.9",
+                "--complevel",
+                "auto"
+            ]),
+            Ok(Command::Custom(CustomCommand::Create {
+                name: "My Setup".into(),
+                id: None,
+                iwad: Some("doom2-1.9".into()),
+                iwad_file: None,
+                compatibility: Some("auto".into())
+            }))
+        );
+        assert_eq!(
+            parse_args(&[
+                "custom",
+                "create",
+                "Mine",
+                "--id",
+                "mine",
+                "--iwad-file",
+                "/games/DOOM2.WAD",
+                "--complevel",
+                "21"
+            ]),
+            Ok(Command::Custom(CustomCommand::Create {
+                name: "Mine".into(),
+                id: Some("mine".into()),
+                iwad: None,
+                iwad_file: Some("/games/DOOM2.WAD".into()),
+                compatibility: Some("21".into())
+            }))
+        );
+        assert_eq!(
+            parse_args(&["custom", "add-file", "mine", "a.wad", "b.deh"]),
+            Ok(Command::Custom(CustomCommand::AddFile {
+                id: "mine".into(),
+                paths: vec!["a.wad".into(), "b.deh".into()]
+            }))
+        );
+        assert_eq!(
+            parse_args(&["custom", "move", "mine", "files", "0", "2"]),
+            Ok(Command::Custom(CustomCommand::Move {
+                id: "mine".into(),
+                group: GroupArg::Files,
+                from: 0,
+                to: 2
+            }))
+        );
+        assert_eq!(
+            parse_args(&["custom", "remove-file", "mine", "patches", "1"]),
+            Ok(Command::Custom(CustomCommand::RemoveFile {
+                id: "mine".into(),
+                group: GroupArg::Patches,
+                index: 1
+            }))
+        );
+        assert_eq!(
+            parse_args(&["custom", "delete", "--delete-profiles", "mine"]),
+            Ok(Command::Custom(CustomCommand::Delete {
+                id: "mine".into(),
+                delete_profiles: true
+            }))
+        );
+    }
+
+    #[test]
+    fn custom_help_topics_and_rejections() {
+        assert_eq!(
+            parse_args(&["custom", "--help"]),
+            Ok(Command::Help(HelpTopic::Custom))
+        );
+        assert_eq!(
+            parse_args(&["custom", "create", "--help"]),
+            Ok(Command::Help(HelpTopic::CustomCreate))
+        );
+        for args in [
+            vec!["custom"],
+            vec!["custom", "frobnicate"],
+            vec!["custom", "show"],
+            vec!["custom", "show", "a", "b"],
+            vec!["custom", "create", "name"],
+            vec![
+                "custom",
+                "create",
+                "name",
+                "--iwad",
+                "v",
+                "--iwad-file",
+                "p",
+            ],
+            vec!["custom", "add-file", "mine"],
+            vec!["custom", "move", "mine", "files", "0"],
+            vec!["custom", "move", "mine", "wads", "0", "1"],
+            vec!["custom", "remove-file", "mine", "files", "x"],
+            vec!["custom", "delete"],
+            vec!["custom", "delete", "mine", "--bad"],
+        ] {
+            assert!(parse_args(&args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn profile_extras_subcommands_parse_into_typed_commands() {
+        assert_eq!(
+            parse_args(&["profile", "extras", "sigil", "list"]),
+            Ok(Command::ProfileExtras(ProfileExtrasCommand::List {
+                recipe: "sigil".into(),
+                profile: None
+            }))
+        );
+        assert_eq!(
+            parse_args(&[
+                "profile",
+                "extras",
+                "sigil",
+                "--profile",
+                "UV",
+                "add",
+                "a.wad"
+            ]),
+            Ok(Command::ProfileExtras(ProfileExtrasCommand::Add {
+                recipe: "sigil".into(),
+                profile: Some("UV".into()),
+                paths: vec!["a.wad".into()]
+            }))
+        );
+        assert_eq!(
+            parse_args(&[
+                "profile",
+                "extras",
+                "--profile",
+                "UV",
+                "sigil",
+                "move",
+                "files",
+                "0",
+                "1"
+            ]),
+            Ok(Command::ProfileExtras(ProfileExtrasCommand::Move {
+                recipe: "sigil".into(),
+                profile: Some("UV".into()),
+                group: GroupArg::Files,
+                from: 0,
+                to: 1
+            }))
+        );
+        assert_eq!(
+            parse_args(&["profile", "extras", "sigil", "remove", "patches", "0"]),
+            Ok(Command::ProfileExtras(ProfileExtrasCommand::Remove {
+                recipe: "sigil".into(),
+                profile: None,
+                group: GroupArg::Patches,
+                index: 0
+            }))
+        );
+        assert_eq!(
+            parse_args(&["profile", "extras", "sigil", "clear"]),
+            Ok(Command::ProfileExtras(ProfileExtrasCommand::Clear {
+                recipe: "sigil".into(),
+                profile: None
+            }))
+        );
+        assert_eq!(
+            parse_args(&["profile", "extras", "--help"]),
+            Ok(Command::Help(HelpTopic::ProfileExtras))
+        );
+        for args in [
+            vec!["profile"],
+            vec!["profile", "extras"],
+            vec!["profile", "extras", "sigil"],
+            vec!["profile", "extras", "sigil", "add"],
+            vec!["profile", "extras", "sigil", "move", "files", "0"],
+            vec!["profile", "extras", "sigil", "remove", "patches"],
+            vec!["profile", "extras", "sigil", "clear", "extra"],
+            vec!["profile", "extras", "sigil", "--profile"],
+        ] {
+            assert!(parse_args(&args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn launch_accepts_accept_changes() {
+        assert_eq!(
+            parse_args(&["launch", "mine", "--accept-changes"]),
+            Ok(Command::Launch {
+                id: "mine".into(),
+                dry_run: false,
+                profile: None,
+                components: vec![],
+                skill: None,
+                pistol_start: false,
+                accept_changes: true
+            })
+        );
     }
 }

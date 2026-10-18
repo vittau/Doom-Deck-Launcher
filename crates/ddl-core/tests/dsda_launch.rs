@@ -76,7 +76,7 @@ fn plan_for(tree: &TestDir, executable: &str) -> LaunchPlan {
             tree.file("DBP37_DeckardBlaster.wad"),
         ],
         patches: vec![tree.file("augzen.deh")],
-        complevel: Complevel::DOOM_1_9,
+        complevel: Some(Complevel::DOOM_1_9),
         skill: Skill::new(3).expect("3 is a valid skill"),
         warp: Some(Warp::single(1).expect("1 is a valid warp")),
         pistol_start: false,

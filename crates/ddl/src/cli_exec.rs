@@ -12,10 +12,13 @@ use std::path::PathBuf;
 
 use ddl_core::downloads::{InstallProgress, InstallStage};
 use ddl_core::engines::dsda;
+use ddl_core::local::{self, Compatibility, CustomIwad, CustomSetup};
+use ddl_core::profiles::Profile;
 
-use crate::cli;
+use crate::cli::{self, CustomCommand, GroupArg, ProfileExtrasCommand};
 use crate::services::{
-    CliFailure, DoctorReport, EngineStatus, Environment, LaunchOverrides, Services,
+    CliFailure, DoctorReport, EngineStatus, Environment, ExtrasOutcome, LaunchOverrides, NewIwad,
+    Services,
 };
 
 /// Runs a parsed subcommand against the real user environment.
@@ -173,22 +176,60 @@ pub fn run_io(
             components,
             skill,
             pistol_start,
+            accept_changes,
         } => {
             let mut services = open(env)?;
             apply_iwad_seam(&mut services)?;
-            let overrides = LaunchOverrides {
-                profile,
-                components,
-                skill,
-                pistol_start,
-            };
-            if dry_run {
-                let resolution = services.resolve_mapset(&id, &overrides)?;
-                print_plan(&resolution, out)
+            if services.has_recipe(&id) {
+                if accept_changes {
+                    let accepted = services.accept_extra_changes(&id, profile.as_deref())?;
+                    if accepted > 0 {
+                        writeln!(err, "Re-recorded {accepted} extra file(s).")
+                            .map_err(output_error)?;
+                    }
+                }
+                let overrides = LaunchOverrides {
+                    profile,
+                    components,
+                    skill,
+                    pistol_start,
+                };
+                if dry_run {
+                    let resolution = services.resolve_mapset(&id, &overrides)?;
+                    print_plan(&resolution, out)
+                } else {
+                    let outcome = services.run_mapset(&id, &overrides)?;
+                    writeln!(err, "DSDA-Doom exited: {}", exit_label(outcome)).map_err(output_error)
+                }
+            } else if services.has_custom(&id) {
+                if !components.is_empty() {
+                    return Err(CliFailure::message(
+                        "a custom setup has no components; drop `--with`",
+                    ));
+                }
+                if dry_run {
+                    let launch =
+                        services.custom_resolution(&id, profile.as_deref(), accept_changes)?;
+                    print_launch_plan(&launch.plan, out)
+                } else {
+                    let outcome = services.run_custom(&id, profile.as_deref(), accept_changes)?;
+                    writeln!(err, "DSDA-Doom exited: {}", exit_label(outcome)).map_err(output_error)
+                }
             } else {
-                let outcome = services.run_mapset(&id, &overrides)?;
-                writeln!(err, "DSDA-Doom exited: {}", exit_label(outcome)).map_err(output_error)
+                Err(CliFailure::message(format!(
+                    "no catalog recipe or custom setup with id `{id}`"
+                )))
             }
+        }
+        cli::Command::Custom(command) => {
+            let mut services = open(env)?;
+            apply_iwad_seam(&mut services)?;
+            exec_custom(&mut services, command, out, err)
+        }
+        cli::Command::ProfileExtras(command) => {
+            let mut services = open(env)?;
+            apply_iwad_seam(&mut services)?;
+            exec_profile_extras(&mut services, command, out, err)
         }
         cli::Command::Doctor => {
             let mut services = open(env)?;
@@ -338,6 +379,269 @@ fn print_catalog_outcome(
 
 fn open(env: Environment) -> Result<Services, CliFailure> {
     Services::open(env).map_err(|problem| CliFailure::message(problem.to_string()))
+}
+
+/// Maps the CLI group onto the core group (spec 026, R3).
+fn core_group(group: GroupArg) -> local::Group {
+    match group {
+        GroupArg::Files => local::Group::Files,
+        GroupArg::Patches => local::Group::Patches,
+    }
+}
+
+/// Parses `--complevel` (default `auto`, which omits the flag).
+fn compatibility_from(value: Option<&str>) -> Result<Compatibility, CliFailure> {
+    match value {
+        None => Ok(Compatibility::Auto),
+        Some(text) => {
+            Compatibility::parse(text).map_err(|error| CliFailure::message(error.to_string()))
+        }
+    }
+}
+
+/// A one-line description of a setup's IWAD.
+fn iwad_label(iwad: &CustomIwad) -> String {
+    match iwad {
+        CustomIwad::Identified { variant } => format!("identified {variant}"),
+        CustomIwad::File { file } => file.path.display().to_string(),
+    }
+}
+
+/// Prints a custom setup; with `check`, names any file that is missing or
+/// changed (spec 026, R4).
+fn print_setup(setup: &CustomSetup, check: bool, out: &mut dyn Write) -> Result<(), CliFailure> {
+    writeln!(out, "{}  {}", setup.id, setup.name).map_err(output_error)?;
+    writeln!(out, "  IWAD: {}", iwad_label(&setup.iwad)).map_err(output_error)?;
+    writeln!(out, "  compatibility: {}", setup.compatibility).map_err(output_error)?;
+    for (label, list) in [
+        ("files (load order)", &setup.files),
+        ("patches", &setup.patches),
+    ] {
+        if list.is_empty() {
+            writeln!(out, "  {label}: (none)").map_err(output_error)?;
+        } else {
+            writeln!(out, "  {label}:").map_err(output_error)?;
+            for (index, file) in list.iter().enumerate() {
+                writeln!(
+                    out,
+                    "    {index}: {}  {}  {} bytes",
+                    file.path.display(),
+                    file.kind,
+                    file.size
+                )
+                .map_err(output_error)?;
+            }
+        }
+    }
+    if check {
+        let issues = local::verify_setup(setup);
+        if issues.is_empty() {
+            writeln!(out, "  files: ok").map_err(output_error)?;
+        } else {
+            for issue in issues {
+                writeln!(out, "  {issue}").map_err(output_error)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// One line summarising a setup's two groups.
+fn print_setup_counts(setup: &CustomSetup, out: &mut dyn Write) -> Result<(), CliFailure> {
+    writeln!(
+        out,
+        "{}: {} file(s), {} patch(es)",
+        setup.id,
+        setup.files.len(),
+        setup.patches.len()
+    )
+    .map_err(output_error)
+}
+
+/// Prints a profile's extras as the two engine groups (spec 026, R5).
+fn print_extras(profile: &Profile, out: &mut dyn Write) -> Result<(), CliFailure> {
+    writeln!(
+        out,
+        "{} ({}) — {} extra file(s)",
+        profile.name,
+        profile.id,
+        profile.extras.len()
+    )
+    .map_err(output_error)?;
+    for (label, group) in [
+        ("files (load order)", local::Group::Files),
+        ("patches", local::Group::Patches),
+    ] {
+        let indices = local::group_indices(&profile.extras, group);
+        if indices.is_empty() {
+            writeln!(out, "  {label}: (none)").map_err(output_error)?;
+            continue;
+        }
+        writeln!(out, "  {label}:").map_err(output_error)?;
+        for (index, at) in indices.iter().enumerate() {
+            let file = &profile.extras[*at];
+            writeln!(
+                out,
+                "    {index}: {}  {}  {} bytes",
+                file.path.display(),
+                file.kind,
+                file.size
+            )
+            .map_err(output_error)?;
+        }
+    }
+    Ok(())
+}
+
+/// Warns that changing extras can strand existing saves (spec 026, R5).
+fn warn_saves(outcome: &ExtrasOutcome, err: &mut dyn Write) -> Result<(), CliFailure> {
+    if outcome.saves_warn {
+        writeln!(
+            err,
+            "Warning: existing saves for this profile may not load with different files."
+        )
+        .map_err(output_error)?;
+    }
+    Ok(())
+}
+
+/// `ddl custom …` (spec 026, R7).
+fn exec_custom(
+    services: &mut Services,
+    command: CustomCommand,
+    out: &mut dyn Write,
+    _err: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    match command {
+        CustomCommand::List => {
+            let setups = services.custom_list()?;
+            if setups.is_empty() {
+                return writeln!(out, "No custom setups.").map_err(output_error);
+            }
+            for setup in setups {
+                writeln!(
+                    out,
+                    "{:<20} {:<6} {:<4} {}",
+                    setup.id,
+                    iwad_label(&setup.iwad),
+                    setup.files.len() + setup.patches.len(),
+                    setup.name
+                )
+                .map_err(output_error)?;
+            }
+            Ok(())
+        }
+        CustomCommand::Show { id } => {
+            let setup = services.custom_show(&id)?;
+            print_setup(&setup, true, out)
+        }
+        CustomCommand::Create {
+            name,
+            id,
+            iwad,
+            iwad_file,
+            compatibility,
+        } => {
+            let compatibility = compatibility_from(compatibility.as_deref())?;
+            let iwad = match (iwad, iwad_file) {
+                (Some(variant), None) => NewIwad::Variant(variant),
+                (None, Some(path)) => NewIwad::File(path),
+                _ => {
+                    return Err(CliFailure::message(
+                        "`custom create` needs exactly one of `--iwad` or `--iwad-file`",
+                    ));
+                }
+            };
+            let setup = services.custom_create(&name, id.as_deref(), iwad, compatibility)?;
+            writeln!(out, "Created custom setup `{}` ({})", setup.id, setup.name)
+                .map_err(output_error)
+        }
+        CustomCommand::AddFile { id, paths } => {
+            let setup = services.custom_add_file(&id, &paths)?;
+            print_setup_counts(&setup, out)
+        }
+        CustomCommand::Move {
+            id,
+            group,
+            from,
+            to,
+        } => {
+            let setup = services.custom_move(&id, core_group(group), from, to)?;
+            print_setup_counts(&setup, out)
+        }
+        CustomCommand::RemoveFile { id, group, index } => {
+            let setup = services.custom_remove_file(&id, core_group(group), index)?;
+            print_setup_counts(&setup, out)
+        }
+        CustomCommand::Delete {
+            id,
+            delete_profiles,
+        } => {
+            services.custom_delete(&id, delete_profiles)?;
+            writeln!(
+                out,
+                "Deleted custom setup `{id}`{}",
+                if delete_profiles {
+                    " and its profiles and saves"
+                } else {
+                    ""
+                }
+            )
+            .map_err(output_error)
+        }
+    }
+}
+
+/// `ddl profile extras …` (spec 026, R5/R7).
+fn exec_profile_extras(
+    services: &mut Services,
+    command: ProfileExtrasCommand,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    match command {
+        ProfileExtrasCommand::List { recipe, profile } => {
+            let profile = services.extras_list(&recipe, profile.as_deref())?;
+            print_extras(&profile, out)
+        }
+        ProfileExtrasCommand::Add {
+            recipe,
+            profile,
+            paths,
+        } => {
+            let outcome = services.extras_add(&recipe, profile.as_deref(), &paths)?;
+            print_extras(&outcome.profile, out)?;
+            warn_saves(&outcome, err)
+        }
+        ProfileExtrasCommand::Remove {
+            recipe,
+            profile,
+            group,
+            index,
+        } => {
+            let outcome =
+                services.extras_remove(&recipe, profile.as_deref(), core_group(group), index)?;
+            print_extras(&outcome.profile, out)?;
+            warn_saves(&outcome, err)
+        }
+        ProfileExtrasCommand::Move {
+            recipe,
+            profile,
+            group,
+            from,
+            to,
+        } => {
+            let outcome =
+                services.extras_move(&recipe, profile.as_deref(), core_group(group), from, to)?;
+            print_extras(&outcome.profile, out)?;
+            warn_saves(&outcome, err)
+        }
+        ProfileExtrasCommand::Clear { recipe, profile } => {
+            let outcome = services.extras_clear(&recipe, profile.as_deref())?;
+            print_extras(&outcome.profile, out)?;
+            warn_saves(&outcome, err)
+        }
+    }
 }
 
 /// Test-only IWAD seam (spec 014, R3): when the `test-support` feature is built
@@ -494,16 +798,16 @@ fn print_plan(
     resolution: &ddl_core::resolver::Resolution,
     out: &mut dyn Write,
 ) -> Result<(), CliFailure> {
-    writeln!(out, "program: {}", resolution.plan().executable.display()).map_err(output_error)?;
-    for token in resolution.plan().to_command() {
+    print_launch_plan(resolution.plan(), out)
+}
+
+/// Prints a launch plan exactly as `ddl launch --dry-run` does (spec 014, R1).
+fn print_launch_plan(plan: &dsda::LaunchPlan, out: &mut dyn Write) -> Result<(), CliFailure> {
+    writeln!(out, "program: {}", plan.executable.display()).map_err(output_error)?;
+    for token in plan.to_command() {
         writeln!(out, "{}", token.to_string_lossy()).map_err(output_error)?;
     }
-    writeln!(
-        out,
-        "working directory: {}",
-        resolution.plan().working_dir.display()
-    )
-    .map_err(output_error)
+    writeln!(out, "working directory: {}", plan.working_dir.display()).map_err(output_error)
 }
 
 fn print_doctor(report: &DoctorReport, out: &mut dyn Write) -> Result<(), CliFailure> {
@@ -1009,6 +1313,7 @@ exit 1
                 components: vec![],
                 skill: None,
                 pistol_start: false,
+                accept_changes: false,
             },
         )
         .unwrap_err();
@@ -1040,6 +1345,7 @@ exit 1
                 components: vec![],
                 skill: Some(4),
                 pistol_start: true,
+                accept_changes: false,
             },
         )
         .expect("dry run");
@@ -1147,6 +1453,7 @@ exit 1
                     components: vec![],
                     skill: Some(5),
                     pistol_start: true,
+                    accept_changes: false,
                 },
             )
             .unwrap();
@@ -1174,6 +1481,7 @@ exit 1
                 components: vec![],
                 skill: Some(5),
                 pistol_start: true,
+                accept_changes: false,
             },
         )
         .unwrap();

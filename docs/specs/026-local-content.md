@@ -82,15 +82,15 @@ free-form extra command-line arguments (later, if asked), Lutris (deferred by D-
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R4, R6–R7) — tests with fixture WAD/ZIP/DEH files: kind detection and
+- [x] **A1** (R1–R4, R6–R7) — tests with fixture WAD/ZIP/DEH files: kind detection and
   rejections; atomic, versioned setup storage; exact argv for a custom setup (both groups, Auto and
   explicit complevel, user-file IWAD); missing and changed files block launch; deleting never
   touches user files; CLI round trip in a scratch XDG root.
-- [ ] **A2** (R3, R5) — exact argv for a catalog mapset profile with extras (recipe first);
+- [x] **A2** (R3, R5) — exact argv for a catalog mapset profile with extras (recipe first);
   old profile state loads; saves warning shown.
 - [ ] **A3** (R8–R11) — headless renders: file browser with multi-select, order editor mid-move,
   New custom setup, Library and Home with a custom setup, Play setup with extras; D-pad focus order
   tested.
-- [ ] **A4** — fmt, clippy `-D warnings`, tests green.
+- [x] **A4** — fmt, clippy `-D warnings`, tests green.
 - [ ] **A5** — *Needs Deck Validation:* add a local PWAD from the SD card, reorder, launch; layer a
   PWAD over an installed mapset; move the file and see the missing-file message.
