@@ -2049,3 +2049,280 @@ pub(super) fn uninstall_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
         );
     }
 }
+
+/// Spec 025: real catalog data in every production title/author slot.
+pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    use crate::{
+        input::Action,
+        services::recipe_change_tests::{installed, setup},
+    };
+    let (_temp, _server, env, _hits) = setup();
+    drop(installed(&env));
+    let state = crate::runtime::attach_environment(ui, env);
+    idle(&state);
+    let template = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .find(|i| i.recipe.id == "auger-zenith")
+        .unwrap()
+        .clone();
+    let mut recipes: Vec<_> = Catalog::embedded()
+        .recipes
+        .into_iter()
+        .map(|r| r.recipe)
+        .collect();
+    let mut synthetic = recipes[0].clone();
+    synthetic.id = "synthetic-60".into();
+    synthetic.title = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEF".into();
+    assert_eq!(synthetic.title.chars().count(), 60);
+    recipes.push(synthetic);
+    if let Ok(id) = std::env::var("DDL_TITLE_RECIPE") {
+        recipes.retain(|r| r.id == id);
+        assert_eq!(recipes.len(), 1, "known render fixture");
+    }
+    let audit = std::env::var_os("DDL_TITLE_AUDIT").is_some();
+    let mut findings = Vec::new();
+    let mut fits = Vec::new();
+    for recipe in recipes {
+        let mut item = template.clone();
+        item.recipe = recipe.clone();
+        item.last_played = Some(1);
+        {
+            let mut r = state.borrow_mut();
+            r.snapshot.as_mut().unwrap().items = vec![item];
+            r.selected = 0;
+        }
+        for (screen, name) in [
+            (Screen::Home, "home"),
+            (Screen::Discover, "discover"),
+            (Screen::Library, "library"),
+            (Screen::Detail, "detail"),
+            (Screen::Setup, "setup"),
+            (Screen::Progress, "progress"),
+        ] {
+            {
+                let mut r = state.borrow_mut();
+                r.screen = screen;
+                r.focus = if matches!(screen, Screen::Discover | Screen::Library) {
+                    10
+                } else {
+                    1
+                };
+                r.pending =
+                    (screen == Screen::Progress).then(|| Command::Install(recipe.id.clone()));
+                r.sync(ui);
+            }
+            if !audit {
+                let nodes: Vec<_> = ui.get_nodes().iter().collect();
+                for title in nodes.iter().filter(|n| [20, 22].contains(&n.kind)) {
+                    if let Some(next) = nodes
+                        .iter()
+                        .filter(|n| n.x == title.x && n.y > title.y && !n.label.is_empty())
+                        .min_by(|a, b| a.y.total_cmp(&b.y))
+                    {
+                        assert!(
+                            title.y + title.h <= next.y,
+                            "{} {name}: title overlaps {}",
+                            recipe.id,
+                            next.label
+                        );
+                    }
+                }
+            }
+            let mut seen = (0, 0);
+            for n in ui
+                .get_nodes()
+                .iter()
+                .filter(|n| [0, 20, 21, 22].contains(&n.kind) && !n.label.is_empty())
+            {
+                let title = n.label == recipe.title || recipe.title.starts_with(n.label.as_str());
+                let author = recipe
+                    .authors
+                    .iter()
+                    .any(|a| n.label.starts_with(a.as_str()));
+                if !title && !author {
+                    continue;
+                }
+                if author {
+                    seen.1 += 1;
+                } else {
+                    seen.0 += 1;
+                }
+                ui.set_fit_label(n.label.clone());
+                ui.set_fit_width(n.w);
+                ui.set_fit_height(n.h);
+                ui.set_fit_size(n.size);
+                ui.set_fit_smaller(if author {
+                    20.
+                } else if n.size > 36. {
+                    36.
+                } else if n.size > 26. {
+                    26.
+                } else {
+                    22.
+                });
+                ui.set_fit_display(!author);
+                ui.set_fit_multiline(if audit { true } else { !author && n.h >= 60. });
+                ui.set_fit_full(n.kind == 22);
+                if audit && ui.get_fit_base_height() > n.h + 0.5 {
+                    findings.push(format!(
+                        "{} {name} {}: {:.1}px > {}px",
+                        recipe.id,
+                        if author { "author" } else { "title" },
+                        ui.get_fit_base_height(),
+                        n.h
+                    ));
+                }
+                if !audit {
+                    assert!(
+                        [20, 21, 22].contains(&n.kind),
+                        "unfitted {} {name}: {}",
+                        recipe.id,
+                        n.label
+                    );
+                    if n.kind == 22 {
+                        assert_eq!(n.label, recipe.title);
+                        assert!(
+                            ui.get_fit_measured_height() <= ui.get_fit_content_height() + 0.5,
+                            "full detail title {}",
+                            recipe.id
+                        );
+                    }
+                    assert!(n.h <= if author { 36. } else { 96. }, "bounded slot");
+                    assert!(ui.get_fit_chosen_size() >= if author { 20. } else { 22. });
+                    assert_title_pixels_fit(
+                        window,
+                        ui,
+                        &format!("{} {name}: {}", recipe.id, n.label),
+                    );
+                }
+            }
+            assert_eq!(
+                seen,
+                match screen {
+                    Screen::Home => (2, 1),
+                    Screen::Discover | Screen::Library | Screen::Detail => (1, 1),
+                    Screen::Progress => (1, 0),
+                    Screen::Setup => (0, 0),
+                    _ => unreachable!(),
+                },
+                "{} {name}: every title/author slot is exercised",
+                recipe.id
+            );
+            ui.set_fit_label(ui.get_heading());
+            ui.set_fit_width(if ui.get_art_band() { 784. } else { 1200. });
+            ui.set_fit_height(48.);
+            ui.set_fit_size(36.);
+            ui.set_fit_smaller(26.);
+            ui.set_fit_display(true);
+            ui.set_fit_multiline(false);
+            ui.set_fit_full(false);
+            if !audit {
+                assert_title_pixels_fit(window, ui, &format!("{} {name} heading", recipe.id));
+            }
+            if ui.get_fit_base_width() > ui.get_fit_width() {
+                fits.push(format!(
+                    "{} {name} heading: base {:.1}px, slot {}px, chosen {}px",
+                    recipe.id,
+                    ui.get_fit_base_width(),
+                    ui.get_fit_width(),
+                    ui.get_fit_chosen_size()
+                ));
+            }
+            if audit && ui.get_fit_base_width() > ui.get_fit_width() {
+                findings.push(format!(
+                    "{} {name} heading: {:.1}px > {}px",
+                    recipe.id,
+                    ui.get_fit_base_width(),
+                    ui.get_fit_width()
+                ));
+            }
+            capture(window, &format!("025-{name}-{}.png", recipe.id));
+        }
+        for (id, name) in [(4, "profiles"), (5, "uninstall")] {
+            let mut r = state.borrow_mut();
+            r.screen = Screen::Detail;
+            r.pending = None;
+            r.sync(ui);
+            r.title_fit_sheet(ui, id == 5);
+            assert!(ui.get_sheet_open());
+            ui.set_fit_label(ui.get_sheet_title());
+            ui.set_fit_width(656.);
+            ui.set_fit_height(if ui.get_sheet_height() > 400. {
+                64.
+            } else if ui.get_sheet_height() > 300. {
+                164.
+            } else {
+                96.
+            });
+            ui.set_fit_size(26.);
+            ui.set_fit_smaller(22.);
+            ui.set_fit_multiline(true);
+            ui.set_fit_display(true);
+            if audit && ui.get_fit_base_height() > ui.get_fit_height() {
+                findings.push(format!(
+                    "{} {name} sheet: {:.1}px > {}px",
+                    recipe.id,
+                    ui.get_fit_base_height(),
+                    ui.get_fit_height()
+                ));
+            }
+            ui.set_fit_full(false);
+            if !audit {
+                assert_title_pixels_fit(window, ui, &format!("{} {name} sheet", recipe.id));
+            }
+            capture(window, &format!("025-{name}-{}.png", recipe.id));
+            r.action(ui, Action::Back);
+            r.sync(ui);
+        }
+    }
+    {
+        let dir = std::env::var_os("DDL_HEADLESS_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("target/headless"));
+        std::fs::write(
+            dir.join(if audit {
+                "025-audit.txt"
+            } else {
+                "025-fit.txt"
+            }),
+            if audit { findings } else { fits }.join("\n"),
+        )
+        .unwrap();
+    }
+}
+
+/// Render the exact production fitter in isolation and reject painted pixels outside
+/// its assigned rectangle. This catches vertical clipping/overflow regressions that
+/// checking fixed ViewNode rectangles alone would miss.
+fn assert_title_pixels_fit(window: &MinimalSoftwareWindow, ui: &AppWindow, context: &str) {
+    ui.set_fit_test_visible(true);
+    let frame = render(window);
+    ui.set_fit_test_visible(false);
+    let (w, h) = (ui.get_fit_width(), ui.get_fit_height());
+    assert!(ui.get_fit_content_height() <= h);
+    assert!(
+        ui.get_fit_content_height()
+            <= ui.get_fit_line_height() * if ui.get_fit_multiline() { 2. } else { 1. } + 0.5
+    );
+    let mut ink = 0;
+    for (index, p) in frame.as_slice().iter().enumerate() {
+        if (p.r, p.g, p.b) == (0x12, 0x0c, 0x0d) {
+            continue;
+        }
+        ink += 1;
+        let (x, y) = (
+            (index % WIDTH as usize) as f32,
+            (index / WIDTH as usize) as f32,
+        );
+        assert!(
+            x >= 40. && x < 40. + w && y >= 240. && y < 240. + h,
+            "{context}: glyph escaped {w}×{h} slot at {x},{y}"
+        );
+    }
+    assert!(ink > 0, "{context}: text must actually render");
+}

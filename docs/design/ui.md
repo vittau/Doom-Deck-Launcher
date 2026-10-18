@@ -81,6 +81,15 @@ with notices included in release tarballs. Verified sources and notices are reta
 | Body / controls | 22 / 30 px | Barlow |
 | Metadata / hint bar | 20 / 28 px | Barlow |
 
+Mapset title slots measure the bundled face at their actual width: wrap to at most two
+lines where space allows, shrink one type-scale step if needed, then elide with “…” only
+as the last fallback. Home hero uses 36→26 px; card and history titles use 26→22 px;
+context headings use 36→26 px on one line. Cards reserve 68 px for titles and one 26 px
+author line; author text elides by measured width, not character count. Home history keeps
+one title line above the profile name. Detail reserves 96 px and uses 44→36 px for the
+complete catalog title, including parenthesized qualifiers, without elision. Keep a 4 px
+glyph inset for display-face side bearings. Sheet headings share the same fitting behavior.
+
 Preserve filename case. Wrap titles and descriptions; directory breadcrumbs elide from the
 start so the destination remains visible. No essential tooltips. Minimum control height 52 px;
 64 px for two-line rows. Long lists scroll inside the content area.
