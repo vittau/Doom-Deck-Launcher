@@ -557,3 +557,11 @@
     released on drop, not left to fd close, which a spawned child could briefly hold), and a
     second gated-fixture header-timeout race in the journey (test-only). Deck checks L1–L3 added.
   refs: [docs/reports/026-local-content.md, docs/deck-testing.md]
+- date: 2026-10-18
+  type: release
+  summary: >-
+    Pre-release v0.0.6-local: local content (any WAD/ZIP/DEH/BEX, player-set load order, extras on
+    top of catalog mapsets), download idle timeout, long titles that fit, the state-lock race fix,
+    plus everything in v0.0.5-screens.1. CI and the Linux e2e passed on the merge. Deck checks:
+    S1–S3 and L1–L3 in docs/deck-testing.md.
+  refs: [docs/deck-testing.md]
