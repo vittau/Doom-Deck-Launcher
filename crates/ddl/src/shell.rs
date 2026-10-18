@@ -1057,6 +1057,7 @@ impl Builder<'_> {
             screenshot: Default::default(),
             credit: Default::default(),
             full_credit: false,
+            fitted_label: false,
             primary,
             actionable,
         });
