@@ -197,3 +197,335 @@ cargo test --workspace   (exit 0)
 
 496 tests passed. The headless UI suite (`ddl` unit, ~196 s) is included and green with the added
 `Blocker` match arm.
+
+## Phase B — local content UI
+
+Implemented R8–R11 in the production runtime, with focused headless UI coverage for A3 and the
+UI share of A4. No new core query or dependency was required; the state-lock lifetime fix below was added after the coordinator requested investigation of a parallel-test regression. `main` was merged before
+finishing (includes specs 024 and 025); custom titles reuse spec 025's measured `Nodes::title`
+and local file rows use its fitted-label renderer. No visible window was opened and no screen
+was captured.
+
+### Changes
+
+- `Snapshot` now carries custom setups, profiles, worker-checked file issues and the profile ids
+  that have saves. `LocalCommand` routes reads, validation, changes and launch to the existing
+  services worker thread. Custom launch calls `run_custom`, using its existing run guard,
+  fakeable engine boundary, isolated config and profile save directories. Extra changes call
+  `accept_extra_changes`; custom acceptance also covers a changed player-file IWAD.
+- Library has **New custom setup**, also reachable on Y, with the first unused automatic name.
+  Controller pickers offer identified IWAD variants, a player file with an `IWAD` header, and
+  Auto or the reviewed compatibility numbers. The player can edit these choices from custom
+  detail. Custom cards and Home Continue/history use the existing painted fallback art and
+  **Custom — not verified**; profiles with extras receive the same badge.
+- The file picker extends the existing directory service, begins at home and supplies home,
+  existing Downloads/Documents, Steam-library and `/run/media/...` mount shortcuts. It uses
+  `UserFile::read` for accepted files, shows detected kind/size, keeps selection across folders,
+  toggles with A, confirms with Start or **Add N files**, and cancels with B. Invalid suffix or
+  content combinations are hidden. Unreadable/broken entries are skipped. Full paths remain in
+  the model and selected-directory breadcrumb; shortcut rows stay compact, and long directory
+  paths are shortened for display.
+- The order editor keeps **Files (load order)** and **Patches (applied after files, in order)**
+  separate. A picks up/drops, Up/Down persists moves within a group, X removes only the
+  reference, Y adds. Catalog extras apply to the active profile; enabled recipe members are
+  derived from the installed manifest in recipe order, dimmed, locked and skipped by focus.
+  Opening extras with existing saves warns that saves may not load after changes.
+- Missing/changed-file sheets name the path and block Play. Cancel has initial focus; a changed
+  file requires **Use the changed file**. Custom deletion names the setup, states that the
+  player's files are never touched, and defaults the D-022 profiles/saves checkbox to unchecked.
+  The checked and unchecked paths both use the phase A deletion operation.
+
+### Focused headless verification
+
+The pre-existing long headless journey was **not extended**. Slint permits one platform setup
+per process, so five independently named tests re-execute only their own case in a headless
+subprocess. Each subprocess uses `MinimalSoftwareWindow` and the Slint software renderer;
+calling `show()` there creates only the off-screen surface. No native backend is initialized.
+
+| Requirement | Test evidence |
+| --- | --- |
+| R8 / R10 / R11 | `local_new_setup_iwad_compatibility_and_content_filtered_multiselect`: Library Y entry, home start, Downloads/Documents shortcuts, false-WAD and PK3 rejection, IWAD-only filtering, Auto creation, persisted explicit level 21 and identified-IWAD selection via the existing fake registry seam, two A-selected files, Start addition and B cancellation. |
+| R9 | `local_order_moves_with_dpad_stays_in_group_and_removes_without_deleting`: D-pad focus into the first file, pickup, move, boundary clamp before patches, drop, X removal, original file retained. |
+| R10 / R4 / R6 | `local_custom_library_home_missing_changed_and_delete_dialog`: Library focus order, custom Continue focus/fallback art/history, missing named path, changed-file Cancel → Right → accept (including a changed player-file IWAD), delete Cancel → Up → checkbox, reset on reopening, unchecked deletion retaining profiles and all player files. |
+| R5 / R9 / R10 | `local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scope`: a second active catalog profile, saves warning, recipe member locked/dimmed before extras, D-pad skips it, persisted reordering, default profile still has no extras. |
+| R6 | `local_delete_checked_removes_only_owned_profiles_and_saves`: checkbox and confirm through the production click dispatcher, owned profile/save directories removed, all player WAD/ZIP/DEH and IWAD files retained. |
+
+The fixtures reuse phase A's hand-built `crates/ddl-core/tests/fixtures/local/{tiny.wad,tiny.zip,
+tiny.deh,tiny.pk3}` plus an original 12-byte, empty-directory IWAD at
+`crates/ddl/tests/fixtures/local/base.wad`. They contain no game data. No external network is
+used: the extras test reuses the existing loopback-only installed-mapset fixture.
+
+Off-screen PNGs are written to `target/headless/026-*.png` (or `DDL_HEADLESS_DIR`): new custom,
+IWAD picker, compatibility, custom detail, file-picker multiselect, order mid-move, Library,
+Home, Play setup extras, extras order, saves warning, missing file, changed file and delete.
+The worker opened the generated PNG files for visual inspection. Iteration corrected dialog
+focus theft, long-list panel height, moving-row contrast, custom Home history/art and compact
+shortcut labels; the final renders retain the Ember frame, readable body text and amber ring.
+
+Focused rerun:
+
+```sh
+cargo test -p ddl runtime::local_ui -- --nocapture
+# test result: ok. 5 passed; 0 failed
+```
+
+### Remaining validation
+
+**Needs Deck Validation:** A5 remains open: physical SD-card shortcuts, controller timing, launch
+and return from real DSDA-Doom with a custom PWAD, extras over a catalog mapset, and moving a
+referenced file. The mount enumeration shares the existing spec 010 production path; the macOS
+host has no `/run/media` mounted card to exercise. Auto compatibility, file kinds and DSDA flags
+are the phase A policy and pinned upstream facts above; phase B adds no engine assumptions.
+Optional renaming/on-screen keyboard remains omitted by the spec's explicit allowance for an
+automatic name. No other phase B requirement is left open.
+
+
+### Parallel-test regression and state-lock lifetime fix
+
+The first full run hit the known spec 025 fit-report directory failure. The fixed spec 025 was
+then merged from `main` (merge `b456099`), resolving the shared helper conflict by retaining
+`headless_dir()` and exposing `write_png` to the focused tests. No spec 025 behavior was rewritten.
+A subsequent run passed the long journey but failed once in the existing
+`cli_exec::tests::launch_profile_selects_isolated_paths_and_remembers_without_saving_overrides`
+at `NewProfile` immediately after `register_fake_iwads`, with `Problem::Busy`. That test passed
+when rerun alone. The coordinator required a source investigation and three consecutive full
+**default parallel** workspace runs; no thread limit or test skipping was used as a fix.
+
+**Confirmed audit:** `StateLock` opens `<config>/state.lock` with Rust `OpenOptions` and calls
+`std::fs::File::try_lock`; on this Unix host the operation is `flock(LOCK_EX | LOCK_NB)`, and
+`unlock` is `flock(LOCK_UN)` ([Rust 1.99.1 File API](https://doc.rust-lang.org/1.99.1/std/fs/struct.File.html#method.try_lock)).
+The guard previously had no `Drop` implementation: normal completion only closed its `File`.
+No production `dup`, `try_clone`, raw libc open, `FromRawFd` or explicit descriptor inheritance
+exists in the state-lock path. The docs specify that inherited/duplicated references can extend
+a lock until their last close; explicit unlock ends it immediately
+([Rust 1.99.1 unlock contract](https://doc.rust-lang.org/1.99.1/std/fs/struct.File.html#method.unlock)).
+
+**Confirmed environment audit:** the parent focused tests launch exactly one named test with
+`--exact`, and the child sets up its own fresh `TempDir`. Its `Environment` resolves paths through
+a closure that supplies only that temporary HOME and returns None for all XDG variables; inherited
+real HOME/XDG values do not select application state. Every focused case and every existing CLI
+fixture owns a separate scratch root. Only PNG output is shared, with distinct filenames; it is
+not a state-lock path.
+
+**Confirmed reproduction (macOS arm64, pinned Rust 1.99.1):** a standalone probe, independent of
+DDL, repeatedly opens/locks/drops one file while another thread runs 250 self-exec subprocesses.
+The child has `env_clear()` and immediately exits, so there is no DDL setup, shared XDG state,
+network or competing mutation. `fcntl(F_GETFD)` returns `1` on the lock fd in both variants;
+the installed macOS SDK header confirms `F_GETFD = 1` and `FD_CLOEXEC = 1`.
+
+```text
+implicit close: 43,316 acquisitions attempted; 95 transient WouldBlock results; FD_CLOEXEC set
+explicit unlock: 41,569 acquisitions attempted; 0 WouldBlock results; FD_CLOEXEC set
+```
+
+This demonstrates that close-on-exec did not by itself make the guard's logical release timely
+under concurrent process creation. The precise kernel spawn stage was not traced; a transient
+inherited open-file-description reference is the inference consistent with this reproduction
+and the documented semantics. The source defect is relying on the descriptor's final close
+instead of ending the mutation lock at guard drop.
+
+**Fix:** `StateLock::drop` explicitly unlocks. `end()` records a successful release so Drop does
+not unlock twice (important for the documented platform-dependent no-lock behavior). The normal
+mutual-exclusion contract is unchanged. The new deterministic test
+`dropping_the_guard_releases_even_with_another_descriptor_alive` keeps a duplicated descriptor
+alive after dropping the guard: it fails against the previous Drop behavior with Busy, passes
+with explicit unlock, and verifies that a newly acquired guard still excludes other acquisitions.
+This small core change was authorized by the coordinator's follow-up investigation request; it
+adds no dependency and no UI code to `ddl-core`.
+
+```text
+before fix: test result: FAILED. 0 passed; 1 failed (Busy)
+after fix: platform::lock::tests — 3 passed; 0 failed
+```
+
+Reproduction source (diagnostic only; the F_GETFD call is macOS-specific):
+
+```rust
+use std::{fs::OpenOptions, sync::{Arc, atomic::{AtomicBool, Ordering}}, process::{Command, Stdio}, thread, os::fd::AsRawFd};
+unsafe extern "C" { fn fcntl(fd: i32, cmd: i32, ...) -> i32; }
+fn main() {
+    if std::env::args().any(|s| s == "--child") { return; }
+    let explicit = std::env::args().any(|s| s == "--unlock");
+    let root = std::env::temp_dir().join(format!("ddl-lock-probe-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let path = root.join("state.lock");
+    let running = Arc::new(AtomicBool::new(true)); let flag = running.clone();
+    let worker = thread::spawn(move || {
+        for _ in 0..250 {
+            Command::new(std::env::current_exe().unwrap()).arg("--child")
+                .env_clear().stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).status().unwrap();
+        }
+        flag.store(false, Ordering::SeqCst);
+    });
+    let (mut attempts, mut busy) = (0u64,0u64); let mut flags = -1;
+    while running.load(Ordering::SeqCst) {
+        let file = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(&path).unwrap();
+        flags = unsafe { fcntl(file.as_raw_fd(), 1) };
+        match file.try_lock() {
+            Ok(()) => if explicit { file.unlock().unwrap(); },
+            Err(std::fs::TryLockError::WouldBlock) => busy += 1,
+            Err(e) => panic!("{e:?}"),
+        }
+        attempts += 1;
+    }
+    worker.join().unwrap();
+    println!("explicit_unlock={explicit} attempts={attempts} busy={busy} fd_flags={flags} (FD_CLOEXEC=1)");
+    std::fs::remove_dir_all(root).unwrap();
+}
+```
+
+Compile with `rustc --edition 2024 probe.rs -o probe`, then run `./probe` and `./probe --unlock`.
+The production regression test uses safe `File::try_clone` and contains no libc calls.
+
+
+### Final phase B verification (A3, A4)
+
+`main` through `4f0e569` (fixed spec 025 plus spec 024) is merged. The code stayed unchanged
+through the three consecutive full runs below. `RUST_TEST_THREADS`, `DDL_HEADLESS_DIR`,
+`DDL_TITLE_ONLY` and `DDL_TITLE_RECIPE` were all unset: this is the default parallel harness,
+with the default artifact directory and the complete long headless journey. Every run exited 0
+and passed **505 tests**; no test was ignored or filtered. The five focused local-content cases
+are included in every run. All 14 `026-*.png` frames were inspected off-screen.
+
+```text
+cargo fmt --all --check
+exit 0 (no output)
+
+cargo clippy --workspace --all-targets -- -D warnings
+Checking ddl-core v0.0.5 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-026b-local-content-ui/crates/ddl-core)
+    Checking ddl v0.0.5 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-026b-local-content-ui/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.43s
+```
+
+Default parallel run 1, `cargo test --workspace` (exit 0):
+
+```text
+test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 151.45s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.92s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Default parallel run 2, `cargo test --workspace` (exit 0):
+
+```text
+test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 191.21s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.68s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.94s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Default parallel run 3, `cargo test --workspace` (exit 0):
+
+```text
+test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 781.72s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.27s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.62s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.07s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.42s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+A3 is checked in the spec. A4 remains checked with the UI and lock-fix verification above.
+A5 remains **Needs Deck Validation**. No open implementation question remains for phase B.
+
+### Phase B review polish
+
+Addressed the three visual review items:
+
+- Recipe members use a darker, muted plate and text, an original padlock SVG,
+  and no load-order number. They remain non-actionable; D-pad navigation skips
+  directly from Add files to the first movable extra.
+- Missing/changed launch dialogs show the filename prominently, the path on its
+  own muted line (middle elision preserves both ends), and a short plain sentence.
+  Paths stay structured across the service/UI boundary, replacing error-message
+  parsing. Existing Cancel / Use the changed file actions are preserved.
+- The file picker has two matching carved viewports. Each pages complete rows as
+  D-pad focus moves, while Add N files and Parent folder stay above the frames.
+  Independent column positions preserve the other column when focus changes.
+
+The focused tests now assert locked styling and skipped focus, separate dialog
+content, UTF-8-safe middle elision, full-row viewport bounds, and D-pad traversal
+past the first page before selecting files. The existing five independent UI
+journeys remain separate from the long headless journey; the sixth focused case
+is a pure path-elision test. No dependencies were added.
+
+Inspected the regenerated `026-extras-order.png`, `026-changed-file.png`,
+`026-missing-file.png`, and `026-file-picker-multiselect.png` off-screen at
+1280×800. Locked content is visibly distinct, filenames and actions remain clear,
+and neither picker column exposes partial rows beneath the header.
+
+The first review validation run passed fmt, clippy, and all 98 other `ddl` tests,
+but the long production journey failed at the SIGIL installation. Its loopback
+server withheld response headers while four PNG captures ran; the real 15 s
+header timeout fired before `package_gate.release()`. The captures were written
+at 18:54:04, :13, :18, and :23; the request timed out at :17. This was a fixture
+timing race, independent of the local-content screens.
+
+With coordinator approval, the test now releases the package gate immediately
+after observing progress, before capturing the four progress states. Captures
+never pump queued worker events, so the synthetic stages remain deterministic.
+The change follows spec 024 R4 and leaves production timeouts untouched. This
+avoids expanding the test configuration or adding a timeout override.
+
+Initial full default-parallel workspace run (exit 101):
+
+```text
+WARN ddl::services: application operation failed error=network error for http://127.0.0.1:57809/sigil.zip: request timed out (receive response) kind=Network
+thread 'headless::fixture_screens_navigation_and_focus_render_headlessly' panicked at crates/ddl/src/headless_production.rs:87:5:
+Some(Network)
+test result: FAILED. 98 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 233.03s
+```
+
+Final review validation after the approved fixture fix:
+`git merge main` reported **Already up to date** (main `4f0e569`). The six focused
+cases passed; the picker case was rerun after adjusting its evidence frame to
+show both selected files together. All four requested review PNGs were rendered
+and inspected. The full workspace command below was run once after the fixture
+fix, with default parallelism and no filters or environment overrides; it exited
+0 with **506 tests passed**, none ignored or filtered.
+
+```text
+cargo fmt --all --check
+exit 0 (no output)
+
+cargo clippy --workspace --all-targets -- -D warnings
+Checking ddl v0.0.5 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-026b-local-content-ui/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 20s
+
+cargo test --workspace
+test result: ok. 99 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 243.18s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.27s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0
+```
+
+A3 and the UI part of A4 remain complete. A5 remains **Needs Deck Validation**;
+there are no remaining phase B implementation or review-polish items.

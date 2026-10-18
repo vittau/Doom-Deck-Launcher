@@ -30,7 +30,7 @@ impl slint::platform::EventLoopProxy for HeadlessProxy {
         Ok(())
     }
 }
-fn pump_events() {
+pub(crate) fn pump_events() {
     let events = std::mem::take(&mut *EVENTS.lock().unwrap());
     for event in events {
         event();
@@ -48,7 +48,7 @@ impl Platform for HeadlessPlatform {
 
 /// Installs the headless platform and creates the fixture component at
 /// 1280×800 with a scale factor of 1 (what the Deck reports).
-fn setup() -> (Rc<MinimalSoftwareWindow>, AppWindow) {
+pub(crate) fn setup() -> (Rc<MinimalSoftwareWindow>, AppWindow) {
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
     slint::platform::set_platform(Box::new(HeadlessPlatform {
         window: window.clone(),
@@ -76,7 +76,7 @@ fn press(window: &MinimalSoftwareWindow, key: Key) {
 }
 
 /// Draws one frame into a fresh 1280×800 buffer with the software renderer.
-fn render(window: &MinimalSoftwareWindow) -> SharedPixelBuffer<Rgb8Pixel> {
+pub(crate) fn render(window: &MinimalSoftwareWindow) -> SharedPixelBuffer<Rgb8Pixel> {
     let mut buffer = SharedPixelBuffer::<Rgb8Pixel>::new(WIDTH, HEIGHT);
     window.request_redraw();
     let drew = window.draw_if_needed(|renderer| {
@@ -105,7 +105,7 @@ fn headless_dir() -> PathBuf {
 }
 
 /// Writes `buffer` as a PNG and returns its path.
-fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
+pub(crate) fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
     let path = headless_dir().join(name);
 
     let file = std::fs::File::create(&path).expect("create the snapshot file");

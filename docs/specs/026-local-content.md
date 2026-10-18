@@ -88,7 +88,7 @@ free-form extra command-line arguments (later, if asked), Lutris (deferred by D-
   touches user files; CLI round trip in a scratch XDG root.
 - [x] **A2** (R3, R5) — exact argv for a catalog mapset profile with extras (recipe first);
   old profile state loads; saves warning shown.
-- [ ] **A3** (R8–R11) — headless renders: file browser with multi-select, order editor mid-move,
+- [x] **A3** (R8–R11) — headless renders: file browser with multi-select, order editor mid-move,
   New custom setup, Library and Home with a custom setup, Play setup with extras; D-pad focus order
   tested.
 - [x] **A4** — fmt, clippy `-D warnings`, tests green.

@@ -470,6 +470,8 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     capture(window, "010-mapset-detail.png");
     ui.invoke_clicked(1);
     wait(&state, |r| r.progress.is_some() || !r.busy);
+    // Spec 024 R4: slow PNG captures must not race the real 15 s header timeout.
+    package_gate.release();
     assert_eq!(state.borrow().screen, Screen::Progress);
     assert!(
         ui.get_nodes()
@@ -482,7 +484,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .any(|n| n.label.contains(" B") || n.label.contains("KiB"))
     );
     capture(window, "010-install-progress.png");
-    // Fast local stages are represented deterministically while HTTP remains gated.
+    // Fast local stages are represented deterministically while worker events stay queued.
     let saved_progress = state.borrow().progress;
     for (stage, name) in [
         (
@@ -504,7 +506,6 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     }
     state.borrow_mut().progress = saved_progress;
     state.borrow_mut().sync(ui);
-    package_gate.release();
     idle(&state);
     assert_eq!(state.borrow().screen, Screen::Setup);
     assert!(
