@@ -2752,6 +2752,7 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Storage => T::ErrorStorage,
         Problem::State => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
+        Problem::Stalled => T::ErrorStalled,
         Problem::Update => T::UpdateError,
         Problem::Catalog => T::ErrorCatalog,
         Problem::Checksum => T::ErrorChecksum,

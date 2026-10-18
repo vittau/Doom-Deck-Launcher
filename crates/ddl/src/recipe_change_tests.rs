@@ -60,6 +60,7 @@ pub(crate) fn setup() -> (tempfile::TempDir, Server, Environment, Arc<AtomicUsiz
             catalog_url: server.url("/catalog.json"),
             reviewed: dsda::ReviewedList::embedded(),
             runner: Arc::new(dsda::FakeEngineRunner::new(dsda::LaunchExit::Clean)),
+            engine_response_timeout: None,
         })),
     };
     (temp, server, env, count)
@@ -78,6 +79,7 @@ pub(crate) fn catalog_env(env: &Environment, change: impl FnOnce(&mut Catalog)) 
             catalog_url: previous.catalog_url.clone(),
             reviewed: previous.reviewed.clone(),
             runner: previous.runner.clone(),
+            engine_response_timeout: previous.engine_response_timeout,
         })),
     }
 }
