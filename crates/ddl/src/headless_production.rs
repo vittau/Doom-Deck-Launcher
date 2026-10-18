@@ -11,6 +11,7 @@ use ddl_core::{
         test_http::{Response, Server},
     },
     engines::dsda::{self, EngineRunner},
+    platform::paths::Paths,
 };
 use std::{
     cell::RefCell,
@@ -18,7 +19,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-struct Gate {
+pub(super) struct Gate {
     open: Mutex<bool>,
     wake: Condvar,
 }
@@ -196,8 +197,43 @@ fn wad() -> Vec<u8> {
     bytes
 }
 
-pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+/// Signature of a segment's capture sink: the real renderer/PNG writer, or a
+/// no-op for the silent prefix a later segment replays to reach its state.
+pub(super) type Captures<'a> = &'a dyn Fn(&str);
+
+/// One focused headless scenario: its own scratch XDG root, its own loopback
+/// HTTP fixture, its own gated engine/package/play servers and its own
+/// off-screen component. No two tests share a mutable path (spec 027, R1/R3).
+pub(super) struct Scene {
+    _temp: tempfile::TempDir,
+    _server: Server,
+    pub(super) paths: Paths,
+    pub(super) home: PathBuf,
+    pub(super) env: Environment,
+    pub(super) window: Rc<MinimalSoftwareWindow>,
+    pub(super) ui: AppWindow,
+    pub(super) state: Rc<RefCell<Runtime>>,
+    pub(super) fake: Arc<dsda::FakeEngineRunner>,
+    pub(super) api: Arc<dsda::CannedApi>,
+    pub(super) exit: Arc<std::sync::atomic::AtomicI32>,
+    pub(super) engine_gate: Arc<Gate>,
+    pub(super) package_gate: Arc<Gate>,
+    pub(super) play_gate: Arc<Gate>,
+}
+
+impl Scene {
+    /// The real capture: render, assert the idle frame, write the PNG and the
+    /// reference comparison.
+    pub(super) fn capture(&self, name: &str) {
+        capture(&self.window, name);
+    }
+}
+
+/// Builds the shared scenario fixture. `setup()` installs the one Slint platform
+/// this child process may have.
+pub(super) fn scene() -> Scene {
     let _ = tracing_subscriber::fmt().with_test_writer().try_init();
+    let (window, ui) = setup();
     let temp = tempfile::tempdir().unwrap();
     let home = temp.path().join("home");
     let owned = home.join("owned");
@@ -317,35 +353,65 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         home: home.clone(),
         test: Some(test),
     };
-    let state = crate::runtime::attach_environment(ui, env.clone());
+    let state = crate::runtime::attach_environment(&ui, env.clone());
+    Scene {
+        _temp: temp,
+        _server: server,
+        paths,
+        home,
+        env,
+        window,
+        ui,
+        state,
+        fake,
+        api,
+        exit,
+        engine_gate,
+        package_gate,
+        play_gate,
+    }
+}
+
+/// Specs 010/024: loading, empty Home/Library, the quit dialog and the engine
+/// install → cancel → retry path.
+pub(super) fn first_run(scene: &Scene, capture: Captures) {
+    let Scene {
+        paths,
+        env,
+        engine_gate,
+        ..
+    } = scene;
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     assert!(ui.get_nodes().iter().any(|n| n.kind == 11));
-    capture(window, "010-loading.png");
+    capture("010-loading.png");
     idle(&state);
     assert_eq!(state.borrow().screen, Screen::FirstRun);
     assert!(paths.config.join("dsda/active.cfg").is_file());
-    capture(window, "010-first-run.png");
+    capture("010-first-run.png");
     for (screen, name) in [
         (Screen::Home, "010-home-empty.png"),
         (Screen::Library, "010-library-empty.png"),
     ] {
         state.borrow_mut().screen = screen;
         state.borrow_mut().sync(ui);
-        capture(window, name);
+        capture(name);
     }
     state.borrow_mut().screen = Screen::FirstRun;
     state.borrow_mut().focus = 1;
     state.borrow_mut().sync(ui);
     ui.invoke_action(10);
-    capture(window, "010-quit-dialog.png");
+    capture("010-quit-dialog.png");
     press(window, Key::Escape);
     // A requests real reviewed install on a worker; gate HTTP while rendering progress.
     press(window, Key::Return);
     wait(&state, |r| r.progress.is_some());
-    capture(window, "010-first-run-engine-install.png");
+    capture("010-first-run-engine-install.png");
     assert_eq!(state.borrow().screen, Screen::Progress);
     press(window, Key::Return);
     assert_eq!(ui.get_focused(), 900);
-    capture(window, "010-cancel-dialog.png");
+    capture("010-cancel-dialog.png");
     press(window, Key::Return);
     assert!(
         state.borrow().busy,
@@ -369,6 +435,13 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     idle(&state);
     assert_eq!(state.borrow().screen, Screen::FirstRun);
     assert!(state.borrow().snapshot.as_ref().unwrap().engine.is_some());
+}
+
+/// Spec 010: the controller browser, bounded scan and explicit ambiguity choice.
+pub(super) fn iwad_review(scene: &Scene, capture: Captures) {
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     // Controller browser, bounded scan and explicit ambiguity choice.
     ui.invoke_clicked(2);
     idle(&state);
@@ -393,7 +466,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .iter()
             .any(|n| n.label.starts_with('.') && n.tone == 1)
     );
-    capture(window, "010-directory-browser.png");
+    capture("010-directory-browser.png");
     press(window, Key::Escape);
     assert_eq!(state.borrow().screen, Screen::FirstRun);
     ui.invoke_clicked(2);
@@ -401,7 +474,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ui.invoke_clicked(1);
     idle(&state);
     assert_eq!(state.borrow().screen, Screen::Review);
-    capture(window, "010-iwad-ambiguous.png");
+    capture("010-iwad-ambiguous.png");
     let candidate = state.borrow().snapshot.as_ref().unwrap().iwads[0]
         .candidates
         .iter()
@@ -409,7 +482,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         .unwrap();
     ui.invoke_clicked(10 + candidate as i32);
     idle(&state);
-    capture(window, "010-iwad-found.png");
+    capture("010-iwad-found.png");
     assert_eq!(
         state.borrow().snapshot.as_ref().unwrap().iwads[0]
             .variant
@@ -418,6 +491,13 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     );
     ui.invoke_clicked(1);
     assert_eq!(state.borrow().screen, Screen::FirstRun);
+}
+
+/// Specs 010/013: Discover cards, the render-only fallback and Eviternity
+/// fixtures, and the SIGIL mapset detail.
+pub(super) fn discover_and_detail(scene: &Scene, capture: Captures) {
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     ui.invoke_clicked(4);
     {
         let mut r = state.borrow_mut();
@@ -443,7 +523,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
                 .any(|i| i.recipe.id == "eviternity")
         );
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 3));
-        capture(window, "010-discover.png");
+        capture("010-discover.png");
         // Render-only community entry: no catalog or install-state mutation.
         let item = &mut r.snapshot.as_mut().unwrap().items[0];
         item.recipe.id = "community-without-art".into();
@@ -453,21 +533,29 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         r.sync(ui);
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 4));
         assert_eq!(ui.get_band_art(), 4);
-        capture(window, "013-discover-fallback.png");
+        capture("013-discover-fallback.png");
         r.snapshot.as_mut().unwrap().items[0].recipe =
             Catalog::embedded().recipe("eviternity").unwrap().clone();
         r.snapshot.as_mut().unwrap().items[0].recipe.title = "Eviternity (render fixture)".into();
         r.sync(ui);
         assert!(ui.get_nodes().iter().any(|n| n.kind == 4 && n.art == 3));
         assert_eq!(ui.get_band_art(), 3);
-        capture(window, "013-discover-eviternity.png");
+        capture("013-discover-eviternity.png");
         r.snapshot = saved;
         r.sync(ui);
     }
     ui.invoke_clicked(11);
     assert_eq!(state.borrow().screen, Screen::Detail);
     assert_eq!(ui.get_heading(), "Details / SIGIL");
-    capture(window, "010-mapset-detail.png");
+    capture("010-mapset-detail.png");
+}
+
+/// Specs 010/017/024: SIGIL install progress with the gated package, the staged
+/// frames and the ready Play setup.
+pub(super) fn install_and_setup(scene: &Scene, capture: Captures) {
+    let Scene { package_gate, .. } = scene;
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     ui.invoke_clicked(1);
     wait(&state, |r| r.progress.is_some() || !r.busy);
     // Spec 024 R4: slow PNG captures must not race the real 15 s header timeout.
@@ -483,7 +571,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .iter()
             .any(|n| n.label.contains(" B") || n.label.contains("KiB"))
     );
-    capture(window, "010-install-progress.png");
+    capture("010-install-progress.png");
     // Fast local stages are represented deterministically while worker events stay queued.
     let saved_progress = state.borrow().progress;
     for (stage, name) in [
@@ -502,7 +590,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ] {
         state.borrow_mut().progress = Some(ddl_core::downloads::InstallProgress::stage(stage));
         state.borrow_mut().sync(ui);
-        capture(window, name);
+        capture(name);
     }
     state.borrow_mut().progress = saved_progress;
     state.borrow_mut().sync(ui);
@@ -536,7 +624,24 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         .find(|n| n.label == "Will launch")
         .unwrap();
     assert_eq!(title.y, 36.);
-    capture(window, "010-play-setup-ready.png");
+    capture("010-play-setup-ready.png");
+}
+
+/// Specs 010/017/025: advanced-component exclusivity, the compatibility dialog,
+/// imports, scrolling, playing and the engine-exit toast.
+pub(super) fn play_setup_options(scene: &Scene, capture: Captures) {
+    let Scene {
+        home,
+        env,
+        paths,
+        fake,
+        play_gate,
+        exit,
+        ..
+    } = scene;
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     // Profile values persist; advanced replacement never combines with main.
     ui.invoke_clicked(40);
     idle(&state);
@@ -556,7 +661,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ui.invoke_clicked(42);
     ui.invoke_clicked(101);
     assert!(ui.get_sheet_open());
-    capture(window, "010-compat-dialog.png");
+    capture("010-compat-dialog.png");
     press(window, Key::Escape);
     // The default-on wide bar survives a cancelled compat confirmation.
     assert_eq!(
@@ -602,7 +707,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     .unwrap();
     ui.invoke_clicked(102);
     idle(&state);
-    capture(window, "010-import-browser.png");
+    capture("010-import-browser.png");
     let row = state
         .borrow()
         .directory
@@ -643,11 +748,16 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         panel.y + panel.h >= focused.y + focused.h + 24.,
         "the carved bottom rail stays below the complete options list"
     );
-    capture(window, "010-play-setup-options-scroll.png");
+    capture("010-play-setup-options-scroll.png");
     // Playing ignores controller and pointer actions, retains run guard and restores Play.
     ui.invoke_clicked(50);
     wait(&state, |r| r.playing);
-    capture(window, "010-playing.png");
+    // A silent prefix replay renders no frame between the click and the assert,
+    // so wait for the worker to take the run guard before checking it.
+    wait(&state, |_| {
+        ddl_core::dsda_config::RunGuard::is_active(&paths.config.join("dsda")).unwrap_or(false)
+    });
+    capture("010-playing.png");
     assert!(ddl_core::dsda_config::RunGuard::is_active(&paths.config.join("dsda")).unwrap());
     let focused = ui.get_focused();
     press(window, Key::Tab);
@@ -667,7 +777,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .last_played
             .is_some()
     );
-    capture(window, "010-engine-failed-toast.png");
+    capture("010-engine-failed-toast.png");
     assert!(!ddl_core::dsda_config::RunGuard::is_active(&paths.config.join("dsda")).unwrap());
     state.borrow_mut().neutral_poll(true);
     for status in [-6, 0] {
@@ -679,6 +789,13 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         state.borrow_mut().neutral_poll(true);
     }
     assert_eq!(fake.launch_count(), 3);
+}
+
+/// Specs 010/015: Library, the favorite star, Home Continue and its credits.
+pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     press(window, Key::Escape);
     assert_eq!(state.borrow().screen, Screen::Detail);
     press(window, Key::Escape);
@@ -693,7 +810,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .filter(|n| n.kind == 4 && n.w >= 160.)
             .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
     );
-    capture(window, "010-library.png");
+    capture("010-library.png");
     // Spec 015, R5: X marks the focused installed mapset; Library shows the star and sorts it first.
     let marks = |ui: &AppWindow| ui.get_nodes().iter().filter(|n| n.kind == 12).count();
     assert_eq!(marks(ui), 0);
@@ -702,7 +819,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert_eq!(marks(ui), 1);
     assert!(ui.get_favorite_hint());
     assert_eq!(ui.get_favorite_label(), "Unfavorite");
-    capture(window, "015-library-favorite.png");
+    capture("015-library-favorite.png");
     press_char(window, "x");
     idle(&state);
     assert_eq!(marks(ui), 0);
@@ -738,7 +855,15 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .all(|n| n.credit.is_empty())
     );
     assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
-    capture(window, "010-home-continue.png");
+    capture("010-home-continue.png");
+}
+
+/// Specs 010/021: the missing-IWAD blocked Play setup and the Settings summary.
+pub(super) fn blocked_setup_and_settings(scene: &Scene, capture: Captures) {
+    let Scene { fake, .. } = scene;
+    let ui = &scene.ui;
+    let state = scene.state.clone();
+    let owned = scene.home.join("owned");
     ui.invoke_clicked(1);
     assert_eq!(state.borrow().screen, Screen::Setup);
     // Missing IWAD rechecks and gates the real resolver without changing the install.
@@ -753,7 +878,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .launch
             .is_err()
     );
-    capture(window, "010-play-setup-blocked.png");
+    capture("010-play-setup-blocked.png");
     ui.invoke_clicked(50);
     assert_eq!(fake.launch_count(), 3);
     // Reset is confirmed and preserves a backup. Folder remove never deletes user data.
@@ -765,7 +890,14 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .iter()
             .any(|n| n.label == "Check when you are ready. No update check has run.")
     );
-    capture(window, "010-settings.png");
+    capture("010-settings.png");
+}
+
+/// Specs 019/021: catalog update rows and the folded Settings sections.
+pub(super) fn settings_rows(scene: &Scene, capture: Captures) {
+    let Scene { api, .. } = scene;
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     // Spec 019 R5/A3: the catalog rows render headlessly and the automatic
     // toggle persists (default on).
     let catalog_row = ui
@@ -830,7 +962,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ] {
         state.borrow_mut().focus = focus;
         state.borrow_mut().sync(ui);
-        capture(window, name);
+        capture(name);
         if focus == 4 {
             assert!(ui.get_nodes().iter().any(|n| n.kind == 10));
             let credit = ui
@@ -854,7 +986,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
                 .find(|n| n.kind == 1 && n.x == 348.)
                 .unwrap();
             assert!(credit.y + credit.h + 24. <= panel.y + panel.h);
-            capture(window, "013-about.png");
+            capture("013-about.png");
         }
     }
     // Spec 021 A3: the opt-in Settings row renders (existing Ember row) and
@@ -906,6 +1038,16 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
         api.requests().is_empty(),
         "startup and local actions never check online releases"
     );
+}
+
+/// Specs 010/019/021: engine update/error/rollback, DSDA reset and folder removal.
+pub(super) fn engine_updates_and_dialogs(scene: &Scene, capture: Captures) {
+    let Scene {
+        api, paths, home, ..
+    } = scene;
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     api.push_error(dsda::ApiError::new("synthetic offline"));
     ui.invoke_clicked(70);
     wait(&state, |r| !r.busy);
@@ -921,7 +1063,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     idle(&state);
     assert_eq!(api.requests().len(), 2);
     let mut installed = dsda::InstalledState::load(
-        &dsda::EngineDirs::for_paths(&paths)
+        &dsda::EngineDirs::for_paths(paths)
             .engines
             .join(dsda::STATE_FILE),
     )
@@ -933,7 +1075,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     installed.previous_good = Some("0.30.0".into());
     installed
         .save(
-            &dsda::EngineDirs::for_paths(&paths)
+            &dsda::EngineDirs::for_paths(paths)
                 .engines
                 .join(dsda::STATE_FILE),
         )
@@ -974,7 +1116,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
 
     ui.invoke_clicked(3);
     ui.invoke_clicked(70);
-    capture(window, "010-reset-dialog.png");
+    capture("010-reset-dialog.png");
     press(window, Key::Return);
     assert!(!state.borrow().busy);
     ui.invoke_clicked(70);
@@ -990,7 +1132,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ui.invoke_clicked(2);
     ui.invoke_clicked(100);
     assert!(ui.get_sheet_open());
-    capture(window, "010-remove-folder-dialog.png");
+    capture("010-remove-folder-dialog.png");
     press(window, Key::Escape);
     assert!(!state.borrow().snapshot.as_ref().unwrap().folders.is_empty());
     ui.invoke_clicked(100);
@@ -999,6 +1141,13 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     idle(&state);
     assert!(state.borrow().snapshot.as_ref().unwrap().folders.is_empty());
     assert!(home.join("purchased.wad").is_file());
+}
+
+/// Spec 010: a real checksum rejection keeps the previous install.
+pub(super) fn install_error(scene: &Scene, capture: Captures) {
+    let Scene { env, .. } = scene;
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     // Error is generated by a real checksum rejection, with the prior install retained.
     state.borrow_mut().screen = Screen::Detail;
     state.borrow_mut().selected = 2;
@@ -1007,7 +1156,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     ui.invoke_clicked(1);
     wait(&state, |r| !r.busy);
     assert_eq!(state.borrow().problem, Some(Problem::Checksum));
-    capture(window, "010-install-error.png");
+    capture("010-install-error.png");
     assert!(
         ui.get_nodes()
             .iter()
@@ -1023,6 +1172,14 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
     assert_eq!(restarted.items[1].profile.skill, 4);
     assert!(restarted.items[1].manifest.is_some());
     assert!(restarted.items[1].profile.last_played.is_some());
+}
+
+/// Spec 010: the actual AUGER;ZENITH resolver/install and exclusive add-on chooser.
+pub(super) fn auger_setup(scene: &Scene, capture: Captures) {
+    let Scene { home, env, .. } = scene;
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
     // Actual AUGER resolver/install/profile journey: no borrowed ready summary.
     press(window, Key::Escape);
     let doom2 = home.join("synthetic-doom2.wad");
@@ -1067,7 +1224,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .count(),
         1
     );
-    capture(window, "010-play-setup-auger.png");
+    capture("010-play-setup-auger.png");
     // Left/right operates on the three choices as one compact group.
     state.borrow_mut().focus = 301;
     state.borrow_mut().sync(ui);
@@ -1115,7 +1272,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .collect::<Vec<_>>(),
         [101]
     );
-    capture(window, "010-play-setup-auger-alternate.png");
+    capture("010-play-setup-auger-alternate.png");
     // A on the selected choice is idempotent, and a different choice replaces it.
     press(window, Key::Return);
     idle(&state);
@@ -1157,7 +1314,7 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .collect::<Vec<_>>(),
         [102]
     );
-    capture(window, "010-play-setup-auger-deckard.png");
+    capture("010-play-setup-auger-deckard.png");
     ui.invoke_clicked(301);
     idle(&state);
     assert!(
@@ -1180,17 +1337,14 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             .len(),
         1
     );
-    profiles_journey(window, ui, &state, &env, &fake);
 }
 
 /// Spec 018: real keys, production services, independent save identity and Continue.
-fn profiles_journey(
-    window: &MinimalSoftwareWindow,
-    ui: &AppWindow,
-    state: &Rc<RefCell<Runtime>>,
-    env: &Environment,
-    fake: &dsda::FakeEngineRunner,
-) {
+pub(super) fn profiles(scene: &Scene, capture: Captures) {
+    let Scene { env, fake, .. } = scene;
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = &scene.state;
     // Current mapset is installed AUGER;ZENITH, with all game prerequisites ready.
     state.borrow_mut().focus = 60;
     state.borrow_mut().sync(ui);
@@ -1219,7 +1373,7 @@ fn profiles_journey(
     assert_eq!(copied.name, "Profile 2");
     press(window, Key::Return);
     idle(state);
-    capture(window, "018-profile-picker.png");
+    capture("018-profile-picker.png");
     // At the last profile, focus begins on copy; Up reaches Previous.
     press(window, Key::UpArrow);
     assert_eq!(ui.get_focused(), 910);
@@ -1239,7 +1393,7 @@ fn profiles_journey(
     assert_eq!(ui.get_focused(), 914);
     press(window, Key::Return);
     assert_eq!(ui.get_focused(), 910);
-    capture(window, "018-profile-names.png");
+    capture("018-profile-names.png");
     press(window, Key::RightArrow);
     press(window, Key::Return); // Casual
     idle(state);
@@ -1258,7 +1412,7 @@ fn profiles_journey(
     assert_eq!(ui.get_focused(), 900);
     assert!(ui.get_sheet_title().contains("Casual"));
     assert!(ui.get_sheet_title().contains("saves and screenshots"));
-    capture(window, "018-delete-confirm.png");
+    capture("018-delete-confirm.png");
     press(window, Key::Escape);
     assert_eq!(ui.get_focused(), 60);
     let store = ddl_core::profiles::ProfileStore::new(&env.paths.config, &env.paths.data);
@@ -1277,7 +1431,7 @@ fn profiles_journey(
         r.sync(ui);
     }
     assert!(ui.get_nodes().iter().any(|n| n.label.contains("Casual")));
-    capture(window, "018-home-continue.png");
+    capture("018-home-continue.png");
     let before_continue = fake.launches().len();
     press(window, Key::Return); // Continue opens setup, preserving the established flow.
     assert_eq!(state.borrow().screen, Screen::Setup);
@@ -1302,7 +1456,7 @@ fn profiles_journey(
         r.sync(ui);
     }
     assert!(ui.get_nodes().iter().any(|n| n.label == "2 profiles"));
-    capture(window, "018-library-profiles.png");
+    capture("018-library-profiles.png");
     // Delete explicitly, and ensure the other profile's dirs survive.
     {
         let mut r = state.borrow_mut();
@@ -2057,7 +2211,19 @@ pub(super) fn uninstall_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
 }
 
 /// Spec 025: real catalog data in every production title/author slot.
-pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+/// A screen group of the spec 025 title-fit audit. `screens` selects the
+/// production screens whose title/author slots are measured, `components`
+/// adds the Play setup component-label frames, `sheets` selects the profile
+/// and/or uninstall sheet headings, and `recipe_group` keeps one half of the
+/// fixtures so no single render pass runs long.
+pub(super) fn title_fit_journey(
+    window: &MinimalSoftwareWindow,
+    ui: &AppWindow,
+    screens: &[&str],
+    components: bool,
+    sheets: &[&str],
+    recipe_group: Option<usize>,
+) {
     use crate::{
         input::Action,
         services::recipe_change_tests::{installed, setup},
@@ -2094,7 +2260,11 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
     let audit = std::env::var_os("DDL_TITLE_AUDIT").is_some();
     let mut findings = Vec::new();
     let mut fits = Vec::new();
-    for recipe in recipes {
+    let recipe_count = recipes.len();
+    for (index, recipe) in recipes.into_iter().enumerate() {
+        if recipe_group.is_some_and(|group| index * 2 / recipe_count.max(1) != group) {
+            continue;
+        }
         let mut item = template.clone();
         item.recipe = recipe.clone();
         item.last_played = Some(1);
@@ -2111,6 +2281,9 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
             (Screen::Setup, "setup"),
             (Screen::Progress, "progress"),
         ] {
+            if !screens.contains(&name) {
+                continue;
+            }
             {
                 let mut r = state.borrow_mut();
                 r.screen = screen;
@@ -2253,7 +2426,7 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
                     ui.get_fit_width()
                 ));
             }
-            if screen == Screen::Setup {
+            if components && screen == Screen::Setup {
                 let rows: Vec<_> = ui
                     .get_nodes()
                     .iter()
@@ -2306,6 +2479,9 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
             capture(window, &format!("025-{name}-{}.png", recipe.id));
         }
         for (id, name) in [(4, "profiles"), (5, "uninstall")] {
+            if !sheets.contains(&name) {
+                continue;
+            }
             let mut r = state.borrow_mut();
             r.screen = Screen::Detail;
             r.pending = None;

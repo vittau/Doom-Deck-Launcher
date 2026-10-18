@@ -9,27 +9,9 @@ use std::{
 };
 
 // Slint's platform is process-global. Separate named tests re-execute only their
-// own case in a headless subprocess, leaving the long production journey alone.
+// own case in a headless subprocess with a private artifact directory (spec 027).
 fn isolated(name: &str) -> bool {
-    if std::env::var("DDL_LOCAL_CASE").as_deref() == Ok(name) {
-        return false;
-    }
-    let output = std::process::Command::new(std::env::current_exe().unwrap())
-        .args([
-            "--exact",
-            &format!("runtime::local_ui::tests::{name}"),
-            "--nocapture",
-        ])
-        .env("DDL_LOCAL_CASE", name)
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    true
+    crate::headless::isolated(module_path!(), name)
 }
 fn environment(home: &Path) -> Environment {
     fs::create_dir_all(home).unwrap();

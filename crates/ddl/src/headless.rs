@@ -95,13 +95,54 @@ fn count_color(buffer: &SharedPixelBuffer<Rgb8Pixel>, color: (u8, u8, u8)) -> us
         .count()
 }
 
-/// Resolves and creates the shared directory for headless render artifacts.
-fn headless_dir() -> PathBuf {
-    let dir = std::env::var_os("DDL_HEADLESS_DIR")
+/// Root for headless render artifacts: `DDL_HEADLESS_DIR` or `target/headless`.
+fn headless_root() -> PathBuf {
+    std::env::var_os("DDL_HEADLESS_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless"));
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless"))
+}
+
+/// Resolves and creates this test's own artifact directory under the root.
+///
+/// Every isolated test writes into `<root>/<case>/`, so parallel tests never
+/// share a mutable path (spec 027, R3).
+fn headless_dir() -> PathBuf {
+    let dir = headless_root();
     std::fs::create_dir_all(&dir).expect("create the snapshot directory");
     dir
+}
+
+/// Runs `case` alone in a fresh subprocess and returns `true` in the parent.
+///
+/// Slint allows one platform per process, so every test that renders installs it
+/// in its own child process. The child gets a private `DDL_HEADLESS_DIR`
+/// (`<root>/<case>`) and its scratch state; the parent returns at once, keeping
+/// the default parallel harness free of shared platform or artifact state.
+pub(crate) fn isolated(module: &str, case: &str) -> bool {
+    const KEY: &str = "DDL_HEADLESS_CASE";
+    if std::env::var(KEY).as_deref() == Ok(case) {
+        return false;
+    }
+    // `module_path!()` carries the crate name (`ddl::headless::…`); the test
+    // harness names its cases without that prefix.
+    let module = module
+        .strip_prefix(concat!(env!("CARGO_CRATE_NAME"), "::"))
+        .unwrap_or(module);
+    let dir = headless_root().join(case);
+    std::fs::create_dir_all(&dir).expect("create the per-case snapshot directory");
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", &format!("{module}::{case}"), "--nocapture"])
+        .env(KEY, case)
+        .env("DDL_HEADLESS_DIR", &dir)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    true
 }
 
 /// Writes `buffer` as a PNG and returns its path.
@@ -167,18 +208,22 @@ fn comparison(name: &str, actual: &SharedPixelBuffer<Rgb8Pixel>) {
     write_png(&format!("comparison-{name}"), &side);
 }
 
+/// Specs 008/010: shell navigation, focus and every fixture screen render
+/// headlessly. Each production journey is its own isolated test (spec 027).
 #[test]
-fn fixture_screens_navigation_and_focus_render_headlessly() {
+fn shell_navigation_and_focus_render_headlessly() {
+    if isolated(
+        module_path!(),
+        "shell_navigation_and_focus_render_headlessly",
+    ) {
+        return;
+    }
     use crate::{
         fixtures::{MapsetId, files},
         input::Action,
         shell::Screen,
     };
     let (window, ui) = setup();
-    if std::env::var_os("DDL_TITLE_ONLY").is_some() {
-        production::title_fit_journey(&window, &ui);
-        return;
-    }
     let state = crate::shell::attach(&ui);
     let quits = Rc::new(std::cell::Cell::new(0));
     let q = quits.clone();
@@ -473,12 +518,10 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     press(&window, Key::Return);
     assert_eq!(quits.get(), 1, "only explicit confirmation quits");
     let _ = ui.window(); // ComponentHandle methods are available without showing a window.
-    production::journey(&window, &ui);
-    production::categories_journey(&window, &ui);
-    production::recipe_changes_journey(&window, &ui);
-    production::uninstall_journey(&window, &ui);
-    production::title_fit_journey(&window, &ui);
 }
 
 #[path = "headless_production.rs"]
 mod production;
+
+#[path = "headless_journeys.rs"]
+mod journeys;
