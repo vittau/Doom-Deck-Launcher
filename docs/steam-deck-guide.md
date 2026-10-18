@@ -287,8 +287,33 @@ cargo test --workspace
 
 `cargo test` never opens a window: the launcher screens are verified headlessly with
 Slint's software renderer, and the frames it draws at 1280×800 are written to
-`target/headless/*.png` (see `crates/ddl/src/headless.rs`). To inspect them somewhere
-else, set `DDL_HEADLESS_DIR`.
+`target/headless/<test>/` (see `crates/ddl/src/headless.rs`). To inspect them
+somewhere else, set `DDL_HEADLESS_DIR`.
+
+### Running UI tests
+
+Slint allows one render platform per process, so each UI test re-runs only its own
+case in a headless subprocess, with its own scratch XDG root and its own artifact
+directory under `DDL_HEADLESS_DIR` (default `target/headless/<test>/`). Run one
+screen or flow by name:
+
+```sh
+cargo test -p ddl first_run_and_engine_setup      # one journey test
+cargo test -p ddl headless::journeys              # every production flow, in parallel
+cargo test -p ddl shell_navigation_and_focus_render_headlessly
+```
+
+The PNGs land in `target/headless/<test>/`; the title-fit report is
+`<test>/025-fit.txt`. Keep the shared directory clean between runs if you inspect
+it in a contact sheet.
+
+Regenerate the README screenshots (lossless recompression into `docs/screenshots/`);
+`--check` verifies them without writing:
+
+```sh
+python3 scripts/readme-screenshots.py
+python3 scripts/readme-screenshots.py --check
+```
 
 Release binaries are not built on a development machine: they are produced by
 GitHub Actions inside a pinned Steam Linux Runtime SDK container, so that they run
