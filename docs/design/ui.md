@@ -68,7 +68,8 @@ for the offline production compositor. Art does not imply gameplay verification.
 
 ### Typography and assets
 
-**Pirata One** for page, hero and section titles (≥26 px); **Barlow Regular** for body,
+**Pirata One** for page, hero and section titles (normally ≥26 px; 22 px only for fitted
+compact titles); **Barlow Regular** for body,
 controls, filenames and metadata. Both unmodified TTFs and SIL OFL 1.1 notices are bundled,
 with notices included in release tarballs. Verified sources and notices are retained in
 [visual-v2/fonts/SOURCE.txt](visual-v2/fonts/SOURCE.txt); Inter remains bundled for legacy assets.
@@ -89,6 +90,9 @@ author line; author text elides by measured width, not character count. Home his
 one title line above the profile name. Detail reserves 96 px and uses 44→36 px for the
 complete catalog title, including parenthesized qualifiers, without elision. Keep a 4 px
 glyph inset for display-face side bearings. Sheet headings share the same fitting behavior.
+Play setup component rows retain a 30 px label slot above their explanation: Barlow 22→20 px,
+one line with elision as needed. Exclusive component choices already use one elided line at
+the minimum 20 px scale.
 
 Preserve filename case. Wrap titles and descriptions; directory breadcrumbs elide from the
 start so the destination remains visible. No essential tooltips. Minimum control height 52 px;

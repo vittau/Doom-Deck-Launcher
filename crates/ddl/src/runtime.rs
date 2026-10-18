@@ -1289,6 +1289,10 @@ impl Runtime {
         self.show_sheet(sheet);
         self.sync(ui);
     }
+    #[cfg(test)]
+    pub fn title_fit_advanced(&mut self) {
+        self.advanced = true;
+    }
     pub fn sync(&mut self, ui: &AppWindow) {
         if !self.categories().contains(&self.category) {
             self.category = Category::All;
@@ -1888,6 +1892,7 @@ impl Runtime {
                                         member.label.clone().into(),
                                         item.profile.components.contains(&member.id),
                                     );
+                                    b.nodes.last_mut().unwrap().fitted_label = true;
                                 }
                                 y += 36. + rows as f32 * 60. + 12.;
                                 continue;
@@ -1915,6 +1920,7 @@ impl Runtime {
                                 detail,
                                 c.optional,
                             );
+                            b.nodes.last_mut().unwrap().fitted_label = true;
                             y += b.nodes.last().unwrap().h + 16.;
                         }
                         b.row(
@@ -2813,6 +2819,7 @@ impl Nodes {
             screenshot: Default::default(),
             credit: Default::default(),
             full_credit: false,
+            fitted_label: false,
         });
     }
     fn panel(&mut self, x: f32, y: f32, w: f32, h: f32) {

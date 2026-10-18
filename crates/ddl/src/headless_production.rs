@@ -2079,6 +2079,7 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
     synthetic.id = "synthetic-60".into();
     synthetic.title = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEF".into();
     assert_eq!(synthetic.title.chars().count(), 60);
+    synthetic.components[0].label = synthetic.title.clone();
     recipes.push(synthetic);
     if let Ok(id) = std::env::var("DDL_TITLE_RECIPE") {
         recipes.retain(|r| r.id == id);
@@ -2107,6 +2108,9 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
             {
                 let mut r = state.borrow_mut();
                 r.screen = screen;
+                if screen == Screen::Setup {
+                    r.title_fit_advanced();
+                }
                 r.focus = if matches!(screen, Screen::Discover | Screen::Library) {
                     10
                 } else {
@@ -2166,6 +2170,7 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
                     22.
                 });
                 ui.set_fit_display(!author);
+                ui.set_fit_strong(false);
                 ui.set_fit_multiline(if audit { true } else { !author && n.h >= 60. });
                 ui.set_fit_full(n.kind == 22);
                 if audit && ui.get_fit_base_height() > n.h + 0.5 {
@@ -2219,6 +2224,7 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
             ui.set_fit_size(36.);
             ui.set_fit_smaller(26.);
             ui.set_fit_display(true);
+            ui.set_fit_strong(false);
             ui.set_fit_multiline(false);
             ui.set_fit_full(false);
             if !audit {
@@ -2240,6 +2246,47 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
                     ui.get_fit_base_width(),
                     ui.get_fit_width()
                 ));
+            }
+            if screen == Screen::Setup {
+                let rows: Vec<_> = ui.get_nodes().iter().filter(|n| n.fitted_label).collect();
+                assert_eq!(
+                    rows.len(),
+                    recipe.components.len(),
+                    "every component label is audited"
+                );
+                for n in rows {
+                    ui.set_fit_label(n.label.clone());
+                    ui.set_fit_width(n.w - if n.kind == 14 { 12. } else { 32. });
+                    ui.set_fit_height(if n.kind == 14 { 26. } else { 30. });
+                    ui.set_fit_size(n.size);
+                    ui.set_fit_smaller(20.);
+                    ui.set_fit_display(false);
+                    ui.set_fit_strong(n.kind == 3 || n.primary);
+                    ui.set_fit_multiline(audit);
+                    ui.set_fit_full(false);
+                    if audit && ui.get_fit_base_height() > ui.get_fit_height() {
+                        findings.push(format!(
+                            "{} component {}: {:.1}px > {}px",
+                            recipe.id,
+                            n.label,
+                            ui.get_fit_base_height(),
+                            ui.get_fit_height()
+                        ));
+                    }
+                    if !audit {
+                        assert_title_pixels_fit(
+                            window,
+                            ui,
+                            &format!("{} component {}", recipe.id, n.label),
+                        );
+                    }
+                    {
+                        let mut r = state.borrow_mut();
+                        r.focus = n.id;
+                        r.sync(ui);
+                    }
+                    capture(window, &format!("025-component-{}-{}.png", recipe.id, n.id));
+                }
             }
             capture(window, &format!("025-{name}-{}.png", recipe.id));
         }
@@ -2263,6 +2310,7 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
             ui.set_fit_smaller(22.);
             ui.set_fit_multiline(true);
             ui.set_fit_display(true);
+            ui.set_fit_strong(false);
             if audit && ui.get_fit_base_height() > ui.get_fit_height() {
                 findings.push(format!(
                     "{} {name} sheet: {:.1}px > {}px",
@@ -2305,6 +2353,10 @@ fn assert_title_pixels_fit(window: &MinimalSoftwareWindow, ui: &AppWindow, conte
     ui.set_fit_test_visible(false);
     let (w, h) = (ui.get_fit_width(), ui.get_fit_height());
     assert!(ui.get_fit_content_height() <= h);
+    assert!(
+        ui.get_fit_content_height() + 0.5 >= ui.get_fit_line_height(),
+        "{context}: even one complete line must fit"
+    );
     assert!(
         ui.get_fit_content_height()
             <= ui.get_fit_line_height() * if ui.get_fit_multiline() { 2. } else { 1. } + 0.5
