@@ -68,7 +68,8 @@ for the offline production compositor. Art does not imply gameplay verification.
 
 ### Typography and assets
 
-**Pirata One** for page, hero and section titles (≥26 px); **Barlow Regular** for body,
+**Pirata One** for page, hero and section titles (normally ≥26 px; 22 px only for fitted
+compact titles); **Barlow Regular** for body,
 controls, filenames and metadata. Both unmodified TTFs and SIL OFL 1.1 notices are bundled,
 with notices included in release tarballs. Verified sources and notices are retained in
 [visual-v2/fonts/SOURCE.txt](visual-v2/fonts/SOURCE.txt); Inter remains bundled for legacy assets.
@@ -80,6 +81,18 @@ with notices included in release tarballs. Verified sources and notices are reta
 | Section / card title | 26 / 34 px | Pirata One |
 | Body / controls | 22 / 30 px | Barlow |
 | Metadata / hint bar | 20 / 28 px | Barlow |
+
+Mapset title slots measure the bundled face at their actual width: wrap to at most two
+lines where space allows, shrink one type-scale step if needed, then elide with “…” only
+as the last fallback. Home hero uses 36→26 px; card and history titles use 26→22 px;
+context headings use 36→26 px on one line. Cards reserve 68 px for titles and one 26 px
+author line; author text elides by measured width, not character count. Home history keeps
+one title line above the profile name. Detail reserves 96 px and uses 44→36 px for the
+complete catalog title, including parenthesized qualifiers, without elision. Keep a 4 px
+glyph inset for display-face side bearings. Sheet headings share the same fitting behavior.
+Play setup component rows retain a 30 px label slot above their explanation: Barlow 22→20 px,
+one line with elision as needed. Exclusive component choices use the same fitter at the minimum 20 px scale, keeping
+their centered single-line treatment and eliding long labels.
 
 Preserve filename case. Wrap titles and descriptions; directory breadcrumbs elide from the
 start so the destination remains visible. No essential tooltips. Minimum control height 52 px;

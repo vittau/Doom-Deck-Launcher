@@ -24,7 +24,7 @@ never cut mid-glyph or overflowing a frame — while the Ember Cathedral look (D
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2) — before/after headless renders for the clipped cases, inspected; README
+- [x] **A1** (R1, R2) — before/after headless renders for the clipped cases, inspected; README
   screenshots regenerated if they change.
-- [ ] **A2** (R3) — the fit test passes for all 13 recipes and the synthetic title.
-- [ ] **A3** — fmt, clippy `-D warnings`, tests green.
+- [x] **A2** (R3) — the fit test passes for all 13 recipes and the synthetic title.
+- [x] **A3** — fmt, clippy `-D warnings`, tests green.
