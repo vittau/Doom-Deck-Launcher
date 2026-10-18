@@ -376,3 +376,74 @@ fn main() {
 
 Compile with `rustc --edition 2024 probe.rs -o probe`, then run `./probe` and `./probe --unlock`.
 The production regression test uses safe `File::try_clone` and contains no libc calls.
+
+
+### Final phase B verification (A3, A4)
+
+`main` through `4f0e569` (fixed spec 025 plus spec 024) is merged. The code stayed unchanged
+through the three consecutive full runs below. `RUST_TEST_THREADS`, `DDL_HEADLESS_DIR`,
+`DDL_TITLE_ONLY` and `DDL_TITLE_RECIPE` were all unset: this is the default parallel harness,
+with the default artifact directory and the complete long headless journey. Every run exited 0
+and passed **505 tests**; no test was ignored or filtered. The five focused local-content cases
+are included in every run. All 14 `026-*.png` frames were inspected off-screen.
+
+```text
+cargo fmt --all --check
+exit 0 (no output)
+
+cargo clippy --workspace --all-targets -- -D warnings
+Checking ddl-core v0.0.5 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-026b-local-content-ui/crates/ddl-core)
+    Checking ddl v0.0.5 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-026b-local-content-ui/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.43s
+```
+
+Default parallel run 1, `cargo test --workspace` (exit 0):
+
+```text
+test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 151.45s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.92s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Default parallel run 2, `cargo test --workspace` (exit 0):
+
+```text
+test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 191.21s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.68s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.94s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Default parallel run 3, `cargo test --workspace` (exit 0):
+
+```text
+test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 781.72s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.27s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.62s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.07s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.42s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+A3 is checked in the spec. A4 remains checked with the UI and lock-fix verification above.
+A5 remains **Needs Deck Validation**. No open implementation question remains for phase B.
