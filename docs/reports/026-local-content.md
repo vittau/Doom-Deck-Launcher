@@ -447,3 +447,29 @@ test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 A3 is checked in the spec. A4 remains checked with the UI and lock-fix verification above.
 A5 remains **Needs Deck Validation**. No open implementation question remains for phase B.
+
+### Phase B review polish
+
+Addressed the three visual review items:
+
+- Recipe members use a darker, muted plate and text, an original padlock SVG,
+  and no load-order number. They remain non-actionable; D-pad navigation skips
+  directly from Add files to the first movable extra.
+- Missing/changed launch dialogs show the filename prominently, the path on its
+  own muted line (middle elision preserves both ends), and a short plain sentence.
+  Paths stay structured across the service/UI boundary, replacing error-message
+  parsing. Existing Cancel / Use the changed file actions are preserved.
+- The file picker has two matching carved viewports. Each pages complete rows as
+  D-pad focus moves, while Add N files and Parent folder stay above the frames.
+  Independent column positions preserve the other column when focus changes.
+
+The focused tests now assert locked styling and skipped focus, separate dialog
+content, UTF-8-safe middle elision, full-row viewport bounds, and D-pad traversal
+past the first page before selecting files. The existing five independent UI
+journeys remain separate from the long headless journey; the sixth focused case
+is a pure path-elision test. No dependencies were added.
+
+Inspected the regenerated `026-extras-order.png`, `026-changed-file.png`,
+`026-missing-file.png`, and `026-file-picker-multiselect.png` off-screen at
+1280×800. Locked content is visibly distinct, filenames and actions remain clear,
+and neither picker column exposes partial rows beneath the header.

@@ -155,6 +155,8 @@ fn local_new_setup_iwad_compatibility_and_content_filtered_multiselect() {
     assert_eq!(r.snapshot.as_ref().unwrap().custom.len(), 1);
     click(&mut r, &ui, 2); // Order
     act(&mut r, &ui, Action::Y);
+    r.focus = PICK;
+    r.sync(&ui);
     for path in &files[..2] {
         let index = r
             .directory
@@ -164,9 +166,61 @@ fn local_new_setup_iwad_compatibility_and_content_filtered_multiselect() {
             .iter()
             .position(|(p, _)| p == path)
             .unwrap();
-        click(&mut r, &ui, PICK + index as i32);
+        while r.focus < PICK + index as i32 {
+            act(&mut r, &ui, Action::Down);
+        }
+        assert_eq!(r.focus, PICK + index as i32);
+        act(&mut r, &ui, Action::Confirm);
     }
     assert_eq!(r.local.selected.len(), 2);
+    assert_eq!(ui.get_scroll_offset(), 0.);
+    let frames: Vec<_> = r.nodes.iter().filter(|n| n.kind == 1).collect();
+    assert_eq!(
+        frames.len(),
+        2,
+        "each picker column has its own carved plate"
+    );
+    for row in r.nodes.iter().filter(|n| n.kind == 3) {
+        assert!(
+            frames.iter().any(|frame| row.x >= frame.x + 16.
+                && row.x + row.w <= frame.x + frame.w - 16.
+                && row.y >= frame.y + 16.
+                && row.y + row.h <= frame.y + frame.h - 16.),
+            "complete row stays inside its viewport"
+        );
+    }
+    // Vertical navigation traverses entries beyond the visible page.
+    let ids: Vec<_> = r
+        .directory
+        .as_ref()
+        .unwrap()
+        .entries
+        .iter()
+        .enumerate()
+        .map(|(index, _)| PICK + index as i32)
+        .collect();
+    r.focus = ids[0];
+    r.sync(&ui);
+    for id in ids.iter().skip(1) {
+        act(&mut r, &ui, Action::Down);
+        assert_eq!(r.focus, *id);
+        assert!(r.nodes.iter().any(|n| n.id == *id));
+    }
+    // Return focus to the selected ZIP for the multi-select evidence frame.
+    let zip = r
+        .directory
+        .as_ref()
+        .unwrap()
+        .entries
+        .iter()
+        .position(|(p, _)| p == &files[1])
+        .unwrap();
+    while r.focus > ids[0] {
+        act(&mut r, &ui, Action::Up);
+    }
+    while r.focus < PICK + zip as i32 {
+        act(&mut r, &ui, Action::Down);
+    }
     write_png("026-file-picker-multiselect.png", &render(&window));
     act(&mut r, &ui, Action::Menu); // Start confirms
     assert_eq!(r.local.view, Some(View::Order));
@@ -282,6 +336,18 @@ fn local_custom_library_home_missing_changed_and_delete_dialog() {
             .iter()
             .any(|n| n.label.contains("tiny.wad"))
     );
+    let sheet: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    assert!(sheet.iter().any(|n| n.kind == 20 && n.label == "tiny.wad"));
+    assert!(
+        sheet
+            .iter()
+            .any(|n| n.kind == 21 && n.label.starts_with('/') && !n.label.contains('`'))
+    );
+    assert!(
+        sheet
+            .iter()
+            .any(|n| n.label == ui.global::<LocalStrings>().get_file_missing())
+    );
     write_png("026-missing-file.png", &render(&window));
     act(&mut r, &ui, Action::Back);
     fs::write(
@@ -299,6 +365,11 @@ fn local_custom_library_home_missing_changed_and_delete_dialog() {
     click(&mut r, &ui, 1);
     assert!(matches!(r.local.dialog, Some(Dialog::Issue(_, true))));
     assert_eq!(r.focus, 900);
+    assert!(
+        ui.get_sheet_nodes()
+            .iter()
+            .any(|n| n.label == ui.global::<LocalStrings>().get_file_changed())
+    );
     write_png("026-changed-file.png", &render(&window));
     act(&mut r, &ui, Action::Right);
     assert_eq!(r.focus, 901);
@@ -381,6 +452,14 @@ fn local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scop
         .unwrap();
     assert!(!locked.actionable);
     assert_eq!(locked.tone, 1);
+    assert_eq!(
+        locked.kind, 16,
+        "locked rows use the dimmed plate and lock icon renderer"
+    );
+    assert_eq!(
+        locked.label, "main.wad",
+        "recipe rows have no position number"
+    );
     assert!(locked.y < r.nodes.iter().find(|n| n.id == ENTRY).unwrap().y);
     write_png("026-extras-order.png", &render(&window));
     r.focus = 1;
@@ -428,4 +507,15 @@ fn local_delete_checked_removes_only_owned_profiles_and_saves() {
     assert!(!dirs.root.exists());
     assert!(files.iter().all(|p| p.is_file()));
     assert!(env.home.join("base.wad").is_file());
+}
+
+#[test]
+fn local_path_elision_preserves_both_ends_and_unicode() {
+    assert_eq!(elide_path_middle("/short/path.wad", 64), "/short/path.wad");
+    let path = format!("/{}{}", "é/".repeat(100), "last.wad");
+    let display = elide_path_middle(&path, 64);
+    assert_eq!(display.chars().count(), 64);
+    assert!(display.starts_with("/é/"));
+    assert!(display.ends_with("last.wad"));
+    assert!(display.contains('…'));
 }

@@ -50,12 +50,14 @@ pub enum Problem {
     /// (spec 014 follow-up).
     EngineRuntime(dsda::RuntimeError),
     Local(String),
+    LocalFile(PathBuf, bool),
 }
 
 impl fmt::Display for Problem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Local(message) => f.write_str(message),
+            Self::LocalFile(path, _) => write!(f, "{}", path.display()),
             Self::Storage => f.write_str("could not write or read DDL's user storage"),
             Self::State => f.write_str("could not read DDL's saved state"),
             Self::Network => f.write_str("a network request failed"),
@@ -110,6 +112,16 @@ impl std::error::Error for CliFailure {}
 impl From<Blocker> for CliFailure {
     fn from(blocker: Blocker) -> Self {
         Self::Blocker(blocker)
+    }
+}
+
+/// Keep file identity data structured through the UI boundary.
+fn identity_issue(issue: local::IdentityError) -> (PathBuf, bool) {
+    match issue {
+        local::IdentityError::Missing { path } | local::IdentityError::Unreadable { path, .. } => {
+            (path, false)
+        }
+        local::IdentityError::Changed { path } => (path, true),
     }
 }
 
@@ -278,7 +290,7 @@ pub struct Snapshot {
     pub items: Vec<Item>,
     pub custom: Vec<CustomSetup>,
     pub custom_profiles: Vec<Profile>,
-    pub local_issues: BTreeMap<String, (String, bool)>,
+    pub local_issues: BTreeMap<String, (PathBuf, bool)>,
     pub profiles_with_saves: BTreeSet<String>,
     /// The reviewed tag vocabulary, for Discover categories and chips.
     pub tags: TagVocabulary,
@@ -488,6 +500,10 @@ impl Services {
         cancel: &CancellationToken,
         emit: &mut dyn FnMut(Event),
     ) -> Result<(), Problem> {
+        let launch_id = match &command {
+            LocalCommand::Play(id) => Some(id.clone()),
+            _ => None,
+        };
         let result: Result<(), CliFailure> = (|| {
             match command {
                 LocalCommand::Browse(path) => {
@@ -582,7 +598,16 @@ impl Services {
             }
             Ok(())
         })();
-        result.map_err(|e| Problem::Local(e.to_string()))
+        result.map_err(|e| {
+            if let Some(id) = launch_id
+                && let Ok(setup) = self.custom_show(&id)
+                && let Some(issue) = local::verify_setup(&setup).into_iter().next()
+            {
+                let (path, changed) = identity_issue(issue);
+                return Problem::LocalFile(path, changed);
+            }
+            Problem::Local(e.to_string())
+        })
     }
 
     pub fn open(env: Environment) -> Result<Self, Problem> {
@@ -1244,10 +1269,10 @@ impl Services {
         let local_issues = setups
             .iter()
             .filter_map(|setup| {
-                local::verify_setup(setup).into_iter().next().map(|issue| {
-                    let changed = matches!(issue, local::IdentityError::Changed { .. });
-                    (setup.id.clone(), (issue.to_string(), changed))
-                })
+                local::verify_setup(setup)
+                    .into_iter()
+                    .next()
+                    .map(|issue| (setup.id.clone(), identity_issue(issue)))
             })
             .collect();
         let profiles_with_saves = held_profiles

@@ -369,16 +369,10 @@ impl Runtime {
                                 _ => {}
                             }
                         }
-                        Err(Problem::Local(message)) => {
-                            if message.contains("changed since") || message.contains("is missing") {
-                                self.local_show_issue((
-                                    message.clone(),
-                                    message.contains("changed since"),
-                                ));
-                            } else {
-                                self.local_error(message);
-                            }
+                        Err(Problem::LocalFile(path, changed)) => {
+                            self.local_show_issue((path, changed))
                         }
+                        Err(Problem::Local(message)) => self.local_error(message),
                         Err(problem) => {
                             self.problem = Some(problem);
                             self.focus = 800;
@@ -2781,7 +2775,7 @@ fn blocker_copy(b: &Blocker) -> (T, T) {
 }
 fn problem_copy(p: &Problem) -> T {
     match p {
-        Problem::Local(_) => T::ErrorLaunch,
+        Problem::Local(_) | Problem::LocalFile(..) => T::ErrorLaunch,
         Problem::Storage => T::ErrorStorage,
         Problem::State => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
@@ -2813,6 +2807,7 @@ fn problem_text(ui: &AppWindow, problem: &Problem) -> slint::SharedString {
 fn problem_detail(problem: &Problem) -> Option<String> {
     match problem {
         Problem::Local(message) => Some(message.clone()),
+        Problem::LocalFile(path, _) => Some(path.display().to_string()),
         Problem::EngineRuntime(runtime) => Some(runtime.to_string()),
         _ => None,
     }

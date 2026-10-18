@@ -24,7 +24,7 @@ pub(super) enum View {
 #[derive(Clone)]
 pub(super) enum Dialog {
     Delete,
-    Issue(String, bool),
+    Issue(PathBuf, bool),
     Saves,
     Error(String),
 }
@@ -43,6 +43,8 @@ pub(super) struct LocalUi {
     dialog_focus: i32,
     delete_profiles: bool,
     return_focus: i32,
+    picker_file_start: usize,
+    picker_shortcut_start: usize,
 }
 impl Runtime {
     fn local_setup(&self) -> Option<&CustomSetup> {
@@ -105,6 +107,8 @@ impl Runtime {
                 }
                 Op::Browse(_) => {
                     self.local.view = Some(View::Picker);
+                    self.local.picker_file_start = 0;
+                    self.local.picker_shortcut_start = 0;
                     self.focus = 1;
                 }
                 Op::Delete(..) => {
@@ -136,20 +140,20 @@ impl Runtime {
         self.local.return_focus = NEW;
         self.local_open(View::New);
     }
-    fn local_issue(&self) -> Option<(String, bool)> {
+    fn local_issue(&self) -> Option<(PathBuf, bool)> {
         if let Some(id) = &self.local.target
             && self.local.view.is_some()
         {
             self.snapshot.as_ref()?.local_issues.get(id).cloned()
         } else {
             match &self.item()?.launch {
-                Err(Blocker::UserFileMissing { path }) => Some((path.display().to_string(), false)),
-                Err(Blocker::UserFileChanged { path }) => Some((path.display().to_string(), true)),
+                Err(Blocker::UserFileMissing { path }) => Some((path.clone(), false)),
+                Err(Blocker::UserFileChanged { path }) => Some((path.clone(), true)),
                 _ => None,
             }
         }
     }
-    pub(super) fn local_show_issue(&mut self, issue: (String, bool)) {
+    pub(super) fn local_show_issue(&mut self, issue: (PathBuf, bool)) {
         self.local.dialog = Some(Dialog::Issue(issue.0, issue.1));
         self.local.dialog_focus = self.focus;
         self.focus = 900;
@@ -357,6 +361,45 @@ impl Runtime {
                 return true;
             }
         }
+        if view == View::Picker
+            && matches!(action, Action::Up | Action::Down)
+            && self.focus >= SHORTCUT
+        {
+            let ids: Vec<i32> = if self.focus >= PICK {
+                self.directory.as_ref().map_or_else(Vec::new, |d| {
+                    d.entries
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, (path, folder))| {
+                            !self.local.picker_iwad || *folder || d.iwad_files.contains(path)
+                        })
+                        .map(|(index, _)| PICK + index as i32)
+                        .collect()
+                })
+            } else {
+                self.directory.as_ref().map_or_else(Vec::new, |d| {
+                    (0..d.shortcuts.len())
+                        .map(|index| SHORTCUT + index as i32)
+                        .collect()
+                })
+            };
+            if let Some(index) = ids.iter().position(|id| *id == self.focus) {
+                if action == Action::Up && index == 0 {
+                    self.focus = if self.focus >= PICK || self.local.picker_iwad {
+                        2
+                    } else {
+                        1
+                    };
+                } else {
+                    self.focus = ids[if action == Action::Up {
+                        index - 1
+                    } else {
+                        (index + 1).min(ids.len() - 1)
+                    }];
+                }
+            }
+            return true;
+        }
         if matches!(
             action,
             Action::Up | Action::Down | Action::Left | Action::Right
@@ -529,7 +572,9 @@ impl Runtime {
         let c = ui.global::<LocalStrings>();
         if let Some(view) = self.local.view {
             b.nodes.clear();
-            b.panel(12., 12., 1200., 478.);
+            if view != View::Picker {
+                b.panel(12., 12., 1200., 478.);
+            }
             match view {
                 View::New | View::Detail => {
                     b.art(36., 36., 270., 330., 4);
@@ -672,7 +717,9 @@ impl Runtime {
                                 .collect();
                             for name in locked {
                                 b.row(0, 36., y, 1152., name.into(), c.get_locked(), false);
-                                b.nodes.last_mut().unwrap().tone = 1;
+                                let row = b.nodes.last_mut().unwrap();
+                                row.tone = 1;
+                                row.kind = 16;
                                 y += 100.;
                             }
                         }
@@ -719,14 +766,30 @@ impl Runtime {
                         b.button(1, 36., 30., 780., c.get_add(), true);
                     }
                     b.button(2, 840., 30., 348., c.get_up(), false);
+                    let height = (ui.window().size().height as f32 - 404.).max(152.);
+                    let capacity = ((height - 32.) / 88.).floor().max(1.) as usize;
+                    b.panel(12., 110., 352., height);
+                    b.panel(380., 110., 832., height);
                     if let Some(directory) = &self.directory {
-                        let mut y = 110.;
-                        for (index, path) in directory.shortcuts.iter().enumerate() {
+                        if (SHORTCUT..PICK).contains(&self.focus) {
+                            self.local.picker_shortcut_start = page_start(
+                                (self.focus - SHORTCUT) as usize,
+                                self.local.picker_shortcut_start,
+                                capacity,
+                            );
+                        }
+                        for (index, path) in directory
+                            .shortcuts
+                            .iter()
+                            .enumerate()
+                            .skip(self.local.picker_shortcut_start)
+                            .take(capacity)
+                        {
                             b.row(
                                 SHORTCUT + index as i32,
                                 36.,
-                                y,
-                                320.,
+                                126. + (index - self.local.picker_shortcut_start) as f32 * 88.,
+                                304.,
                                 path.file_name()
                                     .unwrap_or_default()
                                     .to_string_lossy()
@@ -735,16 +798,32 @@ impl Runtime {
                                 c.get_shortcut(),
                                 true,
                             );
-                            y += 104.;
+                            b.nodes.last_mut().unwrap().h = 72.;
                         }
-                        let mut y = 110.;
-                        for (index, (path, folder)) in directory.entries.iter().enumerate() {
-                            if self.local.picker_iwad
-                                && !folder
-                                && !directory.iwad_files.contains(path)
-                            {
-                                continue;
-                            }
+                        let entries: Vec<_> = directory
+                            .entries
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, (path, folder))| {
+                                !self.local.picker_iwad
+                                    || *folder
+                                    || directory.iwad_files.contains(path)
+                            })
+                            .collect();
+                        if self.focus >= PICK
+                            && let Some(index) = entries
+                                .iter()
+                                .position(|(index, _)| PICK + *index as i32 == self.focus)
+                        {
+                            self.local.picker_file_start =
+                                page_start(index, self.local.picker_file_start, capacity);
+                        }
+                        for (visible, (index, (path, _))) in entries
+                            .iter()
+                            .enumerate()
+                            .skip(self.local.picker_file_start)
+                            .take(capacity)
+                        {
                             let file = directory.files.iter().find(|f| &f.path == path);
                             let label = format!(
                                 "{}{}",
@@ -756,19 +835,19 @@ impl Runtime {
                                 path.file_name().unwrap_or_default().to_string_lossy()
                             );
                             let detail = file.map_or_else(
-                                || elide_path_start(&path.display().to_string(), 64),
+                                || elide_path_start(&path.display().to_string(), 48),
                                 |f| format!("{} · {}", f.kind, human_bytes(f.size)),
                             );
                             b.row(
-                                PICK + index as i32,
-                                384.,
-                                y,
-                                804.,
+                                PICK + *index as i32,
+                                404.,
+                                126. + (visible - self.local.picker_file_start) as f32 * 88.,
+                                784.,
                                 label.into(),
                                 detail.into(),
                                 true,
                             );
-                            y += 100.;
+                            b.nodes.last_mut().unwrap().h = 72.;
                         }
                     }
                 }
@@ -778,8 +857,10 @@ impl Runtime {
                     node.fitted_label = true;
                 }
             }
-            let bottom = b.nodes.iter().map(|n| n.y + n.h).fold(478., f32::max);
-            b.nodes[0].h = bottom + 24. - b.nodes[0].y;
+            if view != View::Picker {
+                let bottom = b.nodes.iter().map(|n| n.y + n.h).fold(478., f32::max);
+                b.nodes[0].h = bottom + 24. - b.nodes[0].y;
+            }
             return;
         }
         if matches!(self.screen, Screen::Library | Screen::Discover)
@@ -1006,14 +1087,14 @@ impl Runtime {
             if view == View::Picker && self.focus >= PICK {
                 ui.set_a_hint(c.get_select());
             }
-            // Local screens use one scrollable plane, including rows on the right.
+            // The picker pages complete rows; other local screens share a scrollable plane.
             let viewport = (ui.window().size().height as f32 - 294.).max(64.);
             let offset = self
                 .nodes
                 .iter()
                 .find(|n| n.id == self.focus)
                 .map_or(0., |n| (n.y + n.h + 12. - viewport).max(0.));
-            ui.set_scroll_offset(offset);
+            ui.set_scroll_offset(if view == View::Picker { 0. } else { offset });
         }
         if let Some(dialog) = &self.local.dialog {
             ui.set_sheet_open(true);
@@ -1056,12 +1137,43 @@ impl Runtime {
                     );
                     b.button(901, 368., 312., 304., c.get_delete(), false);
                 }
-                Dialog::Issue(message, changed) => {
-                    b.label(32., 96., 656., 140., message.clone().into(), 22.);
+                Dialog::Issue(path, changed) => {
+                    b.title(
+                        32.,
+                        92.,
+                        656.,
+                        44.,
+                        path.file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_string()
+                            .into(),
+                        30.,
+                    );
+                    b.author(
+                        32.,
+                        148.,
+                        656.,
+                        32.,
+                        elide_path_middle(&path.display().to_string(), 64).into(),
+                        20.,
+                    );
+                    b.label(
+                        32.,
+                        204.,
+                        656.,
+                        48.,
+                        if *changed {
+                            c.get_file_changed()
+                        } else {
+                            c.get_file_missing()
+                        },
+                        22.,
+                    );
                     if *changed {
                         b.button(901, 368., 312., 304., c.get_changed(), false);
                     } else {
-                        b.label(32., 244., 656., 52., c.get_missing(), 22.);
+                        b.label(32., 260., 656., 36., c.get_missing(), 20.);
                     }
                 }
                 Dialog::Error(message) => {
@@ -1090,6 +1202,28 @@ impl Runtime {
             ui.set_focused(self.focus);
         }
     }
+}
+fn page_start(index: usize, start: usize, capacity: usize) -> usize {
+    if index < start {
+        index
+    } else if index >= start + capacity {
+        index + 1 - capacity
+    } else {
+        start
+    }
+}
+fn elide_path_middle(path: &str, limit: usize) -> String {
+    let chars: Vec<_> = path.chars().collect();
+    if chars.len() <= limit {
+        return path.to_owned();
+    }
+    let left = (limit - 1) / 2;
+    let right = limit - 1 - left;
+    format!(
+        "{}…{}",
+        chars[..left].iter().collect::<String>(),
+        chars[chars.len() - right..].iter().collect::<String>()
+    )
 }
 fn iwad_name(iwad: &NewIwad) -> String {
     match iwad {
