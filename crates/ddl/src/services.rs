@@ -9,6 +9,9 @@ use ddl_core::{
         ActiveInstall, InstallManifest, Installer, RecipeStatus, classify, recipe_content_sha256,
         reconcile_profile,
     },
+    local::{
+        self, Compatibility, CustomIwad, CustomSetup, Group as ExtraGroup, SetupStore, UserFile,
+    },
     platform::{
         lock::{LockError, StateLock},
         paths::Paths,
@@ -132,6 +135,21 @@ fn now_unix_secs() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs())
         .unwrap_or(0)
+}
+
+/// Makes a user-supplied path absolute, resolving a relative one against the
+/// process's current directory (spec 026: user files are referenced in place by
+/// absolute path).
+fn absolute_path(path: &Path) -> Result<PathBuf, CliFailure> {
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+    std::path::absolute(path).map_err(|error| {
+        CliFailure::message(format!(
+            "could not resolve `{}` to an absolute path: {error}",
+            path.display()
+        ))
+    })
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -405,6 +423,8 @@ pub struct Services {
     installer: Installer,
     engine: EngineManager,
     profiles: ProfileStore,
+    /// Spec 026: player-made custom setups under `<data>/custom/`.
+    custom: SetupStore,
 }
 /// Where the effective catalog came from (spec 019, R4).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -505,6 +525,7 @@ impl Services {
         let config =
             DsdaConfigManager::new(&paths.config).map_err(|e| logged(Problem::Config, e))?;
         let profiles = ProfileStore::new(&paths.config, &paths.data);
+        let custom = SetupStore::new(&paths.data);
         let registry_path = paths.config.join("iwads.json");
         let registry = match Registry::load(&registry_path) {
             Ok(registry) => registry,
@@ -524,6 +545,7 @@ impl Services {
             installer,
             engine,
             profiles,
+            custom,
         })
     }
     fn save(&self) -> Result<(), Problem> {
@@ -1901,6 +1923,34 @@ pub struct LaunchOverrides {
     pub pistol_start: bool,
 }
 
+/// The base game a new custom setup launches with (spec 026, R2/R7).
+#[derive(Debug, Clone)]
+pub enum NewIwad {
+    /// An identified IWAD variant id from spec 004's registry.
+    Variant(String),
+    /// A player file whose header is `IWAD`.
+    File(PathBuf),
+}
+
+/// The result of changing a profile's extras (spec 026, R5): the saved profile
+/// and whether the change may strand existing saves.
+#[derive(Debug, Clone)]
+pub struct ExtrasOutcome {
+    /// The saved profile.
+    pub profile: Profile,
+    /// Whether the profile already had save slots, so the CLI warns (R5).
+    pub saves_warn: bool,
+}
+
+/// A resolved custom launch (spec 026, R2/R3): the plan and the profile it used.
+#[derive(Debug, Clone)]
+pub struct CustomLaunch {
+    /// The prepared DSDA-Doom launch plan (spec 003).
+    pub plan: dsda::LaunchPlan,
+    /// The profile whose save/data directories the plan uses.
+    pub profile: Profile,
+}
+
 /// The data behind `ddl doctor` (spec 014, R1).
 #[derive(Debug, Clone)]
 pub struct DoctorReport {
@@ -2317,6 +2367,559 @@ impl Services {
             logs: snapshot.logs,
             engine_state: self.engine.state_path(),
         })
+    }
+
+    // ---- spec 026: local content (custom setups and extra files) ----------
+
+    /// `ddl custom list`: every custom setup, in id order.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] when the setup directory cannot be read.
+    pub fn custom_list(&self) -> Result<Vec<CustomSetup>, CliFailure> {
+        self.custom
+            .list()
+            .map_err(|error| CliFailure::message(error.to_string()))
+    }
+
+    /// `ddl custom show`: one setup with its recorded user files.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown or unreadable setup.
+    pub fn custom_show(&self, id: &str) -> Result<CustomSetup, CliFailure> {
+        self.custom
+            .load_optional(id)
+            .map_err(|error| CliFailure::message(error.to_string()))?
+            .ok_or_else(|| CliFailure::message(format!("no custom setup with id `{id}`")))
+    }
+
+    /// Whether `id` names a custom setup (spec 026, R7).
+    #[must_use]
+    pub fn has_custom(&self, id: &str) -> bool {
+        self.custom.contains(id)
+    }
+
+    /// Whether `id` names a catalog recipe.
+    #[must_use]
+    pub fn has_recipe(&self, id: &str) -> bool {
+        self.recipe(id).is_ok()
+    }
+
+    /// `ddl custom create`: a new setup with its default profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for a duplicate or unsafe id, a file that is
+    /// not an IWAD, or a storage failure.
+    pub fn custom_create(
+        &mut self,
+        name: &str,
+        id: Option<&str>,
+        iwad: NewIwad,
+        compatibility: Compatibility,
+    ) -> Result<CustomSetup, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let id = match id {
+            Some(id) => {
+                if !local::safe_id(id) {
+                    return Err(CliFailure::message(format!(
+                        "`{id}` is not a safe setup id (lowercase letters, digits and `-` only)"
+                    )));
+                }
+                if self.custom.contains(id) {
+                    return Err(CliFailure::message(format!(
+                        "a custom setup `{id}` already exists"
+                    )));
+                }
+                id.to_owned()
+            }
+            None => self.custom.free_id(name),
+        };
+        let iwad = match iwad {
+            NewIwad::Variant(variant) => CustomIwad::Identified { variant },
+            NewIwad::File(path) => {
+                let path = absolute_path(&path)?;
+                let file = UserFile::read(&path)
+                    .map_err(|error| CliFailure::message(error.to_string()))?;
+                if file.kind != local::Kind::Wad || !local::is_iwad_header(&path).unwrap_or(false) {
+                    return Err(CliFailure::message(format!(
+                        "`{}` is not an IWAD: its header is not `IWAD`",
+                        path.display()
+                    )));
+                }
+                CustomIwad::File { file }
+            }
+        };
+        let setup = CustomSetup::new(id.clone(), name, iwad, compatibility, now_unix_secs());
+        setup
+            .validate()
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        self.custom
+            .save(&setup)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        // A default profile, so the setup launches with isolated saves like a
+        // catalog mapset (spec 026, R2/R6).
+        let profile = Profile::new(format!("{id}-default"), "Default", &id);
+        self.profiles
+            .save(&profile)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        Ok(setup)
+    }
+
+    /// `ddl custom add-file`: append one or more user files, routing each by its
+    /// detected kind (spec 026, R7).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown setup, a rejected file, a
+    /// duplicate path or a storage failure.
+    pub fn custom_add_file(
+        &mut self,
+        id: &str,
+        paths: &[PathBuf],
+    ) -> Result<CustomSetup, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let mut setup = self.custom_show(id)?;
+        for path in paths {
+            let path = absolute_path(path)?;
+            let file =
+                UserFile::read(&path).map_err(|error| CliFailure::message(error.to_string()))?;
+            setup
+                .add(file)
+                .map_err(|error| CliFailure::message(error.to_string()))?;
+        }
+        self.save_custom(setup)
+    }
+
+    /// `ddl custom move`: reorder one entry inside a group (spec 026, R7).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown setup, an out-of-range index or a
+    /// storage failure.
+    pub fn custom_move(
+        &mut self,
+        id: &str,
+        group: ExtraGroup,
+        from: usize,
+        to: usize,
+    ) -> Result<CustomSetup, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let mut setup = self.custom_show(id)?;
+        setup
+            .move_entry(group, from, to)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        self.save_custom(setup)
+    }
+
+    /// `ddl custom remove-file`: drop one entry from a group. The file on disk is
+    /// never touched (spec 026, R6).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown setup, an out-of-range index or a
+    /// storage failure.
+    pub fn custom_remove_file(
+        &mut self,
+        id: &str,
+        group: ExtraGroup,
+        index: usize,
+    ) -> Result<CustomSetup, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let mut setup = self.custom_show(id)?;
+        setup
+            .remove(group, index)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        self.save_custom(setup)
+    }
+
+    /// `ddl custom delete`: remove DDL's record, and with `delete_profiles` its
+    /// profiles and saves (spec 026, R6; D-022). Player files are untouched.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown setup or a filesystem failure.
+    pub fn custom_delete(&mut self, id: &str, delete_profiles: bool) -> Result<(), CliFailure> {
+        let _lock = self.lock_cli()?;
+        if self
+            .custom
+            .load_optional(id)
+            .map_err(|error| CliFailure::message(error.to_string()))?
+            .is_none()
+        {
+            return Err(CliFailure::message(format!(
+                "no custom setup with id `{id}`"
+            )));
+        }
+        let profile_ids: Vec<String> = self
+            .profiles
+            .list()
+            .map_err(|error| CliFailure::message(error.to_string()))?
+            .into_iter()
+            .filter(|profile| profile.recipe_id == id)
+            .map(|profile| profile.id)
+            .collect();
+        self.custom
+            .delete(id)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        if delete_profiles {
+            for profile_id in profile_ids {
+                self.profiles
+                    .delete_fully(&profile_id)
+                    .map_err(|error| CliFailure::message(error.to_string()))?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Resolves a custom setup into a launch plan, re-recording changed files
+    /// first when the player confirms them (spec 026, R4).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown setup or profile, a missing or
+    /// changed user file, a missing engine or an unusable IWAD.
+    pub fn custom_resolution(
+        &mut self,
+        id: &str,
+        profile_selector: Option<&str>,
+        accept_changes: bool,
+    ) -> Result<CustomLaunch, CliFailure> {
+        let mut setup = self.custom_show(id)?;
+        if accept_changes {
+            let files = local::accept_changed(&mut setup.files)
+                .map_err(|error| CliFailure::message(error.to_string()))?;
+            let patches = local::accept_changed(&mut setup.patches)
+                .map_err(|error| CliFailure::message(error.to_string()))?;
+            if !files.is_empty() || !patches.is_empty() {
+                let _lock = self.lock_cli()?;
+                setup.updated_at = now_unix_secs();
+                self.custom
+                    .save(&setup)
+                    .map_err(|error| CliFailure::message(error.to_string()))?;
+            }
+        }
+        let profile = self.custom_profile(&setup, profile_selector)?;
+        // Spec 026, R4: check every user file before anything else, so a
+        // missing/changed file is named even when no engine is installed.
+        if let Some(issue) = local::verify_setup(&setup).into_iter().next() {
+            return Err(CliFailure::message(format!(
+                "cannot launch `{id}`: {issue}"
+            )));
+        }
+        let engine = self
+            .engine
+            .active_engine()
+            .map_err(|error| CliFailure::message(error.to_string()))?
+            .ok_or_else(|| CliFailure::message("DSDA-Doom is not installed"))?;
+        let engine = local::Engine {
+            executable: engine.path,
+            version: engine.version,
+        };
+        let plan = local::build_plan(
+            &setup,
+            &profile,
+            &engine,
+            &self.registry,
+            &self.env.paths.data,
+            &self.config,
+        )
+        .map_err(|error| CliFailure::message(error.to_string()))?;
+        plan.prepare_dirs()
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        plan.validate(&local::assign_allowlist())
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        Ok(CustomLaunch { plan, profile })
+    }
+
+    /// `ddl launch <custom id>` without `--dry-run`: launch through the same run
+    /// guard as the UI, remembering the selected profile.
+    ///
+    /// # Errors
+    ///
+    /// As [`Services::custom_resolution`], plus a busy run guard or a launch
+    /// failure.
+    pub fn run_custom(
+        &mut self,
+        id: &str,
+        profile_selector: Option<&str>,
+        accept_changes: bool,
+    ) -> Result<dsda::LaunchOutcome, CliFailure> {
+        let custom = self.custom_resolution(id, profile_selector, accept_changes)?;
+        let guard = self
+            .config
+            .run_guard()
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        {
+            let _lock = self.lock_cli()?;
+            let mut saved = self
+                .profiles
+                .load_optional(&custom.profile.id)
+                .map_err(|error| CliFailure::message(error.to_string()))?
+                .unwrap_or_else(|| custom.profile.clone());
+            saved.touch(dsda::Clock::now_unix_secs(&dsda::SystemClock));
+            self.profiles
+                .save(&saved)
+                .map_err(|error| CliFailure::message(error.to_string()))?;
+        }
+        let outcome = self.run_plan(&custom.plan)?;
+        guard
+            .end()
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        Ok(outcome)
+    }
+
+    /// `ddl profile extras … list`: the selected profile with its extras.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown recipe or profile.
+    pub fn extras_list(
+        &self,
+        recipe_id: &str,
+        selector: Option<&str>,
+    ) -> Result<Profile, CliFailure> {
+        let (_recipe, profile) = self.extras_profile(recipe_id, selector)?;
+        Ok(profile)
+    }
+
+    /// `ddl profile extras … add`: append user files to the selected profile,
+    /// after the recipe's own files (spec 026, R5).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown recipe or profile, a rejected or
+    /// duplicate file, or a storage failure.
+    pub fn extras_add(
+        &mut self,
+        recipe_id: &str,
+        selector: Option<&str>,
+        paths: &[PathBuf],
+    ) -> Result<ExtrasOutcome, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        for path in paths {
+            let path = absolute_path(path)?;
+            let file =
+                UserFile::read(&path).map_err(|error| CliFailure::message(error.to_string()))?;
+            if profile.extras.iter().any(|held| held.path == file.path) {
+                return Err(CliFailure::message(format!(
+                    "`{}` is already an extra of this profile",
+                    file.path.display()
+                )));
+            }
+            profile.extras.push(file);
+        }
+        self.save_extras(profile)
+    }
+
+    /// `ddl profile extras … remove`: drop one extra; the file is untouched.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown recipe or profile, an
+    /// out-of-range index or a storage failure.
+    pub fn extras_remove(
+        &mut self,
+        recipe_id: &str,
+        selector: Option<&str>,
+        group: ExtraGroup,
+        index: usize,
+    ) -> Result<ExtrasOutcome, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let indices = local::group_indices(&profile.extras, group);
+        let at = *indices.get(index).ok_or_else(|| {
+            CliFailure::message(format!(
+                "index {index} is past the {group} list's {} entries",
+                indices.len()
+            ))
+        })?;
+        profile.extras.remove(at);
+        self.save_extras(profile)
+    }
+
+    /// `ddl profile extras … move`: reorder one extra inside a group.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown recipe or profile, an
+    /// out-of-range index or a storage failure.
+    pub fn extras_move(
+        &mut self,
+        recipe_id: &str,
+        selector: Option<&str>,
+        group: ExtraGroup,
+        from: usize,
+        to: usize,
+    ) -> Result<ExtrasOutcome, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let indices = local::group_indices(&profile.extras, group);
+        if from >= indices.len() || to >= indices.len() {
+            return Err(CliFailure::message(format!(
+                "index {} is past the {group} list's {} entries",
+                from.max(to),
+                indices.len()
+            )));
+        }
+        let entry = profile.extras.remove(indices[from]);
+        let after = local::group_indices(&profile.extras, group);
+        let at = after
+            .get(to)
+            .copied()
+            .unwrap_or_else(|| after.last().map_or(profile.extras.len(), |last| last + 1));
+        profile.extras.insert(at, entry);
+        self.save_extras(profile)
+    }
+
+    /// Re-records the changed extras of a catalog profile, for
+    /// `ddl launch --accept-changes` (spec 026, R4). Returns how many changed.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown recipe or profile, an unreadable
+    /// file or a storage failure.
+    pub fn accept_extra_changes(
+        &mut self,
+        recipe_id: &str,
+        selector: Option<&str>,
+    ) -> Result<usize, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let accepted = local::accept_changed(&mut profile.extras)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        if !accepted.is_empty() {
+            self.profiles
+                .save(&profile)
+                .map_err(|error| CliFailure::message(error.to_string()))?;
+        }
+        Ok(accepted.len())
+    }
+
+    /// `ddl profile extras … clear`: drop every extra from the profile.    ///
+    /// # Errors
+    ///
+    /// Returns a [`CliFailure`] for an unknown recipe or profile or a storage
+    /// failure.
+    pub fn extras_clear(
+        &mut self,
+        recipe_id: &str,
+        selector: Option<&str>,
+    ) -> Result<ExtrasOutcome, CliFailure> {
+        let _lock = self.lock_cli()?;
+        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        profile.extras.clear();
+        self.save_extras(profile)
+    }
+
+    /// Saves a mutated custom setup, bumping its update time.
+    fn save_custom(&self, mut setup: CustomSetup) -> Result<CustomSetup, CliFailure> {
+        setup.updated_at = now_unix_secs();
+        self.custom
+            .save(&setup)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        Ok(setup)
+    }
+
+    /// The profile a custom launch uses: an explicit selector, else the setup's
+    /// `-default` profile, else its most recently played.
+    fn custom_profile(
+        &self,
+        setup: &CustomSetup,
+        selector: Option<&str>,
+    ) -> Result<Profile, CliFailure> {
+        let profiles: Vec<Profile> = self
+            .profiles
+            .list()
+            .map_err(|error| CliFailure::message(error.to_string()))?
+            .into_iter()
+            .filter(|profile| profile.recipe_id == setup.id)
+            .collect();
+        let selected = match selector {
+            Some(selector) => {
+                if let Some(exact) = profiles.iter().find(|profile| profile.id == selector) {
+                    exact.clone()
+                } else {
+                    let matches: Vec<&Profile> = profiles
+                        .iter()
+                        .filter(|profile| profile.name == selector)
+                        .collect();
+                    match matches.as_slice() {
+                        [one] => (*one).clone(),
+                        [] => {
+                            return Err(CliFailure::message(format!(
+                                "no profile `{selector}` for `{}`",
+                                setup.id
+                            )));
+                        }
+                        _ => {
+                            return Err(CliFailure::message(format!(
+                                "ambiguous profile `{selector}`; use its id"
+                            )));
+                        }
+                    }
+                }
+            }
+            None => profiles
+                .iter()
+                .find(|profile| profile.id == format!("{}-default", setup.id))
+                .or_else(|| profiles.iter().max_by_key(|profile| profile.last_played))
+                .cloned()
+                .unwrap_or_else(|| {
+                    Profile::new(format!("{}-default", setup.id), "Default", &setup.id)
+                }),
+        };
+        Ok(selected)
+    }
+
+    /// The selected profile of a catalog recipe, for extras editing (spec 026,
+    /// R5). Validated against the recipe so a bad skill or component fails early.
+    fn extras_profile(
+        &self,
+        recipe_id: &str,
+        selector: Option<&str>,
+    ) -> Result<(Recipe, Profile), CliFailure> {
+        let recipe = self
+            .recipe(recipe_id)
+            .map_err(|_| CliFailure::message(format!("no catalog recipe with id `{recipe_id}`")))?;
+        let profile = self.effective_profile(
+            &recipe,
+            &LaunchOverrides {
+                profile: selector.map(str::to_owned),
+                ..LaunchOverrides::default()
+            },
+        )?;
+        Ok((recipe, profile))
+    }
+
+    /// Saves a profile whose extras changed and reports whether it has saves.
+    fn save_extras(&self, profile: Profile) -> Result<ExtrasOutcome, CliFailure> {
+        let saves_warn = local::has_saves(&self.profiles.dirs(&profile.id).save);
+        self.profiles
+            .save(&profile)
+            .map_err(|error| CliFailure::message(error.to_string()))?;
+        Ok(ExtrasOutcome {
+            profile,
+            saves_warn,
+        })
+    }
+
+    /// Runs an already-prepared custom plan through the real (or test) runner.
+    fn run_plan(&self, plan: &dsda::LaunchPlan) -> Result<dsda::LaunchOutcome, CliFailure> {
+        let runner: Box<dyn EngineRunner> =
+            Box::new(dsda::RealEngineRunner::for_state(&self.env.paths));
+        #[cfg(test)]
+        let runner: &dyn EngineRunner = match &self.env.test {
+            Some(test) => test.runner.as_ref(),
+            None => runner.as_ref(),
+        };
+        #[cfg(not(test))]
+        let runner: &dyn EngineRunner = runner.as_ref();
+        runner
+            .launch(plan, &local::assign_allowlist())
+            .map_err(|error| CliFailure::message(error.to_string()))
     }
 
     /// Test-only seam (spec 014, R3): register a fake IWAD for every variant the
