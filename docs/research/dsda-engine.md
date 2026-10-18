@@ -120,9 +120,44 @@ invalid data/save directory arguments can fall back and continue.
 [prboom2/src/SDL/i_main.c:266–296](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_main.c#L266-L296); [prboom2/src/SDL/i_system.c:166–175](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_system.c#L166-L175);
 [prboom2/src/lprintf.c:122–135](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/lprintf.c#L122-L135); [prboom2/src/dsda/data_organizer.c:42–67](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/data_organizer.c#L42-L67).
 
+### Accepted `-file` and `-deh` file types (spec 026)
+
+**Confirmed.** `dsda_Loadfiles` reads the `-file` array in list order. A value with
+no extension is searched as `.wad`, `.lmp`, `.zip`, `.deh`, `.bex` in that order
+(`I_RequireAnyFile`); otherwise it is routed by a **case-insensitive** suffix match
+(`dsda_HasFileExt` compares with `strcasecmp`):
+
+| Suffix | Where the value goes | Tagged source |
+| --- | --- | --- |
+| `.deh`, `.bex` | appended to the `-deh` patch array, so it is processed later as a patch | [prboom2/src/d_main.c:1796-1800](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L1796-L1800) |
+| `.zip` | the ZIP loader (`D_AddZip`/`D_AddUnzippedFile`) | [prboom2/src/d_main.c:1801-1807](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L1801-L1807) |
+| `.wad`, `.lmp` | the WAD loader (`D_AddFile`) | [prboom2/src/d_main.c:1808-1814](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L1808-L1814) |
+| anything else | `I_Error("File type … is not supported")` — the engine aborts | [prboom2/src/d_main.c:1815-1819](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L1815-L1819) |
+
+So `.pk3` is **not** accepted: it has no branch and would abort the engine; `.lmp`
+**is** accepted and handed to the WAD loader (`D_AddFile` appends `.wad` when the
+name lacks it), so a usable `.lmp` is WAD content. `.txt`, `.archive`, `.pk7` and
+similar suffixes also abort.
+
+**Confirmed.** A `-deh` value goes through `I_RequireDeh`, which returns an
+existing absolute path as given (it appends `.bex`, then `.deh`, only when the
+name does not already exist) and hands it to `ProcessDehFile`, which reads it as
+text without re-checking the extension. `ProcessDehFile` does not require the
+`Patch File for DeHackEd` banner.
+[prboom2/src/SDL/i_system.c:641-670](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_system.c#L641-L670);
+[prboom2/src/d_deh.c:1684-1730](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_deh.c#L1684-L1730).
+
 Implications for DDL:
 
-- **Proposed:** Emit one ordered `-file` list and one ordered `-deh` list, with absolute paths and explicit IWAD/complevel/skill.
+- **Confirmed:** the accepted `-file`/`-deh` extensions are exactly `.wad`, `.lmp`,
+  `.zip`, `.deh` and `.bex`, matched case-insensitively; `.pk3` aborts the engine.
+  DDL detects a file's kind from its content and accepts it only when the content
+  and the suffix agree, so a `.pk3`-named ZIP and a `.wad`-named ZIP are both
+  refused (`crates/ddl-core/src/local/kind.rs`, spec 026 R1).
+- **Proposed:** DDL caps a user file at 4 GiB, the ceiling implied by the WAD
+  format's 32-bit offsets; this is DDL policy, not an engine-documented limit.
+
+
 - **Proposed:** Use `-noautoload` for reproducible recipes; do not depend on global directories or COMPLVL discovery for reviewed recipes.
 - **Proposed:** Use `-v` for installation smoke tests; capture stdout/stderr and status separately. A successful probe does not mark a release Deck-validated.
 - **Proposed:** Allow only reviewed compatibility values in recipes; do not offer placeholders merely because the parser accepts them.
