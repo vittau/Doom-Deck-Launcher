@@ -2743,6 +2743,11 @@ fn blocker_copy(b: &Blocker) -> (T, T) {
         Blocker::ComponentNotProvided { .. } => (T::ComponentMissing, T::Import),
         Blocker::IncompatibleChoice { .. } => (T::ChoiceInvalid, T::Setup),
         Blocker::IntegrityFailed { .. } => (T::IntegrityFailed, T::Install),
+        // Spec 026: a local user file is missing or changed; the UI's phase-B
+        // file list is where the player fixes it.
+        Blocker::UserFileMissing { .. } | Blocker::UserFileChanged { .. } => {
+            (T::IntegrityFailed, T::Setup)
+        }
     }
 }
 fn problem_copy(p: &Problem) -> T {

@@ -48,6 +48,12 @@ pub struct Profile {
     /// Per-profile scalar DSDA overrides (spec 005, R7), rendered as `-assign`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub overrides: BTreeMap<String, i64>,
+    /// Ordered user files layered on top of the recipe's own files (spec 026,
+    /// R5). Additive: a profile written before spec 026 loads with none. Files
+    /// stay in this single order; DSDA applies WAD/ZIP entries as the `-file`
+    /// list and DEH/BEX entries as the `-deh` list, each in list order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extras: Vec<crate::local::UserFile>,
 }
 
 impl Profile {
@@ -69,6 +75,7 @@ impl Profile {
             iwad_variant: None,
             last_played: None,
             overrides: BTreeMap::new(),
+            extras: Vec::new(),
         }
     }
 

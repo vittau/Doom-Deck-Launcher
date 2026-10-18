@@ -46,6 +46,27 @@ fn every_subcommand_help_exits_zero_and_prints_usage() {
             "ddl mapset install <id> [--with <component>...]",
         ),
         (&["launch", "--help"], "ddl launch <id> [--dry-run]"),
+        (
+            &["custom", "--help"],
+            "ddl custom: player-made setups from local files",
+        ),
+        (&["custom", "create", "--help"], "ddl custom create <name>"),
+        (
+            &["custom", "add-file", "--help"],
+            "ddl custom add-file <id> <path>...",
+        ),
+        (
+            &["custom", "delete", "--help"],
+            "ddl custom delete <id> [--delete-profiles]",
+        ),
+        (
+            &["profile", "--help"],
+            "ddl profile: edit a mapset profile's extra files",
+        ),
+        (
+            &["profile", "extras", "--help"],
+            "ddl profile extras <recipe>",
+        ),
         (&["doctor", "--help"], "ddl doctor"),
     ];
     for (args, expected) in cases {
@@ -75,6 +96,10 @@ fn unknown_subcommands_are_usage_errors() {
         &["mapset", "status", "extra", "extra"],
         &["launch"],
         &["doctor", "extra"],
+        &["custom"],
+        &["custom", "frobnicate"],
+        &["profile"],
+        &["profile", "extras"],
     ] {
         let output = ddl().args(args).output().unwrap();
         assert_eq!(output.status.code(), Some(2), "{args:?}");

@@ -531,7 +531,11 @@ pub struct LaunchPlan {
     /// Ordered DEH/BEX patches for the single `-deh` flag.
     pub patches: Vec<PathBuf>,
     /// The compatibility level sent as `-complevel`.
-    pub complevel: Complevel,
+    ///
+    /// `None` emits no `-complevel` at all, so the engine decides (a custom
+    /// setup's **Auto**; spec 026, R2/R3). Reviewed catalog mapsets always pin
+    /// one.
+    pub complevel: Option<Complevel>,
     /// The starting skill sent as `-skill`.
     pub skill: Skill,
     /// Optional `-warp` target.
@@ -585,8 +589,10 @@ impl LaunchPlan {
             );
         }
 
-        argv.push(OsString::from("-complevel"));
-        argv.push(OsString::from(self.complevel.value().to_string()));
+        if let Some(complevel) = self.complevel {
+            argv.push(OsString::from("-complevel"));
+            argv.push(OsString::from(complevel.value().to_string()));
+        }
         argv.push(OsString::from("-skill"));
         argv.push(OsString::from(self.skill.value().to_string()));
 
@@ -735,7 +741,10 @@ impl LaunchPlan {
         out.push_str(&format!("  IWAD: {}\n", shorten(&self.iwad, home)));
         push_path_list(&mut out, "files (load order)", &self.files, home);
         push_path_list(&mut out, "patches", &self.patches, home);
-        out.push_str(&format!("  complevel: {}\n", self.complevel));
+        match self.complevel {
+            Some(complevel) => out.push_str(&format!("  complevel: {complevel}\n")),
+            None => out.push_str("  complevel: (engine default)\n"),
+        }
         out.push_str(&format!("  skill: {}\n", self.skill));
         match self.warp {
             Some(warp) => out.push_str(&format!("  warp: {warp}\n")),
@@ -898,7 +907,7 @@ mod tests {
             patches: vec![PathBuf::from(
                 "/home/deck/.local/share/ddl/content/dbp37/augzen.deh",
             )],
-            complevel: Complevel::DOOM_1_9,
+            complevel: Some(Complevel::DOOM_1_9),
             skill: Skill::new(3).expect("3 is a valid skill"),
             warp: Some(Warp::single(1).expect("1 is a valid warp")),
             pistol_start: true,
@@ -1087,6 +1096,23 @@ mod tests {
     }
 
     #[test]
+    fn an_auto_complevel_omits_the_flag_and_says_so_in_the_summary() {
+        // Spec 026, R2: a custom setup's Auto means "no -complevel".
+        let plan = LaunchPlan {
+            complevel: None,
+            ..minimal_plan()
+        };
+        let argv = tokens(&plan.to_command());
+        assert!(!argv.iter().any(|token| token == "-complevel"), "{argv:?}");
+        assert!(
+            plan.describe(Path::new(HOME))
+                .contains("  complevel: (engine default)\n"),
+            "{}",
+            plan.describe(Path::new(HOME))
+        );
+    }
+
+    #[test]
     fn reviewed_complevels_are_accepted_and_placeholders_are_not() {
         for value in 0..=17u8 {
             assert!(Complevel::new(value).is_ok(), "{value} should be reviewed");
@@ -1151,7 +1177,7 @@ mod tests {
             iwad: existing_file(),
             files: Vec::new(),
             patches: Vec::new(),
-            complevel: Complevel::DOOM_1_9,
+            complevel: Some(Complevel::DOOM_1_9),
             skill: Skill::new(3).expect("3 is a valid skill"),
             warp: None,
             pistol_start: false,

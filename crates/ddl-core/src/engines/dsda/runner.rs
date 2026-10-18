@@ -373,7 +373,7 @@ mod tests {
             iwad: PathBuf::from("/opt/ddl/doom2.wad"),
             files: Vec::new(),
             patches: Vec::new(),
-            complevel: Complevel::DOOM_1_9,
+            complevel: Some(Complevel::DOOM_1_9),
             skill: Skill::new(3).expect("in range"),
             warp: None,
             pistol_start: false,
