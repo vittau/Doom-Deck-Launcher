@@ -95,13 +95,18 @@ fn count_color(buffer: &SharedPixelBuffer<Rgb8Pixel>, color: (u8, u8, u8)) -> us
         .count()
 }
 
-/// Writes `buffer` as a PNG and returns its path.
-pub(crate) fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
+/// Resolves and creates the shared directory for headless render artifacts.
+fn headless_dir() -> PathBuf {
     let dir = std::env::var_os("DDL_HEADLESS_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless"));
     std::fs::create_dir_all(&dir).expect("create the snapshot directory");
-    let path = dir.join(name);
+    dir
+}
+
+/// Writes `buffer` as a PNG and returns its path.
+pub(crate) fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
+    let path = headless_dir().join(name);
 
     let file = std::fs::File::create(&path).expect("create the snapshot file");
     let mut encoder = png::Encoder::new(

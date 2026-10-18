@@ -183,3 +183,47 @@ synthetic component before/after frames. The final run's fresh render evidence a
 A1–A3 are complete. No spec 025 requirements or scope questions remain open. No dependencies
 were added. Linux CI and physical Deck validation were not performed in this macOS worktree;
 this task verifies text fitting at the specified 1280×800 resolution headlessly.
+
+## Review fix — default artifact directory (2026-10-18)
+
+Review found that the text-report writer used a working-directory-relative
+`target/headless`, unlike the PNG writer. The earlier verification with
+`DDL_HEADLESS_DIR` set did not cover this default-path failure on a clean checkout.
+
+Commit `924b95c` extracts `headless_dir()` from the existing PNG writer. Both PNGs and
+`025-fit.txt` / `025-audit.txt` now use it: honor `DDL_HEADLESS_DIR`, otherwise resolve
+`CARGO_MANIFEST_DIR/../../target/headless`, and create the directory before writing.
+The spec 025 artifact-write audit found only the PNG path and this conditional report
+writer; `025-before/` and `025-after/` are caller-selected output directories, not
+additional hardcoded write paths. No dependencies were added.
+
+Merged current `main` (`bcbcd83`, including spec 024) without conflicts in `eb4752e`.
+Before verification, moved the prior `target/headless` tree to
+`target/spec-025-review-fix/previous-headless` and asserted the original path did not exist.
+Earlier local evidence paths in this report now live under that archive. This preserves the
+old renders while providing the same absent-directory starting condition as deletion.
+
+Final review-fix verification ran sequentially with `DDL_HEADLESS_DIR` explicitly unset:
+
+```sh
+env -u DDL_HEADLESS_DIR cargo fmt --all --check
+env -u DDL_HEADLESS_DIR cargo clippy --workspace --all-targets -- -D warnings
+env -u DDL_HEADLESS_DIR cargo test --workspace
+```
+
+All exited 0. Formatting was silent; clippy completed in 12.72s. The workspace passed
+**499 tests**, zero failures, including the full headless journey in the default output
+configuration. Selected tails (`target/spec-025-review-fix/{fmt,clippy,tests}.log`):
+
+```text
+test headless::fixture_screens_navigation_and_focus_render_headlessly ... ok
+test result: ok. 93 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 184.83s
+test result: ok. 375 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Confirmed the run created a nonempty `target/headless/025-fit.txt` beside the PNGs and did
+not write a crate-relative `crates/ddl/target/headless/025-fit.txt`. This full existing
+journey covers the reported regression without environment mutation inside parallel tests;
+the audit report uses the same helper and conditional write site. A1–A3 remain satisfied;
+no review-fix items remain open.

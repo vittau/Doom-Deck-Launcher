@@ -2343,9 +2343,7 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
         }
     }
     {
-        let dir = std::env::var_os("DDL_HEADLESS_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("target/headless"));
+        let dir = headless_dir();
         std::fs::write(
             dir.join(if audit {
                 "025-audit.txt"
