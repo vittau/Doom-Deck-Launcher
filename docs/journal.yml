@@ -509,3 +509,20 @@
     "Custom — not verified". Lutris deferred. New specs: 024 download idle timeout + flaky test,
     025 long titles fit their slots, 026 local content (phase A core/CLI, phase B UI).
   refs: [docs/decisions.md, docs/specs/024-download-idle-timeout.md, docs/specs/025-long-titles.md, docs/specs/026-local-content.md]
+- date: 2026-10-17
+  type: merge
+  summary: >-
+    Spec 026 phase A merged: local content core and CLI (D-026) — content-detected WAD/ZIP/DEH/BEX
+    (DSDA-Doom 0.30.1 aborts on `.pk3`, cited), versioned custom setups, ordered files and patches,
+    extras on catalog profiles after the recipe files, SHA-256 identity check that blocks on missing
+    or changed files, `ddl custom …` and `ddl profile extras …`. Phase B (UI) is next.
+  refs: [docs/reports/026-local-content.md]
+- date: 2026-10-17
+  type: session
+  summary: >-
+    Session ended at the owner's request with specs 024 and 025 paused mid-task: committed work
+    sits on their branches, uncommitted reports/renders are kept in the worktrees and in
+    `refs/keep/spec-024-idle-timeout` and `refs/keep/spec-025-long-titles`. The owner asked to
+    split the long headless journey test into smaller tests (backlog). oh-my-zsh now auto-updates,
+    after its update prompt ate the first character of a Codex launch command.
+  refs: [docs/status.md]
