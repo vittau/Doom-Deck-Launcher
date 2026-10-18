@@ -111,6 +111,9 @@ fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> PathBuf {
     );
     encoder.set_color(png::ColorType::Rgb);
     encoder.set_depth(png::BitDepth::Eight);
+    // Keep identical adaptive-filter scanlines; the large catalog matrix needs
+    // fast lossless fixtures, while the README script recompresses for delivery.
+    encoder.set_deflate_compression(png::DeflateCompression::FdeflateUltraFast);
     let mut writer = encoder.write_header().expect("write the PNG header");
     writer
         .write_image_data(buffer.as_bytes())
