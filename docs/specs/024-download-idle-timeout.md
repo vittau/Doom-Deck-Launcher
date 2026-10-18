@@ -1,6 +1,6 @@
 # 024 — Download idle timeout and the flaky engine-download test
 
-**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 006, 010
+**Status:** Done  ·  **Milestone:** M3  ·  **Depends on:** 006, 010
 **Owner request (2026-10-17):** "Pode ajustar o timeout."
 
 ## Goal

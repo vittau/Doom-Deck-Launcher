@@ -1,6 +1,6 @@
 # 025 — Long mapset titles fit their slots
 
-**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 012, 023
+**Status:** Done  ·  **Milestone:** M3  ·  **Depends on:** 012, 023
 **Origin:** spec 023 phase B report: long titles clip in Home and Discover text slots (visible
 with Back to Saturn X). Owner approved the fix on 2026-10-17.
 
