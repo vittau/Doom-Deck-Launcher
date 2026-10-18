@@ -111,6 +111,9 @@ pub(crate) fn write_png(name: &str, buffer: &SharedPixelBuffer<Rgb8Pixel>) -> Pa
     );
     encoder.set_color(png::ColorType::Rgb);
     encoder.set_depth(png::BitDepth::Eight);
+    // Keep identical adaptive-filter scanlines; the large catalog matrix needs
+    // fast lossless fixtures, while the README script recompresses for delivery.
+    encoder.set_deflate_compression(png::DeflateCompression::FdeflateUltraFast);
     let mut writer = encoder.write_header().expect("write the PNG header");
     writer
         .write_image_data(buffer.as_bytes())
@@ -167,6 +170,10 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
         shell::Screen,
     };
     let (window, ui) = setup();
+    if std::env::var_os("DDL_TITLE_ONLY").is_some() {
+        production::title_fit_journey(&window, &ui);
+        return;
+    }
     let state = crate::shell::attach(&ui);
     let quits = Rc::new(std::cell::Cell::new(0));
     let q = quits.clone();
@@ -465,6 +472,7 @@ fn fixture_screens_navigation_and_focus_render_headlessly() {
     production::categories_journey(&window, &ui);
     production::recipe_changes_journey(&window, &ui);
     production::uninstall_journey(&window, &ui);
+    production::title_fit_journey(&window, &ui);
 }
 
 #[path = "headless_production.rs"]

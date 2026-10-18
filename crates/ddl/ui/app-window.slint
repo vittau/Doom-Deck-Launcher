@@ -12,7 +12,7 @@ export { Strings } from "strings.slint";
 export struct ViewNode {
     id: int, x: float, y: float, w: float, h: float,
     kind: int, label: string, detail: string, tone: int, size: float, art: int,
-    primary: bool, actionable: bool, screenshot: string, credit: string, full-credit: bool,
+    primary: bool, actionable: bool, fitted-label: bool, screenshot: string, credit: string, full-credit: bool,
 }
 component Frame inherits Rectangle {
     background: transparent;
@@ -43,6 +43,54 @@ component ArtCaption inherits Rectangle {
         text: root.label; wrap: root.full ? word-wrap : no-wrap;
         overflow: elide; color: Tokens.text; font-size: Tokens.metadata;
         vertical-alignment: center;
+    }
+}
+// Measurements use the same bundled face and width as the rendered text.
+component FittedText inherits Rectangle {
+    // Leave room for Pirata One's negative side bearings (e.g. the initial A).
+    clip: true;
+    in property <string> label;
+    in property <length> base-size;
+    in property <length> smaller-size;
+    in property <bool> display: true;
+    in property <bool> strong: false;
+    in property <bool> centered: false;
+    in property <bool> multiline: true;
+    in property <bool> full: false;
+    in property <bool> title-slot: true;
+    in property <color> ink: Tokens.text;
+    out property <length> line-height: line.preferred-height;
+    out property <length> content-height: title-slot ? min(self.height, line-height * (multiline ? 2 : 1)) : self.height;
+    out property <length> base-width: base.preferred-width;
+    out property <length> base-height: base.preferred-height;
+    out property <length> measured-height: measure.preferred-height;
+    out property <length> measured-width: measure.preferred-width;
+    out property <length> fitted-size: base.preferred-height <= self.height && (multiline || base.preferred-width <= self.width) ? base-size : smaller-size;
+    base := Text {
+        visible: false; width: max(0px, parent.width - 8px); text: root.label;
+        font-family: root.display ? "Pirata One" : "Barlow";
+        font-size: root.base-size; font-weight: root.display || root.strong ? 600 : 400;
+        wrap: root.multiline ? word-wrap : no-wrap;
+    }
+    measure := Text {
+        visible: false; width: max(0px, parent.width - 8px); text: root.label;
+        font-family: root.display ? "Pirata One" : "Barlow";
+        font-size: root.fitted-size; font-weight: root.display || root.strong ? 600 : 400;
+        wrap: root.multiline ? word-wrap : no-wrap;
+    }
+    line := Text {
+        // A bundled family name is a fixed, non-copy, single-line metric sample.
+        visible: false; text: self.font-family;
+        font-family: root.display ? "Pirata One" : "Barlow";
+        font-size: root.fitted-size; font-weight: root.display || root.strong ? 600 : 400;
+    }
+    Text {
+        x: 4px; y: root.centered ? (parent.height - root.content-height) / 2 : 0px;
+        width: max(0px, parent.width - 8px); height: root.content-height; text: root.label;
+        font-family: root.display ? "Pirata One" : "Barlow";
+        font-size: root.fitted-size; font-weight: root.display || root.strong ? 600 : 400;
+        wrap: root.multiline ? word-wrap : no-wrap;
+        overflow: root.full ? clip : elide; color: root.ink;
     }
 }
 component Node inherits Rectangle {
@@ -113,7 +161,7 @@ component Node inherits Rectangle {
         x: 0px; y: 2px; width: 24px; height: 24px;
         source: root.item.tone == 2 ? @image-url("assets/ember/check.svg") : root.item.tone == 4 ? @image-url("assets/ember/cross.svg") : @image-url("assets/ember/pending.svg");
     }
-    if item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 10 && item.kind != 11 && item.kind != 12 && item.kind != 13 && item.kind != 14 && item.kind != 15: Text {
+    if !item.fitted-label && item.kind < 20 && item.kind != 1 && item.kind != 4 && item.kind != 6 && item.kind != 8 && item.kind != 10 && item.kind != 11 && item.kind != 12 && item.kind != 13 && item.kind != 14 && item.kind != 15: Text {
         x: item.kind == 7 ? 32px : item.kind == 8 ? 8px : item.kind == 0 ? 0px : 16px;
         y: item.kind == 7 || item.kind == 0 ? 0px : item.kind == 9 ? 4px : 8px;
         width: parent.width - (item.kind == 0 ? 0px : item.kind == 8 ? 16px : 32px);
@@ -123,6 +171,27 @@ component Node inherits Rectangle {
         font-family: item.kind == 0 && item.size >= 26 ? "Pirata One" : "Barlow";
         font-size: item.size * 1px; font-weight: item.kind == 2 || item.kind == 3 || item.size >= 26 ? 600 : 400;
         wrap: word-wrap; vertical-alignment: item.kind == 0 || item.kind == 7 || item.kind == 9 ? top : center;
+    }
+    if item.kind == 8: FittedText {
+        x: 8px; y: 8px; width: parent.width - 16px; height: parent.height - 16px;
+        label: root.item.label; base-size: root.item.size * 1px; smaller-size: Tokens.metadata;
+        display: false; multiline: false; centered: true;
+        ink: root.item.primary ? Tokens.on-accent : Tokens.text;
+    }
+    if item.fitted-label && item.kind == 3: FittedText {
+        x: 16px; y: 8px; width: parent.width - 32px; height: 30px;
+        label: root.item.label; base-size: root.item.size * 1px; smaller-size: Tokens.metadata;
+        display: false; strong: true; multiline: false;
+    }
+    if item.kind >= 20 && item.kind <= 23: FittedText {
+        width: parent.width; height: parent.height; label: root.item.label;
+        base-size: root.item.size * 1px;
+        smaller-size: root.item.kind == 23 ? Tokens.body : root.item.kind == 21 ? Tokens.metadata : root.item.size > 36 ? Tokens.page : root.item.size > 26 ? Tokens.section : Tokens.body;
+        display: root.item.kind != 21 && root.item.kind != 23;
+        multiline: root.item.kind != 21 && root.item.h >= 60;
+        full: root.item.kind == 22;
+        title-slot: root.item.kind != 23;
+        ink: root.item.kind == 21 ? Tokens.muted : Tokens.text;
     }
     if item.detail != "": Text {
         x: 16px; y: 38px; width: parent.width - 32px; height: parent.height - 42px;
@@ -183,6 +252,30 @@ export component AppWindow inherits Window {
     in property <bool> sheet-open: false;
     in property <string> sheet-title;
     in property <float> sheet-height: 300;
+    // Headless measurement seam: the production fitting component, never a window.
+    in property <bool> fit-test-visible: false;
+    in property <bool> fit-full: false;
+    in property <string> fit-label;
+    in property <float> fit-width;
+    in property <float> fit-height;
+    in property <float> fit-size;
+    in property <float> fit-smaller;
+    in property <bool> fit-multiline: true;
+    in property <bool> fit-display: true;
+    in property <bool> fit-strong: false;
+    out property <float> fit-line-height: probe.line-height / 1px;
+    out property <float> fit-content-height: probe.content-height / 1px;
+    out property <float> fit-base-width: probe.base-width / 1px;
+    out property <float> fit-base-height: probe.base-height / 1px;
+    out property <float> fit-measured-height: probe.measured-height / 1px;
+    out property <float> fit-measured-width: probe.measured-width / 1px;
+    out property <float> fit-chosen-size: probe.fitted-size / 1px;
+    probe := FittedText {
+        visible: false; label: root.fit-label; width: root.fit-width * 1px;
+        height: root.fit-height * 1px; base-size: root.fit-size * 1px;
+        smaller-size: root.fit-smaller * 1px; multiline: root.fit-multiline;
+        display: root.fit-display; strong: root.fit-strong;
+    }
     callback quit-requested();
     callback services-ready();
     in property <bool> setup-screen: false;
@@ -216,7 +309,9 @@ export component AppWindow inherits Window {
             label: root.band-screenshot != "" ? root.band-credit : WiringStrings.concept-art;
         }
     }
-    Text { x: 40px; y: 124px; width: root.art-band ? 784px : parent.width - 80px; height: 48px; text: root.heading; font-family: "Pirata One"; font-size: Tokens.page; color: Tokens.text; }
+    FittedText { x: 40px; y: 124px; width: root.art-band ? 784px : parent.width - 80px; height: 48px;
+        label: root.heading; base-size: Tokens.page; smaller-size: Tokens.section; multiline: false;
+    }
     Text { x: 40px; y: 176px; width: root.art-band ? 784px : parent.width - 80px; height: 32px; text: root.subtitle; color: Tokens.muted; overflow: elide; }
     Flickable {
         x: 20px; y: 210px; width: parent.width - 40px; height: parent.height - 278px;
@@ -257,8 +352,21 @@ export component AppWindow inherits Window {
             x: (parent.width - 720px) / 2; y: (parent.height - root.sheet-height * 1px) / 2; width: 720px; height: root.sheet-height * 1px;
             background: Tokens.raised; border-width: 1px; border-color: Tokens.line; border-radius: 12px;
             Frame { width: parent.width; height: parent.height; }
-            Text { x: 32px; y: 32px; width: parent.width - 64px; height: root.sheet-height > 400 ? 64px : root.sheet-height > 300 ? 164px : 96px; text: root.sheet-title; font-family: "Pirata One"; color: Tokens.text; font-size: Tokens.section; wrap: word-wrap; }
+            FittedText { x: 32px; y: 32px; width: parent.width - 64px; height: root.sheet-height > 400 ? 64px : root.sheet-height > 300 ? 164px : 96px;
+                label: root.sheet-title; base-size: Tokens.section; smaller-size: Tokens.body;
+                title-slot: root.sheet-height > 400;
+            }
             for item in root.sheet-nodes: Node { item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
+        }
+    }
+    // Isolated off-screen fixture verifies glyph bounds without desktop capture.
+    if root.fit-test-visible: Rectangle {
+        width: parent.width; height: parent.height; background: Tokens.canvas;
+        FittedText {
+            x: 40px; y: 240px; width: root.fit-width * 1px; height: root.fit-height * 1px;
+            label: root.fit-label; base-size: root.fit-size * 1px;
+            smaller-size: root.fit-smaller * 1px; display: root.fit-display; strong: root.fit-strong;
+            multiline: root.fit-multiline; full: root.fit-full;
         }
     }
     keys := FocusScope {

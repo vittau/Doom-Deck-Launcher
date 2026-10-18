@@ -1300,6 +1300,21 @@ impl Runtime {
             self.focus = -(self.tab_index() as i32) - 1;
         }
     }
+    /// Render-only seam: audit sheets without saving profiles or deleting files.
+    #[cfg(test)]
+    pub fn title_fit_sheet(&mut self, ui: &AppWindow, uninstall: bool) {
+        let sheet = if uninstall {
+            Sheet::Uninstall(self.item().unwrap().recipe.id.clone())
+        } else {
+            Sheet::Profiles
+        };
+        self.show_sheet(sheet);
+        self.sync(ui);
+    }
+    #[cfg(test)]
+    pub fn title_fit_advanced(&mut self) {
+        self.advanced = true;
+    }
     pub fn sync(&mut self, ui: &AppWindow) {
         if !self.categories().contains(&self.category) {
             self.category = Category::All;
@@ -1444,15 +1459,15 @@ impl Runtime {
                     b.panel(828., 12., 384., 478.);
                     if let Some(item) = latest {
                         b.recipe_art(ui, 36., 36., 240., 300., &item.recipe);
-                        b.label(
+                        b.title(
                             308.,
                             56.,
                             448.,
-                            60.,
+                            68.,
                             display_title(&item.recipe).into(),
                             36.,
                         );
-                        b.label(
+                        b.author(
                             308.,
                             132.,
                             448.,
@@ -1490,11 +1505,11 @@ impl Runtime {
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
                             b.recipe_art(ui, x, 400., 56., 66., &i.recipe);
-                            b.label(
+                            b.title(
                                 x + 72.,
                                 400.,
                                 270.,
-                                32.,
+                                34.,
                                 display_title(&i.recipe).into(),
                                 26.,
                             );
@@ -1554,20 +1569,20 @@ impl Runtime {
                             if item.favorite {
                                 b.favorite(x + 316., y + 26.);
                             }
-                            b.label(
+                            b.title(
                                 x + 20.,
                                 y + 174.,
                                 344.,
-                                42.,
+                                68.,
                                 display_title(&item.recipe).into(),
                                 26.,
                             );
-                            b.label(
+                            b.author(
                                 x + 20.,
-                                y + 218.,
+                                y + 244.,
                                 344.,
-                                50.,
-                                authors_line(&item.recipe, 60),
+                                26.,
+                                item.recipe.authors.join(", ").into(),
                                 20.,
                             );
                             b.label(
@@ -1739,20 +1754,21 @@ impl Runtime {
                             b.button(5, 12., action_y, 360., text(ui, T::Uninstall), false);
                         }
                         b.panel(404., 12., 808., 478.);
-                        b.label(
+                        b.title(428., 24., 760., 96., item.recipe.title.clone().into(), 44.);
+                        b.nodes.last_mut().unwrap().kind = 22;
+                        b.author(
                             428.,
-                            36.,
+                            126.,
                             760.,
-                            60.,
-                            display_title(&item.recipe).into(),
-                            40.,
+                            32.,
+                            item.recipe.authors.join(", ").into(),
+                            22.,
                         );
-                        b.label(428., 100., 760., 32., authors_line(&item.recipe, 66), 22.);
                         b.label(
                             428.,
-                            138.,
+                            166.,
                             760.,
-                            96.,
+                            68.,
                             match &item.recipe_status {
                                 ddl_core::library::RecipeStatus::Update(_) => {
                                     value(ui, T::RecipeSummary, &item.change_summary)
@@ -1767,6 +1783,9 @@ impl Runtime {
                             },
                             22.,
                         );
+                        // The title's second line leaves a shorter description slot.
+                        // Elide its last complete line rather than cutting a glyph.
+                        b.nodes.last_mut().unwrap().kind = 23;
                         let mut y = 242.;
                         if let Some(s) = &self.snapshot {
                             let labels = tag_labels(s, &item.recipe, usize::MAX, None);
@@ -1922,6 +1941,7 @@ impl Runtime {
                                 detail,
                                 c.optional,
                             );
+                            b.nodes.last_mut().unwrap().fitted_label = true;
                             y += b.nodes.last().unwrap().h + 16.;
                         }
                         b.row(
@@ -2136,7 +2156,7 @@ impl Runtime {
                     ui.global::<crate::WiringStrings>()
                         .set_other(subject.clone());
                     ui.set_heading(text(ui, T::ContextTitle));
-                    b.label(36., 36., 1100., 60., subject, 36.);
+                    b.title(36., 36., 1100., 68., subject, 36.);
                     let stage = self.progress.map_or(T::Working, |p| match p.stage {
                         InstallStage::Download => T::Download,
                         InstallStage::Verify => T::Verify,
@@ -2706,23 +2726,6 @@ fn tag_labels(
         .map(|tag| tag.label.clone())
         .collect()
 }
-/// The credited authors on one line: whole names up to `max` characters, then `…`.
-fn authors_line(recipe: &ddl_core::catalog::Recipe, max: usize) -> SharedString {
-    let mut line = String::new();
-    for (n, author) in recipe.authors.iter().enumerate() {
-        let next = if n == 0 {
-            author.clone()
-        } else {
-            format!("{line}, {author}")
-        };
-        if next.chars().count() > max && n > 0 {
-            line.push('…');
-            return line.into();
-        }
-        line = next;
-    }
-    line.into()
-}
 /// Rough text width of a Barlow label at `size`, for packing chips.
 fn chip_width(label: &str, size: f32) -> f32 {
     (label.chars().count() as f32 * size * 0.53 + 26.).ceil()
@@ -2777,6 +2780,7 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Storage => T::ErrorStorage,
         Problem::State => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
+        Problem::Stalled => T::ErrorStalled,
         Problem::Update => T::UpdateError,
         Problem::Catalog => T::ErrorCatalog,
         Problem::Checksum => T::ErrorChecksum,
@@ -2846,6 +2850,7 @@ impl Nodes {
             screenshot: Default::default(),
             credit: Default::default(),
             full_credit: false,
+            fitted_label: false,
         });
     }
     fn panel(&mut self, x: f32, y: f32, w: f32, h: f32) {
@@ -2903,6 +2908,14 @@ impl Nodes {
     fn label(&mut self, x: f32, y: f32, w: f32, h: f32, label: SharedString, size: f32) {
         self.push(-999, x, y, w, h, 0, label, Default::default(), false, false);
         self.nodes.last_mut().unwrap().size = size;
+    }
+    fn title(&mut self, x: f32, y: f32, w: f32, h: f32, label: SharedString, size: f32) {
+        self.label(x, y, w, h, label, size);
+        self.nodes.last_mut().unwrap().kind = 20;
+    }
+    fn author(&mut self, x: f32, y: f32, w: f32, h: f32, label: SharedString, size: f32) {
+        self.label(x, y, w, h, label, size);
+        self.nodes.last_mut().unwrap().kind = 21;
     }
     fn button(&mut self, id: i32, x: f32, y: f32, w: f32, label: SharedString, primary: bool) {
         self.push(
@@ -3361,15 +3374,5 @@ mod category_tests {
             "wraps, then drops the rest"
         );
         assert!(b.nodes.iter().all(|n| n.x + n.w <= 760.));
-    }
-    #[test]
-    fn author_lines_elide_whole_names() {
-        let catalog = Catalog::embedded();
-        let eviternity = catalog.recipe("eviternity").unwrap();
-        let line = authors_line(eviternity, 66);
-        assert!(line.ends_with('…') && line.chars().count() <= 67, "{line}");
-        assert!(line.starts_with("Joshua"));
-        let sigil = catalog.recipe("sigil").unwrap();
-        assert_eq!(authors_line(sigil, 66), "John Romero");
     }
 }

@@ -13,7 +13,8 @@
 //!   against the caller's [`HostAllowlist`]. The one documented exception is
 //!   GitHub's signed asset host, which appears only as a redirect target.
 //! - **Bounded.** At most [`MAX_REDIRECTS`] redirects, a connect timeout, a
-//!   response-header timeout, a size-scaled body deadline (see `body_deadline`),
+//!   response-header timeout, an idle timeout ([`BODY_IDLE_TIMEOUT`]) on the
+//!   gap between body reads, a size-scaled body deadline (see `body_deadline`),
 //!   a hard maximum size and an optional exact expected size.
 //! - **Verified.** The body is streamed to a temporary file while SHA-256 is
 //!   computed; a mismatch is reported with both hashes.
@@ -33,9 +34,14 @@ use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256 as Sha256Digest};
 use ureq::Agent;
+use ureq::Timeout;
 use ureq::config::AutoHeaderValue;
 use ureq::http::Uri;
 use ureq::http::header::LOCATION;
+use ureq::unversioned::resolver::DefaultResolver;
+use ureq::unversioned::transport::{
+    Buffers, ConnectionDetails, Connector, DefaultConnector, NextTimeout, Transport,
+};
 
 use super::cancel::CancellationToken;
 use super::error::Error;
@@ -67,6 +73,13 @@ const RESPONSE_HEADERS_TIMEOUT: Duration = Duration::from_secs(15);
 /// the first byte, so even a tiny file gets a real chance.
 pub const BODY_DEADLINE_BASE: Duration = Duration::from_secs(60);
 
+/// Maximum gap between two body reads (spec 024, R1): a connection that stops
+/// delivering bytes for this long is treated as stalled and aborted with
+/// [`Error::Stalled`], regardless of how much budget the size-scaled body
+/// deadline would still allow. It is enforced per read, so a slow-but-steady
+/// link that keeps sending below this gap is never punished.
+pub const BODY_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+
 /// Minimum sustained throughput a body must keep, in bytes per second
 /// (64 KiB/s). Below this the transfer is treated as stalled, not merely slow.
 pub const MIN_SUSTAINED_RATE: u64 = 64 * 1024;
@@ -75,13 +88,15 @@ pub const MIN_SUSTAINED_RATE: u64 = 64 * 1024;
 /// or `max_size` cannot turn the deadline into an infinite wait.
 pub const MAX_BODY_DEADLINE: Duration = Duration::from_secs(6 * 60 * 60);
 
-/// The knobs behind [`body_deadline`]. Production uses [`Self::default`];
-/// tests shrink all three so a deadline can fire in milliseconds.
+/// The knobs behind [`body_deadline`] and the idle timeout. Production uses
+/// [`Self::default`]; tests shrink all four so a bound can fire in
+/// milliseconds.
 #[derive(Debug, Clone, Copy)]
 struct DeadlinePolicy {
     base: Duration,
     min_rate: u64,
     max: Duration,
+    idle: Duration,
 }
 
 impl Default for DeadlinePolicy {
@@ -90,6 +105,7 @@ impl Default for DeadlinePolicy {
             base: BODY_DEADLINE_BASE,
             min_rate: MIN_SUSTAINED_RATE,
             max: MAX_BODY_DEADLINE,
+            idle: BODY_IDLE_TIMEOUT,
         }
     }
 }
@@ -199,6 +215,12 @@ pub struct Fetcher {
     downloads_dir: PathBuf,
     redirect_exceptions: Vec<String>,
     deadlines: DeadlinePolicy,
+    /// Kept so the agent can be rebuilt when a test knob changes the idle
+    /// timeout, which is baked into the transport at construction time.
+    #[cfg(any(test, feature = "test-support"))]
+    connect_timeout: Duration,
+    #[cfg(any(test, feature = "test-support"))]
+    response_timeout: Duration,
     #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
 }
@@ -207,12 +229,12 @@ impl Fetcher {
     /// Creates a fetcher writing into `<cache_dir>/downloads` (spec 006, R3).
     ///
     /// Connect and response-header timeouts are short so an unreachable or
-    /// silent server fails fast. The **body** deadline is not fixed: it is
-    /// derived per request from the expected size by `body_deadline`
-    /// (`base + size / 64 KiB/s`, capped at 6 h). A fixed total deadline would
-    /// abort a large archive on weak Wi-Fi even though it was still
-    /// progressing; the user can always cancel, and the size-scaled deadline
-    /// still stops a genuinely stalled server.
+    /// silent server fails fast. The **body** has two bounds (spec 024): an
+    /// idle timeout ([`BODY_IDLE_TIMEOUT`], per read) and a size-scaled total
+    /// deadline (`base + size / 64 KiB/s`, capped at 6 h). The total deadline
+    /// alone would let a big archive that stalled after the headers wait for
+    /// the whole budget; the idle timeout aborts it in about a minute, while a
+    /// slow-but-steady link below the idle gap still completes.
     #[must_use]
     pub fn new(cache_dir: impl Into<PathBuf>) -> Self {
         Self::with_timeouts(cache_dir, CONNECT_TIMEOUT, RESPONSE_HEADERS_TIMEOUT)
@@ -220,39 +242,17 @@ impl Fetcher {
 
     /// Creates a fetcher with explicit connect and response-header timeouts.
     ///
-    /// The body deadline is still size-scaled; to shrink it (tests) use the
-    /// `with_deadline_policy` test constructor.
+    /// The body bounds are still size-scaled and idle-bounded; to shrink them
+    /// (tests) use the `with_deadline_policy` and `with_idle_timeout` test
+    /// constructors.
     #[must_use]
     pub fn with_timeouts(
         cache_dir: impl Into<PathBuf>,
         connect_timeout: Duration,
         response_timeout: Duration,
     ) -> Self {
-        let mut builder = Agent::config_builder()
-            .user_agent(concat!("DoomDeckLauncher/", env!("CARGO_PKG_VERSION")))
-            // The fetcher follows redirects itself so it can re-check every
-            // target against the allowlist and enforce the redirect limit.
-            .max_redirects(0)
-            // Status codes are inspected and mapped explicitly.
-            .http_status_as_error(false)
-            // A binary download must be the server's bytes, not an encoding.
-            .accept_encoding(AutoHeaderValue::None)
-            .timeout_connect(Some(connect_timeout))
-            // Header receipt is bounded here; the body gets its own
-            // size-scaled deadline per request (see `transfer`).
-            .timeout_recv_response(Some(response_timeout));
-        // Production is HTTPS-only. Tests relax the transport to reach a
-        // loopback HTTP server; the scheme policy is still exercised directly.
-        #[cfg(not(any(test, feature = "test-support")))]
-        {
-            builder = builder.https_only(true);
-        }
-        #[cfg(any(test, feature = "test-support"))]
-        {
-            builder = builder.https_only(false);
-        }
-        let agent = Agent::new_with_config(builder.build());
-
+        let deadlines = DeadlinePolicy::default();
+        let agent = build_agent(connect_timeout, response_timeout, deadlines.idle);
         Self {
             agent,
             downloads_dir: cache_dir.into().join("downloads"),
@@ -260,10 +260,27 @@ impl Fetcher {
                 .iter()
                 .map(|host| (*host).to_owned())
                 .collect(),
-            deadlines: DeadlinePolicy::default(),
+            deadlines,
+            #[cfg(any(test, feature = "test-support"))]
+            connect_timeout,
+            #[cfg(any(test, feature = "test-support"))]
+            response_timeout,
             #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
         }
+    }
+
+    /// Test-only: a fetcher with an overridden response-header timeout while
+    /// the connect timeout and every body bound keep their production defaults.
+    /// The gated headless engine-download fixture needs this so a starved test
+    /// thread cannot trip the 15 s header timeout (spec 024, R4).
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_response_header_timeout(
+        cache_dir: impl Into<PathBuf>,
+        response_timeout: Duration,
+    ) -> Self {
+        Self::with_timeouts(cache_dir, CONNECT_TIMEOUT, response_timeout)
     }
 
     /// Replaces the size-scaling constants behind the body deadline. Test-only:
@@ -276,7 +293,19 @@ impl Fetcher {
             base,
             min_rate,
             max,
+            idle: self.deadlines.idle,
         };
+        self
+    }
+
+    /// Replaces the body idle timeout. Test-only: shrinking it lets a loopback
+    /// test observe a stall in milliseconds. Rebuilds the agent because the cap
+    /// lives in the transport (spec 024, R1).
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_idle_timeout(mut self, idle: Duration) -> Self {
+        self.deadlines.idle = idle;
+        self.agent = build_agent(self.connect_timeout, self.response_timeout, idle);
         self
     }
 
@@ -550,9 +579,10 @@ impl Fetcher {
         let mut hasher = Sha256Digest::new();
         let mut downloaded: u64 = 0;
         let mut buffer = vec![0u8; READ_BUFFER];
-        // Wall clock for the "too slow" message. The transport enforces the
-        // actual deadline; this only reports how long the body ran.
+        // Wall clock for the error messages. The transport enforces both body
+        // bounds; these only decide which one fired and how long the body ran.
         let started = Instant::now();
+        let mut last_byte = started;
 
         progress(Progress {
             downloaded: 0,
@@ -564,31 +594,46 @@ impl Fetcher {
             if cancel.is_cancelled() {
                 return Err(Error::Cancelled);
             }
-            // Stall detection: ureq 3.4.2 has no per-read idle hook — the only
-            // body timeout available is the total `timeout_recv_body` set per
-            // request above, and a blocking read cannot be interrupted from
-            // this thread. Rather than leak a watchdog thread per transfer
-            // that could not unblock the read anyway, a fully silent server is
-            // given up when the size-scaled deadline expires, and that failure
-            // is reported as `TooSlow` below.
-            let read = reader.read(&mut buffer).map_err(|error| {
-                if is_ureq_timeout(&error) {
-                    Error::TooSlow {
-                        url: url.to_string(),
-                        downloaded,
-                        total,
-                        elapsed: started.elapsed(),
+            // Both body bounds are enforced by the transport (spec 024, R1):
+            // each read blocks for at most `min(remaining total deadline,
+            // BODY_IDLE_TIMEOUT)`. A read that times out therefore means either
+            // the idle gap or the total deadline fired; the gap since the last
+            // byte says which, so the user gets `Stalled` for a silent
+            // connection and `TooSlow` only when the whole budget is gone.
+            // A cancel that raced the timer wins, as required by R3.
+            let read = match reader.read(&mut buffer) {
+                Ok(read) => read,
+                Err(error) => {
+                    if cancel.is_cancelled() {
+                        return Err(Error::Cancelled);
                     }
-                } else {
-                    Error::Network {
-                        url: url.to_string(),
-                        detail: error.to_string(),
-                    }
+                    return Err(if is_ureq_timeout(&error) {
+                        if last_byte.elapsed() >= self.deadlines.idle {
+                            Error::Stalled {
+                                url: url.to_string(),
+                                received: downloaded,
+                                total,
+                            }
+                        } else {
+                            Error::TooSlow {
+                                url: url.to_string(),
+                                downloaded,
+                                total,
+                                elapsed: started.elapsed(),
+                            }
+                        }
+                    } else {
+                        Error::Network {
+                            url: url.to_string(),
+                            detail: error.to_string(),
+                        }
+                    });
                 }
-            })?;
+            };
             if read == 0 {
                 break;
             }
+            last_byte = Instant::now();
             downloaded += read as u64;
             if downloaded > hard_limit {
                 return Err(Error::SizeExceeded {
@@ -616,6 +661,118 @@ impl Fetcher {
             temp,
             sha256: Sha256::finish(hasher),
         })
+    }
+}
+
+/// Builds the ureq agent, capping every body read at `idle` (spec 024, R1).
+///
+/// ureq 3.4.2's `timeout_recv_body` is a *total* budget for the body, not a
+/// per-read one (confirmed against ureq 3.4.2: `timings::CallTimings::
+/// next_timeout` starts the `RecvBody` budget at the response headers and the
+/// budget "is not restarted for each read"). A total budget cannot express an
+/// idle timeout: it would abort a large archive that is still progressing. The
+/// idle cap is therefore applied in the transport, where the socket read
+/// timeout for each read is chosen: [`IdleCapTransport`] lowers ureq's computed
+/// `RecvBody` timeout to at most `idle`, so a silent connection fails after
+/// `idle` while a progressing one keeps resetting the gap. The size-scaled
+/// total deadline still applies through ureq's own budget.
+fn build_agent(connect_timeout: Duration, response_timeout: Duration, idle: Duration) -> Agent {
+    let mut builder = Agent::config_builder()
+        .user_agent(concat!("DoomDeckLauncher/", env!("CARGO_PKG_VERSION")))
+        // The fetcher follows redirects itself so it can re-check every
+        // target against the allowlist and enforce the redirect limit.
+        .max_redirects(0)
+        // Status codes are inspected and mapped explicitly.
+        .http_status_as_error(false)
+        // A binary download must be the server's bytes, not an encoding.
+        .accept_encoding(AutoHeaderValue::None)
+        .timeout_connect(Some(connect_timeout))
+        // Header receipt is bounded here; the body gets an idle cap (transport)
+        // and a size-scaled total deadline per request (see `transfer`).
+        .timeout_recv_response(Some(response_timeout));
+    // Production is HTTPS-only. Tests relax the transport to reach a
+    // loopback HTTP server; the scheme policy is still exercised directly.
+    #[cfg(not(any(test, feature = "test-support")))]
+    {
+        builder = builder.https_only(true);
+    }
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        builder = builder.https_only(false);
+    }
+    let config = builder.build();
+    // Keep ureq's default connector chain (SOCKS, TCP, TLS) exactly as
+    // `Agent::new_with_config` would, and only wrap its final transport.
+    let connector = DefaultConnector::default().chain(IdleCapConnector { idle });
+    Agent::with_parts(config, connector, DefaultResolver::default())
+}
+
+/// A connector that wraps the default transport in [`IdleCapTransport`].
+#[derive(Debug)]
+struct IdleCapConnector {
+    idle: Duration,
+}
+
+impl Connector<Box<dyn Transport>> for IdleCapConnector {
+    type Out = IdleCapTransport<Box<dyn Transport>>;
+
+    fn connect(
+        &self,
+        _details: &ConnectionDetails,
+        chained: Option<Box<dyn Transport>>,
+    ) -> Result<Option<Self::Out>, ureq::Error> {
+        Ok(chained.map(|inner| IdleCapTransport {
+            inner,
+            idle: self.idle,
+        }))
+    }
+}
+
+/// A transport that lowers ureq's per-read `RecvBody` timeout to an idle cap.
+///
+/// ureq computes each body read's timeout as the remaining total budget; this
+/// wrapper passes the smaller of that and the idle timeout to the inner
+/// transport, which applies it to the socket. Every phase is delegated, so
+/// pooling, TLS detection and connect/send/header timeouts are untouched.
+#[derive(Debug)]
+struct IdleCapTransport<T> {
+    inner: T,
+    idle: Duration,
+}
+
+impl<T: Transport> IdleCapTransport<T> {
+    /// The timeout to hand the inner transport for one read.
+    fn cap(&self, timeout: NextTimeout) -> NextTimeout {
+        if timeout.reason != Timeout::RecvBody {
+            return timeout;
+        }
+        let idle = ureq::unversioned::transport::time::Duration::from(self.idle);
+        NextTimeout {
+            after: timeout.after.min(idle),
+            reason: timeout.reason,
+        }
+    }
+}
+
+impl<T: Transport> Transport for IdleCapTransport<T> {
+    fn buffers(&mut self) -> &mut dyn Buffers {
+        self.inner.buffers()
+    }
+
+    fn transmit_output(&mut self, amount: usize, timeout: NextTimeout) -> Result<(), ureq::Error> {
+        self.inner.transmit_output(amount, timeout)
+    }
+
+    fn await_input(&mut self, timeout: NextTimeout) -> Result<bool, ureq::Error> {
+        self.inner.await_input(self.cap(timeout))
+    }
+
+    fn is_open(&mut self) -> bool {
+        self.inner.is_open()
+    }
+
+    fn is_tls(&self) -> bool {
+        self.inner.is_tls()
     }
 }
 
@@ -1254,9 +1411,11 @@ mod tests {
     }
 
     #[test]
-    fn a_stalled_transfer_is_aborted_with_the_deadline_error() {
-        // Headers arrive, then the server says nothing for much longer than the
-        // deadline: the read blocks and the body budget expires.
+    fn a_transfer_that_outlasts_the_total_deadline_reports_too_slow() {
+        // Headers arrive, then the server says nothing. With the idle timeout at
+        // its production default, the shrunk size-scaled total deadline is the
+        // first bound to fire, so the error is `TooSlow` (spec 024: the total
+        // deadline stays as the overall bound).
         let body = vec![9u8; 32 * 1024];
         let served = body.clone();
         let server = Server::start(move |_req| {
@@ -1288,6 +1447,112 @@ mod tests {
             }
             other => panic!("expected TooSlow, got {other}"),
         }
+        assert_no_temp_files(dir.path());
+    }
+
+    #[test]
+    fn an_idle_transfer_is_aborted_with_the_stalled_error() {
+        // The server sends one chunk immediately and then goes quiet for far
+        // longer than the idle timeout. The total deadline is untouched, so a
+        // `TooSlow` would only fire after the whole (60 s) budget; the idle cap
+        // must abort first with a distinct error (spec 024, R1/R2).
+        let body = vec![9u8; 32 * 1024];
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            Response::ok(served.clone()).stall_after(16 * 1024, Duration::from_secs(5))
+        });
+        let dir = TestDir::new("idle");
+        let hash = Sha256::of(&body);
+        let request = DownloadRequest::new(
+            server.url("/file"),
+            hash,
+            body.len() as u64,
+            allow(&[&server]),
+        );
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_idle_timeout(Duration::from_millis(250));
+
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("idle transfer is aborted");
+        match error {
+            Error::Stalled {
+                received, total, ..
+            } => {
+                assert_eq!(received, 16 * 1024, "the first chunk did arrive");
+                assert_eq!(total, Some(body.len() as u64));
+            }
+            other => panic!("expected Stalled, got {other}"),
+        }
+        assert_no_temp_files(dir.path());
+    }
+
+    #[test]
+    fn a_slow_but_steady_transfer_below_the_idle_gap_succeeds() {
+        // 64 KiB in four 16 KiB pieces 150 ms apart: each gap is below the 400 ms
+        // idle timeout, so the idle cap never fires and the size-scaled total
+        // deadline lets it finish (spec 024, R1).
+        let body = vec![0xAB; 64 * 1024];
+        let body_len = body.len() as u64;
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            Response::ok(served.clone()).trickle(16 * 1024, Duration::from_millis(150))
+        });
+        let dir = TestDir::new("idle-steady");
+        let request = DownloadRequest::new(
+            server.url("/file"),
+            Sha256::of(&body),
+            body_len,
+            allow(&[&server]),
+        );
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_idle_timeout(Duration::from_millis(400));
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("a steady link below the idle gap completes");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_no_temp_files(dir.path());
+    }
+
+    #[test]
+    fn cancel_during_a_stall_reports_cancelled() {
+        // The server delivers a chunk then stalls; a cancel lands while the read
+        // is blocked. Cancel must win over the idle timer (spec 024, R3): the
+        // read times out on the idle cap, but the error is `Cancelled`.
+        let body = vec![7u8; 32 * 1024];
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            Response::ok(served.clone()).stall_after(16 * 1024, Duration::from_secs(5))
+        });
+        let dir = TestDir::new("idle-cancel");
+        let request = DownloadRequest::new(
+            server.url("/file"),
+            Sha256::of(&body),
+            body.len() as u64,
+            allow(&[&server]),
+        );
+        let cancel = CancellationToken::new();
+        let handle = cancel.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            handle.cancel();
+        });
+        let mut progress = |_p: Progress| {};
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_idle_timeout(Duration::from_millis(300));
+
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("cancelled during a stall");
+        assert!(matches!(error, Error::Cancelled), "{error}");
         assert_no_temp_files(dir.path());
     }
 

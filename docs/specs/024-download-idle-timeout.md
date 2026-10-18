@@ -37,9 +37,9 @@ engine-download fixture once failed under concurrent builds with `Network` inste
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1–R3) — loopback tests: a server that sends headers and some bytes then stalls
+- [x] **A1** (R1–R3) — loopback tests: a server that sends headers and some bytes then stalls
   fails with the idle error within the shrunk idle timeout; a slow-but-steady server below the
   idle gap still succeeds; cancel during a stall reports Cancelled; error text tested.
 - [ ] **A2** (R4) — the fixture passes 20 consecutive runs while another `cargo build` runs
   (report the loop command and result).
-- [ ] **A3** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** — fmt, clippy `-D warnings`, tests green.

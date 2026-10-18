@@ -32,6 +32,8 @@ pub enum Problem {
     Storage,
     State,
     Network,
+    /// Spec 024: the transfer went quiet past the idle timeout.
+    Stalled,
     Update,
     /// Spec 019: the catalog update check failed.
     Catalog,
@@ -57,6 +59,9 @@ impl fmt::Display for Problem {
             Self::Storage => f.write_str("could not write or read DDL's user storage"),
             Self::State => f.write_str("could not read DDL's saved state"),
             Self::Network => f.write_str("a network request failed"),
+            Self::Stalled => f.write_str(
+                "the download stopped receiving data; check your connection and try again",
+            ),
             Self::Update => f.write_str("the update check failed"),
             Self::Catalog => f.write_str("the catalog update check failed"),
             Self::Checksum => f.write_str("a downloaded file failed its checksum"),
@@ -118,6 +123,7 @@ fn download_error(error: &ddl_core::downloads::Error) -> Problem {
         E::Cancelled => Problem::Cancelled,
         E::HashMismatch { .. } => Problem::Checksum,
         E::Network { .. } | E::HttpStatus { .. } => Problem::Network,
+        E::Stalled { .. } => Problem::Stalled,
         E::Io { .. } => Problem::Storage,
         _ => Problem::UnsafeArchive,
     }
@@ -428,6 +434,10 @@ pub struct TestEnvironment {
     pub catalog_url: String,
     pub reviewed: dsda::ReviewedList,
     pub runner: std::sync::Arc<dyn EngineRunner + Send + Sync>,
+    /// Spec 024 R4: a longer response-header timeout for the gated
+    /// engine-download fixture, so a starved test thread cannot trip the
+    /// production 15 s timeout. `None` keeps production behaviour.
+    pub engine_response_timeout: Option<std::time::Duration>,
 }
 
 pub struct Services {
@@ -622,14 +632,18 @@ impl Services {
         let engine = EngineManager::for_paths(paths);
         #[cfg(test)]
         let engine = if let Some(test) = &env.test {
-            EngineManager::with_parts(
+            let mut engine = EngineManager::with_parts(
                 dsda::EngineDirs::for_paths(paths),
                 test.reviewed.clone(),
                 Box::new(TestApi(test.api.clone())),
                 Box::new(dsda::SystemClock),
             )
             .with_http_for_tests()
-            .with_download_base(&test.engine_base)
+            .with_download_base(&test.engine_base);
+            if let Some(timeout) = test.engine_response_timeout {
+                engine = engine.with_response_timeout(timeout);
+            }
+            engine
         } else {
             engine
         };
@@ -3880,6 +3894,7 @@ mod catalog_tests {
                 catalog_url,
                 reviewed: dsda::ReviewedList::embedded(),
                 runner: Arc::new(dsda::FakeEngineRunner::new(dsda::LaunchExit::Clean)),
+                engine_response_timeout: None,
             })),
         }
     }
