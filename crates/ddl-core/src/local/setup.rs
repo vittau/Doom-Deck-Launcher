@@ -13,7 +13,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::engines::dsda::{Complevel, ValueRangeError};
+use crate::engines::dsda::Complevel;
 
 use super::kind::{Kind, UserFile};
 
@@ -66,16 +66,20 @@ impl Compatibility {
     ///
     /// # Errors
     ///
-    /// Returns [`ValueRangeError::Complevel`] for a number outside the reviewed
-    /// range (`0`-`17` and `21`).
-    pub fn parse(value: &str) -> Result<Self, ValueRangeError> {
+    /// Returns [`SetupError::Invalid`] for anything that is neither `auto` nor a
+    /// reviewed number (`0`-`17` and `21`).
+    pub fn parse(value: &str) -> Result<Self, SetupError> {
         if value.eq_ignore_ascii_case("auto") {
             return Ok(Self::Auto);
         }
-        let number: u8 = value
-            .parse()
-            .map_err(|_| ValueRangeError::Complevel(u8::MAX))?;
-        Complevel::new(number).map(Self::Level)
+        let number: u8 = value.parse().map_err(|_| {
+            SetupError::Invalid(format!(
+                "`{value}` is neither `auto` nor a reviewed compatibility number (0-17 or 21)"
+            ))
+        })?;
+        Complevel::new(number)
+            .map(Self::Level)
+            .map_err(|error| SetupError::Invalid(error.to_string()))
     }
 }
 
@@ -240,10 +244,17 @@ impl CustomSetup {
         Ok(())
     }
 
-    /// The recorded user files in both groups, in model order.
+    /// The recorded user files in model order: the user-file IWAD first (when
+    /// there is one), then the `-file` group, then the `-deh` group.
     #[must_use]
     pub fn all_user_files(&self) -> Vec<&UserFile> {
-        self.files.iter().chain(self.patches.iter()).collect()
+        let mut files: Vec<&UserFile> = Vec::new();
+        if let CustomIwad::File { file } = &self.iwad {
+            files.push(file);
+        }
+        files.extend(self.files.iter());
+        files.extend(self.patches.iter());
+        files
     }
 
     /// Checks the document's own invariants (not the files on disk).
@@ -335,6 +346,22 @@ impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
+}
+
+/// The underlying indices of an extras list that belong to `group`, in list
+/// order. A profile's extras are one ordered list (spec 026, R5); its two
+/// engine groups are derived from the detected kinds.
+#[must_use]
+pub fn group_indices(extras: &[UserFile], group: Group) -> Vec<usize> {
+    extras
+        .iter()
+        .enumerate()
+        .filter(|(_, file)| match group {
+            Group::Files => file.kind.is_load_file(),
+            Group::Patches => file.kind.is_patch(),
+        })
+        .map(|(index, _)| index)
+        .collect()
 }
 
 /// Whether `id` is safe as a file name and directory name.
@@ -501,6 +528,13 @@ mod tests {
         for bad in ["18", "19", "20", "22", "-1", "vanilla", "boom"] {
             assert!(Compatibility::parse(bad).is_err(), "{bad}");
         }
+        assert!(
+            Compatibility::parse("vanilla")
+                .unwrap_err()
+                .to_string()
+                .contains("neither `auto` nor a reviewed"),
+            "the message must explain the accepted forms"
+        );
         assert_eq!(Compatibility::Auto.level(), None);
         assert_eq!(
             Compatibility::Level(Complevel::MBF)

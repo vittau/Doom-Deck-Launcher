@@ -1,12 +1,14 @@
 //! Loading, saving and locating custom setups (spec 026, R2/R6).
 //!
 //! Each setup is one JSON document under `<data>/custom/<id>.json`, written
-//! atomically with an explicit schema version. Its runtime directories live
-//! under `<data>/custom/<id>/` (`save`, `data`, `shots`, `run`), matching the
-//! per-profile isolation of decision D-011.
+//! atomically with an explicit schema version. Its runtime directories are the
+//! selected profile's (`<data>/profiles/<profile id>/`), exactly as a catalog
+//! mapset's are (decision D-011); a custom setup therefore reuses spec 018's
+//! profile isolation rather than duplicating it.
 //!
-//! Deleting a setup removes only DDL's own record and directories. The player's
-//! files, referenced in place elsewhere, are never touched (spec 026, R6).
+//! Deleting a setup removes DDL's own record — and, when the player asks, the
+//! setup's profiles and their saves. The player's files, referenced in place
+//! elsewhere, are never touched (spec 026, R6).
 
 use std::fs;
 use std::io::{self, Read, Write};
@@ -20,42 +22,6 @@ pub const DIR: &str = "custom";
 
 /// Upper bound on a setup read, so a corrupt file cannot exhaust memory.
 const MAX_SETUP_BYTES: u64 = 4 * 1024 * 1024;
-
-/// The runtime directories one setup owns.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SetupDirs {
-    /// `<data>/custom/<id>`.
-    pub root: PathBuf,
-    /// DSDA `-save`.
-    pub save: PathBuf,
-    /// DSDA `-data`.
-    pub data: PathBuf,
-    /// DSDA `-shotdir`.
-    pub shots: PathBuf,
-    /// The working directory the engine starts in.
-    pub run: PathBuf,
-}
-
-impl SetupDirs {
-    /// The runtime directories for `id` under `data_dir`.
-    #[must_use]
-    pub fn new(data_dir: &Path, id: &str) -> Self {
-        let root = data_dir.join(DIR).join(id);
-        Self {
-            save: root.join("save"),
-            data: root.join("data"),
-            shots: root.join("shots"),
-            run: root.join("run"),
-            root,
-        }
-    }
-
-    /// Every directory a launch needs, in creation order.
-    #[must_use]
-    pub fn all(&self) -> [&Path; 4] {
-        [&self.save, &self.data, &self.shots, &self.run]
-    }
-}
 
 /// Reads and writes custom setups.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,12 +42,6 @@ impl SetupStore {
     #[must_use]
     pub fn root(&self) -> PathBuf {
         self.data_dir.join(DIR)
-    }
-
-    /// `<data>/custom/<id>` and the runtime directories it owns.
-    #[must_use]
-    pub fn dirs(&self, id: &str) -> SetupDirs {
-        SetupDirs::new(&self.data_dir, id)
     }
 
     /// `<data>/custom/<id>.json`.
@@ -156,7 +116,7 @@ impl SetupStore {
         }
     }
 
-    /// Writes `setup` atomically.
+    /// Writes `setup` atomically, with DDL-only permissions.
     ///
     /// # Errors
     ///
@@ -223,31 +183,14 @@ impl SetupStore {
         Ok(setups)
     }
 
-    /// Deletes a setup's own record and — when `delete_data` is true — its
-    /// profile/save directories. Player files are untouched (spec 026, R6).
-    ///
-    /// The document goes first, exactly as `ProfileStore` orders it: a failed
-    /// document removal must never destroy saves.
-    ///
-    /// # Errors
-    ///
-    /// Returns a [`SetupError`] when the id is unsafe or a filesystem operation
-    /// fails. Deleting an already-missing setup is not an error.
-    pub fn delete(&self, id: &str, delete_data: bool) -> Result<(), SetupError> {
-        self.path(id)?; // reject an unsafe id before touching any path
-        self.delete_record(id)?;
-        if delete_data {
-            self.remove_runtime_dirs(id)?;
-        }
-        Ok(())
-    }
-
-    /// Removes `<data>/custom/<id>.json`, reporting whether it existed.
+    /// Deletes DDL's record for `id`, reporting whether it existed. The player's
+    /// files are never touched; profiles and saves are the caller's concern
+    /// (spec 026, R6).
     ///
     /// # Errors
     ///
     /// Returns a [`SetupError`] when the id is unsafe or deletion fails.
-    pub fn delete_record(&self, id: &str) -> Result<bool, SetupError> {
+    pub fn delete(&self, id: &str) -> Result<bool, SetupError> {
         let path = self.path(id)?;
         match fs::remove_file(&path) {
             Ok(()) => Ok(true),
@@ -255,48 +198,11 @@ impl SetupStore {
             Err(error) => Err(SetupError::Io(error)),
         }
     }
-
-    /// Removes `<data>/custom/<id>`, proven to stay inside DDL's custom root
-    /// and refusing a symlinked directory.
-    fn remove_runtime_dirs(&self, id: &str) -> Result<(), SetupError> {
-        let root = self.dirs(id).root;
-        match fs::symlink_metadata(&root) {
-            Ok(meta) if meta.file_type().is_symlink() => {
-                return Err(SetupError::UnsafeId(id.to_owned()));
-            }
-            Ok(_) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
-            Err(error) => return Err(SetupError::Io(error)),
-        }
-        let base = self.root();
-        if let Ok(base) = fs::canonicalize(&base)
-            && let Ok(canonical) = fs::canonicalize(&root)
-            && !canonical.starts_with(&base)
-        {
-            return Err(SetupError::UnsafeId(id.to_owned()));
-        }
-        match fs::remove_dir_all(&root) {
-            Ok(()) => Ok(()),
-            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-            Err(error) => Err(SetupError::Io(error)),
-        }
-    }
-
-    /// Creates the runtime directories a launch needs.
-    ///
-    /// # Errors
-    ///
-    /// Returns the first filesystem error.
-    pub fn prepare_dirs(&self, id: &str) -> Result<SetupDirs, SetupError> {
-        let dirs = self.dirs(id);
-        for dir in dirs.all() {
-            fs::create_dir_all(dir)?;
-        }
-        Ok(dirs)
-    }
 }
 
-/// True for a directory that holds at least one DSDA save slot (`.dsg`).
+/// True for a directory that holds at least one DSDA save slot (`.dsg`), used
+/// to warn that changing a mapset's extras can strand an existing save
+/// (spec 026, R5).
 #[must_use]
 pub fn has_saves(save_dir: &Path) -> bool {
     let Ok(entries) = fs::read_dir(save_dir) else {
@@ -363,17 +269,8 @@ mod tests {
         assert!(store.contains("my-setup"));
         assert_eq!(store.load_optional("missing").unwrap(), None);
 
-        // Deleting without data keeps the runtime dirs and removes the record.
-        store.prepare_dirs("my-setup").unwrap();
-        fs::write(store.dirs("my-setup").save.join("slot0.dsg"), b"save").unwrap();
-        store.delete("my-setup", false).unwrap();
-        assert!(!store.contains("my-setup"));
-        assert!(store.dirs("my-setup").save.join("slot0.dsg").exists());
-
-        // Deleting with data removes the DDL-owned directories too.
-        store.save(&setup).unwrap();
-        store.delete("my-setup", true).unwrap();
-        assert!(!store.dirs("my-setup").root.exists());
+        assert!(store.delete("my-setup").unwrap());
+        assert!(!store.delete("my-setup").unwrap());
         assert!(store.list().unwrap().is_empty());
     }
 
@@ -386,7 +283,7 @@ mod tests {
         let mut setup = setup("my-setup");
         setup.files[0].path.clone_from(&user_file);
         store.save(&setup).unwrap();
-        store.delete("my-setup", true).unwrap();
+        store.delete("my-setup").unwrap();
         assert_eq!(fs::read(&user_file).unwrap(), b"player data");
     }
 
@@ -403,24 +300,6 @@ mod tests {
             store.path("../escape"),
             Err(SetupError::UnsafeId(_))
         ));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn delete_with_data_refuses_a_symlinked_runtime_directory() {
-        let temp = TempDir::new().unwrap();
-        let store = SetupStore::new(temp.path().join("data"));
-        store.save(&setup("my-setup")).unwrap();
-        let outside = temp.path().join("outside");
-        fs::create_dir_all(&outside).unwrap();
-        fs::write(outside.join("sentinel"), b"safe").unwrap();
-        fs::create_dir_all(store.root()).unwrap();
-        std::os::unix::fs::symlink(&outside, store.dirs("my-setup").root).unwrap();
-        assert!(matches!(
-            store.delete("my-setup", true),
-            Err(SetupError::UnsafeId(_))
-        ));
-        assert_eq!(fs::read(outside.join("sentinel")).unwrap(), b"safe");
     }
 
     #[test]

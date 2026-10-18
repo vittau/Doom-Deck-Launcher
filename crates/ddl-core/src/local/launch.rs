@@ -15,11 +15,10 @@ use crate::engines::dsda::{AssignAllowlist, AssignOverride, EngineRunner, Launch
 use crate::iwads::identify::{Identifier, Outcome, sha256_file};
 use crate::iwads::registry::{FileTime, Registry, RegistryEntry, Source};
 use crate::iwads::{CanonicalLinks, Game as IwadsGame, IwadTable};
-use crate::profiles::Profile;
+use crate::profiles::{Profile, ProfileDirs};
 
 use super::kind::{IdentityError, UserFile};
 use super::setup::{CustomIwad, CustomSetup, SetupError};
-use super::store::SetupDirs;
 
 /// The `-assign` keys DDL owns (spec 005, R7), used by a custom launch too.
 #[must_use]
@@ -149,7 +148,7 @@ pub fn build_plan(
     }
 
     let iwad = resolve_iwad(&setup.iwad, registry, data_dir)?;
-    let dirs = SetupDirs::new(data_dir, &setup.id);
+    let dirs = ProfileDirs::new(data_dir, &profile.id);
     let skill = crate::engines::dsda::Skill::new(profile.skill)
         .map_err(|error| LaunchError::Setup(SetupError::Invalid(error.to_string())))?;
 
@@ -480,6 +479,13 @@ mod tests {
         .unwrap();
         // Not a known variant, so the user's own path is used.
         assert_eq!(plan.iwad, iwad.path);
+
+        // The user-file IWAD is checked with the other user files (R4).
+        std::fs::remove_file(&iwad.path).unwrap();
+        assert!(matches!(
+            verify_setup(&setup).as_slice(),
+            [IdentityError::Missing { .. }]
+        ));
     }
 
     #[test]

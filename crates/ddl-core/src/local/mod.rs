@@ -34,6 +34,7 @@ pub use launch::{
     verify_setup,
 };
 pub use setup::{
-    Compatibility, CustomIwad, CustomSetup, Group, SCHEMA_VERSION, SetupError, safe_id, slug,
+    Compatibility, CustomIwad, CustomSetup, Group, SCHEMA_VERSION, SetupError, group_indices,
+    safe_id, slug,
 };
-pub use store::{DIR, SetupDirs, SetupStore, has_saves};
+pub use store::{DIR, SetupStore, has_saves};
