@@ -77,7 +77,8 @@ component FittedText inherits Rectangle {
         wrap: root.multiline ? word-wrap : no-wrap;
     }
     line := Text {
-        visible: false; text: "Ag";
+        // A bundled family name is a fixed, non-copy, single-line metric sample.
+        visible: false; text: self.font-family;
         font-family: root.display ? "Pirata One" : "Barlow";
         font-size: root.fitted-size; font-weight: root.display || root.strong ? 600 : 400;
     }
