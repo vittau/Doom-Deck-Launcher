@@ -565,3 +565,12 @@
     plus everything in v0.0.5-screens.1. CI and the Linux e2e passed on the merge. Deck checks:
     S1–S3 and L1–L3 in docs/deck-testing.md.
   refs: [docs/deck-testing.md]
+- date: 2026-10-18
+  type: merge
+  summary: >-
+    Spec 027 merged: the single 355 s headless journey is split into 25 isolated tests (each in
+    its own subprocess with its own XDG root and artifact directory, runnable by name); the worst
+    test takes 37.5 s and the full workspace about 2 minutes warm, with 3 consecutive parallel runs
+    green. Every capture and assertion is mapped in the report; README regeneration uses the new
+    tests (the Play setup render was refreshed for spec 026's Extra files row).
+  refs: [docs/reports/027-split-headless-journey.md]

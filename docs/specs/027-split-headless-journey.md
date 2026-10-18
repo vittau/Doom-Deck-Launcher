@@ -1,6 +1,6 @@
 # 027 — Split the headless production journey into focused tests
 
-**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 010, 025, 026
+**Status:** Done  ·  **Milestone:** M3  ·  **Depends on:** 010, 025, 026
 **Owner request (2026-10-17):** "Esse teste tá muito longo, tem que quebrar depois em testes
 menores."
 
