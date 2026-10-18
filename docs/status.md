@@ -44,3 +44,7 @@
 | Uninstall a mapset (owner decision D-022: checkbox to also delete profiles and saves) | 022 | **Done** (A5 needs Deck): Uninstall on Mapset detail, confirm with "Also delete profiles and saves" (unchecked), crash-safe and path-contained, `ddl mapset uninstall <id> [--delete-profiles]`; also fixed a pre-existing duplicate "Play setup" button on detail |
 | Real mapset screenshots on cards (owner request 2026-10-17; D-024: bundled with source and credit) | 023 | **Done**: 23 bundled in-game shots for all 13 recipes with SOURCES.toml, `[[screenshots]]` field + lint; cards, Home, Library, detail and art band show them with a compact "Screenshot: <credit>" caption; painted art only as fallback. Deck: S1 |
 | GOG and other store IWAD paths | 021 | **Done** (A5 needs Deck): Heroic (native + Flatpak), minigalaxy, GOG offline default; opt-in standard Linux folders. Lutris stays manual (would need SQLite). GOG/id Anthology Final Doom hashes added to `data/iwads.toml`. |
+| Download idle timeout (60 s without data → clear error) + fix the flaky engine-download test | 024 | In progress (opencode) |
+| Long mapset titles fit their slots (found in 023 review) | 025 | In progress (Codex) |
+| Local content: arbitrary user WADs/patches, player-set load order, extras on top of catalog mapsets (D-026) | 026 | Phase A (core + CLI) in progress (opencode); phase B (file picker, order editor, Library/Play setup) on Codex after A |
+| Lutris IWAD discovery | — | Deferred (owner, 2026-10-17: "não precisa ainda") |

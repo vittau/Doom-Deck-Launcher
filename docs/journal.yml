@@ -500,3 +500,12 @@
     IWAD discovery, recipe updates after install and the Rose Compass logo. CI fix: the bundle
     step now passes the catalog serial explicitly (the first bundle had serial 0). Linux e2e green.
   refs: [docs/deck-testing.md]
+- date: 2026-10-17
+  type: decision
+  summary: >-
+    D-026: DDL must run arbitrary local content — any WAD/ZIP/DEH the player brings, with a
+    player-set load order, as standalone custom setups and as extra files on top of installed
+    catalog mapsets; files referenced in place by SHA-256, never executed or modified; badged
+    "Custom — not verified". Lutris deferred. New specs: 024 download idle timeout + flaky test,
+    025 long titles fit their slots, 026 local content (phase A core/CLI, phase B UI).
+  refs: [docs/decisions.md, docs/specs/024-download-idle-timeout.md, docs/specs/025-long-titles.md, docs/specs/026-local-content.md]
