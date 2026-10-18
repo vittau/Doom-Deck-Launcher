@@ -42,9 +42,11 @@ Changing UI behaviour or visuals; new coverage beyond what exists (welcome, but 
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R2) — the journey test is gone or reduced to a thin smoke; the report maps
+- [x] **A1** (R1, R2) — the journey test is gone or reduced to a thin smoke; the report maps
   every old section, capture and assertion to its new test.
-- [ ] **A2** (R3) — per-test durations and total wall time before/after in the report; the full
+- [x] **A2** (R3) — per-test durations and total wall time before/after in the report; the full
   default-parallel `cargo test --workspace` passes 3 times in a row.
-- [ ] **A3** (R4) — docs note; README screenshots regenerate byte-identically.
-- [ ] **A4** — fmt, clippy `-D warnings`, tests green.
+- [x] **A3** (R4) — docs note; README screenshots regenerate byte-identically.
+- [x] **A4** — fmt, clippy `-D warnings`, tests green.
+
+Verified in [reports/027-split-headless-journey.md](../reports/027-split-headless-journey.md).

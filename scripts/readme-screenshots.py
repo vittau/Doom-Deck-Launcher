@@ -15,6 +15,12 @@ IMAGES = {
     '010-play-setup-auger.png': 'play-setup.png',
     '015-detail-tags.png': 'mapset-detail.png',
 }
+# Each headless test writes under its own `DDL_HEADLESS_DIR/<case>/` (spec 027).
+PRODUCERS = (
+    'headless::journeys::library_favorite_and_home',
+    'headless::journeys::categories_favorites_and_screenshots',
+    'headless::journeys::auger_options_and_components',
+)
 
 
 def optimized_png(data):
@@ -45,14 +51,18 @@ def main():
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='ddl-readme-') as scratch:
-        subprocess.run(
-            ['cargo', 'test', '-p', 'ddl', 'fixture_screens_navigation_and_focus_render_headlessly'],
-            cwd=ROOT, env={**os.environ, 'DDL_HEADLESS_DIR': scratch}, check=True,
-        )
+        for case in PRODUCERS:
+            subprocess.run(
+                ['cargo', 'test', '-p', 'ddl', case],
+                cwd=ROOT, env={**os.environ, 'DDL_HEADLESS_DIR': scratch}, check=True,
+            )
+        root = Path(scratch)
         destination = ROOT / 'docs/screenshots'
         destination.mkdir(parents=True, exist_ok=True)
         for source, name in IMAGES.items():
-            data = optimized_png((Path(scratch) / source).read_bytes())
+            matches = list(root.rglob(source))
+            assert len(matches) == 1, f'{source}: {matches}'
+            data = optimized_png(matches[0].read_bytes())
             path = destination / name
             if args.check:
                 assert path.read_bytes() == data, f'stale screenshot: {path}'
