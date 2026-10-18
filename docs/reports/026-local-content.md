@@ -201,7 +201,7 @@ cargo test --workspace   (exit 0)
 ## Phase B — local content UI
 
 Implemented R8–R11 in the production runtime, with focused headless UI coverage for A3 and the
-UI share of A4. No core API change or new dependency was required. `main` was merged before
+UI share of A4. No new core query or dependency was required; the state-lock lifetime fix below was added after the coordinator requested investigation of a parallel-test regression. `main` was merged before
 finishing (includes specs 024 and 025); custom titles reuse spec 025's measured `Nodes::title`
 and local file rows use its fitted-label renderer. No visible window was opened and no screen
 was captured.
@@ -278,3 +278,101 @@ host has no `/run/media` mounted card to exercise. Auto compatibility, file kind
 are the phase A policy and pinned upstream facts above; phase B adds no engine assumptions.
 Optional renaming/on-screen keyboard remains omitted by the spec's explicit allowance for an
 automatic name. No other phase B requirement is left open.
+
+
+### Parallel-test regression and state-lock lifetime fix
+
+The first full run hit the known spec 025 fit-report directory failure. The fixed spec 025 was
+then merged from `main` (merge `b456099`), resolving the shared helper conflict by retaining
+`headless_dir()` and exposing `write_png` to the focused tests. No spec 025 behavior was rewritten.
+A subsequent run passed the long journey but failed once in the existing
+`cli_exec::tests::launch_profile_selects_isolated_paths_and_remembers_without_saving_overrides`
+at `NewProfile` immediately after `register_fake_iwads`, with `Problem::Busy`. That test passed
+when rerun alone. The coordinator required a source investigation and three consecutive full
+**default parallel** workspace runs; no thread limit or test skipping was used as a fix.
+
+**Confirmed audit:** `StateLock` opens `<config>/state.lock` with Rust `OpenOptions` and calls
+`std::fs::File::try_lock`; on this Unix host the operation is `flock(LOCK_EX | LOCK_NB)`, and
+`unlock` is `flock(LOCK_UN)` ([Rust 1.99.1 File API](https://doc.rust-lang.org/1.99.1/std/fs/struct.File.html#method.try_lock)).
+The guard previously had no `Drop` implementation: normal completion only closed its `File`.
+No production `dup`, `try_clone`, raw libc open, `FromRawFd` or explicit descriptor inheritance
+exists in the state-lock path. The docs specify that inherited/duplicated references can extend
+a lock until their last close; explicit unlock ends it immediately
+([Rust 1.99.1 unlock contract](https://doc.rust-lang.org/1.99.1/std/fs/struct.File.html#method.unlock)).
+
+**Confirmed environment audit:** the parent focused tests launch exactly one named test with
+`--exact`, and the child sets up its own fresh `TempDir`. Its `Environment` resolves paths through
+a closure that supplies only that temporary HOME and returns None for all XDG variables; inherited
+real HOME/XDG values do not select application state. Every focused case and every existing CLI
+fixture owns a separate scratch root. Only PNG output is shared, with distinct filenames; it is
+not a state-lock path.
+
+**Confirmed reproduction (macOS arm64, pinned Rust 1.99.1):** a standalone probe, independent of
+DDL, repeatedly opens/locks/drops one file while another thread runs 250 self-exec subprocesses.
+The child has `env_clear()` and immediately exits, so there is no DDL setup, shared XDG state,
+network or competing mutation. `fcntl(F_GETFD)` returns `1` on the lock fd in both variants;
+the installed macOS SDK header confirms `F_GETFD = 1` and `FD_CLOEXEC = 1`.
+
+```text
+implicit close: 43,316 acquisitions attempted; 95 transient WouldBlock results; FD_CLOEXEC set
+explicit unlock: 41,569 acquisitions attempted; 0 WouldBlock results; FD_CLOEXEC set
+```
+
+This demonstrates that close-on-exec did not by itself make the guard's logical release timely
+under concurrent process creation. The precise kernel spawn stage was not traced; a transient
+inherited open-file-description reference is the inference consistent with this reproduction
+and the documented semantics. The source defect is relying on the descriptor's final close
+instead of ending the mutation lock at guard drop.
+
+**Fix:** `StateLock::drop` explicitly unlocks. `end()` records a successful release so Drop does
+not unlock twice (important for the documented platform-dependent no-lock behavior). The normal
+mutual-exclusion contract is unchanged. The new deterministic test
+`dropping_the_guard_releases_even_with_another_descriptor_alive` keeps a duplicated descriptor
+alive after dropping the guard: it fails against the previous Drop behavior with Busy, passes
+with explicit unlock, and verifies that a newly acquired guard still excludes other acquisitions.
+This small core change was authorized by the coordinator's follow-up investigation request; it
+adds no dependency and no UI code to `ddl-core`.
+
+```text
+before fix: test result: FAILED. 0 passed; 1 failed (Busy)
+after fix: platform::lock::tests — 3 passed; 0 failed
+```
+
+Reproduction source (diagnostic only; the F_GETFD call is macOS-specific):
+
+```rust
+use std::{fs::OpenOptions, sync::{Arc, atomic::{AtomicBool, Ordering}}, process::{Command, Stdio}, thread, os::fd::AsRawFd};
+unsafe extern "C" { fn fcntl(fd: i32, cmd: i32, ...) -> i32; }
+fn main() {
+    if std::env::args().any(|s| s == "--child") { return; }
+    let explicit = std::env::args().any(|s| s == "--unlock");
+    let root = std::env::temp_dir().join(format!("ddl-lock-probe-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let path = root.join("state.lock");
+    let running = Arc::new(AtomicBool::new(true)); let flag = running.clone();
+    let worker = thread::spawn(move || {
+        for _ in 0..250 {
+            Command::new(std::env::current_exe().unwrap()).arg("--child")
+                .env_clear().stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).status().unwrap();
+        }
+        flag.store(false, Ordering::SeqCst);
+    });
+    let (mut attempts, mut busy) = (0u64,0u64); let mut flags = -1;
+    while running.load(Ordering::SeqCst) {
+        let file = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(&path).unwrap();
+        flags = unsafe { fcntl(file.as_raw_fd(), 1) };
+        match file.try_lock() {
+            Ok(()) => if explicit { file.unlock().unwrap(); },
+            Err(std::fs::TryLockError::WouldBlock) => busy += 1,
+            Err(e) => panic!("{e:?}"),
+        }
+        attempts += 1;
+    }
+    worker.join().unwrap();
+    println!("explicit_unlock={explicit} attempts={attempts} busy={busy} fd_flags={flags} (FD_CLOEXEC=1)");
+    std::fs::remove_dir_all(root).unwrap();
+}
+```
+
+Compile with `rustc --edition 2024 probe.rs -o probe`, then run `./probe` and `./probe --unlock`.
+The production regression test uses safe `File::try_clone` and contains no libc calls.

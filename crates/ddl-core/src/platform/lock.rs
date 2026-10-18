@@ -63,6 +63,7 @@ impl From<io::Error> for LockError {
 pub struct StateLock {
     path: PathBuf,
     file: File,
+    released: bool,
 }
 
 impl StateLock {
@@ -82,7 +83,11 @@ impl StateLock {
             .truncate(false)
             .open(&path)?;
         match file.try_lock() {
-            Ok(()) => Ok(Self { path, file }),
+            Ok(()) => Ok(Self {
+                path,
+                file,
+                released: false,
+            }),
             Err(TryLockError::WouldBlock) => Err(LockError::Busy),
             Err(TryLockError::Error(error)) => Err(LockError::Io(error)),
         }
@@ -99,8 +104,23 @@ impl StateLock {
     /// # Errors
     ///
     /// Returns [`LockError::Io`] when the advisory lock cannot be released.
-    pub fn end(self) -> Result<(), LockError> {
-        self.file.unlock().map_err(LockError::Io)
+    pub fn end(mut self) -> Result<(), LockError> {
+        self.file.unlock().map_err(LockError::Io)?;
+        self.released = true;
+        Ok(())
+    }
+}
+
+impl Drop for StateLock {
+    fn drop(&mut self) {
+        // Closing only this fd can leave an inherited/duplicated open-file
+        // description locked until its last reference closes. Explicitly end
+        // the guard's lock even during concurrent process creation.
+        if !self.released
+            && let Err(error) = self.file.unlock()
+        {
+            tracing::warn!(%error, path = %self.path.display(), "state lock release failed");
+        }
     }
 }
 
@@ -121,6 +141,25 @@ mod tests {
 
         lock.end().expect("release");
         StateLock::acquire(dir.path()).expect("acquire after release");
+    }
+
+    #[test]
+    fn dropping_the_guard_releases_even_with_another_descriptor_alive() {
+        let dir = tempdir().unwrap();
+        let lock = StateLock::acquire(dir.path()).unwrap();
+        // Models a descriptor duplicated during concurrent process creation.
+        // The duplicate stays alive beyond the guard's logical lifetime.
+        let duplicate = lock.file.try_clone().unwrap();
+        drop(lock);
+        let next = StateLock::acquire(dir.path())
+            .expect("a duplicate descriptor must not extend the mutation transaction");
+        drop(duplicate);
+        assert!(matches!(
+            StateLock::acquire(dir.path()),
+            Err(LockError::Busy)
+        ));
+        drop(next);
+        StateLock::acquire(dir.path()).unwrap();
     }
 
     #[test]
