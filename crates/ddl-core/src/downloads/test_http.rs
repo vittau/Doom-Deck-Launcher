@@ -32,6 +32,10 @@ pub struct Response {
     /// `delay` before each piece, instead of in one write. Lets a test model a
     /// slow-but-steady link or a server that stalls after the headers.
     pub trickle: Option<(usize, Duration)>,
+    /// When set (with `trickle`), the first piece is written immediately and
+    /// only the later pieces wait `delay`. Models a connection that delivers
+    /// some bytes and then goes quiet (spec 024 idle tests).
+    pub first_now: bool,
 }
 
 impl Response {
@@ -48,6 +52,7 @@ impl Response {
             headers: Vec::new(),
             body: Vec::new(),
             trickle: None,
+            first_now: false,
         }
     }
 
@@ -74,6 +79,15 @@ impl Response {
     #[must_use]
     pub fn trickle(mut self, chunk: usize, delay: Duration) -> Self {
         self.trickle = Some((chunk, delay));
+        self
+    }
+
+    /// Sends the first `chunk` bytes immediately, then waits `delay` before
+    /// each remaining piece: a connection that delivers some data and stalls.
+    #[must_use]
+    pub fn stall_after(mut self, chunk: usize, delay: Duration) -> Self {
+        self.trickle = Some((chunk, delay));
+        self.first_now = true;
         self
     }
 }
@@ -187,8 +201,10 @@ where
     // pause. Everything else goes out in one write.
     match response.trickle {
         Some((chunk, delay)) => {
-            for piece in response.body.chunks(chunk.max(1)) {
-                thread::sleep(delay);
+            for (index, piece) in response.body.chunks(chunk.max(1)).enumerate() {
+                if !(response.first_now && index == 0) {
+                    thread::sleep(delay);
+                }
                 stream.write_all(piece)?;
                 stream.flush()?;
             }
