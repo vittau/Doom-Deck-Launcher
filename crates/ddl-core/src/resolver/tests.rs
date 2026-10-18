@@ -514,7 +514,14 @@ fn missing_iwad_names_the_game_and_vanilla_resolves_per_family() {
         )
         .expect("resolve");
         assert_eq!(resolution.summary().complevel, expected, "{variant}");
-        assert_eq!(resolution.plan().complevel.value(), expected);
+        assert_eq!(
+            resolution
+                .plan()
+                .complevel
+                .expect("a catalog launch pins a complevel")
+                .value(),
+            expected
+        );
     }
 }
 
@@ -699,4 +706,147 @@ fn summary_snapshot_for_the_three_reference_recipes() {
         );
         assert_eq!(text, expected, "{id}");
     }
+}
+
+/// Reads a small user file fixture of the given content kind.
+fn user_file(dir: &Path, name: &str, bytes: &[u8]) -> crate::local::UserFile {
+    let path = dir.join(name);
+    fs::write(&path, bytes).expect("write user file");
+    crate::local::UserFile::read(&path).expect("accepted user file")
+}
+
+/// A minimal valid PWAD with the given lump names; no real game data.
+fn pwad(lumps: &[&str]) -> Vec<u8> {
+    let mut directory = Vec::new();
+    for name in lumps {
+        directory.extend_from_slice(&0_i32.to_le_bytes());
+        directory.extend_from_slice(&0_i32.to_le_bytes());
+        let mut padded = [0_u8; 8];
+        let len = name.len().min(8);
+        padded[..len].copy_from_slice(&name.as_bytes()[..len]);
+        directory.extend_from_slice(&padded);
+    }
+    let mut out = Vec::new();
+    out.extend_from_slice(b"PWAD");
+    out.extend_from_slice(&(lumps.len() as i32).to_le_bytes());
+    out.extend_from_slice(&12_i32.to_le_bytes());
+    out.extend_from_slice(&directory);
+    out
+}
+
+#[test]
+fn profile_extras_load_after_the_recipe_files_and_patches() {
+    // Spec 026, A2/R3/R5: the recipe's verified order is never changed; extras
+    // go after it, WAD/ZIP in list order into `-file`, DEH/BEX into `-deh`.
+    let dir = TempDir::new().unwrap();
+    let data = dir.path();
+    let recipe = embedded("alien-vendetta");
+    let registry = iwad_registry(data, "doom2-1.9", IwadsGame::Doom2, b"doom2 bytes");
+    let (engine, _) = engine(data);
+    let config = config(data);
+
+    let mut manifest = empty_manifest(&recipe);
+    let maps = add_member(data, &mut manifest, &recipe, "free", "maps", b"main maps");
+    let patch = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "free",
+        "patch",
+        b"recipe patch",
+    );
+
+    let extra_wad = user_file(data, "extra.wad", &pwad(&["MAP01"]));
+    let extra_deh = user_file(
+        data,
+        "extra.deh",
+        b"Patch File for DeHackEd v3.0\nThing 1\nHit points = 30\n",
+    );
+
+    let profile = Profile {
+        extras: vec![extra_wad.clone(), extra_deh.clone()],
+        ..Profile::new("p1", "Play", "alien-vendetta")
+    };
+    let resolution = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve with extras");
+    assert_eq!(
+        resolution.plan().files,
+        vec![maps.clone(), extra_wad.path.clone()],
+        "recipe files come first, extras after"
+    );
+    assert_eq!(
+        resolution.plan().patches,
+        vec![patch.clone(), extra_deh.path.clone()],
+        "recipe patches come first, extra patches after"
+    );
+    assert_eq!(
+        resolution.summary().content.len(),
+        2,
+        "the summary lists the extra file too"
+    );
+    assert_eq!(resolution.summary().content[1].label, "Extra file");
+
+    // A missing extra blocks the launch and is named (R4).
+    fs::remove_file(&extra_wad.path).unwrap();
+    let never = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect_err("missing extra");
+    match never {
+        Blocker::UserFileMissing { path } => assert_eq!(path, extra_wad.path),
+        other => panic!("expected UserFileMissing, got {other}"),
+    }
+
+    // A changed extra blocks until the player confirms (R4).
+    let changed = user_file(data, "changed.wad", &pwad(&["MAP01"]));
+    fs::write(&changed.path, pwad(&["MAP02", "MAP03"])).unwrap();
+    let profile = Profile {
+        extras: vec![changed.clone()],
+        ..Profile::new("p1", "Play", "alien-vendetta")
+    };
+    let blocked = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect_err("changed extra");
+    assert!(
+        matches!(blocked, Blocker::UserFileChanged { .. }),
+        "{blocked}"
+    );
+    assert!(blocked.to_string().contains("confirm"), "{blocked}");
+
+    // Re-recording the change lets the same launch through.
+    let mut extras = profile.extras.clone();
+    crate::local::accept_changed(&mut extras).expect("accept the change");
+    let profile = Profile {
+        extras,
+        ..Profile::new("p1", "Play", "alien-vendetta")
+    };
+    assert!(
+        resolve(
+            &recipe,
+            &profile,
+            &Iwads::new(data, &registry),
+            &manifest,
+            Some(&engine),
+            &config,
+        )
+        .is_ok()
+    );
 }

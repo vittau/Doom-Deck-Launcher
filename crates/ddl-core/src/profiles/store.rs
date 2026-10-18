@@ -430,4 +430,23 @@ mod tests {
             Err(ProfileError::UnsupportedSchema(99))
         ));
     }
+
+    #[test]
+    fn a_profile_written_before_spec_026_loads_without_extras() {
+        // Spec 026, R5/A2: `extras` is additive, so an older document is valid.
+        let config = TempDir::new().unwrap();
+        let data = TempDir::new().unwrap();
+        let store = ProfileStore::new(config.path(), data.path());
+        fs::create_dir_all(store.root()).unwrap();
+        let legacy = r#"{
+  "schema_version": 1,
+  "id": "p1",
+  "name": "Default",
+  "recipe_id": "sigil-test",
+  "skill": 3
+}"#;
+        fs::write(store.root().join("p1.json"), legacy).unwrap();
+        let profile = store.load("p1").expect("legacy profile loads");
+        assert!(profile.extras.is_empty());
+    }
 }

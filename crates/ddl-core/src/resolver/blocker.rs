@@ -52,6 +52,17 @@ pub enum Blocker {
         /// What failed.
         detail: String,
     },
+    /// A user file attached to the launch is gone (spec 026, R4).
+    UserFileMissing {
+        /// The missing path.
+        path: PathBuf,
+    },
+    /// A user file changed since DDL recorded it and the player has not
+    /// confirmed the change (spec 026, R4).
+    UserFileChanged {
+        /// The changed path.
+        path: PathBuf,
+    },
 }
 
 impl fmt::Display for Blocker {
@@ -77,6 +88,16 @@ impl fmt::Display for Blocker {
             Self::IntegrityFailed { detail } => {
                 write!(f, "installed content failed an integrity check: {detail}")
             }
+            Self::UserFileMissing { path } => write!(
+                f,
+                "your file `{}` is missing; re-add it or remove it from the list",
+                path.display()
+            ),
+            Self::UserFileChanged { path } => write!(
+                f,
+                "your file `{}` changed since DDL recorded it; confirm the change to use it",
+                path.display()
+            ),
         }
     }
 }
