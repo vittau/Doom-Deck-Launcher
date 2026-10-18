@@ -16,8 +16,8 @@ each with its own scratch XDG root and its own artifact directory. The full
   becomes `shell_navigation_and_focus_render_headlessly`, which covers only the
   spec 008/010 shell navigation and focus walk.
 - `crates/ddl/src/headless_journeys.rs` (new) — 24 isolated tests: 12 production
-  journey segments, the four formerly separate journeys, and nine title-fit
-  passes.
+  journey segments, three formerly separate journeys (categories, recipe changes,
+  uninstall), and nine title-fit passes.
 - `crates/ddl/src/headless_production.rs` — the journey's fixture block becomes
   `Scene` + `scene()`; the linear body is split into `first_run`, `iwad_review`,
   `discover_and_detail`, `install_and_setup`, `play_setup_options`,
