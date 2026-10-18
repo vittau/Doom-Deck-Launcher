@@ -2248,7 +2248,11 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
                 ));
             }
             if screen == Screen::Setup {
-                let rows: Vec<_> = ui.get_nodes().iter().filter(|n| n.fitted_label).collect();
+                let rows: Vec<_> = ui
+                    .get_nodes()
+                    .iter()
+                    .filter(|n| n.fitted_label || (n.kind == 8 && (100..200).contains(&n.id)))
+                    .collect();
                 assert_eq!(
                     rows.len(),
                     recipe.components.len(),
@@ -2256,12 +2260,12 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
                 );
                 for n in rows {
                     ui.set_fit_label(n.label.clone());
-                    ui.set_fit_width(n.w - if n.kind == 14 { 12. } else { 32. });
-                    ui.set_fit_height(if n.kind == 14 { 26. } else { 30. });
+                    ui.set_fit_width(n.w - if n.kind == 8 { 16. } else { 32. });
+                    ui.set_fit_height(if n.kind == 8 { n.h - 16. } else { 30. });
                     ui.set_fit_size(n.size);
                     ui.set_fit_smaller(20.);
                     ui.set_fit_display(false);
-                    ui.set_fit_strong(n.kind == 3 || n.primary);
+                    ui.set_fit_strong(n.kind == 3);
                     ui.set_fit_multiline(audit);
                     ui.set_fit_full(false);
                     if audit && ui.get_fit_base_height() > ui.get_fit_height() {
@@ -2285,7 +2289,12 @@ pub(super) fn title_fit_journey(window: &MinimalSoftwareWindow, ui: &AppWindow) 
                         r.focus = n.id;
                         r.sync(ui);
                     }
-                    capture(window, &format!("025-component-{}-{}.png", recipe.id, n.id));
+                    capture_component(
+                        window,
+                        ui,
+                        &n,
+                        &format!("025-component-{}-{}.png", recipe.id, n.id),
+                    );
                 }
             }
             capture(window, &format!("025-{name}-{}.png", recipe.id));
@@ -2377,4 +2386,42 @@ fn assert_title_pixels_fit(window: &MinimalSoftwareWindow, ui: &AppWindow, conte
         );
     }
     assert!(ink > 0, "{context}: text must actually render");
+}
+
+/// Check the real row/button too: a correct isolated fitter must not hide a
+/// component label through a production visibility or implicit-height binding.
+fn capture_component(
+    window: &MinimalSoftwareWindow,
+    ui: &AppWindow,
+    node: &crate::ViewNode,
+    name: &str,
+) {
+    let frame = render(window);
+    let button = node.kind == 8;
+    let inset = if button { 8. } else { 20. };
+    let x = (28. + node.x + inset) as u32;
+    let y = (218. + node.y - ui.get_scroll_offset() + 8.) as u32;
+    let w = (node.w - inset * 2.) as u32;
+    let h = if button { node.h as u32 - 16 } else { 30 };
+    assert!(
+        x + w <= WIDTH && y >= 210 && y + h <= HEIGHT - 64,
+        "{name}: component must be in the viewport"
+    );
+    let color = if node.primary {
+        (0x12, 0x0c, 0x0d)
+    } else {
+        (0xf8, 0xea, 0xd5)
+    };
+    let ink = (y..y + h)
+        .flat_map(|y| (x..x + w).map(move |x| (x, y)))
+        .filter(|(x, y)| {
+            let p = frame.as_slice()[(*y * WIDTH + *x) as usize];
+            (p.r, p.g, p.b) == color
+        })
+        .count();
+    assert!(
+        ink > 0,
+        "{name}: production component label must be visible"
+    );
+    write_png(name, &frame);
 }

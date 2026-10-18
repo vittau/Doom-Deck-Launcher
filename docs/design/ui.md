@@ -91,8 +91,8 @@ one title line above the profile name. Detail reserves 96 px and uses 44→36 px
 complete catalog title, including parenthesized qualifiers, without elision. Keep a 4 px
 glyph inset for display-face side bearings. Sheet headings share the same fitting behavior.
 Play setup component rows retain a 30 px label slot above their explanation: Barlow 22→20 px,
-one line with elision as needed. Exclusive component choices already use one elided line at
-the minimum 20 px scale.
+one line with elision as needed. Exclusive component choices use the same fitter at the minimum 20 px scale, keeping
+their centered single-line treatment and eliding long labels.
 
 Preserve filename case. Wrap titles and descriptions; directory breadcrumbs elide from the
 start so the destination remains visible. No essential tooltips. Minimum control height 52 px;

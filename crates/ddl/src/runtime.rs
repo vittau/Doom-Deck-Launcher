@@ -1892,7 +1892,6 @@ impl Runtime {
                                         member.label.clone().into(),
                                         item.profile.components.contains(&member.id),
                                     );
-                                    b.nodes.last_mut().unwrap().fitted_label = true;
                                 }
                                 y += 36. + rows as f32 * 60. + 12.;
                                 continue;
