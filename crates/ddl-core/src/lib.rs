@@ -8,7 +8,8 @@
 //! Spec 009 adds the mapset [`library`], [`profiles`] and the [`resolver`] that
 //! ties a recipe, a profile and installed state into a launch plan. Earlier
 //! specs add [`catalog`] (recipes), [`downloads`] (fetching and safe extraction)
-//! and [`iwads`] (the base-game library).
+//! and [`iwads`] (the base-game library). Spec 026 adds [`local`]: custom
+//! setups and extra files with a player-set load order (decision D-026).
 #![forbid(unsafe_code)]
 
 pub mod catalog;
@@ -17,6 +18,7 @@ pub mod dsda_config;
 pub mod engines;
 pub mod iwads;
 pub mod library;
+pub mod local;
 pub mod platform;
 pub mod profiles;
 pub mod resolver;

@@ -194,6 +194,37 @@ pub fn resolve(
     }
 
     let complevel = resolve_complevel(recipe, iwad_game)?;
+
+    // Spec 026, R3/R5: the profile's extra user files load after the recipe's
+    // own files, recipe patches before extra patches. The recipe's verified
+    // order is never changed. Every extra is checked first (R4).
+    for extra in &profile.extras {
+        match extra.verify() {
+            Ok(()) => {}
+            Err(crate::local::IdentityError::Missing { path }) => {
+                return Err(Blocker::UserFileMissing { path });
+            }
+            Err(crate::local::IdentityError::Changed { path }) => {
+                return Err(Blocker::UserFileChanged { path });
+            }
+            Err(crate::local::IdentityError::Unreadable { path, error }) => {
+                return Err(Blocker::IntegrityFailed {
+                    detail: format!("could not read `{}`: {error}", path.display()),
+                });
+            }
+        }
+        if extra.kind.is_patch() {
+            patches.push(extra.path.clone());
+        } else {
+            files.push(extra.path.clone());
+            content.push(SummaryContent {
+                position: files.len(),
+                label: "Extra file".to_owned(),
+                path: extra.path.clone(),
+            });
+        }
+    }
+
     let skill = Skill::new(profile.skill).map_err(|error| Blocker::IncompatibleChoice {
         detail: error.to_string(),
     })?;
@@ -206,7 +237,7 @@ pub fn resolve(
         iwad: canonical.clone(),
         files,
         patches,
-        complevel,
+        complevel: Some(complevel),
         skill,
         warp,
         pistol_start: profile.pistol_start,
