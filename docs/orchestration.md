@@ -65,9 +65,12 @@ task may reuse that task's terminal. After settlement: release the worker, close
    (spot-check one or two against the source), acceptance criteria met, headless PNGs looked at.
    Send fixes back to the **same** terminal *before* releasing: `worker-release` of a
    worker-started Codex/Claude dispatch closes its terminal (`closed_agent_terminal`).
-7. **Merge** with `git merge --no-ff` into `main`; resolve test-list conflicts (embedded recipe
+7. **Merge** with `git merge --no-ff`; resolve test-list conflicts (embedded recipe
    ids, item counts) as the union; then run `cargo fmt --all --check`, `cargo clippy --workspace
-   --all-targets -- -D warnings` and `cargo test --workspace` **on `main`** before pushing. After
+   --all-targets -- -D warnings` and `cargo test --workspace` on the merge result before pushing.
+   Worktrees share the local `main` ref, so a worker that merges `main` picks up an unverified
+   merge: while workers are running, merge on a scratch branch (`git switch -c verify/<task>`),
+   check there, then fast-forward `main` (`git switch main && git merge --ff-only verify/<task>`). After
    catalog or download changes also run the Linux e2e: `gh workflow run e2e.yml --ref main`.
    Then `worker-release`, close the terminal, `worktree rm`, and update `docs/status.md` and
    `docs/journal.yml`. Keep merged task branches on the remote unless the owner asks
