@@ -468,3 +468,34 @@ then their save/data/shot/run directories (spec 018 order). Favorites stay — t
 preference — and the shared download cache and IWAD links are untouched. `ddl mapset uninstall <id>
 [--delete-profiles]` performs the same transaction headlessly and refuses while the UI holds the
 state lock.
+
+## 11. Local content (spec 026)
+
+Library offers **New custom setup** as a normal focused action and on **Y**. The player keeps
+an automatic “Custom setup N” name, chooses an identified base IWAD or a local file whose content
+has an `IWAD` header, and chooses Auto compatibility or a documented numeric level (0–17, 21).
+Auto explicitly says **“DSDA-Doom decides”**. Custom detail, Library cards and Home Continue use
+the original painted fallback art and **Custom — not verified**. Continue reopens the setup;
+it does not automatically load an engine save.
+
+**File order** has two groups: **Files (load order)** and **Patches (applied after files, in
+order)**. **A** picks up the focused entry, **Up/Down** moves it within its group, **A** drops,
+**X** removes the reference, and **Y** opens the file picker. Removing never deletes the player's
+file. An installed mapset's Play setup offers **Extra files** for the active profile. Its enabled
+recipe members precede the extras in each group, dimmed and locked; focus skips them. Opening
+this editor warns when that profile has saves: **“Existing saves may not load after changing
+extra files.”**
+
+The picker starts at the home directory, with Home, existing Downloads/Documents, Steam libraries
+and mounted `/run/media/...` shortcuts. Only content-validated WAD/ZIP/DEH/BEX files and navigable
+folders appear; kind and size accompany files. **A** toggles selection, retaining it across
+folders; **Start** or **Add N files** adds the selection. **B** cancels the picker and restores
+its editor. The IWAD-only picker filters further to files with an `IWAD` header. No text entry
+or native file dialog is required.
+
+Missing/changed files block Play in an Ember sheet naming the path. Changed files require the
+explicit **Use the changed file** action; initial focus remains Cancel. Custom detail's **Delete
+setup** uses the same Ember sheet, naming the setup and stating **“Your files are never touched.”**
+The **Also delete profiles and saves** checkbox starts unchecked each time; unchecked retains
+profiles/saves, checked deletes DDL-owned profiles, saves and screenshots. **A** toggles the
+checkbox, **B** cancels, and focus starts on Cancel.

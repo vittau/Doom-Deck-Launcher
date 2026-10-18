@@ -512,8 +512,21 @@ impl Services {
                         }
                     }
                     directory.entries.sort_by(|a, b| {
-                        b.1.cmp(&a.1)
-                            .then_with(|| a.0.file_name().cmp(&b.0.file_name()))
+                        hidden_path(&a.0)
+                            .cmp(&hidden_path(&b.0))
+                            .then(b.1.cmp(&a.1))
+                            .then_with(|| {
+                                a.0.file_name()
+                                    .unwrap_or_default()
+                                    .to_string_lossy()
+                                    .to_lowercase()
+                                    .cmp(
+                                        &b.0.file_name()
+                                            .unwrap_or_default()
+                                            .to_string_lossy()
+                                            .to_lowercase(),
+                                    )
+                            })
                     });
                     directory.shortcuts.splice(
                         1..1,

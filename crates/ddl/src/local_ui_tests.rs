@@ -8,6 +8,29 @@ use std::{
     time::{Duration, Instant},
 };
 
+// Slint's platform is process-global. Separate named tests re-execute only their
+// own case in a headless subprocess, leaving the long production journey alone.
+fn isolated(name: &str) -> bool {
+    if std::env::var("DDL_LOCAL_CASE").as_deref() == Ok(name) {
+        return false;
+    }
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            &format!("runtime::local_ui::tests::{name}"),
+            "--nocapture",
+        ])
+        .env("DDL_LOCAL_CASE", name)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    true
+}
 fn environment(home: &Path) -> Environment {
     fs::create_dir_all(home).unwrap();
     let paths = ddl_core::platform::paths::resolve(&|key: &str| {
@@ -82,6 +105,9 @@ fn runtime(env: &Environment, services: &Services, ui: &AppWindow) -> Runtime {
 
 #[test]
 fn local_new_setup_iwad_compatibility_and_content_filtered_multiselect() {
+    if isolated("local_new_setup_iwad_compatibility_and_content_filtered_multiselect") {
+        return;
+    }
     let (window, ui) = setup();
     ui.show().unwrap();
     let temp = tempfile::tempdir().unwrap();
@@ -96,6 +122,7 @@ fn local_new_setup_iwad_compatibility_and_content_filtered_multiselect() {
     write_png("026-new-custom.png", &render(&window));
     click(&mut r, &ui, 1); // IWAD picker
     assert_eq!(r.local.view, Some(View::Iwad));
+    write_png("026-iwad-picker.png", &render(&window));
     click(&mut r, &ui, 1); // local IWAD file
     assert_eq!(r.directory.as_ref().unwrap().path, env.home);
     let d = r.directory.as_ref().unwrap();
@@ -149,10 +176,49 @@ fn local_new_setup_iwad_compatibility_and_content_filtered_multiselect() {
     act(&mut r, &ui, Action::Back);
     assert_eq!(r.local.view, Some(View::Order));
     assert!(files.iter().all(|p| p.is_file()));
+    act(&mut r, &ui, Action::Back); // custom detail
+    click(&mut r, &ui, 4);
+    click(&mut r, &ui, 29); // documented level 21
+    assert_eq!(
+        r.local_setup()
+            .unwrap()
+            .compatibility
+            .level()
+            .unwrap()
+            .value(),
+        21
+    );
+    click(&mut r, &ui, 4);
+    click(&mut r, &ui, 10); // restore Auto
+    assert_eq!(r.local_setup().unwrap().compatibility, Compatibility::Auto);
+    // Use the existing explicit fake-registry seam; no game data is needed.
+    let mut refreshed = Services::open(env.clone()).unwrap();
+    refreshed
+        .register_fake_iwads(&temp.path().join("identified"))
+        .unwrap();
+    r.snapshot = Some(refreshed.snapshot().unwrap());
+    r.sync(&ui);
+    let variant = r
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .iwads
+        .iter()
+        .find_map(|e| e.variant.clone())
+        .unwrap();
+    click(&mut r, &ui, 3);
+    write_png("026-iwad-picker.png", &render(&window));
+    click(&mut r, &ui, 10);
+    assert!(
+        matches!(&r.local_setup().unwrap().iwad, CustomIwad::Identified { variant: selected } if selected == &variant)
+    );
 }
 
 #[test]
 fn local_order_moves_with_dpad_stays_in_group_and_removes_without_deleting() {
+    if isolated("local_order_moves_with_dpad_stays_in_group_and_removes_without_deleting") {
+        return;
+    }
     let (window, ui) = setup();
     ui.show().unwrap();
     let temp = tempfile::tempdir().unwrap();
@@ -180,22 +246,32 @@ fn local_order_moves_with_dpad_stays_in_group_and_removes_without_deleting() {
 
 #[test]
 fn local_custom_library_home_missing_changed_and_delete_dialog() {
+    if isolated("local_custom_library_home_missing_changed_and_delete_dialog") {
+        return;
+    }
     let (window, ui) = setup();
     ui.show().unwrap();
     let temp = tempfile::tempdir().unwrap();
     let env = environment(&temp.path().join("home"));
     let (s, files) = custom(&env);
-    let store = ProfileStore::new(&env.paths.data);
+    let store = ProfileStore::new(&env.paths.config, &env.paths.data);
     let mut profile = store.load_optional("night-maps-default").unwrap().unwrap();
     profile.touch(1000);
     store.save(&profile).unwrap();
     let mut r = runtime(&env, &s, &ui);
+    act(&mut r, &ui, Action::Down);
+    assert_eq!(r.focus, CUSTOM);
+    act(&mut r, &ui, Action::Up);
+    assert_eq!(r.focus, NEW);
     write_png("026-library-custom.png", &render(&window));
-    r.screen = Screen::Home;
-    r.sync(&ui);
+    act(&mut r, &ui, Action::Tab(0));
+    assert_eq!(r.focus, CUSTOM);
+    assert_eq!(ui.get_band_art(), 4);
+    assert!(ui.get_band_screenshot().is_empty());
     assert!(r.nodes.iter().any(|n| n.id == CUSTOM));
     write_png("026-home-custom.png", &render(&window));
     click(&mut r, &ui, CUSTOM);
+    write_png("026-custom-detail.png", &render(&window));
     fs::remove_file(&files[0]).unwrap();
     r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
     r.sync(&ui);
@@ -228,6 +304,17 @@ fn local_custom_library_home_missing_changed_and_delete_dialog() {
     assert_eq!(r.focus, 901);
     act(&mut r, &ui, Action::Confirm);
     assert!(r.local_issue().is_none());
+    // A changed player-file IWAD follows the same explicit acceptance path.
+    let base = env.home.join("base.wad");
+    let mut changed_base = fs::read(&base).unwrap();
+    changed_base.extend_from_slice(b"new");
+    fs::write(&base, changed_base).unwrap();
+    r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
+    r.sync(&ui);
+    click(&mut r, &ui, 1);
+    assert!(matches!(r.local.dialog, Some(Dialog::Issue(_, true))));
+    click(&mut r, &ui, 901);
+    assert!(r.local_issue().is_none());
     click(&mut r, &ui, 5);
     assert_eq!(r.focus, 900);
     assert!(!r.local.delete_profiles);
@@ -254,14 +341,23 @@ fn local_custom_library_home_missing_changed_and_delete_dialog() {
 
 #[test]
 fn local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scope() {
+    if isolated("local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scope") {
+        return;
+    }
     let (window, ui) = setup();
     ui.show().unwrap();
     let (_temp, _server, env, _hits) = crate::services::recipe_change_tests::setup();
     let files = fixtures(&env.home);
     let mut s = crate::services::recipe_change_tests::installed(&env);
+    s.execute(
+        Command::NewProfile("auger-zenith".into(), false),
+        &CancellationToken::new(),
+        &mut |_| {},
+    )
+    .unwrap();
     s.extras_add("auger-zenith", None, &files).unwrap();
     let profile = s.extras_list("auger-zenith", None).unwrap();
-    let store = ProfileStore::new(&env.paths.data);
+    let store = ProfileStore::new(&env.paths.config, &env.paths.data);
     let save = store.dirs(&profile.id).save;
     fs::create_dir_all(&save).unwrap();
     fs::write(save.join("save0.dsg"), b"save").unwrap();
@@ -271,6 +367,8 @@ fn local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scop
     r.focus = 60;
     r.sync(&ui);
     assert!(r.nodes.iter().any(|n| n.id == EXTRAS));
+    r.focus = EXTRAS;
+    r.sync(&ui);
     write_png("026-play-setup-extras.png", &render(&window));
     click(&mut r, &ui, EXTRAS);
     assert!(matches!(r.local.dialog, Some(Dialog::Saves)));
@@ -291,9 +389,43 @@ fn local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scop
     act(&mut r, &ui, Action::Confirm);
     act(&mut r, &ui, Action::Down);
     act(&mut r, &ui, Action::Confirm);
+    assert!(
+        store
+            .load_optional("auger-zenith-default")
+            .unwrap()
+            .unwrap()
+            .extras
+            .is_empty()
+    );
     let saved = Services::open(env)
         .unwrap()
         .extras_list("auger-zenith", Some(&profile.id))
         .unwrap();
     assert_eq!(saved.extras[1].path, files[0]);
+}
+
+#[test]
+fn local_delete_checked_removes_only_owned_profiles_and_saves() {
+    if isolated("local_delete_checked_removes_only_owned_profiles_and_saves") {
+        return;
+    }
+    let (_window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (s, files) = custom(&env);
+    let store = ProfileStore::new(&env.paths.config, &env.paths.data);
+    let dirs = store.dirs("night-maps-default");
+    fs::create_dir_all(&dirs.save).unwrap();
+    fs::write(dirs.save.join("save0.dsg"), b"save").unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    click(&mut r, &ui, CUSTOM);
+    click(&mut r, &ui, 5);
+    click(&mut r, &ui, 902);
+    assert!(r.local.delete_profiles);
+    click(&mut r, &ui, 901);
+    assert!(store.load_optional("night-maps-default").unwrap().is_none());
+    assert!(!dirs.root.exists());
+    assert!(files.iter().all(|p| p.is_file()));
+    assert!(env.home.join("base.wad").is_file());
 }

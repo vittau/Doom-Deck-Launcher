@@ -370,10 +370,14 @@ impl Runtime {
                             }
                         }
                         Err(Problem::Local(message)) => {
-                            self.local_show_issue((
-                                message.clone(),
-                                message.contains("changed since"),
-                            ));
+                            if message.contains("changed since") || message.contains("is missing") {
+                                self.local_show_issue((
+                                    message.clone(),
+                                    message.contains("changed since"),
+                                ));
+                            } else {
+                                self.local_error(message);
+                            }
                         }
                         Err(problem) => {
                             self.problem = Some(problem);
@@ -2593,6 +2597,7 @@ impl Runtime {
         if !self.playing
             && self.focus >= 0
             && self.sheet.is_none()
+            && self.local.dialog.is_none()
             && !self
                 .nodes
                 .iter()

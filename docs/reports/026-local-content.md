@@ -197,3 +197,84 @@ cargo test --workspace   (exit 0)
 
 496 tests passed. The headless UI suite (`ddl` unit, ~196 s) is included and green with the added
 `Blocker` match arm.
+
+## Phase B — local content UI
+
+Implemented R8–R11 in the production runtime, with focused headless UI coverage for A3 and the
+UI share of A4. No core API change or new dependency was required. `main` was merged before
+finishing (includes specs 024 and 025); custom titles reuse spec 025's measured `Nodes::title`
+and local file rows use its fitted-label renderer. No visible window was opened and no screen
+was captured.
+
+### Changes
+
+- `Snapshot` now carries custom setups, profiles, worker-checked file issues and the profile ids
+  that have saves. `LocalCommand` routes reads, validation, changes and launch to the existing
+  services worker thread. Custom launch calls `run_custom`, using its existing run guard,
+  fakeable engine boundary, isolated config and profile save directories. Extra changes call
+  `accept_extra_changes`; custom acceptance also covers a changed player-file IWAD.
+- Library has **New custom setup**, also reachable on Y, with the first unused automatic name.
+  Controller pickers offer identified IWAD variants, a player file with an `IWAD` header, and
+  Auto or the reviewed compatibility numbers. The player can edit these choices from custom
+  detail. Custom cards and Home Continue/history use the existing painted fallback art and
+  **Custom — not verified**; profiles with extras receive the same badge.
+- The file picker extends the existing directory service, begins at home and supplies home,
+  existing Downloads/Documents, Steam-library and `/run/media/...` mount shortcuts. It uses
+  `UserFile::read` for accepted files, shows detected kind/size, keeps selection across folders,
+  toggles with A, confirms with Start or **Add N files**, and cancels with B. Invalid suffix or
+  content combinations are hidden. Unreadable/broken entries are skipped. Full paths remain in
+  the model and selected-directory breadcrumb; shortcut rows stay compact, and long directory
+  paths are shortened for display.
+- The order editor keeps **Files (load order)** and **Patches (applied after files, in order)**
+  separate. A picks up/drops, Up/Down persists moves within a group, X removes only the
+  reference, Y adds. Catalog extras apply to the active profile; enabled recipe members are
+  derived from the installed manifest in recipe order, dimmed, locked and skipped by focus.
+  Opening extras with existing saves warns that saves may not load after changes.
+- Missing/changed-file sheets name the path and block Play. Cancel has initial focus; a changed
+  file requires **Use the changed file**. Custom deletion names the setup, states that the
+  player's files are never touched, and defaults the D-022 profiles/saves checkbox to unchecked.
+  The checked and unchecked paths both use the phase A deletion operation.
+
+### Focused headless verification
+
+The pre-existing long headless journey was **not extended**. Slint permits one platform setup
+per process, so five independently named tests re-execute only their own case in a headless
+subprocess. Each subprocess uses `MinimalSoftwareWindow` and the Slint software renderer;
+calling `show()` there creates only the off-screen surface. No native backend is initialized.
+
+| Requirement | Test evidence |
+| --- | --- |
+| R8 / R10 / R11 | `local_new_setup_iwad_compatibility_and_content_filtered_multiselect`: Library Y entry, home start, Downloads/Documents shortcuts, false-WAD and PK3 rejection, IWAD-only filtering, Auto creation, persisted explicit level 21 and identified-IWAD selection via the existing fake registry seam, two A-selected files, Start addition and B cancellation. |
+| R9 | `local_order_moves_with_dpad_stays_in_group_and_removes_without_deleting`: D-pad focus into the first file, pickup, move, boundary clamp before patches, drop, X removal, original file retained. |
+| R10 / R4 / R6 | `local_custom_library_home_missing_changed_and_delete_dialog`: Library focus order, custom Continue focus/fallback art/history, missing named path, changed-file Cancel → Right → accept (including a changed player-file IWAD), delete Cancel → Up → checkbox, reset on reopening, unchecked deletion retaining profiles and all player files. |
+| R5 / R9 / R10 | `local_catalog_extras_lock_recipe_members_warn_for_saves_and_keep_profile_scope`: a second active catalog profile, saves warning, recipe member locked/dimmed before extras, D-pad skips it, persisted reordering, default profile still has no extras. |
+| R6 | `local_delete_checked_removes_only_owned_profiles_and_saves`: checkbox and confirm through the production click dispatcher, owned profile/save directories removed, all player WAD/ZIP/DEH and IWAD files retained. |
+
+The fixtures reuse phase A's hand-built `crates/ddl-core/tests/fixtures/local/{tiny.wad,tiny.zip,
+tiny.deh,tiny.pk3}` plus an original 12-byte, empty-directory IWAD at
+`crates/ddl/tests/fixtures/local/base.wad`. They contain no game data. No external network is
+used: the extras test reuses the existing loopback-only installed-mapset fixture.
+
+Off-screen PNGs are written to `target/headless/026-*.png` (or `DDL_HEADLESS_DIR`): new custom,
+IWAD picker, compatibility, custom detail, file-picker multiselect, order mid-move, Library,
+Home, Play setup extras, extras order, saves warning, missing file, changed file and delete.
+The worker opened the generated PNG files for visual inspection. Iteration corrected dialog
+focus theft, long-list panel height, moving-row contrast, custom Home history/art and compact
+shortcut labels; the final renders retain the Ember frame, readable body text and amber ring.
+
+Focused rerun:
+
+```sh
+cargo test -p ddl runtime::local_ui -- --nocapture
+# test result: ok. 5 passed; 0 failed
+```
+
+### Remaining validation
+
+**Needs Deck Validation:** A5 remains open: physical SD-card shortcuts, controller timing, launch
+and return from real DSDA-Doom with a custom PWAD, extras over a catalog mapset, and moving a
+referenced file. The mount enumeration shares the existing spec 010 production path; the macOS
+host has no `/run/media` mounted card to exercise. Auto compatibility, file kinds and DSDA flags
+are the phase A policy and pinned upstream facts above; phase B adds no engine assumptions.
+Optional renaming/on-screen keyboard remains omitted by the spec's explicit allowance for an
+automatic name. No other phase B requirement is left open.

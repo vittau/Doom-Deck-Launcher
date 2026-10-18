@@ -26,6 +26,7 @@ pub(super) enum Dialog {
     Delete,
     Issue(String, bool),
     Saves,
+    Error(String),
 }
 #[derive(Default)]
 pub(super) struct LocalUi {
@@ -153,6 +154,11 @@ impl Runtime {
         self.local.dialog_focus = self.focus;
         self.focus = 900;
     }
+    pub(super) fn local_error(&mut self, message: String) {
+        self.local.dialog = Some(Dialog::Error(message));
+        self.local.dialog_focus = self.focus;
+        self.focus = 900;
+    }
     fn local_target(&self) -> Option<(String, Option<String>)> {
         if let Some(id) = &self.local.target {
             Some((id.clone(), None))
@@ -232,7 +238,7 @@ impl Runtime {
                                     self.local_op(ui, Op::Accept(id, profile));
                                 }
                             }
-                            Dialog::Saves | Dialog::Issue(_, false) => {}
+                            Dialog::Saves | Dialog::Issue(_, false) | Dialog::Error(_) => {}
                         }
                     }
                 }
@@ -249,7 +255,11 @@ impl Runtime {
                     self.local_begin(ui)
                 }
                 (Screen::Library | Screen::Home, Action::Confirm, id)
-                    if (CUSTOM..CUSTOM + 100).contains(&id) =>
+                    if id >= CUSTOM
+                        && self
+                            .snapshot
+                            .as_ref()
+                            .is_some_and(|s| s.custom.get((id - CUSTOM) as usize).is_some()) =>
                 {
                     self.local.target = self
                         .snapshot
@@ -528,7 +538,7 @@ impl Runtime {
                         .map(|s| s.name.clone())
                         .or_else(|| self.local.creating.clone())
                         .unwrap_or_default();
-                    b.label(340., 30., 800., 50., name.into(), 34.);
+                    b.title(340., 30., 800., 50., name.into(), 34.);
                     b.label(340., 88., 800., 32., c.get_badge(), 22.);
                     b.label(36., 388., 270., 80., c.get_local_help(), 20.);
                     if view == View::New {
@@ -556,7 +566,9 @@ impl Runtime {
                         b.button(2, 758., 138., 406., c.get_order(), false);
                         let base = match &setup.iwad {
                             CustomIwad::Identified { variant } => variant.clone(),
-                            CustomIwad::File { file } => file.path.display().to_string(),
+                            CustomIwad::File { file } => {
+                                elide_path_start(&file.path.display().to_string(), 64)
+                            }
                         };
                         b.row(3, 340., 214., 824., c.get_iwad(), base.into(), true);
                         b.row(
@@ -696,7 +708,7 @@ impl Runtime {
                                 },
                                 true,
                             );
-                            b.nodes.last_mut().unwrap().primary = moving;
+                            b.nodes.last_mut().unwrap().tone = if moving { 3 } else { 0 };
                             y += 100.;
                         }
                     }
@@ -720,7 +732,7 @@ impl Runtime {
                                     .to_string_lossy()
                                     .to_string()
                                     .into(),
-                                path.display().to_string().into(),
+                                c.get_shortcut(),
                                 true,
                             );
                             y += 104.;
@@ -744,7 +756,7 @@ impl Runtime {
                                 path.file_name().unwrap_or_default().to_string_lossy()
                             );
                             let detail = file.map_or_else(
-                                || path.display().to_string(),
+                                || elide_path_start(&path.display().to_string(), 64),
                                 |f| format!("{} · {}", f.kind, human_bytes(f.size)),
                             );
                             b.row(
@@ -761,6 +773,13 @@ impl Runtime {
                     }
                 }
             }
+            for node in &mut b.nodes {
+                if node.kind == 3 {
+                    node.fitted_label = true;
+                }
+            }
+            let bottom = b.nodes.iter().map(|n| n.y + n.h).fold(478., f32::max);
+            b.nodes[0].h = bottom + 24. - b.nodes[0].y;
             return;
         }
         if matches!(self.screen, Screen::Library | Screen::Discover)
@@ -807,7 +826,7 @@ impl Runtime {
                     let y = 96. + 438. * (slot / 3) as f32;
                     b.card(CUSTOM + index as i32, x, y, 384., 410.);
                     b.art(x + 16., y + 16., 352., 142., 4);
-                    b.label(x + 20., y + 174., 344., 80., setup.name.clone().into(), 26.);
+                    b.title(x + 20., y + 174., 344., 80., setup.name.clone().into(), 26.);
                     b.label(x + 20., y + 270., 344., 56., c.get_badge(), 22.);
                     b.label(x + 20., y + 340., 344., 40., c.get_order(), 20.);
                 }
@@ -839,8 +858,25 @@ impl Runtime {
                 }
                 b.nodes.retain(|n| n.x >= 800. || n.y > 330. || n.kind == 1);
                 b.art(36., 36., 240., 300., 4);
-                b.label(308., 56., 448., 80., setup.name.clone().into(), 36.);
+                b.nodes
+                    .retain(|n| !(n.x == 852. && [172., 244., 316.].contains(&n.y)));
+                b.label(852., 172., 336., 80., c.get_iwad_selected(), 22.);
+                b.label(852., 280., 336., 90., c.get_badge(), 22.);
+                b.title(308., 56., 448., 80., setup.name.clone().into(), 36.);
                 b.label(308., 156., 448., 64., c.get_badge(), 22.);
+                let profile_name = s
+                    .custom_profiles
+                    .iter()
+                    .find(|p| p.recipe_id == setup.id)
+                    .map_or_else(String::new, |p| p.name.clone());
+                b.label(308., 212., 448., 28., profile_name.clone().into(), 22.);
+                if catalog_time.is_none() {
+                    b.nodes.retain(|n| n.label != text(ui, T::NoRecent));
+                    b.art(36., 400., 56., 66., 4);
+                    b.title(108., 400., 600., 34., setup.name.clone().into(), 26.);
+                    b.label(108., 436., 600., 30., profile_name.into(), 20.);
+                }
+
                 b.button(
                     CUSTOM + index as i32,
                     308.,
@@ -871,6 +907,13 @@ impl Runtime {
                 .map(|n| n.y + n.h)
                 .fold(0., f32::max)
                 + 20.;
+            if let Some(panel) = b
+                .nodes
+                .iter_mut()
+                .find(|n| n.kind == 1 && n.x == 12. && n.w == 680.)
+            {
+                panel.h = y + 104. - panel.y;
+            }
             b.row(
                 EXTRAS,
                 36.,
@@ -892,6 +935,23 @@ impl Runtime {
             ui.set_local_remove_hint(false);
             ui.set_local_confirm_hint(false);
             return;
+        }
+        if self.screen == Screen::Home
+            && self.local.view.is_none()
+            && let Some(snapshot) = &self.snapshot
+        {
+            let catalog_time = snapshot.items.iter().filter_map(|i| i.last_played).max();
+            let custom_time = snapshot
+                .custom_profiles
+                .iter()
+                .filter(|p| snapshot.custom.iter().any(|s| s.id == p.recipe_id))
+                .filter_map(|p| p.last_played)
+                .max();
+            if custom_time.is_some_and(|time| catalog_time.is_none_or(|old| time >= old)) {
+                ui.set_band_art(4);
+                ui.set_band_screenshot(Default::default());
+                ui.set_subtitle(text(ui, T::HomeSub));
+            }
         }
         let c = ui.global::<LocalStrings>();
         ui.set_local_add_hint(
@@ -936,6 +996,16 @@ impl Runtime {
                     .map_or(c.get_picker_help(), |d| d.path.display().to_string().into()),
                 View::Detail => c.get_badge(),
             });
+            if view == View::Order && self.local_row_index().is_some() {
+                ui.set_a_hint(if self.local.moving.is_some() {
+                    c.get_drop()
+                } else {
+                    c.get_pick_up()
+                });
+            }
+            if view == View::Picker && self.focus >= PICK {
+                ui.set_a_hint(c.get_select());
+            }
             // Local screens use one scrollable plane, including rows on the right.
             let viewport = (ui.window().size().height as f32 - 294.).max(64.);
             let offset = self
@@ -949,10 +1019,17 @@ impl Runtime {
             ui.set_sheet_open(true);
             ui.set_sheet_height(420.);
             let mut b = Nodes::new(ui);
+            if matches!(dialog, Dialog::Delete) {
+                c.set_value(
+                    self.local_setup()
+                        .map_or_else(SharedString::default, |s| s.name.clone().into()),
+                );
+            }
             ui.set_sheet_title(match dialog {
                 Dialog::Delete => c.get_delete_title(),
                 Dialog::Issue(..) => c.get_blocked(),
                 Dialog::Saves => c.get_extras(),
+                Dialog::Error(_) => c.get_error(),
             });
             match dialog {
                 Dialog::Delete => {
@@ -987,11 +1064,28 @@ impl Runtime {
                         b.label(32., 244., 656., 52., c.get_missing(), 22.);
                     }
                 }
+                Dialog::Error(message) => {
+                    b.label(32., 96., 656., 180., message.clone().into(), 22.);
+                }
                 Dialog::Saves => {
                     b.label(32., 112., 656., 120., c.get_saves(), 24.);
                 }
             }
-            b.button(900, 32., 312., 304., c.get_cancel(), false);
+            b.button(
+                900,
+                32.,
+                312.,
+                304.,
+                if matches!(dialog, Dialog::Saves) {
+                    c.get_continue()
+                } else {
+                    c.get_cancel()
+                },
+                false,
+            );
+            if let Some(node) = b.nodes.iter().find(|n| n.id == self.focus) {
+                ui.set_a_hint(node.label.clone());
+            }
             ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
             ui.set_focused(self.focus);
         }

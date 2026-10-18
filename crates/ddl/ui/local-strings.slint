@@ -1,5 +1,11 @@
 export global LocalStrings {
     in property <string> value;
+    out property <string> shortcut: @tr("Shortcut");
+    out property <string> pick-up: @tr("Pick up");
+    out property <string> drop: @tr("Drop");
+    out property <string> continue: @tr("Continue");
+    out property <string> iwad-selected: @tr("Your base IWAD is selected.");
+    out property <string> error: @tr("Could not complete this action");
     out property <string> new: @tr("New custom setup");
     out property <string> badge: @tr("Custom — not verified");
     out property <string> new-help: @tr("Choose your base game, then add local files.");
@@ -17,7 +23,7 @@ export global LocalStrings {
     out property <string> add: @tr("Add {} files", root.value);
     out property <string> play: @tr("Play");
     out property <string> delete: @tr("Delete setup");
-    out property <string> delete-title: @tr("Delete this custom setup?");
+    out property <string> delete-title: @tr("Delete {}?", root.value);
     out property <string> delete-check: @tr("Also delete profiles and saves");
     out property <string> delete-help: @tr("Your files are never touched.");
     out property <string> kept: @tr("Profiles and saves will be kept.");
