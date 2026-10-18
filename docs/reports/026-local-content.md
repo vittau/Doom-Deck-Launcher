@@ -473,3 +473,59 @@ Inspected the regenerated `026-extras-order.png`, `026-changed-file.png`,
 `026-missing-file.png`, and `026-file-picker-multiselect.png` off-screen at
 1280×800. Locked content is visibly distinct, filenames and actions remain clear,
 and neither picker column exposes partial rows beneath the header.
+
+The first review validation run passed fmt, clippy, and all 98 other `ddl` tests,
+but the long production journey failed at the SIGIL installation. Its loopback
+server withheld response headers while four PNG captures ran; the real 15 s
+header timeout fired before `package_gate.release()`. The captures were written
+at 18:54:04, :13, :18, and :23; the request timed out at :17. This was a fixture
+timing race, independent of the local-content screens.
+
+With coordinator approval, the test now releases the package gate immediately
+after observing progress, before capturing the four progress states. Captures
+never pump queued worker events, so the synthetic stages remain deterministic.
+The change follows spec 024 R4 and leaves production timeouts untouched. This
+avoids expanding the test configuration or adding a timeout override.
+
+Initial full default-parallel workspace run (exit 101):
+
+```text
+WARN ddl::services: application operation failed error=network error for http://127.0.0.1:57809/sigil.zip: request timed out (receive response) kind=Network
+thread 'headless::fixture_screens_navigation_and_focus_render_headlessly' panicked at crates/ddl/src/headless_production.rs:87:5:
+Some(Network)
+test result: FAILED. 98 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 233.03s
+```
+
+Final review validation after the approved fixture fix:
+`git merge main` reported **Already up to date** (main `4f0e569`). The six focused
+cases passed; the picker case was rerun after adjusting its evidence frame to
+show both selected files together. All four requested review PNGs were rendered
+and inspected. The full workspace command below was run once after the fixture
+fix, with default parallelism and no filters or environment overrides; it exited
+0 with **506 tests passed**, none ignored or filtered.
+
+```text
+cargo fmt --all --check
+exit 0 (no output)
+
+cargo clippy --workspace --all-targets -- -D warnings
+Checking ddl v0.0.5 (/Users/vitor/orca/workspaces/Doom-Deck-Launcher/spec-026b-local-content-ui/crates/ddl)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 20s
+
+cargo test --workspace
+test result: ok. 99 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 243.18s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.27s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 376 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0
+```
+
+A3 and the UI part of A4 remain complete. A5 remains **Needs Deck Validation**;
+there are no remaining phase B implementation or review-polish items.
