@@ -1,6 +1,6 @@
 # 026 — Local content: custom setups and extra files with a player-set load order
 
-**Status:** Ready  ·  **Milestone:** M3  ·  **Depends on:** 004, 005, 010, 018 · **Decision:** D-026
+**Status:** Done  ·  **Milestone:** M3  ·  **Depends on:** 004, 005, 010, 018 · **Decision:** D-026
 **Owner request (2026-10-17):** "é crucial que rode qualquer coisa arbitrária que a pessoa queira,
 e que seja possível ajustar a ordenação. Tem que ser possível também adicionar PWADs em cima de
 coisas baixadas pelo DDL."

@@ -545,3 +545,15 @@
     directory helper. Merges are now verified on a scratch branch while workers run, because
     worktrees share the local `main` ref.
   refs: [docs/reports/025-long-titles.md, docs/orchestration.md]
+- date: 2026-10-18
+  type: merge
+  summary: >-
+    Spec 026 phase B merged: local content UI (D-026) — controller file picker with multi-select
+    and SD-card/Downloads/Documents shortcuts, grouped order editor (files, then patches) with
+    pick-up/move/drop, New custom setup in Library, custom setups in Home, Extra files on Play
+    setup with the recipe's files locked above, IWAD and compatibility pickers, missing/changed-file
+    and delete dialogs, all badged "Custom — not verified"; new screens tested in focused headless
+    tests outside the long journey. Found and fixed a real state-lock race (the lock is now
+    released on drop, not left to fd close, which a spawned child could briefly hold), and a
+    second gated-fixture header-timeout race in the journey (test-only). Deck checks L1–L3 added.
+  refs: [docs/reports/026-local-content.md, docs/deck-testing.md]

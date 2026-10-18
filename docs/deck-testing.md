@@ -85,6 +85,14 @@ the controller now work (gilrs).
 | S2 | Settings → Engine shows `Catalog: <date> (built-in)`; **Check for catalog updates** succeeds online and reports `updated` or "already current" | Gaming | ⏳ | Spec 019; needs Wi-Fi |
 | S3 | Airplane mode: start DDL — no error or delay from the automatic catalog check; the manual check shows a clear network error | Gaming | ⏳ | Automatic check is silent offline |
 
+## Local content (spec 026) — needs Deck validation
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| L1 | Library → **New custom setup** → add a PWAD and a DEH from the SD card (file picker, A to select, Start to add), pick the IWAD, reorder with A/D-pad/A, launch | Gaming | ⏳ | Badge "Custom — not verified"; files stay where they are |
+| L2 | Installed mapset → Play setup → **Extra files** → add a PWAD on top; it loads after the recipe files; saves warning shows when the profile has saves | Gaming | ⏳ | Recipe files locked at the top |
+| L3 | Move or edit an added file in Desktop Mode, then launch: the missing-file / changed-file dialog names the file; "Use the changed file" works | Gaming | ⏳ | A user-file IWAD's campaign follows its file name (D-017 note) |
+
 ## GOG and other stores (spec 021)
 
 Everything here is **Needs Deck Validation**: the paths come from the launchers' own upstream
