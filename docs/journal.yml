@@ -535,3 +535,13 @@
     fixture was racing the real 15 s response-header timeout under load; it now sets a test-only
     timeout. A2 (20 runs under load) left partial at 6/20.
   refs: [docs/reports/024-download-idle-timeout.md]
+- date: 2026-10-18
+  type: merge
+  summary: >-
+    Spec 025 merged: long mapset titles and component labels fit every slot (wrap, then shrink one
+    step, then elide; full title on detail), guarded by a fit test over all 13 recipes and a
+    synthetic 60-character title. Review caught a fit-report writer that used a relative
+    `target/headless` path without creating it (failed on a clean checkout); fixed to share the PNG
+    directory helper. Merges are now verified on a scratch branch while workers run, because
+    worktrees share the local `main` ref.
+  refs: [docs/reports/025-long-titles.md, docs/orchestration.md]
