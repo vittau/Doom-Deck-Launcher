@@ -47,11 +47,13 @@ pub enum Problem {
     /// The engine could not start because the host runtime is missing something
     /// (spec 014 follow-up).
     EngineRuntime(dsda::RuntimeError),
+    Local(String),
 }
 
 impl fmt::Display for Problem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Local(message) => f.write_str(message),
             Self::Storage => f.write_str("could not write or read DDL's user storage"),
             Self::State => f.write_str("could not read DDL's saved state"),
             Self::Network => f.write_str("a network request failed"),
@@ -268,6 +270,10 @@ pub struct Item {
 #[derive(Debug, Clone)]
 pub struct Snapshot {
     pub items: Vec<Item>,
+    pub custom: Vec<CustomSetup>,
+    pub custom_profiles: Vec<Profile>,
+    pub local_issues: BTreeMap<String, (String, bool)>,
+    pub profiles_with_saves: BTreeSet<String>,
     /// The reviewed tag vocabulary, for Discover categories and chips.
     pub tags: TagVocabulary,
     pub engine: Option<dsda::InstalledEngine>,
@@ -308,9 +314,24 @@ pub struct Directory {
     pub path: PathBuf,
     pub entries: Vec<(PathBuf, bool)>,
     pub shortcuts: Vec<PathBuf>,
+    pub files: Vec<UserFile>,
+    pub iwad_files: BTreeSet<PathBuf>,
+}
+/// UI local-content operations execute on the same worker as catalog services.
+#[derive(Debug, Clone)]
+pub enum LocalCommand {
+    Browse(PathBuf),
+    Create(String, NewIwad, Compatibility),
+    Save(CustomSetup),
+    Add(String, Option<String>, Vec<PathBuf>),
+    Extras(Profile),
+    Delete(String, bool),
+    Accept(String, Option<String>),
+    Play(String),
 }
 #[derive(Debug, Clone)]
 pub enum Command {
+    Local(LocalCommand),
     Startup,
     InstallEngine(String),
     Scan(Option<PathBuf>),
@@ -451,6 +472,96 @@ impl Environment {
     }
 }
 impl Services {
+    fn execute_local(
+        &mut self,
+        command: LocalCommand,
+        cancel: &CancellationToken,
+        emit: &mut dyn FnMut(Event),
+    ) -> Result<(), Problem> {
+        let result: Result<(), CliFailure> = (|| {
+            match command {
+                LocalCommand::Browse(path) => {
+                    let mut directory = self
+                        .browse(&path, false, cancel)
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                    for entry in fs::read_dir(&path)
+                        .map_err(|e| CliFailure::message(e.to_string()))?
+                        .take(4096)
+                    {
+                        if cancel.is_cancelled() {
+                            return Err(CliFailure::message("cancelled"));
+                        }
+                        if let Ok(entry) = entry
+                            && let Ok(file) = UserFile::read(&entry.path())
+                        {
+                            directory.entries.push((file.path.clone(), false));
+                            if local::is_iwad_header(&file.path).unwrap_or(false) {
+                                directory.iwad_files.insert(file.path.clone());
+                            }
+                            directory.files.push(file);
+                        }
+                    }
+                    directory.entries.sort_by(|a, b| {
+                        b.1.cmp(&a.1)
+                            .then_with(|| a.0.file_name().cmp(&b.0.file_name()))
+                    });
+                    directory.shortcuts.splice(
+                        1..1,
+                        [
+                            self.env.home.join("Downloads"),
+                            self.env.home.join("Documents"),
+                        ]
+                        .into_iter()
+                        .filter(|p| p.is_dir()),
+                    );
+                    emit(Event::Directory(directory));
+                }
+                LocalCommand::Create(name, iwad, compatibility) => {
+                    self.custom_create(&name, None, iwad, compatibility)?;
+                }
+                LocalCommand::Save(setup) => {
+                    let _lock = self.lock_cli()?;
+                    self.save_custom(setup)?;
+                }
+                LocalCommand::Add(id, profile, paths) => {
+                    if self.has_custom(&id) {
+                        self.custom_add_file(&id, &paths)?;
+                    } else {
+                        self.extras_add(&id, profile.as_deref(), &paths)?;
+                    }
+                }
+                LocalCommand::Extras(profile) => {
+                    let _lock = self.lock_cli()?;
+                    self.save_extras(profile)?;
+                }
+                LocalCommand::Delete(id, profiles) => self.custom_delete(&id, profiles)?,
+                LocalCommand::Accept(id, profile) => {
+                    if self.has_custom(&id) {
+                        let _lock = self.lock_cli()?;
+                        let mut setup = self.custom_show(&id)?;
+                        local::accept_changed(&mut setup.files)
+                            .map_err(|e| CliFailure::message(e.to_string()))?;
+                        local::accept_changed(&mut setup.patches)
+                            .map_err(|e| CliFailure::message(e.to_string()))?;
+                        if let CustomIwad::File { file } = &mut setup.iwad {
+                            local::accept_changed(std::slice::from_mut(file))
+                                .map_err(|e| CliFailure::message(e.to_string()))?;
+                        }
+                        self.save_custom(setup)?;
+                    } else {
+                        self.accept_extra_changes(&id, profile.as_deref())?;
+                    }
+                }
+                LocalCommand::Play(id) => {
+                    emit(Event::Playing);
+                    emit(Event::EngineExit(self.run_custom(&id, None, false)?));
+                }
+            }
+            Ok(())
+        })();
+        result.map_err(|e| Problem::Local(e.to_string()))
+    }
+
     pub fn open(env: Environment) -> Result<Self, Problem> {
         let paths = &env.paths;
         for dir in [&paths.config, &paths.data, &paths.cache, &paths.state] {
@@ -1102,7 +1213,30 @@ impl Services {
             });
         }
         let config = self.config.state().ok();
+        let setups = self.custom.list().map_err(|e| logged(Problem::State, e))?;
+        let local_issues = setups
+            .iter()
+            .filter_map(|setup| {
+                local::verify_setup(setup).into_iter().next().map(|issue| {
+                    let changed = matches!(issue, local::IdentityError::Changed { .. });
+                    (setup.id.clone(), (issue.to_string(), changed))
+                })
+            })
+            .collect();
+        let profiles_with_saves = held_profiles
+            .iter()
+            .filter(|p| {
+                local::has_saves(
+                    &ddl_core::profiles::ProfileDirs::new(&self.env.paths.data, &p.id).save,
+                )
+            })
+            .map(|p| p.id.clone())
+            .collect();
         Ok(Snapshot {
+            local_issues,
+            profiles_with_saves,
+            custom: setups,
+            custom_profiles: held_profiles,
             items,
             tags: self.catalog.tags.clone(),
             previous: engines.previous_good,
@@ -1259,6 +1393,9 @@ impl Services {
         if cancel.is_cancelled() {
             return Err(Problem::Cancelled);
         }
+        if let Command::Local(operation) = command {
+            return self.execute_local(operation, cancel, emit);
+        }
         // One DDL process mutates its state at a time (spec 014, R2). The lock
         // is released when this command returns (or the process dies).
         let _state_lock = if command.mutates_state() {
@@ -1268,6 +1405,7 @@ impl Services {
         };
         emit(Event::Working);
         match command {
+            Command::Local(_) => unreachable!(),
             Command::Startup => {
                 if let Err(error) = self
                     .config
@@ -1812,7 +1950,9 @@ impl Services {
             }
             let entry = entry.map_err(|e| logged(Problem::Storage, e))?;
             let p = entry.path();
-            let metadata = fs::metadata(&p).map_err(|e| logged(Problem::Storage, e))?;
+            let Ok(metadata) = fs::metadata(&p) else {
+                continue;
+            };
             if metadata.is_dir()
                 || files
                     && metadata.is_file()
@@ -1862,6 +2002,8 @@ impl Services {
             path: path.to_path_buf(),
             entries,
             shortcuts,
+            files: vec![],
+            iwad_files: BTreeSet::new(),
         })
     }
 }

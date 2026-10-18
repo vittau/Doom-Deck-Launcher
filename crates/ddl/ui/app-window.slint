@@ -4,6 +4,8 @@ import "assets/PirataOne-Regular.ttf";
 import { ScreenshotAssets } from "@screenshots";
 export { ScreenshotAssets } from "@screenshots";
 import { WiringStrings } from "wiring-strings.slint";
+import { LocalStrings } from "local-strings.slint";
+export { LocalStrings } from "local-strings.slint";
 import { Tokens } from "tokens.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
@@ -171,6 +173,9 @@ export component AppWindow inherits Window {
     in property <string> favorite-label: @tr("Favorite");
     in property <bool> category-hint: false;
     in property <bool> import-hint: false;
+    in property <bool> local-add-hint: false;
+    in property <bool> local-remove-hint: false;
+    in property <bool> local-confirm-hint: false;
     in property <bool> detail-hint: false;
     in property <string> toast;
     in property <float> scroll-offset: 0;
@@ -237,10 +242,12 @@ export component AppWindow inherits Window {
             Hint { badge: @tr("B"); label: @tr("Back"); }
             if root.favorite-hint: Hint { badge: @tr("X"); label: root.favorite-label; }
             if root.detail-hint: Hint { badge: @tr("X"); label: @tr("Details"); }
+            if root.local-add-hint: Hint { badge: @tr("Y"); label: LocalStrings.add-hint; }
+            if root.local-remove-hint: Hint { badge: @tr("X"); label: LocalStrings.remove; }
             if root.import-hint: Hint { badge: @tr("Y"); label: @tr("Import"); }
             if root.root-screen && !root.sheet-open: Hint { badge: @tr("L1/R1"); label: @tr("Tabs"); pill: true; }
             if root.category-hint && !root.sheet-open: Hint { badge: @tr("L2/R2"); label: @tr("Category"); pill: true; }
-            Hint { badge: @tr("Start"); label: @tr("Menu"); pill: true; }
+            Hint { badge: @tr("Start"); label: root.local-confirm-hint ? LocalStrings.confirm : LocalStrings.menu; pill: true; }
         }
     }
     if root.input-locked: Text {x:40px;y:parent.height - 64px;height:64px;text:@tr("Game running — return here when you exit");color:Tokens.muted;vertical-alignment:center;}

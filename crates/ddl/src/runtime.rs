@@ -5,6 +5,10 @@ use crate::{
     services::{self, Command, Directory, Environment, Event, Item, Problem, Services, Snapshot},
     wiring_copy::{Text as T, text, value},
 };
+#[path = "local_ui.rs"]
+mod local_ui;
+use local_ui::LocalUi;
+
 use ddl_core::{
     downloads::{CancellationToken, InstallProgress, InstallStage},
     resolver::Blocker,
@@ -63,6 +67,7 @@ enum Sheet {
 }
 pub struct Runtime {
     env: Environment,
+    local: LocalUi,
     pub screen: Screen,
     pub focus: i32,
     pub snapshot: Option<Snapshot>,
@@ -101,6 +106,7 @@ impl Runtime {
     pub fn new(env: Environment) -> Self {
         Self {
             env,
+            local: LocalUi::default(),
             screen: Screen::Loading,
             focus: 1,
             snapshot: None,
@@ -184,7 +190,10 @@ impl Runtime {
             return;
         }
         self.busy = true;
-        if matches!(command, Command::Play(_)) {
+        if matches!(
+            command,
+            Command::Play(_) | Command::Local(services::LocalCommand::Play(_))
+        ) {
             self.playing = true;
             self.neutral = true;
         }
@@ -240,7 +249,9 @@ impl Runtime {
                 }
                 Event::Directory(d) => {
                     self.directory = Some(d);
-                    self.screen = Screen::Browser;
+                    if self.local.view.is_none() {
+                        self.screen = Screen::Browser;
+                    }
                     self.focus = 1;
                 }
                 Event::Updates(u) => {
@@ -279,6 +290,7 @@ impl Runtime {
                     match result {
                         Ok(snapshot) => {
                             self.snapshot = Some(*snapshot);
+                            self.local_finished(&command);
                             self.problem = None;
                             if let Some(Command::UpdateMapset(id)) = &command
                                 && let Some(item) = self
@@ -357,6 +369,12 @@ impl Runtime {
                                 _ => {}
                             }
                         }
+                        Err(Problem::Local(message)) => {
+                            self.local_show_issue((
+                                message.clone(),
+                                message.contains("changed since"),
+                            ));
+                        }
                         Err(problem) => {
                             self.problem = Some(problem);
                             self.focus = 800;
@@ -408,6 +426,10 @@ impl Runtime {
             return;
         }
         if self.neutral {
+            return;
+        }
+        if self.local_action(ui, action) {
+            self.sync(ui);
             return;
         }
         if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
@@ -547,7 +569,7 @@ impl Runtime {
         if self.playing {
             return;
         }
-        if self.sheet.is_some() {
+        if self.sheet.is_some() || self.local.dialog.is_some() {
             if ui
                 .get_sheet_nodes()
                 .iter()
@@ -2546,6 +2568,7 @@ impl Runtime {
             b.button(800, 36., 638., 552., text(ui, T::Retry), true);
             b.button(801, 612., 638., 576., text(ui, T::Diagnostics), false);
         }
+        self.local_nodes(ui, &mut b);
         self.nodes = b.nodes;
         if !self.playing
             && self.focus >= 0
@@ -2642,6 +2665,7 @@ impl Runtime {
             b.button(901, 368., button_y, 304., text(ui, confirm), false);
             ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
         }
+        self.local_sheet(ui);
         if self.sheet.is_some() {
             let nodes: Vec<_> = ui.get_sheet_nodes().iter().collect();
             if !nodes.iter().any(|n| n.id == self.focus && n.actionable) {
@@ -2749,6 +2773,7 @@ fn blocker_copy(b: &Blocker) -> (T, T) {
 }
 fn problem_copy(p: &Problem) -> T {
     match p {
+        Problem::Local(_) => T::ErrorLaunch,
         Problem::Storage => T::ErrorStorage,
         Problem::State => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
@@ -2778,6 +2803,7 @@ fn problem_text(ui: &AppWindow, problem: &Problem) -> slint::SharedString {
 /// The runtime detail a problem carries, when it has one.
 fn problem_detail(problem: &Problem) -> Option<String> {
     match problem {
+        Problem::Local(message) => Some(message.clone()),
         Problem::EngineRuntime(runtime) => Some(runtime.to_string()),
         _ => None,
     }
@@ -3287,6 +3313,10 @@ mod category_tests {
         let recipe = catalog.recipe("eviternity").unwrap();
         let s = Snapshot {
             items: vec![],
+            custom: vec![],
+            custom_profiles: vec![],
+            local_issues: Default::default(),
+            profiles_with_saves: Default::default(),
             tags: catalog.tags.clone(),
             engine: None,
             previous: None,
