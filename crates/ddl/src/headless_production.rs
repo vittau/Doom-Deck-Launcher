@@ -306,6 +306,11 @@ pub(super) fn journey(window: &MinimalSoftwareWindow, ui: &AppWindow) {
             fake: fake.clone(),
             exit: exit.clone(),
         }),
+        // The engine server withholds the response headers until `engine_gate`
+        // is released, so the production 15 s header timeout could fire while
+        // the test thread is starved under load (spec 024, R4). A longer
+        // test-only timeout makes the gate — not the timer — decide the outcome.
+        engine_response_timeout: Some(Duration::from_secs(120)),
     });
     let env = Environment {
         paths: paths.clone(),

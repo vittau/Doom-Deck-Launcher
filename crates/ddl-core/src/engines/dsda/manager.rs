@@ -78,6 +78,12 @@ pub struct EngineManager {
     download_base: String,
     #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
+    /// Test-only override for the engine fetch's response-header timeout. The
+    /// gated headless fixture holds the response headers until the test releases
+    /// a gate; under load the production 15 s timeout could fire first, so the
+    /// fixture lengthens it without touching production behaviour (spec 024, R4).
+    #[cfg(any(test, feature = "test-support"))]
+    response_timeout: Option<std::time::Duration>,
 }
 
 impl EngineManager {
@@ -98,6 +104,8 @@ impl EngineManager {
             download_base: RELEASE_DOWNLOAD_BASE.to_owned(),
             #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
+            #[cfg(any(test, feature = "test-support"))]
+            response_timeout: None,
         }
     }
 
@@ -122,6 +130,16 @@ impl EngineManager {
     #[cfg(any(test, feature = "test-support"))]
     pub fn with_http_for_tests(mut self) -> Self {
         self.allow_http_for_tests = true;
+        self
+    }
+
+    /// Overrides the engine fetch's response-header timeout. Test-only, used by
+    /// the gated headless engine-download fixture so a starved test thread
+    /// cannot trip the production 15 s timeout (spec 024, R4).
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_response_timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.response_timeout = Some(timeout);
         self
     }
 
@@ -499,6 +517,9 @@ impl EngineManager {
         let mut fetcher = Fetcher::new(self.dirs.cache.clone());
         #[cfg(any(test, feature = "test-support"))]
         {
+            if let Some(timeout) = self.response_timeout {
+                fetcher = Fetcher::with_response_header_timeout(self.dirs.cache.clone(), timeout);
+            }
             if self.allow_http_for_tests {
                 fetcher = fetcher.allow_http_for_tests();
             }

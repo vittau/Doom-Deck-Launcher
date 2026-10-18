@@ -526,3 +526,12 @@
     split the long headless journey test into smaller tests (backlog). oh-my-zsh now auto-updates,
     after its update prompt ate the first character of a Codex launch command.
   refs: [docs/status.md]
+- date: 2026-10-18
+  type: merge
+  summary: >-
+    Spec 024 merged: a transfer that receives no body bytes for 60 s fails with a distinct
+    `Stalled` error ("stopped receiving data; try again"), enforced per read in the ureq transport
+    because ureq's body timeout is a total budget; cancel still wins. The flaky headless engine
+    fixture was racing the real 15 s response-header timeout under load; it now sets a test-only
+    timeout. A2 (20 runs under load) left partial at 6/20.
+  refs: [docs/reports/024-download-idle-timeout.md]

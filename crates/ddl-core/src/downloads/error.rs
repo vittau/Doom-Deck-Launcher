@@ -67,6 +67,17 @@ pub enum Error {
         /// How long the body was read before giving up.
         elapsed: Duration,
     },
+    /// No body bytes arrived for the idle timeout (`fetch::BODY_IDLE_TIMEOUT`),
+    /// so the connection stalled even though the size-scaled body deadline
+    /// still had budget left (spec 024, R2). Retrying is safe: nothing was
+    /// committed.
+    Stalled {
+        url: String,
+        /// Bytes received before the connection went quiet.
+        received: u64,
+        /// Announced or expected total, when known.
+        total: Option<u64>,
+    },
     /// The server answered with a non-success status.
     HttpStatus { url: String, status: u16 },
     /// The transfer exceeded an allowed size.
@@ -130,6 +141,20 @@ impl fmt::Display for Error {
                     ),
                 }
             }
+            Self::Stalled {
+                url,
+                received,
+                total,
+            } => match total {
+                Some(total) => write!(
+                    f,
+                    "download stalled: stopped receiving data after {received} of {total} bytes; check your connection and try again ({url})"
+                ),
+                None => write!(
+                    f,
+                    "download stalled: stopped receiving data after {received} bytes; check your connection and try again ({url})"
+                ),
+            },
             Self::HttpStatus { url, status } => {
                 write!(f, "server returned HTTP {status} for {url}")
             }
@@ -203,6 +228,31 @@ mod tests {
         }
         .to_string();
         assert!(without_hint.contains("nope.wad"));
+    }
+
+    #[test]
+    fn stalled_names_progress_and_suggests_a_retry() {
+        let with_total = Error::Stalled {
+            url: "https://example.invalid/pkg.zip".to_owned(),
+            received: 2048,
+            total: Some(8192),
+        }
+        .to_string();
+        assert!(with_total.contains("2048 of 8192 bytes"), "{with_total}");
+        assert!(
+            with_total.contains("stopped receiving data"),
+            "{with_total}"
+        );
+        assert!(with_total.contains("try again"), "{with_total}");
+
+        let without_total = Error::Stalled {
+            url: "https://example.invalid/pkg.zip".to_owned(),
+            received: 0,
+            total: None,
+        }
+        .to_string();
+        assert!(without_total.contains("after 0 bytes"), "{without_total}");
+        assert!(!without_total.contains(" of "), "{without_total}");
     }
 
     #[test]
