@@ -1,12 +1,14 @@
 # Steam library shortcuts for installed mapsets
 
-**Spec:** 043 (R1–R2) · **Status:** research complete 2026-10-19 · **Scope:** Steam library
-shortcuts and artwork for installed mapsets. No Steam Input code, no controller layouts, no
-change to DDL's launch model. **No code was written for this task.**
+**Spec:** 043 (R1–R2, R4) · **Status:** research complete 2026-10-19 · **Scope:** Steam library
+shortcuts and artwork for installed mapsets, and listing DDL's own artwork on SteamGridDB. No
+Steam Input code, no controller layouts, no change to DDL's launch model. **No code was written
+for this task.**
 
-This document answers R1 (how a non-Steam shortcut is represented and added on SteamOS) and R2
-(what a per-mapset shortcut would mean for DDL). R3, the recommendation, is in
-`docs/reports/043-steam-shortcuts-research.md`.
+This document answers R1 (how a non-Steam shortcut is represented and added on SteamOS), R2
+(what a per-mapset shortcut would mean for DDL) and R4 (how DDL's own artwork gets listed on
+SteamGridDB and found by the tools). R3, the recommendation, and the owner's SteamGridDB
+step-by-step are in `docs/reports/043-steam-shortcuts-research.md`.
 
 Every factual claim carries one of these labels:
 
@@ -26,6 +28,9 @@ Every factual claim carries one of these labels:
 | Can DDL name shortcuts deterministically? | Yes: tools write their own 32-bit reserved-range `appid`; artwork is named from that id. Valve's own UI uses randomised IDs. | Confirmed (tools) / Proposed (DDL) |
 | Is automatic creation safe in Gaming Mode? | DDL is itself launched by Steam there, so Steam is running; closing it is disruptive and the write path is unsupported. | Confirmed (architecture) / Needs Deck Validation (session behaviour) |
 | Is per-mapset artwork available? | No. DDL has 1280×720 screenshots, not 600×900 capsules, 3840×1240 heroes, or transparent logos. | Confirmed |
+| Can a non-Steam app have a SteamGridDB page? | Yes. Pages exist for tools with no store id (EmuDeck, Lutris, DSDA-Doom); the page is requested through the site and approved manually. | Confirmed |
+| Do DDL's Steam exports fit SteamGridDB's rules? | Yes, all six. 600×900, 920×430, 3840×1240, 512×512 and 1280×720 are accepted sizes and every file is PNG, far under the limits. No re-export is needed. | Confirmed |
+| Will searching `DDL` find the art? | No. `DDL` currently resolves to an unrelated Steam game. The page and the shortcut must both be named `DoomDeckLauncher`. | Confirmed (search) / Proposed (naming) |
 
 ## 2. Sources and pins
 
@@ -40,7 +45,14 @@ Every factual claim carries one of these labels:
 | [SteamTinkerLaunch wiki: Add Non-Steam Game](https://github.com/sonic2kk/steamtinkerlaunch/wiki/Add-Non-Steam-Game/c56b4c922ed85b7d8ecbaaab708e6f65717a0104) | Wiki revision `c56b4c9` (2023-10-17) | User-facing workflow, artwork folder, restart requirement. |
 | [SteamTinkerLaunch source](https://github.com/sonic2kk/steamtinkerlaunch/tree/8550ab26a712b7f5f6d0947070181446b9de61fd) | Commit `8550ab2` (2025-07-14) | Path discovery, app-id notes, artwork names, "Ensure the Steam Client is closed". |
 | [BoilR](https://github.com/PhilipK/BoilR/tree/fed7df598b59f1fc2c6916c06bf33bf7c27f16cf) | Tag `v.1.11.0`, commit `fed7df5` (2026-10-02) | Steam shutdown/wait, user enumeration, backup, artwork names, collections change. |
-| [Steam ROM Manager](https://github.com/SteamGridDB/steam-rom-manager/tree/7f0f4024bf829a22a2fba56c6e6dce5182b76af4) | Tag `v2.5.44`, commit `7f0f402` (2026-08-06) | App-id formula, loginusers parsing, backup names, artwork names, casing normalisation. |
+| [Steam ROM Manager](https://github.com/SteamGridDB/steam-rom-manager/tree/7f0f4024bf829a22a2fba56c6e6dce5182b76af4) | Tag `v2.5.44`, commit `7f0f402` (2026-08-06) | App-id formula, loginusers parsing, backup names, artwork names, casing normalisation; SteamGridDB title search. |
+| [SteamGridDB FAQ](https://www.steamgriddb.com/faq) | Read 2026-10-19 (no revision available) | Adding a missing game; game requests are manually approved; grid-vs-icon guidance. |
+| [SteamGridDB Rules](https://www.steamgriddb.com/help) | Read 2026-10-19 (no revision available) | Asset styles and the asset-removal rules that uploads must survive. |
+| [SteamGridDB site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js) | Asset hash `233e475efea66025d29a`; read 2026-10-19 | Upload dialog limits per asset type, accepted dimensions, style lists, Steam OpenID login, `/request-game` link, public autocomplete endpoint. |
+| [SteamGridDB OpenAPI 2.10.0](https://www.steamgriddb.com/static/openapi.yml) | Served by <https://www.steamgriddb.com/api/v2>; read 2026-10-19 | API v2 endpoints, Bearer auth, upload parameters, style enums, `Game` fields. |
+| [decky-steamgriddb](https://github.com/SteamGridDB/decky-steamgriddb/tree/26682f6a58b5dad774abe740ee3f9bad38296496) | v1.8.1, commit `26682f6` (2026-10-05) | Shortcut name → `searchGames` → first result → asset search. |
+| [node-steamgriddb](https://github.com/SteamGridDB/node-steamgriddb/tree/95c5993859230601ae97c6b0a4109699512da4f5) | Commit `95c5993` (2025-08-26) | `searchGame` = `GET /search/autocomplete/<term>`; `SGDBGame` fields. |
+| [SGDB public autocomplete](https://www.steamgriddb.com/api/public/search/autocomplete?term=doomdecklauncher) | Probed 2026-10-19 | What `ddl`, `DoomDeckLauncher` and near-miss spellings return today. |
 | [`steam_shortcuts_util` 1.1.9](https://crates.io/crates/steam_shortcuts_util/1.1.9) | Checksum `c7e0c9bee47630fbfad0df3951421aa55aa2f68dcf0f9a62764550d44925d59d` | Rust parser/writer; independent field order and app-id formula. |
 | [ValveSoftware/steam-for-linux issue #9463](https://github.com/ValveSoftware/steam-for-linux/issues/9463) | Opened 2023-05-05; updated 2026-03-19; open | Steam-created shortcut IDs are randomised; third-party prediction broke. |
 | DDL code | Commit `3867208` (task branch base; these docs add no code) | `crates/ddl-core/src/iwads/steam.rs`, `crates/ddl/src/cli.rs`, `crates/ddl-core/src/engines/dsda/runner.rs` |
@@ -387,7 +399,215 @@ implemented.
 - **Confirmed** — there is no existing code that reads or writes `shortcuts.vdf`, `loginusers.vdf`
   or `config/grid/`. This would be new surface area.
 
-## 5. Open questions for Deck validation
+## 5. R4 — Getting DDL's artwork onto SteamGridDB
+
+### 5.1 The unit is a game page, not a shortcut
+
+- **Confirmed** — SteamGridDB (SGDB) stores artwork per **game page**: every grid, hero, logo
+  and icon has a `game_id`. The upload dialog asks the user to "Choose a game..." and, in the
+  same dialog, offers "Game you want not listed? Click here to request it!", which goes to
+  `/request-game`
+  ([FAQ](https://www.steamgriddb.com/faq);
+  [site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js), upload
+  metadata block). There is no concept of a Steam shortcut id or a non-Steam appid in SGDB.
+- **Confirmed** — a page does **not** need a store id. `Game.types` is an array that can be
+  empty, and the API returns only `id`, `name`, `types`, `verified` for a game
+  ([OpenAPI 2.10.0, `Game`](https://www.steamgriddb.com/static/openapi.yml);
+  [`SGDBGame`](https://github.com/SteamGridDB/node-steamgriddb/blob/95c5993859230601ae97c6b0a4109699512da4f5/src/index.ts#L4-L10)).
+  Probes on 2026-10-19 returned pages with empty `types` for other launchers and source ports:
+  `EmuDeck` (5356989), `Lutris` (5267809), `AM2R` (35262), `Chiaki (Program)` (5319543),
+  `DSDA-Doom` (5460386) and `GZDoom` (35849)
+  ([autocomplete](https://www.steamgriddb.com/api/public/search/autocomplete?term=emudeck)).
+  A launcher is an accepted kind of entry, and DDL's own engine already has a page.
+- **Confirmed** — SGDB accounts are Steam accounts. The site's login sends the browser through
+  Steam OpenID (`https://steamcommunity.com/openid/login?...`); no separate registration form
+  was found in the bundle
+  ([site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js), module
+  `74899`). The API key, needed only for the API path, is generated in Profile → Preferences
+  ([OpenAPI `securitySchemes`](https://www.steamgriddb.com/static/openapi.yml);
+  [SteamTinkerLaunch wiki](https://github.com/sonic2kk/steamtinkerlaunch/wiki/SteamGridDB/c56b4c922ed85b7d8ecbaaab708e6f65717a0104)).
+- **Proposed** — DDL needs one page, for the launcher itself. Per-mapset pages are a different
+  project; SGDB already hosts a community DOOM-WAD art project ("GRID AND TEAR!",
+  <https://www.steamgriddb.com/projects/grid-and-tear>), which is the natural home for that work
+  if the owner ever wants it.
+
+### 5.2 Creating the page
+
+- **Confirmed** — the documented way to add a missing game is the request form: "When you submit
+  an asset, after adding an image, a link will appear in the window titled: 'Game you want not
+  listed? Click here to request it!' … All requests are manually approved."
+  ([FAQ](https://www.steamgriddb.com/faq)). The direct URL is
+  <https://www.steamgriddb.com/request-game>.
+- **Confirmed** — `/request-game` requires a signed-in account: it is registered as a protected
+  route in the site bundle, and EmuDeck's manual states "You will need to login to view this
+  page" ([site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js), route
+  table; [EmuDeck manual](https://manual.emudeck.com/tricks/melonDS/)).
+- **Proposed** — request the page as `DoomDeckLauncher`, one word, no suffix, described as a
+  DOOM mapset launcher for Steam Deck. Do not use "(Program)" or "DDL": the name is what the
+  tools search for (§5.6). The form's exact fields are behind the Steam login and were not read,
+  so fill in only what the form shows and only what is true.
+- **Proposed** — start from the upload dialog rather than going straight to `/request-game` if
+  possible: the FAQ describes the request link as appearing there "after adding an image". The
+  FAQ does not say whether that image is carried into the request, so upload again after approval
+  if the new page turns out to be empty.
+
+### 5.3 Upload path and account requirements
+
+- **Confirmed** — the normal path is the website: sign in with Steam → **Upload** → choose the
+  asset type → choose the game → choose a style → add the file → publish. This needs only the
+  Steam-linked account ([site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js),
+  upload dialog).
+- **Confirmed** — the API path exists but is optional: `POST /api/v2/grids`, `/heroes`, `/logos`
+  or `/icons` as `multipart/form-data` with `game_id`, `style` and `asset`, authenticated with
+  `Authorization: Bearer <api key>`
+  ([OpenAPI 2.10.0](https://www.steamgriddb.com/static/openapi.yml); the same endpoints are used
+  by the Decky plugin and by SteamTinkerLaunch).
+- **Confirmed** — game **requests** are approved manually (FAQ). For individual **assets** no
+  approval step is documented; they appear on the page and are subject to the Rules and to
+  removal after the fact ("Asset Removal") ([Rules](https://www.steamgriddb.com/help)).
+- **Proposed** — the owner should upload through the website. It needs no API key, shows the
+  per-asset rules inline, and is the path the rules text refers to.
+
+### 5.4 Size, format and style rules
+
+Taken from the upload dialog's own instructions, which are stricter and newer than the API
+documentation:
+
+| Asset | Accepted dimensions | Formats | Size limit | Styles |
+| --- | --- | --- | --- | --- |
+| Grid (Steam portrait / wide capsules) | 600×900, 920×430, 460×215 | PNG, JPEG, animated WebP | 15 MB static / 48 MB animated | Alternate, Blurred, White Logo, Materiel, No Logo |
+| Grid (Galaxy 2.0 tiles) | 342×482, 660×930 | PNG, JPEG, animated WebP | 15 MB static / 48 MB animated | same |
+| Square grid | 512×512, 1024×1024 | PNG, JPEG, animated WebP | 15 MB static / 48 MB animated | same |
+| Hero | 3840×1240, 1920×620, 1600×650 | PNG, JPEG, animated WebP | 24 MB static / 48 MB animated | Alternate, Blurred, Materiel |
+| Logo | no fixed size, "as high quality as possible" | PNG, animated WebP | 15 MB static / 32 MB animated | Official, White, Black, Custom |
+| Icon | square: 16, 32, 48, 64, 128, 256, 512 or 1024 | PNG, ICO | 3 MB | Official, Custom |
+
+Sources: [site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js)
+(asset instructions and the accepted-dimension arrays) and
+[OpenAPI 2.10.0](https://www.steamgriddb.com/static/openapi.yml) (`Styles`, `StylesHero`,
+`StylesLogo`, `StylesIcon`). One upload dialog serves grids and heroes, so any of the listed grid
+sizes is accepted for either slot; DDL only needs one portrait, one wide and one hero.
+
+- **Confirmed** — the API documentation is **stale for grids**: it still says "Dimensions must be
+  920x430 or 460x215, maximum file size 1MB" for `POST /grids`, while the website accepts
+  600×900 and 15 MB. This is another reason to use the website for the first upload.
+- **Confirmed** — generic rules that affect us: do not upload an asset of one type as another
+  (rule 2), do not upload assets irrelevant to the site (rule 3), and do not upload a detailed
+  square image as an icon — "icons with too much detail (full square backgrounds, non-abbreviated
+  logos, etc) should be uploaded as square grids" (rule 10)
+  ([Rules](https://www.steamgriddb.com/help)). We upload each file in its own slot, so only
+  rule 10 needs a judgement call (§5.5).
+- **Proposed** — style tags for our first-party set: **Alternate** for both grids and the hero
+  (they are neither blurred nor material, and the logo is not a white-only lock-up);
+  **Official** for the logo and icon, because DDL authors both the application and the art, which
+  is the same claim "Official" makes for a publisher's assets. If the owner prefers to keep
+  "Official" for store-published games only, use **Custom** for the logo and icon instead.
+
+### 5.5 Do DDL's exports already meet the rules?
+
+Checked with `file(1)` against the files in `docs/design/logo/steam/`, which the release workflow
+copies to `ddl/art/` (`.github/workflows/release.yml`, `install … docs/design/logo/steam/*.png`):
+
+| File | Actual | Slot | Verdict |
+| --- | --- | --- | --- |
+| `library-capsule.png` | 600×900, RGBA PNG, 73 KB | Grid (portrait) | Accepted as is. |
+| `wide-capsule.png` | 920×430, RGBA PNG, 70 KB | Grid (wide) | Accepted as is. |
+| `hero.png` | 3840×1240, RGBA PNG, 127 KB | Hero | Accepted as is. Contains no logo or text, matching Steam's hero guidance. |
+| `logo.png` | 1280×720, RGBA PNG, 89 KB | Logo | Accepted: logos have no fixed size, and this one is transparent. |
+| `icon-512.png` | 512×512, RGBA PNG, 102 KB | Icon | Accepted. |
+| `icon-256.png` | 256×256, RGBA PNG, 35 KB | Icon (alternative) | Accepted; same bytes as the window icon. |
+
+**No re-export is required.** All six files are PNG, square where they must be, within the
+accepted dimension lists, and two orders of magnitude below the size limits.
+
+- **Proposed** — upload `icon-512.png` (the detailed emblem, `emblem.svg`) as the SGDB icon. It
+  is a single graphic on transparency, which is exactly what the FAQ asks for; keep
+  `icon-256.png` (the simplified `emblem-small.svg`) for the Steam shortcut, where it is shown at
+  small sizes. If the 512 px emblem looks busy at 16 px, swap in the 256 px file — both are valid
+  icon sizes.
+- **Confirmed** — none of our files is an animated WebP, an ICO or a GIF, so no SGDB-specific
+  conversion is needed. RGBA transparency is fine for every slot.
+
+### 5.6 Name matching: what the tools actually search
+
+Three tools do the same thing: send a **name string** to SGDB's autocomplete endpoint and take
+the **first** result.
+
+- **Confirmed (Decky)** — the Decky SteamGridDB plugin v1.8.1 does, for a non-Steam shortcut:
+  `searchGames(appOverview.display_name)`, then `setSelectedGame(gameRes[0])`; only if the list is
+  empty does it open the game-selection modal. The choice is cached per shortcut
+  (`nonsteam_<appId>`) and can be changed with the cog button
+  ([`useAssetSearch.tsx#L182-L201`](https://github.com/SteamGridDB/decky-steamgriddb/blob/26682f6a58b5dad774abe740ee3f9bad38296496/src/hooks/useAssetSearch.tsx#L182-L201),
+  [`useSGDB.tsx#L256-L270`](https://github.com/SteamGridDB/decky-steamgriddb/blob/26682f6a58b5dad774abe740ee3f9bad38296496/src/hooks/useSGDB.tsx#L256-L270)).
+  `display_name` is the shortcut's name in Steam — the string the player sees in the library.
+- **Confirmed (Steam ROM Manager)** — SRM resolves a title with `client.searchGame(title)` and uses
+  `(res[0] || {}).id` for the actual download. A title written as `${gameid:12345}` bypasses the
+  search and uses that id ([`steamgriddb.worker.ts#L53-L82`](https://github.com/SteamGridDB/steam-rom-manager/blob/7f0f4024bf829a22a2fba56c6e6dce5182b76af4/src/lib/image-providers/steamgriddb.worker.ts#L53-L82),
+  [`available-providers.ts#L187`](https://github.com/SteamGridDB/steam-rom-manager/blob/7f0f4024bf829a22a2fba56c6e6dce5182b76af4/src/lib/image-providers/available-providers.ts#L187)).
+- **Confirmed (SteamTinkerLaunch)** — STL calls the same `/search/autocomplete/` endpoint and
+  reads `.data[0]`; its wiki tells users to enter the SGDB **Game ID** for non-Steam games rather
+  than rely on the name
+  ([`steamtinkerlaunch#L1817-L1830`](https://github.com/sonic2kk/steamtinkerlaunch/blob/8550ab26a712b7f5f6d0947070181446b9de61fd/steamtinkerlaunch#L1817-L1830),
+  [wiki](https://github.com/sonic2kk/steamtinkerlaunch/wiki/SteamGridDB/c56b4c922ed85b7d8ecbaaab708e6f65717a0104)).
+- **Confirmed** — SGDB's autocomplete is a fuzzy **name** search, not an alias lookup:
+  - The site lowercases and trims the term before querying
+    (`encodeURIComponent(e.toLowerCase().trim())`) and the API documents the endpoint only as
+    "Search for a game by name"
+    ([site bundle](https://www.steamgriddb.com/static/assets/233e475efea66025d29a.js);
+    [OpenAPI](https://www.steamgriddb.com/static/openapi.yml), `/search/autocomplete/{term}`).
+  - The `Game` object has no alternate-name/alias field (OpenAPI 2.10.0; `SGDBGame` in
+    node-steamgriddb 2025-08-26). There is nothing to add "DDL" to.
+  - Probes against the site's own autocomplete endpoint on 2026-10-19:
+
+| Query | First results | Reading |
+| --- | --- | --- |
+| `ddl` | 无尽DDL（INFINITY DEADLINE） (5520727) | A three-letter name is already taken by an unrelated Steam game. |
+| `DoomDeckLauncher`, `doomdecklauncher` | *(empty)* | No page exists yet. |
+| `doom deck launcher` | Deck Vs Doom, Doom, DooM in the Dark, … | Word matches; no exact hit. |
+| `deck launcher` | Deck of Ashes, Deck Casters, … | "Launcher" is not required to match. |
+| `doom launcher` | Doom Launcher (5449883), Hakros Doom Launcher (Program), … | A different, already-listed launcher owns the close name. |
+| `emu deck` | EmuDeck (5356989) | Camel-case names are split into words and match. |
+| `steam grid db` | SteamGridDB (5253321) | Same. |
+| `another metroid 2 remake` | Another Metroidy Text Adventure, … | Aliases are **not** matched: AM2R is not returned. |
+| `srb2` | Sonic Robo Blast 2 Kart (SRB2 Kart) | An acronym only matches because it is inside the page name. |
+
+- **Confirmed** — therefore "DDL" would resolve to the wrong game in all three tools, and
+  "Doom Deck Launcher" is ambiguous against "Doom Launcher" and "Deck Vs Doom" until our page
+  ranks first. **Proposed** — the page title and the Steam shortcut name must be the same exact
+  string, `DoomDeckLauncher`. It is unique today, it is already the name used in DDL's own
+  artwork and documentation, and it makes the autocomplete term identical to the page name.
+- **Needs Deck Validation** — that, once the page exists, `DoomDeckLauncher` really is the first
+  result on the authenticated v2 endpoint Decky uses, and that Decky picks it without the player
+  opening the picker. The public endpoint and the v2 endpoint share the database but were not
+  compared directly; the v2 endpoint needs an API key, which this task did not use.
+
+### 5.7 Recommended names
+
+| Thing | Value | Reason |
+| --- | --- | --- |
+| SGDB page title | `DoomDeckLauncher` | Exact string the tools search for; unique in the database today. |
+| Aliases / alternate names | none available | SGDB exposes no alias field; only the page name is searched. |
+| Steam shortcut name | `DoomDeckLauncher` | Decky searches `display_name`, i.e. this name. |
+| SGDB game id | record it after approval | SRM can use `${gameid:<id>}` and STL asks for the id, which survives any future rename. |
+
+- **Confirmed** — the Steam Deck guide already refers to "the **DoomDeckLauncher** shortcut you
+  added during install", but the install step never asks the player to rename the shortcut
+  ([`docs/steam-deck-guide.md`](../steam-deck-guide.md), "Install" step 3 and the controller
+  section). A shortcut added by picking the `ddl` binary is likely to be named `ddl`.
+  **Needs Deck Validation** — the exact default name Steam assigns on the current client.
+- **Proposed** — the guide should add a rename step: right-click the shortcut → **Properties** →
+  set the name to `DoomDeckLauncher`. That fixes the guide's own inconsistency and is what makes
+  the SGDB lookup work.
+
+### 5.8 Owner upload steps
+
+The step-by-step is in the report, because it is an owner action and not research:
+`docs/reports/043-steam-shortcuts-research.md` §"R4 — SteamGridDB upload steps". In short: sign
+in with Steam, request the `DoomDeckLauncher` page, wait for approval, upload the six files from
+`docs/design/logo/steam/`, then verify that `DoomDeckLauncher` is the first search result and
+that the Decky picker shows the art.
+
+## 6. Open questions for Deck validation
 
 1. Does a shortcut with `Exe=/path/to/ddl` and `LaunchOptions=launch <id>` start correctly from
    Gaming Mode, including paths with spaces and a quoted `Exe`? **Needs Deck Validation.**
@@ -406,8 +626,13 @@ implemented.
    **Needs Deck Validation.**
 8. How are non-ASCII names and paths encoded in `shortcuts.vdf` on the current client?
    **Needs Deck Validation.**
+9. Does the SGDB page `DoomDeckLauncher` become the first result of the authenticated
+   `/api/v2/search/autocomplete/DoomDeckLauncher` endpoint, so the Decky plugin picks it without
+   the player opening the picker? **Needs Deck Validation.**
+10. What name does the current Steam client give a non-Steam shortcut added from the `ddl`
+    binary, and does renaming it to `DoomDeckLauncher` stick? **Needs Deck Validation.**
 
-## 6. What this means for R3
+## 7. What this means for R3
 
 The mechanism is understood and reproducible, but it is unsupported, fragile, and conflicts with
 DDL's normal Gaming Mode lifecycle. Automatic shortcut writing is not a small feature: it needs a
