@@ -67,11 +67,11 @@
 | Dropbox as a fast first mirror (narrow `*.dl.dropboxusercontent.com` redirect rule) for the 21 DBPs now on slow archive.org | 038 | Phase 1 **merged** (redirect rule: one-label host, only in a chain entering at `www.dropbox.com`, same-host second hop); phase 2 (mirrors) after 037 |
 | Resumable downloads: keep pinned partials, `Range`/`If-Range` resume, 3 retries, bounded partial cache | 040 | Ready |
 | Research: Cacowards inventory with /idgames availability and DSDA verdicts | 042 | Ready |
-| Research: optional Steam shortcuts for installed mapsets (feasibility) | 043 | Ready |
+| Research: optional Steam shortcuts for installed mapsets (feasibility) + SteamGridDB | 043 | **Done**: README-only (no shortcut writing: Steam must be closed, unsupported format); SteamGridDB has no aliases, so the page and the shortcut name are `DoomDeckLauncher`; owner requests the page and uploads the existing art |
 | Weekly catalog link health (`ddl catalog check-links`, headers only, issue on failure) | 044 | Ready (after 040) |
-| UI touch-ups: seamless wall background, no "Verification pending" / process labels in the player UI | 045 | In progress |
+| UI touch-ups: seamless wall background, no "Verification pending" / process labels in the player UI | 045 | **Done**: wall crop inside the atlas border (regenerated from the PNG atlas), Home readiness row and every hard-coded process label removed (audit in the report), headless tests fixed for the 89-recipe catalog (main was red after 037) |
 | Complevels as DSDA aliases (`vanilla`/`boom`/`mbf`/`mbf21`), no complevel verification status (D-030) | 046 | Ready (after 037 and 045) |
-| Transparent README logo (light and dark variants via `<picture>`) | 047 | In progress |
+| Transparent README logo (light and dark variants via `<picture>`) | 047 | **Done**: `readme-logo-{dark,light}` transparent, name contrast 15.97:1 / 19.37:1, `<picture>` in README |
 | Vector panel frames and ornaments (corners meet their rails at any size) | 048 | Ready (after 045) |
 | Fade from the title panel into the art band | 049 | In progress |
 | Research: /idgames browse | 041 | **Done**: mirror `ls-laR.gz` (43,741 files, daily) + per-file txt; recommends a CI-built index; specs 050–053 written from its proposal; owner questions open (publish a derived index; courtesy note to the archive maintainers) |
