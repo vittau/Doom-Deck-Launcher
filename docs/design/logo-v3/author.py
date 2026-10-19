@@ -276,7 +276,7 @@ def furnace_full(p='fu'):
     b += path(''.join(circle(x, y, 5.5) for x, y in bosses), DARK)
     b += path(''.join(circle(x, y, 3.5) for x, y in bosses), BRONZE_RAMP[5])
     # The clockwise half of every blade sits in the stone's shadow.
-    b += path(''.join(poly(h[:3]) for h in holes), DARK, opacity=0.42)
+    b += path(''.join(poly(h[:3]) for h in holes), '#4A0F12', opacity=0.5)
     return defs, b
 
 
@@ -287,7 +287,7 @@ def furnace_small(p='fus'):
     b += path(poly(octagon(22)), f'url(#{p}-glow)')
     holes = [kite(a, 84, 38, 26, 28) for a in CARDINAL]
     b += path(poly(octagon(27)) + ''.join(poly(h) for h in holes) + circle(C, C, 18), '#241415', True)
-    b += path(''.join(poly(h[:3]) for h in holes), DARK, opacity=0.42)
+    b += path(''.join(poly(h[:3]) for h in holes), '#4A0F12', opacity=0.5)
     return defs, b
 
 
