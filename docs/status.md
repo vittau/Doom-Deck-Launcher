@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Rose Compass logo, real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-19
+**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-19
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -65,4 +65,4 @@
 | Logo v3: richer Rose Compass, SVG only, more detail and colour (owner routing: Opus 5.5 high) | 036 | **Done**: three directions, owner picked B Stained Glass after a second round (lead came, amber + red glass, jewels, smaller ember); small tier for 32–64 px; reproducible exporter with `--check`; D-029 |
 | Every Doomer Boards Project (DBP 01–99) that DSDA-Doom can play, /idgames first, Dropbox fallback (D-028) | 037 | In progress |
 | Dropbox as a fast first mirror (narrow `*.dl.dropboxusercontent.com` redirect rule) for the 21 DBPs now on slow archive.org | 038 | Ready (after 037) |
-| Apply logo v3 (D-029) in production: masters, header, loading, About, window icon, Steam art, social preview | 039 | Ready |
+| Apply logo v3 (D-029) in production: masters, header, loading, About, window icon, Steam art, social preview | 039 | **Done**: masters authored from `logo-v3/author.py` (v2 kept in `logo-v2/production-d023/`), every PNG regenerated with resvg 0.47.0 (`export.py --check`), small tier for the header and window icon, README logo and screenshots refreshed; social preview regenerated — **owner uploads it to GitHub by hand**. Deck: logo check |

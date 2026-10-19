@@ -675,3 +675,11 @@
     D-023's flat Rose Compass; the design record (spec 036) is merged and spec 039 applies it.
   refs: [docs/decisions.md, docs/reports/036-logo-v3.md, docs/specs/039-apply-logo-v3.md]
 
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Spec 039 merged (Sonnet worker): logo v3 Stained Glass is the production logo in the app
+    header, loading screen, About, window icon (small tier), Steam art, README and the 1280x640
+    social preview, all regenerated reproducibly with resvg 0.47.0. v2 production files kept as
+    history. 571 workspace tests green. The owner uploads the social preview to GitHub by hand.
+  refs: [docs/reports/039-apply-logo-v3.md]
