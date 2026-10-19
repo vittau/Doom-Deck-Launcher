@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 7; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "the-merry-christmassy-doom-project"
+title = "The Merry Christmassy Doom Project (Doomer Boards Project 7)"
+authors = ["Doomer Boards Project 7"]
+release = "2018-12-24"
+page = "https://www.doomworld.com/idgames/themes/xmas/dbp7xmas"
+description = "DOOM II: MAP01–MAP05 (5 maps). Jingle bells, shotgun shells, blasting demons in the fiery hells!."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/the-merry-christmassy-doom-project/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "the-merry-christmassy-doom-project/01.jpg"
+credit = "Doomer Boards Project 7"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 7", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and ZDoom", "Release thread: https://doomer.boards.net/thread/1453/limit-removing-christmassy-project-released"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and ZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 7; episode = 5 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/themes/xmas/dbp7xmas"
+urls = ["https://www.gamers.org/pub/idgames/themes/xmas/dbp7xmas.zip", "https://youfailit.net/pub/idgames/themes/xmas/dbp7xmas.zip", "https://ftp.fu-berlin.de/pc/games/idgames/themes/xmas/dbp7xmas.zip"]
+size = 2319284
+sha256 = "81e8dd0500d8d573ae526586305f59d868ca6cfb03e81e99fb20ef313f080182"
+kind = "zip"
+idgames_path = "themes/xmas/dbp7xmas.zip"
+
+[[packages.members]]
+id = "dbp7xmas"
+path = "DBP7XMAS.txt"
+size = 3796
+sha256 = "6cd2ae18c73f0954b5d9aab0d644bfe553fa2ad8fe6757e2976df6f5a74273e3"
+keep = true
+
+[[packages.members]]
+id = "dbp7xmas-2"
+path = "DBP7XMAS.wad"
+size = 6129430
+sha256 = "580e21c7c1b0da045d7cc39f05d24c4439231faa4b13f4f7482f3572fd19cfee"
+keep = false
+
+[[components]]
+id = "main"
+label = "The Merry Christmassy Doom Project"
+description = "Main episode: MAP01–MAP05."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp7xmas-2"
+role = "maps"

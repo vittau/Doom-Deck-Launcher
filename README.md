@@ -1,6 +1,10 @@
-<p align="center"><img src="docs/design/logo/readme-logo.png" alt="DoomDeckLauncher — Rose Compass Stained Glass logo" width="700"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/design/logo/readme-logo-dark.png"><img src="docs/design/logo/readme-logo-light.png" alt="DoomDeckLauncher — Rose Compass Stained Glass logo" width="700"></picture></p>
 
 # DoomDeckLauncher
+
+> [!NOTE]
+> This project is developed and maintained with the help of AI agents, under the direction and
+> review of its human maintainer.
 
 **A native, controller-first DOOM mapset launcher for Steam Deck, powered by the official [DSDA-Doom](https://github.com/dsda-org/dsda-doom) AppImage.**
 

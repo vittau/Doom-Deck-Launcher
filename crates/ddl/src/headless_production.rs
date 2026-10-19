@@ -840,13 +840,10 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
     let checks: Vec<_> = ui.get_nodes().iter().filter(|n| n.kind == 7).collect();
     assert_eq!(
         checks.iter().map(|n| n.y).collect::<Vec<_>>(),
-        [100., 172., 244., 316.]
+        [100., 172., 244.]
     );
-    assert_eq!(
-        checks.iter().map(|n| n.tone).collect::<Vec<_>>(),
-        [2, 2, 4, 3]
-    );
-    assert!(ui.get_nodes().iter().any(|n| n.id == 2 && n.y == 402.));
+    assert_eq!(checks.iter().map(|n| n.tone).collect::<Vec<_>>(), [2, 2, 4]);
+    assert!(ui.get_nodes().iter().any(|n| n.id == 2 && n.y == 330.));
     assert!(
         ui.get_nodes()
             .iter()
@@ -854,6 +851,10 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
             .all(|n| !n.screenshot.is_empty())
     );
     assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
+    assert!(ui.get_nodes().iter().all(|n| {
+        let label = n.label.to_lowercase();
+        !label.contains("verification pending") && !label.contains("needs deck validation")
+    }));
     capture("010-home-continue.png");
 }
 
@@ -1694,7 +1695,19 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.sync(ui);
     }
     let all = card_ids(ui);
-    assert_eq!(all.len(), catalog.recipes.len());
+    // The grid draws the cards that fit the viewport, and the active catalog may be a
+    // fetched bundle rather than the embedded one (spec 019), so compare the grid with
+    // the snapshot instead of the embedded recipe count.
+    let shown = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .map_or(0, |s| s.items.len());
+    assert!(shown > 0, "Discover has recipes");
+    assert!(
+        !all.is_empty() && all.len() <= shown,
+        "the grid draws cards"
+    );
     let mut expected = vec!["All".to_owned()];
     expected.extend(used.iter().map(|t| t.label.clone()));
     expected.push("Favorites".into());
@@ -1712,12 +1725,17 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert!(ui.get_category_hint() && ui.get_favorite_hint());
     capture(window, "015-discover-all.png");
 
-    // Spec 023 R3/A2, spec 033 R4: every catalog card resolves to an embedded
-    // image with no caption over it; the credit is plain text on Mapset detail.
-    // Capture each focused card so all thirteen are visible across the scroll
-    // positions, including the two bright-sky compositions.
-    for loaded in &catalog.recipes {
-        let recipe = &loaded.recipe;
+    // Spec 023 R3/A2, spec 033 R4: every card that ships a screenshot resolves to the
+    // embedded image with no caption over it; the credit is plain text on Mapset detail.
+    // Spec 037 R4: a recipe may ship none and fall back to the painted concept art, so
+    // the cards under test are the active catalog's recipes that declare a screenshot.
+    let cards: Vec<ddl_core::catalog::Recipe> = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .map(|s| s.items.iter().map(|i| i.recipe.clone()).collect())
+        .unwrap_or_default();
+    for recipe in cards.iter().filter(|r| !r.screenshots.is_empty()) {
         let index = state
             .borrow()
             .snapshot
@@ -1741,7 +1759,18 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         let image = ui
             .global::<crate::ScreenshotAssets>()
             .invoke_image(asset.clone());
-        assert_eq!((image.size().width, image.size().height), (640, 360));
+        let size = image.size();
+        assert!(
+            (ddl_core::catalog::MIN_SCREENSHOT_WIDTH..=ddl_core::catalog::MAX_SCREENSHOT_WIDTH)
+                .contains(&size.width)
+                && (ddl_core::catalog::MIN_SCREENSHOT_HEIGHT
+                    ..=ddl_core::catalog::MAX_SCREENSHOT_HEIGHT)
+                    .contains(&size.height),
+            "{} screenshot is {}x{} outside catalog bounds",
+            recipe.id,
+            size.width,
+            size.height
+        );
         {
             let mut r = state.borrow_mut();
             r.focus = 10 + index as i32;
@@ -1951,13 +1980,31 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(selected_chip(ui), "All");
     assert_eq!(ui.get_focused(), card_ids(ui)[0]);
 
-    // X on the second card: persisted, starred, and sorted first.
+    // Right reaches another card; favorite a non-first recipe with multiple tags
+    // so the detail assertions exercise all tags regardless of catalog ordering.
     press(window, Key::RightArrow);
-    let second = ui.get_focused();
-    assert_ne!(second, card_ids(ui)[0]);
+    assert_ne!(ui.get_focused(), card_ids(ui)[0]);
+    let first = card_ids(ui)[0];
+    let favorite_id = {
+        let mut r = state.borrow_mut();
+        let index = r
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .enumerate()
+            .find(|(index, item)| 10 + *index as i32 != first && item.recipe.tags.len() >= 2)
+            .map(|(index, _)| index)
+            .expect("favorite/detail journey needs a non-first recipe with multiple tags");
+        r.focus = 10 + index as i32;
+        r.selected = index;
+        r.sync(ui);
+        r.focus
+    };
     press_char(window, "x");
     idle(&state);
-    let marked = state.borrow().snapshot.as_ref().unwrap().items[(second - 10) as usize]
+    let marked = state.borrow().snapshot.as_ref().unwrap().items[(favorite_id - 10) as usize]
         .recipe
         .id
         .clone();
@@ -1974,7 +2021,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     let first_card = ui
         .get_nodes()
         .iter()
-        .find(|n| n.id == second)
+        .find(|n| n.id == favorite_id)
         .map(|n| (n.x, n.y))
         .unwrap();
     assert_eq!(first_card, (12., 84.), "favorites sort first");
@@ -1988,7 +2035,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         ui.invoke_action(12);
     }
     assert_eq!(selected_chip(ui), "Favorites");
-    assert_eq!(card_ids(ui), [second]);
+    assert_eq!(card_ids(ui), [favorite_id]);
     capture(window, "015-discover-favorites.png");
 
     // Detail: all tag chips, favorite mark, X and the Favorite button.
