@@ -433,7 +433,7 @@ fn navigation_feedback() {
     let _ = ui.get_toast_opacity();
     super::advance_time(150);
     assert!(
-        (0.0..1.0).contains(&ui.get_toast_opacity()),
+        ui.get_toast_opacity() > 0.0 && ui.get_toast_opacity() < 1.0,
         "toast fades rather than disappearing abruptly"
     );
     super::advance_time(200);

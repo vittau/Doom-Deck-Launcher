@@ -225,14 +225,19 @@ component Badge inherits Rectangle {
     border-radius: pill ? 7px : 14px;
     Text { text: root.label; color: Tokens.text; font-size: 16px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
 }
-component Hint inherits HorizontalLayout {
+// Explicit intrinsic width keeps the compact footer stable across conditional hints.
+component Hint inherits Rectangle {
     in property <string> badge;
     in property <string> label;
     in property <bool> pill: false;
-    spacing: 8px; alignment: start; horizontal-stretch: 0;
+    horizontal-stretch: 0;
+    width: (pill ? 54px : 28px) + 8px + caption.preferred-width;
     height: 28px;
     Badge { label: root.badge; pill: root.pill; }
-    Text { text: root.label; color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center; }
+    caption := Text {
+        x: root.pill ? 62px : 36px; width: parent.width - self.x; height: parent.height;
+        text: root.label; color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center;
+    }
 }
 export component AppWindow inherits Window {
     title: @tr("DoomDeckLauncher");
