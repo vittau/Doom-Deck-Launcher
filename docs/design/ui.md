@@ -52,13 +52,11 @@ reduced opacity. Unavailable controls give explicit reasons and preserve readabl
 Original carved oxblood wall repeats seamlessly, visibly surrounding smooth information panels.
 Pre-rendered bronze / red-stone frames use 28 px nine-slice borders, preserving corners at all
 panel sizes. Cards (Home, Discover and Library), detail and the top art band show the recipe's
-first bundled screenshot, centred and cropped to fill (spec 023, D-024). A bone-coloured
-“Screenshot: <credit>” uses the existing 20 px metadata text on a slim, 90%-opaque near-black
-plate with a thin bronze edge. It hugs the text at the image's bottom-left (bottom-right in the
-art band), stays on one line and elides long credits with “…”. Detail alone may wrap the full
-credit to two lines. Images narrower than 160 px, including Home history thumbnails, omit the
-caption; the hero and detail carry the credit. A recipe without a bundled
-screenshot keeps its painted cover and “Original concept art” caption. Images are embedded by
+first bundled screenshot, centred and cropped to fill (spec 023, D-024). Images carry no
+caption plate or text over them (spec 033). The credit is plain text elsewhere: Mapset detail's
+source section lists “Screenshots: <credit>”, and About lists every screenshot credit from
+the bundled `SOURCES.toml` files. A recipe without a bundled screenshot keeps its painted
+cover, also without a caption. Images are embedded by
 Slint at build time, so browsing requires no network. Detail repeats the first shot rather than
 adding a carousel or a new controller action.
 The original angular broken-circle emblem pairs with a clearly legible bone Barlow DDL logotype;
@@ -113,6 +111,10 @@ Reference canvas exactly 1280×800: header 104 px, content y=128–704, hint bar
 32 px gap prevents overlap. Reference coordinates illustrate proportions, not fixed pane heights:
 Slint layouts allocate remaining content space and scroll overflow, including at smaller windows.
 No window decorations required. Reserve ring gutters and 40 px outer safe inset.
+
+**Tone (spec 033):** copy is plain, short and factual. A header is its title alone; a line under
+a header, card or panel appears only if it tells the player a state, a requirement or the next
+step. No taglines, slogans or flavour text.
 
 Every visible literal—including status, errors, categories, accessibility labels, hint verbs,
 pluralized file counts and confirmation copy—must use Slint `@tr` or translated model resources.
@@ -172,10 +174,10 @@ Purpose: resume the last mapset/profile and expose readiness. Left hero: cover, 
 and “Continue”; right: “Ready to play” prerequisite summary and Discover action. Lower recent
 items show title, creators, required game, installed/confidence status and last played.
 “Continue” means reopen the last launch profile/start the engine; it **does not promise loading an
-engine save automatically**. Copy: “Your last profile, ready again.”
+engine save automatically**.
 Focus: Continue → hero Details → right readiness actions → recent cards; initial Continue, or
-“Discover mapsets” if no history. Loading: “Loading your library…”; empty: “Your next mapset starts
-here” / “Discover mapsets”; error: “Could not read recent play” / Retry, library still usable;
+“Discover mapsets” if no history. Loading: “Loading your library…”; empty: “Choose a mapset to install
+and play.” / “Discover mapsets”; error: “Could not read recent play” / Retry, library still usable;
 offline: installed Continue works, cached Discover remains available. Missing prerequisites replace
 Continue with “Finish setup”, naming the blocker.
 
@@ -185,7 +187,7 @@ Purpose: browse curated categories without typing. **Category strip (spec 015):*
 each tag of `catalog/tags.toml` that at least one recipe uses, in the vocabulary's `order`, then
 “Favorites”. A 3-column grid contains cover placeholders, title, creators, required game + IWAD
 status, install state, a favorite star and at most two tag chips (the open category's tag first).
-Focused card gets ring; titles stay below the image and only the credit plate overlays it. Select opens detail.
+Focused card gets ring; titles stay below the image, which carries no text. Select opens detail.
 Bindings: **Up** from the first grid row enters the strip at the selected chip; **Left/Right** on
 the strip moves the chip and switches the category at once (no wrap); **Down** from the strip
 enters the first card; **L2/R2** (keyboard `[` `]`) switch to the previous/next category from the
@@ -205,7 +207,7 @@ short description, base-game readiness, compatibility confidence + tested engine
 components summary, credits/source and installed version. No invented “Verified” label in mockups:
 “Verification pending” is deliberate. “Install” stays available if the IWAD is missing; no
 “Install & Play” promise while blocked. Focus primary → Setup → Favorite (“Add to favorites” / “Remove from favorites”; **X** does the same from anywhere on the screen) → Profiles → requirements →
-components → evidence → source/credits. The pane scrolls to keep whole focused row visible.
+components → evidence → source/credits (“Screenshots: <credit>” as plain text; About lists all screenshot credits). The pane scrolls to keep whole focused row visible.
 Loading “Loading mapset details…”; empty/removed recipe “This mapset is no longer in the catalog”
 with installed copy still reachable; error “Could not read this recipe” / Retry + Diagnostics;
 offline cached detail usable, Install unavailable with “Connect to install”. Source shows URL and

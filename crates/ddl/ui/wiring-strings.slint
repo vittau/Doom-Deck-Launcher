@@ -1,6 +1,5 @@
 export global WiringStrings {
-    out property <string> screenshot-credit: @tr("Screenshot: {}", root.value);
-    out property <string> concept-art: @tr("Original concept art");
+    out property <string> screenshots-credit: @tr("Screenshots: {}", root.value);
     out property <string> recipe-update: @tr("Update available");
     out property <string> recipe-removed: @tr("No longer in the catalog");
     out property <string> recipe-update-action: @tr("Update");
@@ -37,24 +36,17 @@ export global WiringStrings {
 
     out property <string> addon-choice: @tr("Add-on — choose one");
     out property <string> none: @tr("None");
-    out property <string> first-sub: @tr("Prepare the engine and bring your own base games.");
-    out property <string> download-help: @tr("Receiving the archive; checks follow before installation.");
-    out property <string> verify-help: @tr("Checking integrity before these files can be used.");
-    out property <string> extract-help: @tr("Unpacking content into a safe staging directory.");
-    out property <string> commit-help: @tr("Saving the completed install; cancellation is temporarily unavailable.");
+    out property <string> download-help: @tr("Receiving the archive. Checks run before install.");
+    out property <string> verify-help: @tr("Checking the files before use.");
+    out property <string> extract-help: @tr("Unpacking the files.");
+    out property <string> commit-help: @tr("Finishing the install. Cancel is unavailable for now.");
 
     out property <string> ready-checks: @tr("Readiness checks");
     out property <string> no-recent: @tr("No sessions recorded yet.");
-    out property <string> home-intro: @tr("Build your library and begin a new session.");
     out property <string> recent: @tr("Recently played");
     out property <string> found-game: @tr("{} found", root.value);
     out property <string> missing-game: @tr("{} missing", root.value);
-    out property <string> discover-sub: @tr("Curated worlds. Choose your next descent.");
-    out property <string> library-sub: @tr("Installed worlds, ready for your next session.");
-    out property <string> detail-sub: @tr("Requirements, content and source.");
-    out property <string> setup-sub: @tr("Review components and gameplay before launching.");
-    out property <string> settings-sub: @tr("Manage your engine, base games and settings.");
-    out property <string> pre-check: @tr("Check when you are ready. No update check has run.");
+    out property <string> pre-check: @tr("No update check has run.");
     out property <string> content-single: @tr("1 content file");
     out property <string> stage-sequence: @tr("Download → Extract → Verify → Install");
     out property <string> engine-stage-sequence: @tr("Download → Verify → Extract → Install");
@@ -74,7 +66,7 @@ export global WiringStrings {
     out property <string> finish: @tr("Finish setup");
     out property <string> engine-ready: @tr("Engine installed · reviewed digest");
     out property <string> base-games: @tr("Your base games");
-    out property <string> scan-help: @tr("Add a folder containing your legally owned IWADs. Steam libraries are checked automatically.");
+    out property <string> scan-help: @tr("Add a folder with your IWADs. Steam libraries are checked automatically.");
     out property <string> review: @tr("Review base games");
     out property <string> use-game: @tr("Use this game");
     out property <string> ambiguous: @tr("Choose the version you own");
@@ -87,8 +79,6 @@ export global WiringStrings {
     out property <string> discover: @tr("Discover");
     out property <string> library: @tr("Library");
     out property <string> settings: @tr("Settings");
-    out property <string> home-empty: @tr("Your next mapset starts here");
-    out property <string> home-sub: @tr("Your last profile, ready again.");
     out property <string> discover-action: @tr("Discover mapsets");
     out property <string> continue: @tr("Continue");
     out property <string> details: @tr("Details");
@@ -118,7 +108,7 @@ export global WiringStrings {
     out property <string> pistol-off: @tr("Pistol start: Off");
     out property <string> pistol-help: @tr("Reset inventory at each map");
     out property <string> load-order: @tr("Recipe load order");
-    out property <string> order-help: @tr("Recipe-required order is locked. Enabled files are listed under Will launch.");
+    out property <string> order-help: @tr("The recipe's file order is locked.");
     out property <string> will-launch: @tr("Will launch");
     out property <string> play: @tr("Play");
     out property <string> unavailable: @tr("Play unavailable");
@@ -127,7 +117,6 @@ export global WiringStrings {
     out property <string> config-schema: @tr("Baseline schema {}", root.value);
     out property <string> playing-help: @tr("Game running — return here when you exit");
     out property <string> install-stopped: @tr("Install stopped");
-    out property <string> install-error-sub: @tr("Review the error and choose your next step.");
     out property <string> install-title: @tr("Download / install");
     out property <string> download: @tr("Downloading…");
     out property <string> verify: @tr("Verifying…");

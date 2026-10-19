@@ -575,7 +575,9 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     click(&mut r, &ui, BASE + 1);
     assert_eq!(r.local.view, Some(View::Base));
     assert!(!ui.get_root_screen());
-    assert!(r.nodes.iter().any(|n| n.label == "Original game"));
+    // Spec 033 R5: no "Original game" caption, and home paths show with `~`.
+    assert!(!r.nodes.iter().any(|n| n.label.contains("Original game")));
+    assert!(r.nodes.iter().any(|n| n.label.starts_with("~/")));
     write_png("032-base-game.png", &render(&window));
     click(&mut r, &ui, 2);
     assert_eq!(r.local.view, Some(View::BaseSetup));
