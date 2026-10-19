@@ -632,4 +632,13 @@
     (keys spot-checked against DSDA v0.30.1 source). 552 workspace tests green. The orchestrator's
     GUI guard killed the owner's own screenshot once; it now exempts interactive captures.
   refs: [docs/reports/031-profiles-ux.md, docs/reports/029-deck-display.md]
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Spec 032 merged (D-027): base games are playable from a Library group with their own page,
+    profiles, saves and extras, at DSDA's vanilla complevel per IWAD; IWAD folders now lists the
+    automatic Steam/GOG sources. Codex reached its 5-hour limit during the final checks; a Sonnet
+    5.5 worker took over the same worktree, merged 029+031 and fixed one Library focus regression.
+    557 workspace tests green.
+  refs: [docs/reports/032-base-games-and-iwad-sources.md]
 
