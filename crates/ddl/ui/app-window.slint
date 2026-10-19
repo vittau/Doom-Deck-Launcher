@@ -284,6 +284,19 @@ export component AppWindow inherits Window {
     in property <bool> sheet-open: false;
     in property <string> sheet-title;
     in property <float> sheet-height: 300;
+    in property <bool> profile-hint: false;
+    in property <bool> profile-name-open: false;
+    in-out property <string> profile-name;
+    in-out property <string> profile-name-error;
+    callback profile-name-focused();
+    changed profile-name-open => {
+        if profile-name-open { name-input.focus(); name-input.select-all(); } else { keys.focus(); }
+    }
+    changed focused => {
+        if profile-name-open {
+            if focused == 918 { name-input.focus(); } else { keys.focus(); }
+        }
+    }
     // Headless measurement seam: the production fitting component, never a window.
     in property <bool> fit-test-visible: false;
     in property <bool> fit-full: false;
@@ -366,7 +379,8 @@ export component AppWindow inherits Window {
         background: Tokens.raised; border-radius: 8px; border-width: 2px; border-color: Tokens.line;
         Text { x: 16px; width: parent.width - 32px; text: root.displayed-toast; color: Tokens.text; font-size: Tokens.metadata; vertical-alignment: center; wrap: word-wrap; }
     }
-    if root.sheet-open: Rectangle {
+    Rectangle {
+        visible: root.sheet-open;
         x: 0px; y: 0px; width: parent.width; height: parent.height; background: #120C0DE0;
         Rectangle {
             x: (parent.width - 720px) / 2; y: (parent.height - root.sheet-height * 1px) / 2; width: 720px; height: root.sheet-height * 1px;
@@ -376,7 +390,35 @@ export component AppWindow inherits Window {
                 label: root.sheet-title; base-size: Tokens.section; smaller-size: Tokens.body;
                 title-slot: root.sheet-height > 400;
             }
-            for item in root.sheet-nodes: Node { item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
+            if root.profile-name-open: Rectangle {
+                x: 32px; y: 140px; width: 656px; height: 64px;
+                background: #170f0d; border-width: 2px;
+                border-color: name-input.has-focus ? #efb44f : #72503a;
+            }
+            name-input := TextInput {
+                visible: root.profile-name-open;
+                x: 48px; y: 152px; width: 624px; height: 40px;
+                color: #ead8b7; font-family: "Barlow"; font-size: 24px;
+                text <=> root.profile-name;
+                single-line: true;
+                changed has-focus => { if self.has-focus { root.profile-name-focused(); } }
+                edited => { root.profile-name-error = ""; }
+                accepted => { root.clicked(917); }
+                key-pressed(event) => {
+                    if event.text == Key.Escape { root.action(5); return accept; }
+                    if event.text == Key.DownArrow || event.text == Key.Tab { root.action(1); return accept; }
+                    return reject;
+                }
+            }
+            if root.profile-name-open: Text {
+                x: 32px; y: 224px; width: 656px; height: 40px;
+                text: root.profile-name-error; color: #efb44f; font-size: 20px;
+            }
+            if root.profile-name-open: Text {
+                x: 32px; y: 282px; width: 656px; height: 36px;
+                text: @tr("Keyboard unavailable? Press Steam + X."); color: #ead8b7; font-size: 20px;
+            }
+            for item in root.sheet-nodes: Node { visible: item.id != 918; item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
         }
     }
     Rectangle {
@@ -392,6 +434,7 @@ export component AppWindow inherits Window {
             if root.local-add-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: LocalStrings.add-hint; }
             if root.local-remove-hint && !root.sheet-open: Hint { badge: @tr("X"); label: LocalStrings.remove; }
             if root.import-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: @tr("Import"); }
+            if root.profile-hint: Hint { badge: @tr("L1/R1"); label: @tr("Profile"); pill: true; }
             if root.root-screen && !root.sheet-open: Hint { badge: @tr("L1/R1"); label: @tr("Tabs"); pill: true; }
             if root.category-hint && !root.sheet-open: Hint { badge: @tr("L2/R2"); label: @tr("Category"); pill: true; }
             if !root.sheet-open || root.local-confirm-hint: Hint { badge: @tr("Start"); label: root.local-confirm-hint ? LocalStrings.confirm : LocalStrings.menu; pill: true; }
