@@ -62,3 +62,4 @@
 | Drop decorative subtitles and the screenshot caption plates (credits move to detail text and About) | 033 | Ready (after 031, 032) |
 | Owner's DSDA controller layout (Select map, D-pad zoom/weapons, A use, B autorun, L1/R1 quick save/load, X quick turn) | 034 | Ready (after 029) |
 | Bundled images as JPEG ≤ 1280×800 at low quality, lint-enforced for community screenshots; UI art recompressed | 035 | Ready (after 031, 032) |
+| Logo v3: richer Rose Compass, SVG only, more detail and colour (owner routing: Opus 5.5 high) | 036 | In progress |
