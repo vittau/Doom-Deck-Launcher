@@ -657,4 +657,15 @@
     the map open; X is input_reverse, disabled in strict recording). Player rebinds survive the
     migration. Workspace tests green.
   refs: [docs/reports/034-dsda-controller-layout.md]
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Specs 033 and 035 merged (Sonnet workers). 033: decorative subtitles and caption plates are
+    gone; credits are plain text on Mapset detail and About. 035: bundled images are JPEG at most
+    1280x800 (q60), lint-enforced at 192 KiB for community screenshots; assets shrank from 8.3 to
+    2.8 MB. 571 workspace tests green. Spec 038 written: Dropbox's per-request download host
+    (ucXXXX.dl.dropboxusercontent.com) made exact-host allowlisting impossible, so 037 moved 21
+    DBPs to archive.org (slow); 038 adds a narrow redirect rule and Dropbox as first mirror.
+  refs: [docs/reports/033-plain-headers.md, docs/reports/035-lean-bundled-images.md,
+         docs/specs/038-dropbox-redirects.md]
 
