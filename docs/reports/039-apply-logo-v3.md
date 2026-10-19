@@ -62,8 +62,7 @@ None in the project. Design-time only: resvg 0.47.0 (pinned), Pillow 12.3.0 and 
    themselves are unchanged in role, because the app draws them on dark panels.
 3. **Social preview variants** (Threshold, Atlas) were regenerated with the lock-up; they show the
    dark tablet behind DDL on the scene, as the approved lock-up defines.
-4. `docs/design/logo/` SVGs are bigger (contact-sheet.svg ≈ 280 KB, others 17–37 KB); PNG sizes are
-   in the README table's source commands' output (steam art ≤ 130 KB each).
+4. The v3 SVGs are larger than the D-023 ones (`contact-sheet.svg` ≈ 280 KB, compositions 17–37 KB). Steam PNGs stay ≤ 130 KB each.
 
 ## Spec items left open
 
