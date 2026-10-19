@@ -415,6 +415,20 @@ impl Fetcher {
         std::thread::sleep(delay);
     }
 
+    /// Bytes already on disk that the next attempt for `request` would resume
+    /// (spec 040, R6).
+    ///
+    /// The install layer calls this before handing the request to
+    /// [`Fetcher::download`] so its first progress event starts at the resumed
+    /// count instead of a synthetic zero. It mirrors the fetcher's own resume
+    /// rule: a pin is required and the partial must belong to the first URL.
+    #[must_use]
+    pub fn resumable_bytes(&self, request: &DownloadRequest) -> Option<u64> {
+        let url = request.urls.first()?;
+        let hash = request.expected_sha256?;
+        partial::load(&self.downloads_dir, hash, url, request.expected_size).map(|s| s.bytes)
+    }
+
     /// The body deadline for `request`: size-scaled from the exact expected
     /// size when it is known, otherwise from the request's hard size cap.
     fn body_deadline_for(&self, request: &DownloadRequest) -> Duration {
@@ -2551,6 +2565,8 @@ mod tests {
         let cancel = CancellationToken::new();
         let mut seen = Vec::new();
         let mut progress = |p: Progress| seen.push(p);
+        // Spec 040 R6: the install layer asks for this before its first event.
+        assert_eq!(fetcher.resumable_bytes(&request), Some(7));
 
         let path = fetcher
             .download(&request, &cancel, &mut progress)

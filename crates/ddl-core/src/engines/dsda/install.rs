@@ -169,8 +169,10 @@ fn stage(
     )
     .with_size(request.expected_size);
     use crate::downloads::{InstallProgress, InstallStage};
+    // Spec 040 R6: the first event starts at the bytes already on disk, so a
+    // resumed install never jumps back to 0 %.
     progress(InstallProgress::transfer(crate::downloads::Progress::new(
-        0,
+        fetcher.resumable_bytes(&download).unwrap_or(0),
         Some(request.expected_size),
     )));
     let cached = fetcher.download(&download, cancel, &mut |p| {
