@@ -50,6 +50,13 @@ pub const ALLOWED_KEYS: &[&str] = &[
     "invert_analog_look",
     // Demo playback.
     "playback_mouse_controls",
+    // Video baseline the template owns (spec 029, R4). String keys such as
+    // `screen_resolution` are not assignable here because `-assign` values are
+    // integers (research §9).
+    "use_fullscreen",
+    "exclusive_fullscreen",
+    "render_aspect",
+    "render_stretch_hud",
 ];
 
 /// Why an override could not be recorded.

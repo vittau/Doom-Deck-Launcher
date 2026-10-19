@@ -292,6 +292,9 @@ impl DsdaConfigManager {
         for (key, value) in &self.template.values {
             document.set(key, Value::Int(*value));
         }
+        for (key, value) in &self.template.strings {
+            document.set(key, Value::Str(value.clone()));
+        }
 
         let now = self.clock.now_unix_secs();
         let backup = backups::create(
@@ -421,6 +424,7 @@ mod tests {
                 .iter()
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
+            strings: Vec::new(),
         }
     }
 
@@ -593,6 +597,61 @@ mod tests {
             merged,
             "the new baseline is exactly what was written"
         );
+    }
+
+    /// A3 (spec 029, R4): migrating the shipped v1 baseline to v2 adds the Deck
+    /// video defaults while a value the player changed in DSDA's menu survives.
+    #[test]
+    fn a_version_bump_adds_deck_video_defaults_and_keeps_a_user_change() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        // The v1 baseline the current install would have: the same control and
+        // mouse keys, without the spec-029 video keys.
+        let mut v1 = Template::embedded().expect("valid template");
+        v1.template_version = "1".to_owned();
+        v1.values.retain(|(key, _)| {
+            !matches!(
+                key.as_str(),
+                "use_fullscreen" | "exclusive_fullscreen" | "render_aspect" | "render_stretch_hud"
+            )
+        });
+        v1.strings.clear();
+
+        let first = manager(&config, v1, &clock);
+        first.provision().expect("first use");
+
+        // The player turns the gamepad off and picks a different resolution in
+        // DSDA's own menu (DSDA rewrites the file, adding its own keys).
+        let edited = "use_game_controller 0\nuse_mouse 1\nscreen_resolution \"1920x1080\"\ndsda_engine_key 7\n";
+        fs::write(first.active_path(), edited).expect("simulate a DSDA rewrite");
+
+        let second = DsdaConfigManager::with_template(&config, Template::embedded().unwrap())
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert!(migration.migrated);
+        assert_eq!(migration.from_version, "1");
+        assert_eq!(migration.to_version, "2");
+
+        let merged = read(&second.active_path());
+        assert!(
+            merged.contains("use_game_controller 0\n"),
+            "the player's change is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("screen_resolution \"1920x1080\"\n"),
+            "a user-changed string value is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("dsda_engine_key 7\n"),
+            "keys DDL does not own are kept:\n{merged}"
+        );
+        // The new defaults the player never touched are added.
+        assert!(merged.contains("use_fullscreen 1\n"), "{merged}");
+        assert!(merged.contains("exclusive_fullscreen 0\n"), "{merged}");
+        assert!(merged.contains("render_aspect 2\n"), "{merged}");
+        assert!(merged.contains("render_stretch_hud 2\n"), "{merged}");
     }
 
     #[test]

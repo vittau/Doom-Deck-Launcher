@@ -6,20 +6,20 @@
 # separately installed DSDA-Doom keeps under `~/.dsda-doom/` or
 # `$XDG_DATA_HOME/dsda-doom/` (D-012).
 #
-# `values` below lists only the keys DDL owns. Unknown keys are rejected when the
-# file is loaded, so a typo cannot silently claim ownership of a key DSDA would
-# otherwise own.
+# `values` and `strings` below list only the keys DDL owns. Unknown keys are
+# rejected when the file is loaded, so a typo cannot silently claim ownership of
+# a key DSDA would otherwise own.
 #
 # Every value that is marked "upstream default" was transcribed from DSDA-Doom
 # v0.30.1 `prboom2/src/dsda/configuration.c` (see `docs/research/dsda-engine.md`
-# §4). Those values are the engine's own defaults and are **not** Steam Deck
-# tuning; Deck-calibrated values are out of scope for v1 and arrive later from
-# on-device testing (OVERVIEW §8.1).
+# §4 and §9). Those values are the engine's own defaults and are **not** Steam
+# Deck tuning; the video baseline added in template v2 comes from the researched
+# source and the first Deck test (spec 029, `docs/research/dsda-engine.md` §9).
 
 # Increments whenever the baseline changes; DDL uses it to detect a migration and
 # to name `<config dir>/dsda/base/<template_version>.cfg` (R3, R5). Kept as a
 # string so a future `1.1` needs no schema change.
-template_version = "1"
+template_version = "2"
 
 # DSDA-Doom versions this template was written and checked against. Pinned to the
 # one researched tagged release; see `docs/research/dsda-engine.md` (v0.30.1,
@@ -52,3 +52,22 @@ mouse_sensitivity_mlook = 10
 # Analog roles and look direction (OVERVIEW §8.1); upstream defaults.
 swap_analogs = 0
 invert_analog_look = 0
+
+# --- Steam Deck video baseline (spec 029, R4) --------------------------------
+# Desktop fullscreen on the Deck's 1280×800 panel. `use_fullscreen` is 0
+# (windowed) upstream; DDL turns it on, while `exclusive_fullscreen` stays 0 so
+# gamescope can composite it (a mode change is not wanted).
+# [configuration.c:1177-1184]
+use_fullscreen = 1
+exclusive_fullscreen = 0
+# Force 16:10 widescreen rendering (the Deck panel's aspect) so the widescreen
+# status bars of spec 017 have room; value 2 is 16:10 [v_video.c:1357-1376].
+render_aspect = 2
+# Scale the status bar / HUD to the full screen width (`patch_stretch_fit_to_width`
+# = 2) so the wide STBAR fills the panel edge to edge [stretch.h:41-52].
+render_stretch_hud = 2
+
+# String keys: the native render resolution. DSDA parses `WIDTHxHEIGHT` and uses
+# it in fullscreen [i_video.c:736-758]; the Deck panel is 1280×800.
+[strings]
+screen_resolution = "1280x800"
