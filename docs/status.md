@@ -66,7 +66,6 @@
 | Every Doomer Boards Project (DBP 01–99) that DSDA-Doom can play, /idgames first, Dropbox fallback (D-028) | 037 | **Done**: the page lists 77 DBPs (01–77; 78–99 are only reserved CSS slots), all DSDA-playable; 76 new recipes (DBP37 was `auger-zenith`) — 43 from /idgames, 9 from dsdarchive, 24 from the archive.org `dbp-wad-archive` item (`ia600903.us.archive.org`); 67 screenshots; `lint --fetch` green for every recipe; catalog now 89 recipes. doomshack.org is dead (not allowlisted). Dropbox mirrors follow in 038 |
 | Dropbox as a fast first mirror (narrow `*.dl.dropboxusercontent.com` redirect rule) for the 21 DBPs now on slow archive.org | 038 | Phase 1 **merged** (redirect rule: one-label host, only in a chain entering at `www.dropbox.com`, same-host second hop); phase 2 (mirrors) after 037 |
 | Resumable downloads: keep pinned partials, `Range`/`If-Range` resume, 3 retries, bounded partial cache | 040 | Ready |
-| Research: /idgames browse as an unverified tier (data source without the blocked API, labels, safety, UX, follow-up specs) | 041 | Ready |
 | Research: Cacowards inventory with /idgames availability and DSDA verdicts | 042 | Ready |
 | Research: optional Steam shortcuts for installed mapsets (feasibility) | 043 | Ready |
 | Weekly catalog link health (`ddl catalog check-links`, headers only, issue on failure) | 044 | Ready (after 040) |
@@ -74,4 +73,10 @@
 | Complevels as DSDA aliases (`vanilla`/`boom`/`mbf`/`mbf21`), no complevel verification status (D-030) | 046 | Ready (after 037 and 045) |
 | Transparent README logo (light and dark variants via `<picture>`) | 047 | In progress |
 | Vector panel frames and ornaments (corners meet their rails at any size) | 048 | Ready (after 045) |
+| Fade from the title panel into the art band | 049 | In progress |
+| Research: /idgames browse | 041 | **Done**: mirror `ls-laR.gz` (43,741 files, daily) + per-file txt; recommends a CI-built index; specs 050–053 written from its proposal; owner questions open (publish a derived index; courtesy note to the archive maintainers) |
+| /idgames index build and publish | 050 | Ready (first publish waits for the owner) |
+| /idgames browse core (fetch, cache, search) | 051 | Ready (after 050) |
+| /idgames unverified install and launch | 052 | Ready (after 051) |
+| /idgames browse UI and recipe-draft hand-off | 053 | Ready (after 052) |
 | Apply logo v3 (D-029) in production: masters, header, loading, About, window icon, Steam art, social preview | 039 | **Done**: masters authored from `logo-v3/author.py` (v2 kept in `logo-v2/production-d023/`), every PNG regenerated with resvg 0.47.0 (`export.py --check`), small tier for the header and window icon, README logo and screenshots refreshed; social preview regenerated — **owner uploads it to GitHub by hand**. Deck: logo check |
