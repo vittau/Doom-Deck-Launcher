@@ -1304,7 +1304,14 @@ impl Runtime {
                 b.label(36., 96., 1152., 56., "No installed mapsets yet".into(), 26.);
             }
             if !b.nodes.iter().any(|n| n.id == self.focus && n.actionable) {
-                self.focus = BASE;
+                // Mapsets keep first focus (specs 010/015); base games take it only
+                // when nothing else on Library can.
+                self.focus = self
+                    .library_items()
+                    .first()
+                    .map(|&i| 10 + i as i32)
+                    .or_else(|| (!s.custom.is_empty()).then_some(CUSTOM))
+                    .unwrap_or(BASE);
             }
             for node in &mut b.nodes {
                 if node.y >= 96. {
