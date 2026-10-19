@@ -31,10 +31,46 @@ JOBS=[('emblem-small.svg', ASSETS/'logo/icon.png',256,256),
       ('social-preview.svg',HERE/'social-preview.png',1280,640),
       ('social-preview-variants/threshold.svg',HERE/'social-preview-variants/threshold.png',1280,640),
       ('social-preview-variants/atlas.svg',HERE/'social-preview-variants/atlas.png',1280,640),
-      ('readme-logo.svg',HERE/'readme-logo.png',1520,400),
+      ('readme-logo-dark.svg',HERE/'readme-logo-dark.png',1520,400),
+      ('readme-logo-light.svg',HERE/'readme-logo-light.png',1520,400),
       ('contact-sheet.svg',HERE/'contact-sheet.png',1200,1200)]
 SOCIAL={'social-preview.svg','social-preview-variants/threshold.svg','social-preview-variants/atlas.svg'}
 BRAND_COLORS=['F8EAD5','B88960','52272B','FFD078','120C0D']
+README_THEMES={'dark':('#F8EAD5','#0d1117'), 'light':('#120C0D','#ffffff')}
+
+def validate_readme(master, rendered):
+    theme=master.stem.removeprefix('readme-logo-')
+    ink,background=README_THEMES[theme]
+    # Only the name's fill may differ from the existing full-name composition.
+    content=ET.parse(master).getroot()[-1]
+    assert content.get('transform')=='translate(30 20)'
+    reference=list(ET.parse(HERE/'full-name.svg').getroot())[-2:]
+    assert len(content)==len(reference)==2
+    assert ET.tostring(content[0])==ET.tostring(reference[0]),'README emblem changed'
+    assert content[1].attrib==reference[1].attrib,'README name position changed'
+    assert len(content[1])==len(reference[1])==1
+    actual,expected=content[1][0],reference[1][0]
+    assert actual.get('fill')==ink
+    assert {k:v for k,v in actual.attrib.items() if k!='fill'}=={k:v for k,v in expected.attrib.items() if k!='fill'},'README name contours changed'
+    im=Image.open(rendered).convert('RGBA')
+    alpha=im.getchannel('A')
+    edges=[alpha.crop(box).getextrema() for box in
+           [(0,0,im.width,1),(0,im.height-1,im.width,im.height),
+            (0,0,1,im.height),(im.width-1,0,im.width,im.height)]]
+    assert all(edge==(0,0) for edge in edges),'README edges must be fully transparent'
+    corners=[alpha.getpixel(point) for point in
+             [(0,0),(im.width-1,0),(0,im.height-1),(im.width-1,im.height-1)]]
+    # The name is a flat fill; measure its opaque interior, excluding AA edges.
+    rgb=tuple(bytes.fromhex(ink[1:]))
+    assert any(pixel==(*rgb,255) for pixel in im.crop((428,40,1460,360)).get_flattened_data()),'README name fill missing'
+    def luminance(color):
+        values=[v/255 for v in bytes.fromhex(color[1:])]
+        return sum((v/12.92 if v<=.04045 else ((v+.055)/1.055)**2.4)*weight
+                   for v,weight in zip(values,(.2126,.7152,.0722)))
+    l1,l2=sorted([luminance(ink),luminance(background)])
+    contrast=(l2+.05)/(l1+.05)
+    assert contrast>=4.5,'README name contrast below 4.5:1'
+    print(f'{master.name}: corners alpha={corners}; all edges alpha=0; name {ink} on {background} contrast={contrast:.2f}:1')
 
 def validate_social(master):
     tree=ET.parse(master)
@@ -115,6 +151,8 @@ def main():
                 assert all(tuple(bytes.fromhex(c)) in colors for c in BRAND_COLORS),'brand colour lost'
                 encoded.save(out,optimize=True)
             data=out.read_bytes();assert struct.unpack('>II',data[16:24])==(w,h)
+            if src.startswith('readme-logo-'):
+                validate_readme(HERE/src,out)
             if src in SOCIAL:
                 assert len(data)<=1_000_000,'social preview exceeds 1 MB'
                 assert data[25]==3,'indexed social export expected'

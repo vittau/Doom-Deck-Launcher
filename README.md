@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/design/logo/readme-logo.png" alt="DoomDeckLauncher — Rose Compass Stained Glass logo" width="700"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/design/logo/readme-logo-dark.png"><img src="docs/design/logo/readme-logo-light.png" alt="DoomDeckLauncher — Rose Compass Stained Glass logo" width="700"></picture></p>
 
 # DoomDeckLauncher
 
