@@ -2,8 +2,9 @@
 
 **Status:** Phase 1 (**R1**, **R3**) and phase 2 (**R2**) implemented. A1 verified; A2 verified
 (`lint --fetch` for the 12 changed recipes plus an offline lint of the whole catalog). A3's
-full-workspace checks wait for the coordinator's build slot (main is red on an unrelated headless
-test until the 045 merge lands); the Linux e2e is the coordinator's. No new dependency.
+full-workspace checks wait for the coordinator's explicit slot go — `main`'s unrelated 13-recipe
+test fix (045) has since landed, but the shared build slot has not been released; the Linux e2e is
+the coordinator's. No new dependency.
 
 ## What changed
 
@@ -146,9 +147,9 @@ mapset was re-downloaded); all 12 → **passed (fetched packages verified)** on 
 - `cargo test -p ddl-core catalog` → 56 passed (includes the offline `lint_paths` over the real
   `catalog/`, so the edited recipes and `hosts.toml` lint).
 - Full `cargo clippy --workspace` / `cargo test --workspace` are **waiting for the build slot**:
-  `main` is red on an unrelated headless test (13-recipe assumption) until the coordinator's 045
-  merge lands. Then: merge `main`, run fmt, clippy, test in that order with `set -o pipefail`.
-  The Linux e2e is the coordinator's (A3).
+  `main` now carries the 045 fix for the unrelated 13-recipe headless test, but the coordinator has
+  not yet released the shared slot. Then: merge `main`, run fmt, clippy, test in that order with
+  `set -o pipefail`. The Linux e2e is the coordinator's (A3).
 
 ## Dependencies
 
