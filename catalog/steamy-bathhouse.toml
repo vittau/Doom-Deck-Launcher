@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 54; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "steamy-bathhouse"
+title = "Steamy Bathhouse (Doomer Boards Project 54)"
+authors = ["Doomer Boards Project 54"]
+release = "2022-12-03"
+page = "https://dsdarchive.com/wads/dbp_54_rc1_3"
+description = "DOOM II: MAP01–MAP08 (9 maps). The Turkish bathhouses are a refreshing new frontier for demons to appear."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/steamy-bathhouse/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "steamy-bathhouse/01.jpg"
+credit = "Doomer Boards Project 54"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 54", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": prboom-plus cl2, DSDA, Eternity, GZDoom", "Release thread: https://doomer.boards.net/thread/3022/steamy-bathhouse"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: prboom-plus cl2, DSDA, Eternity, GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 54; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp_54_rc1_3"
+urls = ["https://dsdarchive.com/files/wads/doom2/5148/DBP_54_RC1.3.zip"]
+size = 6487227
+sha256 = "1ce85311113ae58e3b956cb896fac2c53474ba9821184951ea2c6922e7100b70"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-54"
+path = "DBP_54.txt"
+size = 4565
+sha256 = "90eef336c3e738df5058e637f00d562c0b1d5e61894868e1dba5dcc4b4003734"
+keep = true
+
+[[packages.members]]
+id = "dbp-54-rc1-3"
+path = "DBP_54_RC1.3.wad"
+size = 19541732
+sha256 = "d56c63b25d6120e57eb64fb4fbf214e523baa71a8975737bc1f9b0770b2558b9"
+keep = false
+
+[[components]]
+id = "main"
+label = "Steamy Bathhouse"
+description = "Main episode: MAP01–MAP08."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-54-rc1-3"
+role = "maps"

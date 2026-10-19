@@ -1,0 +1,91 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 66; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "lunar-strain"
+title = "Lunar Strain (Doomer Boards Project 66)"
+authors = ["Doomer Boards Project 66"]
+release = "2024-06-20"
+page = "https://dsdarchive.com/wads/dbp_66_rc3"
+description = "DOOM II: MAP01–MAP23 (23 maps). An alien force stages a hostile takeover of the Moon base in this space odyssey."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/lunar-strain/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "lunar-strain/01.jpg"
+credit = "Doomer Boards Project 66"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 66", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/3575/lunar-strain"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 66;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp_66_rc3"
+urls = ["https://dsdarchive.com/files/wads/doom2/5029/DBP_66_RC3.zip"]
+size = 25059778
+sha256 = "a0799c2c78cfaa25558a3bf795019185c735ff091188a3aa69177d932431be3b"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp66-extra"
+path = "DBP_66_RC3/DBP66_Extra.zip"
+size = 21784
+sha256 = "d3b8d315c2a2b3f08d4c77a2afb164988301d538210996374779a7a504a5710d"
+keep = false
+
+[[packages.members]]
+id = "dbp-66"
+path = "DBP_66_RC3/DBP_66.txt"
+size = 9935
+sha256 = "ac6ee5b18abcf954d8ac3d064cf92a4d737ef289797364c0e83376ad43b4073d"
+keep = true
+
+[[packages.members]]
+id = "dbp-66-rc3"
+path = "DBP_66_RC3/DBP_66_RC3.wad"
+size = 47926696
+sha256 = "ae4ca3bc1b2726f74d3927157c2610bc8767fc974e8afe088c31fd5471c15c32"
+keep = false
+
+[[packages.members]]
+id = "dbp-66-rc3-noshuttle"
+path = "DBP_66_RC3/DBP_66_RC3_noshuttle.wad"
+size = 47926636
+sha256 = "f9c4a68fa56a5979bdfb9899c8f4d79b9a08b625768a4332355c21b49bbc2512"
+keep = false
+
+[[components]]
+id = "main"
+label = "Lunar Strain"
+description = "Main episode: MAP01–MAP23."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-66-rc3"
+role = "maps"

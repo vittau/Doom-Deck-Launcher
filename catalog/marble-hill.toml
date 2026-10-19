@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 67; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "marble-hill"
+title = "Marble Hill (Doomer Boards Project 67)"
+authors = ["Doomer Boards Project 67"]
+release = "2024-08-07"
+page = "https://dsdarchive.com/wads/dbp67_rc3"
+description = "DOOM II: MAP01–MAP20 (20 maps). A peaceful retreat turns chaotic as a space marine from hell on earth warps to the loopy marble zone."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/marble-hill/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "marble-hill/01.jpg"
+credit = "Doomer Boards Project 67"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 67", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, DSDA, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/3642/marble-hill"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, DSDA, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 67;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp67_rc3"
+urls = ["https://dsdarchive.com/files/wads/doom2/5084/DBP67_RC3.zip"]
+size = 11680665
+sha256 = "1f4baed018d17716e0f8f25b90bb97c0ffb054f8b9eb11c194bf71742626089d"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp67"
+path = "DBP67.txt"
+size = 8161
+sha256 = "3432d7bd9989e2b43a5a5243150c47ddee111cf1c3e100d43ea68460dc46d934"
+keep = true
+
+[[packages.members]]
+id = "dbp67-2"
+path = "DBP67.wad"
+size = 45863693
+sha256 = "ccea0b648ca96a1175bff8153910dad16d9571eaeca7a5d943e71f9155580e7f"
+keep = false
+
+[[components]]
+id = "main"
+label = "Marble Hill"
+description = "Main episode: MAP01–MAP20."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp67-2"
+role = "maps"

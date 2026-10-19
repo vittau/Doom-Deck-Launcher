@@ -2,6 +2,9 @@
 # Doomworld is pages-only. Squarespace is the exact Romero redirect host.
 # github.com (pages) and raw.githubusercontent.com (downloads) serve the pinned-commit
 # widescreen status bars from docs/research/widescreen-statusbars.md §5.2 (spec 017, R3).
+# ia600903.us.archive.org is the pinned download host of the archive.org item
+# `dbp-wad-archive`; archive.org/download/... redirects through a per-request
+# dnNNNNNN.<region>.archive.org host, so the item host is addressed directly (spec 037, D-028).
 schema_version = 1
 pages = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "www.doomworld.com", "doomer.boards.net", "github.com"]
-downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com"]
+downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com", "ia600903.us.archive.org"]
