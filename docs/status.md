@@ -70,4 +70,6 @@
 | Research: Cacowards inventory with /idgames availability and DSDA verdicts | 042 | Ready |
 | Research: optional Steam shortcuts for installed mapsets (feasibility) | 043 | Ready |
 | Weekly catalog link health (`ddl catalog check-links`, headers only, issue on failure) | 044 | Ready (after 040) |
+| UI touch-ups: seamless wall background, no "Verification pending" / process labels in the player UI | 045 | In progress |
+| Complevels as DSDA aliases (`vanilla`/`boom`/`mbf`/`mbf21`), no complevel verification status (D-030) | 046 | Ready (after 037 and 045) |
 | Apply logo v3 (D-029) in production: masters, header, loading, About, window icon, Steam art, social preview | 039 | **Done**: masters authored from `logo-v3/author.py` (v2 kept in `logo-v2/production-d023/`), every PNG regenerated with resvg 0.47.0 (`export.py --check`), small tier for the header and window icon, README logo and screenshots refreshed; social preview regenerated — **owner uploads it to GitHub by hand**. Deck: logo check |
