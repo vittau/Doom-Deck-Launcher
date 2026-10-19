@@ -668,4 +668,10 @@
     DBPs to archive.org (slow); 038 adds a narrow redirect rule and Dropbox as first mirror.
   refs: [docs/reports/033-plain-headers.md, docs/reports/035-lean-bundled-images.md,
          docs/specs/038-dropbox-redirects.md]
+- date: 2026-10-19
+  type: decision
+  summary: >-
+    D-029: the owner approved logo v3 B Stained Glass (round 2) as the production logo, replacing
+    D-023's flat Rose Compass; the design record (spec 036) is merged and spec 039 applies it.
+  refs: [docs/decisions.md, docs/reports/036-logo-v3.md, docs/specs/039-apply-logo-v3.md]
 
