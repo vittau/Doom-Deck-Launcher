@@ -22,7 +22,7 @@ Candidate pool: **135** playable, not-yet-cataloged entries with a verified `/id
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2004 | Top Ten p2 | Tremor | [`levels/doom2/Ports/s-u/tremor.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/tremor.zip) | 872 kB | Doom II | Boom-compatible (tested with prboom, ZDoom and Edge) |
-| 2004 | Runner-up | Deus Vult | [`levels/doom2/Ports/d-f/dv.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dv.zip) | 6.3 MB | Doom II | A limit removing source port for Map 01-04, |
+| 2004 | Runner-up | Deus Vult | [`levels/doom2/Ports/d-f/dv.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dv.zip) | 6.3 MB | Doom II | A limit removing source port for Map 01-04 |
 | 2005 | Top Ten p1 | Scythe 2 | [`levels/doom2/Ports/megawads/scythe2.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/scythe2.zip) | 10.6 MB | Doom II | Any limit removing port. Tested with prboom and zdoom. |
 | 2006 | Top Ten p1 | IC2005 | [`levels/doom2/Ports/g-i/ic2005.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/g-i/ic2005.zip) | 1.6 MB | Doom II | Boom compatible (with increased SEG limit) |
 | 2007 | Top Ten p2 | Sine Die | [`levels/doom2/Ports/s-u/sinedie.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/sinedie.zip) | 2.5 MB | Doom II | Boom, see "Tested With" |
@@ -228,43 +228,43 @@ Candidate pool: **135** playable, not-yet-cataloged entries with a verified `/id
 
 | Year | Award | Title | Source link | Evidence |
 | --- | --- | --- | --- | --- |
-| 2018 | Top Ten p1 | Avactor | [https://www.doomworld.com/forum/topic/101647-avactor-release/](https://www.doomworld.com/forum/topic/101647-avactor-release/) | Doom 2, Boom-compatible |
-| 2018 | Top Ten p2 | Dimension of the Boomed | [https://www.doomworld.com/forum/topic/92574-dimension-of-the-boomed/](https://www.doomworld.com/forum/topic/92574-dimension-of-the-boomed/) | Doom 2, Boom-compatible |
-| 2019 | Runner-up | Doom Zero | [https://www.doomworld.com/forum/topic/109216-doom-zero-launch-and-celebrating-25-years-of-doom-ii/](https://www.doomworld.com/forum/topic/109216-doom-zero-launch-and-celebrating-25-years-of-doom-ii/) | Doom 2, vanilla-compatible, 32 maps |
+| 2018 | Top Ten p1 | Avactor | [thread](https://www.doomworld.com/forum/topic/101647-avactor-release/) | Doom 2, Boom-compatible |
+| 2018 | Top Ten p2 | Dimension of the Boomed | [thread](https://www.doomworld.com/forum/topic/92574-dimension-of-the-boomed/) | Doom 2, Boom-compatible |
+| 2019 | Runner-up | Doom Zero | [thread](https://www.doomworld.com/forum/topic/109216-doom-zero-launch-and-celebrating-25-years-of-doom-ii/) | Doom 2, vanilla-compatible, 32 maps |
 | 2019 | Runner-up | Entropy | — | Doom 2, Boom-compatible, 1 map |
-| 2019 | Top Ten p2 | Finely Crafted Fetish Film | [https://www.doomworld.com/forum/topic/104608-finely-crafted-fetish-film-7-puzzle-maps-for-boom/](https://www.doomworld.com/forum/topic/104608-finely-crafted-fetish-film-7-puzzle-maps-for-boom/) | Doom 2, Boom-compatible, 7 maps |
-| 2019 | Top Ten p3 | Lost Civilization | [https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/](https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/) | Doom 2, Boom-compatible, 22 maps |
-| 2020 | Runner-up | Gods & Guardians | [https://www.doomworld.com/forum/topic/100195-godsguardians-classic-6-map-episode-v10/?tab=comments#comment-1863761](https://www.doomworld.com/forum/topic/100195-godsguardians-classic-6-map-episode-v10/?tab=comments#comment-1863761) | Doom 2, vanilla-compatible, 7 maps |
-| 2021 | Top Twelve p4 | 1000 Lines Community Project 3 | [https://www.doomworld.com/forum/topic/125479-1000-lines-3-community-project-rc-2-is-released](https://www.doomworld.com/forum/topic/125479-1000-lines-3-community-project-rc-2-is-released) | Doom 2, vanilla-compatible, 32 maps |
-| 2021 | Runner-up | Down the Drain | [https://www.doomworld.com/forum/topic/124197-down-the-drain-32-vanilla-maps-rc2/](https://www.doomworld.com/forum/topic/124197-down-the-drain-32-vanilla-maps-rc2/) | Doom 2, vanilla, 32 maps |
-| 2021 | Runner-up | Intergalactic Xenology 2 | [https://www.doomworld.com/forum/topic/122180-doom-2-intergalactic-xenology-2/](https://www.doomworld.com/forum/topic/122180-doom-2-intergalactic-xenology-2/) | Doom 2, Boom-compatible, 5 maps |
-| 2021 | Runner-up | Old Still Life | [https://www.doomworld.com/forum/topic/124976-old-still-life-wad/](https://www.doomworld.com/forum/topic/124976-old-still-life-wad/) | Doom 2, Boom-compatible, 12 maps |
-| 2022 | Runner-up | Anomaly Report | [https://www.doomworld.com/forum/topic/128408-anomaly-report-released-a-new-33-level-megawad-for-vanilla-doom-ii/](https://www.doomworld.com/forum/topic/128408-anomaly-report-released-a-new-33-level-megawad-for-vanilla-doom-ii/) | Doom 2, vanilla-compatible, 33 maps |
-| 2022 | Top Ten p1 | JUMPWAD | [https://www.doomworld.com/forum/topic/129577-jumpwad-7-platforming-maps-by-ribbiks-and-me-d/](https://www.doomworld.com/forum/topic/129577-jumpwad-7-platforming-maps-by-ribbiks-and-me-d/) | Doom 2, MBF-compatible, 7 maps |
-| 2022 | Top Ten p2 | Malevolence Episode 1 | [https://www.doomworld.com/forum/topic/131061-malevolence-episode-1-9-maps-boom-compatible/](https://www.doomworld.com/forum/topic/131061-malevolence-episode-1-9-maps-boom-compatible/) | Doom 2, Boom-compatible, 9 maps |
-| 2023 | Runner-up | Ad Mortem | [https://www.doomworld.com/forum/topic/125461-ad-mortem-a-mbf21-halloween-themed-megawad-new-update-phase-3-is-out/](https://www.doomworld.com/forum/topic/125461-ad-mortem-a-mbf21-halloween-themed-megawad-new-update-phase-3-is-out/) | Doom 2, MBF21-compatible, 34 maps |
-| 2023 | Top Twelve p2 | Austrian Avian Association | [https://www.doomworld.com/forum/topic/135951/](https://www.doomworld.com/forum/topic/135951/) | Doom 2, Boom-compatible, 8 maps |
-| 2023 | Runner-up | Head Trauma | [https://www.doomworld.com/forum/topic/140572-head-trauma-v-03-looking-for-playtesters/](https://www.doomworld.com/forum/topic/140572-head-trauma-v-03-looking-for-playtesters/) | Doom 2, Boom-compatible, 6 maps |
-| 2023 | Runner-up | The Diseases, and Casualties of This Year Being 1632 | [https://www.doomworld.com/forum/topic/133295-boom-the-diseases-and-casualties-this-year-being-1632-11-maps-v11/](https://www.doomworld.com/forum/topic/133295-boom-the-diseases-and-casualties-this-year-being-1632-11-maps-v11/) | Doom 2, Boom-compatible, 11 maps |
-| 2023 | Top Twelve p3 | Wormwood V | [https://www.doomworld.com/forum/topic/141190-wormvwood/](https://www.doomworld.com/forum/topic/141190-wormvwood/) | Doom 2, Boom-compatible, 5 maps |
-| 2024 | Runner-up | Curse of Blood | [https://www.doomworld.com/forum/topic/146785-curse-of-blood-a-32-map-megawad-rc2-released/](https://www.doomworld.com/forum/topic/146785-curse-of-blood-a-32-map-megawad-rc2-released/) | Doom 2, MBF21, 32 maps |
-| 2024 | Runner-up | Eraser | [https://www.doomworld.com/forum/topic/147486-eraser-rc1-update-a-single-level-partial-conversion-boom/](https://www.doomworld.com/forum/topic/147486-eraser-rc1-update-a-single-level-partial-conversion-boom/) | Doom 2, Boom-compatible, 1 map |
-| 2024 | Top Twelve p3 | Necromantic Thirst | [https://www.doomworld.com/forum/topic/149103-necromantic-thirst-rc1/](https://www.doomworld.com/forum/topic/149103-necromantic-thirst-rc1/) | Doom 2, Boom-compatible, 32 maps |
+| 2019 | Top Ten p2 | Finely Crafted Fetish Film | [thread](https://www.doomworld.com/forum/topic/104608-finely-crafted-fetish-film-7-puzzle-maps-for-boom/) | Doom 2, Boom-compatible, 7 maps |
+| 2019 | Top Ten p3 | Lost Civilization | [thread](https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/) | Doom 2, Boom-compatible, 22 maps |
+| 2020 | Runner-up | Gods & Guardians | [thread](https://www.doomworld.com/forum/topic/100195-godsguardians-classic-6-map-episode-v10/?tab=comments#comment-1863761) | Doom 2, vanilla-compatible, 7 maps |
+| 2021 | Top Twelve p4 | 1000 Lines Community Project 3 | [thread](https://www.doomworld.com/forum/topic/125479-1000-lines-3-community-project-rc-2-is-released) | Doom 2, vanilla-compatible, 32 maps |
+| 2021 | Runner-up | Down the Drain | [thread](https://www.doomworld.com/forum/topic/124197-down-the-drain-32-vanilla-maps-rc2/) | Doom 2, vanilla, 32 maps |
+| 2021 | Runner-up | Intergalactic Xenology 2 | [thread](https://www.doomworld.com/forum/topic/122180-doom-2-intergalactic-xenology-2/) | Doom 2, Boom-compatible, 5 maps |
+| 2021 | Runner-up | Old Still Life | [thread](https://www.doomworld.com/forum/topic/124976-old-still-life-wad/) | Doom 2, Boom-compatible, 12 maps |
+| 2022 | Runner-up | Anomaly Report | [thread](https://www.doomworld.com/forum/topic/128408-anomaly-report-released-a-new-33-level-megawad-for-vanilla-doom-ii/) | Doom 2, vanilla-compatible, 33 maps |
+| 2022 | Top Ten p1 | JUMPWAD | [thread](https://www.doomworld.com/forum/topic/129577-jumpwad-7-platforming-maps-by-ribbiks-and-me-d/) | Doom 2, MBF-compatible, 7 maps |
+| 2022 | Top Ten p2 | Malevolence Episode 1 | [thread](https://www.doomworld.com/forum/topic/131061-malevolence-episode-1-9-maps-boom-compatible/) | Doom 2, Boom-compatible, 9 maps |
+| 2023 | Runner-up | Ad Mortem | [thread](https://www.doomworld.com/forum/topic/125461-ad-mortem-a-mbf21-halloween-themed-megawad-new-update-phase-3-is-out/) | Doom 2, MBF21-compatible, 34 maps |
+| 2023 | Top Twelve p2 | Austrian Avian Association | [thread](https://www.doomworld.com/forum/topic/135951/) | Doom 2, Boom-compatible, 8 maps |
+| 2023 | Runner-up | Head Trauma | [thread](https://www.doomworld.com/forum/topic/140572-head-trauma-v-03-looking-for-playtesters/) | Doom 2, Boom-compatible, 6 maps |
+| 2023 | Runner-up | The Diseases, and Casualties of This Year Being 1632 | [thread](https://www.doomworld.com/forum/topic/133295-boom-the-diseases-and-casualties-this-year-being-1632-11-maps-v11/) | Doom 2, Boom-compatible, 11 maps |
+| 2023 | Top Twelve p3 | Wormwood V | [thread](https://www.doomworld.com/forum/topic/141190-wormvwood/) | Doom 2, Boom-compatible, 5 maps |
+| 2024 | Runner-up | Curse of Blood | [thread](https://www.doomworld.com/forum/topic/146785-curse-of-blood-a-32-map-megawad-rc2-released/) | Doom 2, MBF21, 32 maps |
+| 2024 | Runner-up | Eraser | [thread](https://www.doomworld.com/forum/topic/147486-eraser-rc1-update-a-single-level-partial-conversion-boom/) | Doom 2, Boom-compatible, 1 map |
+| 2024 | Top Twelve p3 | Necromantic Thirst | [thread](https://www.doomworld.com/forum/topic/149103-necromantic-thirst-rc1/) | Doom 2, Boom-compatible, 32 maps |
 | 2024 | Top Twelve p3 | Nostalgic Entropy: Neo Retro | — | Doom 2, MBF21, 1 map |
-| 2024 | Runner-up | Outpost 13 | [https://www.doomworld.com/forum/topic/142279-release-outpost-13/](https://www.doomworld.com/forum/topic/142279-release-outpost-13/) | Doom 2, Boom-compatible, 1 map |
-| 2024 | Top Twelve p1 | Pirate Doom 2 | [https://www.doomworld.com/forum/topic/143805-pirate-doom-ii-finished/](https://www.doomworld.com/forum/topic/143805-pirate-doom-ii-finished/) | Doom 2, MBF, 32 maps |
-| 2024 | Runner-up | Realm of Chaos 2 | [https://www.doomworld.com/forum/topic/125506-realm-of-chaos-2-the-revenge-of-96-rc3-released-testers-needed/](https://www.doomworld.com/forum/topic/125506-realm-of-chaos-2-the-revenge-of-96-rc3-released-testers-needed/) | Doom 2, Boom-compatible, 40 maps |
-| 2024 | Top Twelve p3 | Umbra | [https://www.doomworld.com/forum/topic/148700-umbra-rc46-mbf21/](https://www.doomworld.com/forum/topic/148700-umbra-rc46-mbf21/) | Doom 2, MBF21, 1 map |
-| 2025 | Runner-up | Beyond the Zero | [https://www.doomworld.com/forum/topic/155082-beyond-the-zero-surreal-lynchian-puzzle-map/](https://www.doomworld.com/forum/topic/155082-beyond-the-zero-surreal-lynchian-puzzle-map/) | Doom 2, Boom-compatible, 4 maps |
-| 2025 | Top Twelve p2 | Blues Brothers 2025 | [https://www.doomworld.com/forum/topic/155711-blues-brothers-2025-mbf21-neo-noir-neo-horror-megawad-rc4/](https://www.doomworld.com/forum/topic/155711-blues-brothers-2025-mbf21-neo-noir-neo-horror-megawad-rc4/) | Doom 2, MBF21, 23 maps |
-| 2025 | Runner-up | CPD 2 | [https://www.doomworld.com/forum/topic/154633/](https://www.doomworld.com/forum/topic/154633/) | Doom 2, MBF21, 11 maps |
-| 2025 | Runner-up | Chilling Winds of Dis | [https://www.doomworld.com/forum/topic/151566-rc3-the-chilling-winds-of-dis-40-maps-boom-format/](https://www.doomworld.com/forum/topic/151566-rc3-the-chilling-winds-of-dis-40-maps-boom-format/) | Doom 2, Boom-compatible, 40 maps |
-| 2025 | Top Twelve p3 | Drake O'Brien Ovational Megawad | [https://www.doomworld.com/forum/topic/153776-drake-o%E2%80%99brien-ovational-megawad-rc2/](https://www.doomworld.com/forum/topic/153776-drake-o%E2%80%99brien-ovational-megawad-rc2/) | TNT: Evilution, limit-removing, 32 maps |
-| 2025 | Runner-up | Entangled | [https://www.doomworld.com/forum/topic/151288/](https://www.doomworld.com/forum/topic/151288/) | Doom 2, limit-removing, 1 map |
-| 2025 | Top Twelve p3 | Gossip | [https://www.doomworld.com/forum/topic/127080-gossip-boom-version-14-final-update/](https://www.doomworld.com/forum/topic/127080-gossip-boom-version-14-final-update/) | Doom 2, Boom-compatible, 9 maps |
-| 2025 | Runner-up | Lemoncholia | [https://www.doomworld.com/forum/topic/153418-lemoncholia-6-maps-by-grain-of-salt-limit-removing/](https://www.doomworld.com/forum/topic/153418-lemoncholia-6-maps-by-grain-of-salt-limit-removing/) | Doom 2, limit-removing, 6 maps |
-| 2025 | Top Twelve p3 | Lonesome Road | [https://www.doomworld.com/forum/topic/151858-lonesome-road-chapter-1/](https://www.doomworld.com/forum/topic/151858-lonesome-road-chapter-1/) | Doom 2, vanilla-compatible, 9 maps |
-| 2025 | Runner-up | The Warp | [https://www.doomworld.com/forum/topic/153124-the-warp-gold-edition-out-now/](https://www.doomworld.com/forum/topic/153124-the-warp-gold-edition-out-now/) | Doom 2, MBF21, 39 maps |
+| 2024 | Runner-up | Outpost 13 | [thread](https://www.doomworld.com/forum/topic/142279-release-outpost-13/) | Doom 2, Boom-compatible, 1 map |
+| 2024 | Top Twelve p1 | Pirate Doom 2 | [thread](https://www.doomworld.com/forum/topic/143805-pirate-doom-ii-finished/) | Doom 2, MBF, 32 maps |
+| 2024 | Runner-up | Realm of Chaos 2 | [thread](https://www.doomworld.com/forum/topic/125506-realm-of-chaos-2-the-revenge-of-96-rc3-released-testers-needed/) | Doom 2, Boom-compatible, 40 maps |
+| 2024 | Top Twelve p3 | Umbra | [thread](https://www.doomworld.com/forum/topic/148700-umbra-rc46-mbf21/) | Doom 2, MBF21, 1 map |
+| 2025 | Runner-up | Beyond the Zero | [thread](https://www.doomworld.com/forum/topic/155082-beyond-the-zero-surreal-lynchian-puzzle-map/) | Doom 2, Boom-compatible, 4 maps |
+| 2025 | Top Twelve p2 | Blues Brothers 2025 | [thread](https://www.doomworld.com/forum/topic/155711-blues-brothers-2025-mbf21-neo-noir-neo-horror-megawad-rc4/) | Doom 2, MBF21, 23 maps |
+| 2025 | Runner-up | CPD 2 | [thread](https://www.doomworld.com/forum/topic/154633/) | Doom 2, MBF21, 11 maps |
+| 2025 | Runner-up | Chilling Winds of Dis | [thread](https://www.doomworld.com/forum/topic/151566-rc3-the-chilling-winds-of-dis-40-maps-boom-format/) | Doom 2, Boom-compatible, 40 maps |
+| 2025 | Top Twelve p3 | Drake O'Brien Ovational Megawad | [thread](https://www.doomworld.com/forum/topic/153776-drake-o%E2%80%99brien-ovational-megawad-rc2/) | TNT: Evilution, limit-removing, 32 maps |
+| 2025 | Runner-up | Entangled | [thread](https://www.doomworld.com/forum/topic/151288/) | Doom 2, limit-removing, 1 map |
+| 2025 | Top Twelve p3 | Gossip | [thread](https://www.doomworld.com/forum/topic/127080-gossip-boom-version-14-final-update/) | Doom 2, Boom-compatible, 9 maps |
+| 2025 | Runner-up | Lemoncholia | [thread](https://www.doomworld.com/forum/topic/153418-lemoncholia-6-maps-by-grain-of-salt-limit-removing/) | Doom 2, limit-removing, 6 maps |
+| 2025 | Top Twelve p3 | Lonesome Road | [thread](https://www.doomworld.com/forum/topic/151858-lonesome-road-chapter-1/) | Doom 2, vanilla-compatible, 9 maps |
+| 2025 | Runner-up | The Warp | [thread](https://www.doomworld.com/forum/topic/153124-the-warp-gold-edition-out-now/) | Doom 2, MBF21, 39 maps |
 
 ## Tag-citation gaps in existing recipes
 
