@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 59; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "zeppelin-armada"
+title = "Zeppelin Armada (Doomer Boards Project 59)"
+authors = ["Doomer Boards Project 59"]
+release = "2023-07-03"
+page = "https://doomer.boards.net/thread/3272/zeppelin-armada"
+description = "DOOM II: MAP01–MAP18 (18 maps). Play as Dexter Hornbuckle on his steampunk time travelling adventure."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/zeppelin-armada/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "zeppelin-armada/01.jpg"
+credit = "Doomer Boards Project 59"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 59", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/3272/zeppelin-armada"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 59."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/3272/zeppelin-armada"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp59_zeppelin-armada-full-v1-1.zip"]
+size = 12666143
+sha256 = "e7d90d03b460c3d20f180afe5f79f22b793627b7f67d5c232d4711b6f6ce4a56"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-59-full"
+path = "DBP_59_full.txt"
+size = 5109
+sha256 = "9da2d31ec72e1f3a8f2f7886b430422bda1ce9b474044c357cda395c7d1fbdbd"
+keep = true
+
+[[packages.members]]
+id = "dbp-59-full-2"
+path = "DBP_59_full.wad"
+size = 50015674
+sha256 = "92a9ac5e1bd40cd79515372fe54a0ede9316cbe433f6b7caacbb9e07ecf7b92e"
+keep = false
+
+[[components]]
+id = "main"
+label = "Zeppelin Armada"
+description = "Main episode: MAP01–MAP18."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-59-full-2"
+role = "maps"

@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 4; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "xenomorph-base"
+title = "Xenomorph Base (Doomer Boards Project 4)"
+authors = ["Doomer Boards Project 4"]
+release = "2018-07-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_04"
+description = "DOOM II: MAP01–MAP08 (6 maps). Unearthly horrors from the likes of HR Giger lurk meanacingly beneath the surface of the xenomorph home planet..."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/xenomorph-base/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "xenomorph-base/01.jpg"
+credit = "Doomer Boards Project 4"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 4", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/1330/ti-limit-removing-xenomorph-base"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 4; episode = 6 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_04"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp_04.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp_04.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp_04.zip"]
+size = 1755778
+sha256 = "a5a4dc5de831602baf7c9704c08c02bb02f02ccef46df6644d0be40dcd9667e7"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp_04.zip"
+
+[[packages.members]]
+id = "dbp-04"
+path = "DBP_04.txt"
+size = 3183
+sha256 = "7fae1c3f9c0c00e9bc29d9ad4f20e2b48911f5076c53f4fd5140861472ca3a03"
+keep = true
+
+[[packages.members]]
+id = "dbp-04-2"
+path = "DBP_04.wad"
+size = 4948203
+sha256 = "9818c773c25567d842e37560c7a5a14aa9fdef9b224a1468bdbda28f0c9c1c64"
+keep = false
+
+[[components]]
+id = "main"
+label = "Xenomorph Base"
+description = "Main episode: MAP01–MAP08."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-04-2"
+role = "maps"

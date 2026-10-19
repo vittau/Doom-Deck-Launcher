@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 34; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "luminous-gloom"
+title = "Luminous Gloom (Doomer Boards Project 34)"
+authors = ["Doomer Boards Project 34"]
+release = "2021-04-01"
+page = "https://dsdarchive.com/wads/dbp_34"
+description = "DOOM II: MAP01–MAP10 (10 maps). A planet adrift in the emptiness of space, carries a mysterious substance illuminating the secrets of a lost world."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/luminous-gloom/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "luminous-gloom/01.jpg"
+credit = "Doomer Boards Project 34"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 34", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/2065/luminous-gloom"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 34."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp_34"
+urls = ["https://dsdarchive.com/files/wads/doom2/3537/DBP_34.zip"]
+size = 3900531
+sha256 = "69975c86f7f236bd3a54c1a1affe3a87dc203d4a110413c029c6fa0654749b4a"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-34"
+path = "DBP_34.txt"
+size = 3545
+sha256 = "65485b3b5a25149c919233183887fe75ff26bfdc09279061324b02dbc8d8d29f"
+keep = true
+
+[[packages.members]]
+id = "dbp-34-2"
+path = "DBP_34.wad"
+size = 12157689
+sha256 = "1d9c1f803cc1cfa7607747e1b70412d90a95177b4337aa4ffa955cd5b72b434c"
+keep = false
+
+[[components]]
+id = "main"
+label = "Luminous Gloom"
+description = "Main episode: MAP01–MAP10."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-34-2"
+role = "maps"

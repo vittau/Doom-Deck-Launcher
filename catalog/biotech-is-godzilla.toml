@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 22; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "biotech-is-godzilla"
+title = "Biotech is Godzilla (Doomer Boards Project 22)"
+authors = ["Doomer Boards Project 22"]
+release = "2020-03-31"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp22"
+description = "DOOM II: MAP01–MAP09 (9 maps). Forests of concrete and steel, breathing and flowing forever under the wide eye of the sun, now ruled the works of man."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/biotech-is-godzilla/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "biotech-is-godzilla/01.jpg"
+credit = "Doomer Boards Project 22"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 22", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": PRBoom+ 2.5.1.4, ZDoom 2.8.1, Crispy Doom, GZDoom, Eternity Engine", "Release thread: https://doomer.boards.net/thread/1682/limit-removing-dbp22-biotech-godzilla"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: PRBoom+ 2.5.1.4, ZDoom 2.8.1, Crispy Doom, GZDoom, Eternity Engine. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 22; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp22"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp22.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp22.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp22.zip"]
+size = 7610683
+sha256 = "36eed1f96de6258dc3ca59b9b65d2842a3492d24af768e929d8a35439cb611d4"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp22.zip"
+
+[[packages.members]]
+id = "dbp22"
+path = "DBP22.txt"
+size = 5030
+sha256 = "463661ebd042b241212db503972200c069eec4b177d46c8b3e47d1c08e0348ad"
+keep = true
+
+[[packages.members]]
+id = "dbp22-2"
+path = "DBP22.wad"
+size = 18469518
+sha256 = "8d4bfb268275622338bf2ff89b4c0a4cdb46dc6ad963a0880a4040eaba1e9c84"
+keep = false
+
+[[components]]
+id = "main"
+label = "Biotech is Godzilla"
+description = "Main episode: MAP01–MAP09."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp22-2"
+role = "maps"

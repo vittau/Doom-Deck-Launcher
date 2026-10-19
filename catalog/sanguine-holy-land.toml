@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 65; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "sanguine-holy-land"
+title = "Sanguine Holy Land (Doomer Boards Project 65)"
+authors = ["Doomer Boards Project 65"]
+release = "2024-04-13"
+page = "https://doomer.boards.net/thread/3531/dbp65-sanguine-holy-land"
+description = "DOOM II: MAP01–MAP14 (14 maps). Enter the dark, gothic fortresses, shadowed under the dim red light of the sky."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/sanguine-holy-land/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "sanguine-holy-land/01.jpg"
+credit = "Doomer Boards Project 65"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 65", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/3531/dbp65-sanguine-holy-land"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 65."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/3531/dbp65-sanguine-holy-land"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp65_sanguine-holy-land-v3.zip"]
+size = 12656806
+sha256 = "fcc88d330aeb7b231f319985da0ae66cd417aa889cb3673030e500d39a2085e2"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp65"
+path = "DBP65.txt"
+size = 4623
+sha256 = "a4f4a205402d6c9e58b6bb2d7ba6dd56db1a76990a780e51be3cd7fd70827d11"
+keep = true
+
+[[packages.members]]
+id = "dbp65-2"
+path = "DBP65.wad"
+size = 43236044
+sha256 = "6b9114146e61c07f71c80025da2c14d80458f90d66fbecf89de34ca41769da81"
+keep = false
+
+[[components]]
+id = "main"
+label = "Sanguine Holy Land"
+description = "Main episode: MAP01–MAP14."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp65-2"
+role = "maps"

@@ -1,0 +1,104 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 49; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "mausoleum-nefarium"
+title = "Mausoleum Nefarium (Doomer Boards Project 49)"
+authors = ["Doomer Boards Project 49"]
+release = "2022-07-01"
+page = "https://doomer.boards.net/thread/2666/mausoleum-nefarium"
+description = "DOOM II: MAP01–MAP11 (11 maps). Explore the hidden crypts and the forgotten story left behind by its disciples."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/mausoleum-nefarium/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "mausoleum-nefarium/01.jpg"
+credit = "Doomer Boards Project 49"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 49", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/2666/mausoleum-nefarium"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 49."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/2666/mausoleum-nefarium"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp49_mausoleum-nefarium-v1-01.zip"]
+size = 11339025
+sha256 = "1e9d1735f3b729e1934583454de96e2945f0ce2af0be54358bf852734a3d3257"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-49"
+path = "DBP_49/DBP_49/DBP_49.txt"
+size = 3756
+sha256 = "fc106c5bb64cca4d6b80e26d8cd345cbe186cad230a4fc31b5a005f4da87ff69"
+keep = true
+
+[[packages.members]]
+id = "dbp-49-2"
+path = "DBP_49/DBP_49/DBP_49.wad"
+size = 18804327
+sha256 = "ae048b4689200d29c42e2914146f7d15a59b284226692c45829c4097786ce92e"
+keep = false
+
+[[packages.members]]
+id = "dbp-49-full"
+path = "DBP_49/DBP_49/DBP_49_full.wad"
+size = 19021588
+sha256 = "bfeaceaf23bba8cfaa2d89705964f13c2fc7fbf7dbdf512011453f5753c66950"
+keep = false
+
+[[packages.members]]
+id = "dbp-49-gfx"
+path = "DBP_49/DBP_49/DBP_49_gfx.wad"
+size = 222012
+sha256 = "fa7c33f494cfcb5bcef33602932e20172ba34a543ca6229ea361312c0aa25a28"
+keep = false
+
+[[components]]
+id = "main"
+label = "Mausoleum Nefarium"
+description = "Main episode: MAP01–MAP11."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-49-2"
+role = "maps"
+
+[[components]]
+id = "gfx"
+label = "Alternate monster graphics"
+description = "DBP_49_gfx.wad, the Pain Elemental and Lost Soul graphics replacement the readme lists as optional."
+optional = true
+default = false
+position = 2
+
+[[components.members]]
+package = "free"
+member = "dbp-49-gfx"
+role = "graphics"

@@ -1,0 +1,84 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 68; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "outposts-of-the-wasteland"
+title = "Outposts of the Wasteland (Doomer Boards Project 68)"
+authors = ["Doomer Boards Project 68"]
+release = "2024-10-04"
+page = "https://doomer.boards.net/thread/3754/dbp68-outposts-wasteland-rc1-cl2"
+description = "DOOM II: MAP01–MAP19 (19 maps). When gasoline is worth more than gold, one man must fight for his life against a ruthless gang in a post-apocalyptic universe."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/outposts-of-the-wasteland/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "outposts-of-the-wasteland/01.jpg"
+credit = "Doomer Boards Project 68"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 68", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/3754/dbp68-outposts-wasteland-rc1-cl2"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 68."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/3754/dbp68-outposts-wasteland-rc1-cl2"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp68_outposts-of-the-wasteland-rc1-4.zip"]
+size = 16063876
+sha256 = "48516b154d4b41472d63bf52f8687e1c2935e8ed684e6b67d85925d00c04d4f5"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp68"
+path = "DBP68.txt"
+size = 4137
+sha256 = "60c57ca44c5fd74d4adf5c50389a9b77b731a47b7fbcb45e32c4bc4dd35ae3c3"
+keep = true
+
+[[packages.members]]
+id = "dbp68-rc1-4"
+path = "DBP68_RC1.4.wad"
+size = 45288184
+sha256 = "2ef3be1c844321ec0c86b747aca7fc15c4c72dcb4012893f641f254713865c74"
+keep = false
+
+[[packages.members]]
+id = "dbp68-uwide"
+path = "dbp68_uwide.wad"
+size = 23652
+sha256 = "3758d5210add88fb5f3fb20fdb185b1dbc65b7b29bcaea1ef42a6a439821ee09"
+keep = false
+
+[[components]]
+id = "main"
+label = "Outposts of the Wasteland"
+description = "Main episode: MAP01–MAP19."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp68-rc1-4"
+role = "maps"
