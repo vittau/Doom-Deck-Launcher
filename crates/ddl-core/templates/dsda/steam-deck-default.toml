@@ -15,11 +15,13 @@
 # §4 and §9). Those values are the engine's own defaults and are **not** Steam
 # Deck tuning; the video baseline added in template v2 comes from the researched
 # source and the first Deck test (spec 029, `docs/research/dsda-engine.md` §9).
+# The controller layout added in template v3 is the owner's own layout (spec 034);
+# its upstream defaults and button codes are transcribed in the same section.
 
 # Increments whenever the baseline changes; DDL uses it to detect a migration and
 # to name `<config dir>/dsda/base/<template_version>.cfg` (R3, R5). Kept as a
 # string so a future `1.1` needs no schema change.
-template_version = "2"
+template_version = "3"
 
 # DSDA-Doom versions this template was written and checked against. Pinned to the
 # one researched tagged release; see `docs/research/dsda-engine.md` (v0.30.1,
@@ -71,3 +73,108 @@ render_stretch_hud = 2
 # it in fullscreen [i_video.c:736-758]; the Deck panel is 1280×800.
 [strings]
 screen_resolution = "1280x800"
+
+# --- Steam Deck controller layout (spec 034, R2) -----------------------------
+#
+# One entry per DSDA action key that DDL binds. Each entry replaces the gamepad
+# button of DSDA's v0.30.1 default and keeps that default's keyboard binding, so
+# keyboard play is unchanged. DSDA has three input profiles and applies its
+# defaults to all three [m_misc.c:696-701], so every entry is written to all
+# three `|`-separated profile segments of the generated `input_*` line.
+#
+# `joy`/`mouse` are the numeric indices from [game_controller.h:22-49]; the file
+# format uses integers, never the menu names. `upstream` is the complete default
+# this entry replaces [m_misc.c:391-581]; the three-way merge uses it to tell "the
+# player never touched this binding" from "the player rebound it in DSDA's menu"
+# when a template version learns to own a binding (spec 005 R5; spec 034 R2).
+#
+# Button codes used below: 0 pad a, 1 pad b, 2 pad x, 3 pad y, 4 pad back,
+# 5 pad guide, 6 pad start, 7 lstick, 8 rstick, 9 pad l (L1), 10 pad r (R1),
+# 11 dpad u, 12 dpad d, 13 dpad l, 14 dpad r, 15-20 misc/paddles/touchpad,
+# 21 pad lt, 22 pad rt.
+#
+# The owner's table only names the buttons below. Fire, strafe, movement, look
+# and the menu actions keep DSDA's defaults. Use/open stays on DSDA's default
+# A binding; DDL does not claim that key. Jump also keeps its default on B, so B
+# toggles autorun and still jumps on maps that allow jumping (spec 034 R3).
+
+# Automap toggle -> View. Upstream is Trigger Left [m_misc.c:425]; the keyboard
+# Tab binding is kept. `pad back` is SDL's back button, which Steam's View button
+# sends (Proposed, Deck validation pending; research §4).
+[[bindings]]
+action = "input_map"
+keys = [9]
+mouse = -1
+joy = 4
+upstream = { keys = [9], mouse = -1, joy = 21 }
+
+# Automap zoom in -> D-pad Up. Upstream has no gamepad button [m_misc.c:443].
+# D-pad Up keeps its menu [m_misc.c:473] and fly [m_misc.c:403] defaults: DSDA
+# checks every action independently, and menus are handled before the automap.
+[[bindings]]
+action = "input_map_zoomin"
+keys = [61]
+mouse = -1
+joy = 11
+upstream = { keys = [61], mouse = -1, joy = -1 }
+
+# Automap zoom out -> D-pad Down. Upstream has no gamepad button [m_misc.c:444].
+[[bindings]]
+action = "input_map_zoomout"
+keys = [45]
+mouse = -1
+joy = 12
+upstream = { keys = [45], mouse = -1, joy = -1 }
+
+# Toggle run (autorun) -> B. Upstream is Left Stick click [m_misc.c:400].
+[[bindings]]
+action = "input_autorun"
+keys = [186]
+mouse = -1
+joy = 1
+upstream = { keys = [186], mouse = -1, joy = 7 }
+
+# Next weapon -> D-pad Right. Upstream is Y [m_misc.c:418]; Y becomes unbound
+# because DSDA allows one gamepad button per action per profile (research §4).
+[[bindings]]
+action = "input_nextweapon"
+keys = [0]
+mouse = -1
+joy = 14
+upstream = { keys = [0], mouse = -1, joy = 3 }
+
+# Previous weapon -> D-pad Left. Upstream is X [m_misc.c:419].
+[[bindings]]
+action = "input_prevweapon"
+keys = [0]
+mouse = -1
+joy = 13
+upstream = { keys = [0], mouse = -1, joy = 2 }
+
+# Quick save -> L1 (`pad l`). Upstream has no gamepad button [m_misc.c:436].
+[[bindings]]
+action = "input_quicksave"
+keys = [192]
+mouse = -1
+joy = 9
+upstream = { keys = [192], mouse = -1, joy = -1 }
+
+# Quick load -> R1 (`pad r`). Upstream has no gamepad button [m_misc.c:437].
+[[bindings]]
+action = "input_quickload"
+keys = [195]
+mouse = -1
+joy = 10
+upstream = { keys = [195], mouse = -1, joy = -1 }
+
+# Quick 180-degree turn -> X. Upstream is Right Stick click [m_misc.c:401]; the
+# action is DSDA's `input_reverse`, which adds QUICKREVERSE (180 degrees) to the
+# turn command [g_game.c:206, g_game.c:554-563]. Strict-mode demo recording
+# disables it (research §5). X is free because previous weapon moved to D-pad
+# Left; R3 becomes unbound.
+[[bindings]]
+action = "input_reverse"
+keys = [47]
+mouse = -1
+joy = 2
+upstream = { keys = [47], mouse = -1, joy = 8 }
