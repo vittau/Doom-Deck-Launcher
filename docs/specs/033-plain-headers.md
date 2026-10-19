@@ -27,6 +27,10 @@ screenshot na UI, polui muito."
   (D-024 keeps attribution; `SOURCES.toml` stays the record). This supersedes spec 023 R3's
   caption.
 
+- **R5** — **Base-game pages (spec 032):** "Original game" appears once at most (drop it from
+  the header subtitle, the card subline and the label under the art), and file paths under the
+  home directory are shown with `~` (full path stays available, e.g. on focus or in Diagnostics).
+
 ## Acceptance criteria
 
 - [ ] **A1** (R1) — the audit table (string id, text, verdict, reason) is in the report.
