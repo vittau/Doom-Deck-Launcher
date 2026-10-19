@@ -45,10 +45,16 @@ the production horizontal master. Its main use is the 154×56 header slot,
 where the emblem is drawn at 56 px. The wordmark is the D-023 DDL contours,
 with three additions:
 
-- a dark outline, so it also reads on light grounds (the production wordmark
-  disappears there);
-- a carved side in the variant's depth colour;
+- the DDL sits on a **dark tablet** that has the octagon's 45° corner cuts.
+  The tablet is the header's own `#120C0D`, so it is invisible in the app; on
+  light grounds it keeps the bone letters from bleeding into the background.
+  The production wordmark disappears there entirely.
+- each letter is an exact extruded solid: a continuous dark outline and a
+  carved side in the variant's depth colour, built as convex sweeps with
+  see-through counters, so no seams or light slivers appear.
 - a bone face (in C, the face warms to amber at the bottom).
+
+The DDL is centred vertically on the emblem.
 
 ## Contact sheets
 
@@ -80,7 +86,7 @@ id defined in the same file.
 | --- | ---: | ---: | ---: |
 | `emblem.svg` | 5,979 B | 5,341 B | 6,255 B |
 | `emblem-small.svg` | 1,630 B | 1,817 B | 1,510 B |
-| `horizontal.svg` | 2,691 B | 2,878 B | 2,805 B |
+| `horizontal.svg` | 2,906 B | 3,093 B | 3,027 B |
 
 For comparison, the production `emblem.svg` is 814 B.
 
@@ -96,7 +102,7 @@ It rendered every v3 `emblem.svg` and `emblem-small.svg` at 32, 56, 256 and
 512 px, and every `horizontal.svg` at 165×64, 330×128 and 660×256, then
 compared each one pixel by pixel with resvg 0.47.0 on the same `#120C0D`
 background. The largest channel difference was **1/255** for the emblems and
-**2/255** for the lock-ups, the same anti-aliasing rounding that the
+**1/255** or less for the final lock-ups, the same anti-aliasing rounding that the
 production masters show. The gradients therefore render identically in the
 app's renderer. There are no filters to prove.
 

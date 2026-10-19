@@ -301,19 +301,63 @@ def shifted(points, dx, dy=0):
     return [(x + dx, y + dy) for x, y in points]
 
 
-def letters(grow=0, dx=0, dy=0):
-    d = ''
+def area(points):
+    n = len(points)
+    return sum(points[i][0] * points[(i + 1) % n][1] - points[(i + 1) % n][0] * points[i][1]
+               for i in range(n))
+
+
+def hull(points):
+    """Convex hull (monotone chain), wound like octagon() so clip() accepts it."""
+    pts = sorted(set(points))
+    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lower, upper = [], []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    out = lower[:-1] + upper[:-1]
+    return out if area(out) * area(octagon(0)) > 0 else out[::-1]
+
+
+DEPTH = (3, 3)
+
+
+def solid(convex, dx=0):
+    """A convex letter part swept back along DEPTH: one solid, no seams."""
+    return hull(shifted(convex, dx) + shifted(convex, dx + DEPTH[0], DEPTH[1]))
+
+
+def tunnel(counter, dx=0):
+    """Where a counter stays open through the whole depth."""
+    return clip(shifted(counter, dx), hull(shifted(counter, dx + DEPTH[0], DEPTH[1])))
+
+
+def letters(grow=0, swept=False):
+    """DDL contours, grown by `grow`; swept=True gives the extruded solid."""
+    ds = ''
     for x in (0, 54):
-        d += poly(shifted(offset(D_OUTER, grow), x + dx, dy))
-        d += poly(shifted(offset(D_COUNTER, -grow), x + dx, dy))
-    return d + poly(shifted(offset(L_SHAPE, grow), dx, dy))
+        outer, counter = offset(D_OUTER, grow), offset(D_COUNTER, -grow)
+        ds += poly(solid(outer, x) if swept else shifted(outer, x))
+        ds += poly(tunnel(counter, x) if swept else shifted(counter, x))
+    # The L as two convex bars so the sweep stays exact.
+    bars = [[(108 - grow, -grow), (122 + grow, -grow), (122 + grow, 64 + grow), (108 - grow, 64 + grow)],
+            [(108 - grow, 50 - grow), (154 + grow, 50 - grow), (154 + grow, 64 + grow), (108 - grow, 64 + grow)]]
+    return ds, ''.join(poly(hull(b + shifted(b, *DEPTH)) if swept else b) for b in bars)
 
 
 def wordmark(face, depth):
-    """Dark outline for light grounds, a carved side in depth colour, bone face."""
-    body = path(letters(3) + letters(3, 3, 3), DARK, True)
-    body += path(letters(0, 3, 3), depth, True)
-    return body + path(letters(), face, True)
+    """Solid dark outline for light grounds, a carved side in depth colour, bone face."""
+    body = ''
+    for grow, fill in ((3.5, DARK), (0, depth)):
+        ds, l = letters(grow, swept=True)
+        body += path(ds, fill, True) + path(l, fill)
+    ds, l = letters()
+    return body + path(ds, face, True) + path(l, face)
 
 
 VARIANTS = {
@@ -351,7 +395,11 @@ def label(text, x, y, size=18, color=MUTED, face='Barlow-Regular', centre=False)
 # --- compositions ---------------------------------------------------------------
 def lockup(small, ddl):
     """Same 330x128 frame as the production horizontal master (header drop-in)."""
-    return small[0] + ddl[0], group(small[1], 0, 0, 0.5) + group(ddl[1], 152, 22)
+    # A dark tablet with the octagon's 45-degree cuts: invisible on the dark
+    # header, and on light grounds it keeps the bone letters from bleeding out.
+    tablet = path(poly([(146, 12), (314, 12), (326, 24), (326, 104), (314, 116), (146, 116),
+                        (134, 104), (134, 24)]), DARK)
+    return small[0] + ddl[0], group(small[1], 0, 0, 0.5) + tablet + group(ddl[1], 152, 30)
 
 
 def header_mock(lock):
