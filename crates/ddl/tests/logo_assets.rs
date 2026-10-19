@@ -12,7 +12,8 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
         ("steam/hero.png", 3840, 1240, false),
         ("steam/logo.png", 1280, 720, true),
         ("social-preview.png", 1280, 640, false),
-        ("readme-logo.png", 1520, 400, true),
+        ("readme-logo-dark.png", 1520, 400, true),
+        ("readme-logo-light.png", 1520, 400, true),
         ("contact-sheet.png", 1200, 1200, false),
     ] {
         let mut decoder = png::Decoder::new(std::io::BufReader::new(
