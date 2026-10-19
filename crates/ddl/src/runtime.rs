@@ -454,12 +454,12 @@ impl Runtime {
                     } else if action == Action::Down && self.focus < 1000 + count - 1 {
                         self.focus += 1;
                     } else if action == Action::Down {
-                        self.focus = 910;
+                        self.focus = 912;
                     }
                 }
                 Action::Up
                     if matches!(self.sheet, Some(Sheet::Profiles))
-                        && matches!(self.focus, 910 | 911) =>
+                        && matches!(self.focus, 912 | 913) =>
                 {
                     self.focus = 1000 + self.item().map_or(1, |i| i.profiles.len()) as i32 - 1;
                 }
@@ -748,7 +748,7 @@ impl Runtime {
                 }
             }
             (Screen::Detail, 6) => self.enter(Screen::Setup, 60),
-            (Screen::Detail, 4) | (Screen::Setup, 60) => {
+            (Screen::Setup, 60) => {
                 if let Some(item) = self.item() {
                     // Materialise an implicit Default before any management action.
                     self.start(ui, Command::Save(item.profile.clone()));
@@ -1124,7 +1124,6 @@ impl Runtime {
             return;
         }
         match self.focus {
-            910 | 911 => self.switch_profile(ui, self.focus == 911),
             id if id >= 1000 && (id - 1000) < item.profiles.len() as i32 => {
                 self.start(
                     ui,
@@ -1229,23 +1228,28 @@ impl Runtime {
                     false,
                 );
             }
-            b.label(
-                32.,
-                282.,
-                656.,
-                28.,
-                value(ui, T::ProfileListStatus, item.profiles.len()),
-                18.,
+            let actions_y = 116. + item.profiles.len().min(3) as f32 * 62.;
+            b.button(912, 32., actions_y, 304., text(ui, T::CopyProfile), false);
+            b.button(
+                913,
+                368.,
+                actions_y,
+                304.,
+                text(ui, T::DefaultProfile),
+                false,
             );
-            b.button(910, 32., 320., 304., text(ui, T::PreviousProfile), false);
-            b.button(911, 368., 320., 304., text(ui, T::NextProfile), false);
-            b.button(912, 32., 388., 304., text(ui, T::CopyProfile), false);
-            b.button(913, 368., 388., 304., text(ui, T::DefaultProfile), false);
-            b.button(914, 32., 456., 304., text(ui, T::RenameProfile), false);
+            b.button(
+                914,
+                32.,
+                actions_y + 68.,
+                304.,
+                text(ui, T::RenameProfile),
+                false,
+            );
             b.button(
                 915,
                 368.,
-                456.,
+                actions_y + 68.,
                 304.,
                 text(
                     ui,
@@ -1258,7 +1262,7 @@ impl Runtime {
                 false,
             );
             b.nodes.last_mut().unwrap().actionable = item.profiles.len() > 1;
-            b.button(916, 32., 524., 656., text(ui, T::Done), false);
+            b.button(916, 32., actions_y + 136., 656., text(ui, T::Done), false);
         }
         ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
     }
@@ -1801,15 +1805,6 @@ impl Runtime {
                                     T::FavoriteAddButton
                                 },
                             ),
-                            false,
-                        );
-                        action_y += 68.;
-                        b.button(
-                            4,
-                            12.,
-                            action_y,
-                            360.,
-                            value(ui, T::ActiveProfile, &item.profile.name),
                             false,
                         );
                         action_y += 68.;
@@ -2783,7 +2778,7 @@ impl Runtime {
         ui.set_sheet_height(
             if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
                 if matches!(self.sheet, Some(Sheet::Profiles)) {
-                    620.
+                    340. + self.item().map_or(0, |i| i.profiles.len().min(3)) as f32 * 62.
                 } else {
                     460.
                 }

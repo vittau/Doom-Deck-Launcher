@@ -1351,9 +1351,10 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     {
         let mut r = state.borrow_mut();
         r.screen = Screen::Detail;
-        r.focus = 4;
+        r.focus = 3;
         r.sync(ui);
     }
+    assert!(!ui.get_nodes().iter().any(|n| n.id == 4));
     press(window, Key::RightArrow);
     assert_eq!(ui.get_focused(), 6);
     assert!(
@@ -1436,7 +1437,7 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     ui.set_profile_name("Casual".into());
     ui.invoke_clicked(917);
     idle(state);
-    // Wrapping Previous/Next buttons and L1/R1 all switch within the sheet.
+    // Selecting rows with A activates them; L1/R1 wrap within the sheet.
     ui.invoke_clicked(60);
     idle(state);
     capture("031-profile-list.png");
@@ -1447,12 +1448,27 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
             .id
             .clone()
     };
-    ui.invoke_clicked(911);
-    idle(state); // last -> first
+    assert!(
+        !ui.get_sheet_nodes()
+            .iter()
+            .any(|n| matches!(n.id, 910 | 911) || n.label.contains("active marked"))
+    );
+    press(window, Key::UpArrow); // second row -> first
+    press(window, Key::Return);
+    idle(state);
     assert_ne!(active(), copied_id);
-    ui.invoke_clicked(910);
-    idle(state); // first -> last
+    press(window, Key::DownArrow); // first row -> second
+    press(window, Key::Return);
+    idle(state);
     assert_eq!(active(), copied_id);
+    press(window, Key::DownArrow); // list -> grouped actions, without an empty row
+    assert_eq!(ui.get_focused(), 912);
+    let nodes: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    let row = nodes.iter().find(|n| n.id == 1001).unwrap();
+    let action = nodes.iter().find(|n| n.id == 912).unwrap();
+    assert_eq!(action.y - (row.y + row.h), 26.);
+    press(window, Key::UpArrow);
+    assert_eq!(ui.get_focused(), 1001);
     press(window, Key::Tab);
     idle(state); // R1 mapping
     assert_ne!(active(), copied_id);
@@ -2576,7 +2592,7 @@ pub(super) fn title_fit_journey(
             }
             capture(window, &format!("025-{name}-{}.png", recipe.id));
         }
-        for (id, name) in [(4, "profiles"), (5, "uninstall")] {
+        for name in ["profiles", "uninstall"] {
             if !sheets.contains(&name) {
                 continue;
             }
@@ -2584,7 +2600,7 @@ pub(super) fn title_fit_journey(
             r.screen = Screen::Detail;
             r.pending = None;
             r.sync(ui);
-            r.title_fit_sheet(ui, id == 5);
+            r.title_fit_sheet(ui, name == "uninstall");
             assert!(ui.get_sheet_open());
             ui.set_fit_label(ui.get_sheet_title());
             ui.set_fit_width(656.);
