@@ -613,4 +613,12 @@
     credit plates over images pollute the UI — spec 033 now removes them and shows credits as
     plain text on Mapset detail and in About (attribution per D-024 kept).
   refs: [docs/specs/033-plain-headers.md, docs/specs/035-lean-bundled-images.md]
+- date: 2026-10-19
+  type: decision
+  summary: >-
+    D-028: Dropbox is allowed as a fallback download host when a mapset is not on /idgames (owner).
+    Spec 037 adds every DSDA-playable Doomer Boards Project (DBP 01-99, about 30 on /idgames) to
+    the catalog in batches, starting with an inventory; spec 036 (logo v3) runs on Opus 5.5 high
+    at the owner's request.
+  refs: [docs/decisions.md, docs/specs/037-doomer-boards-catalog.md, docs/specs/036-logo-v3.md]
 
