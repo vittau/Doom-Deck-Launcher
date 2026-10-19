@@ -1,8 +1,8 @@
 # 038 — Dropbox as a fast mirror — worker report
 
-**Status:** Phase 1 complete (**R1**, **R3**; A1 verified). **R2 is not started** — it waits for
-spec 037 to land in `main` and for the coordinator's go-ahead. No new dependency. No full-workspace
-check has run yet (build slot not requested); `ddl-core`-targeted `fmt`/`clippy`/tests are green.
+**Status:** Phase 1 (**R1**, **R3**) and phase 2 (**R2**) implemented. A1 verified; A2's
+`ddl catalog lint --fetch` and A3's full-workspace checks are pending the shared build slot; the
+Linux e2e is the coordinator's. No new dependency.
 
 ## What changed
 
@@ -15,7 +15,7 @@ check has run yet (build slot not requested); `ddl-core`-targeted `fmt`/`clippy`
     the host is **exactly one non-empty DNS label** (no dot) followed by the suffix. The bare
     suffix, any deeper label, any `…dl.dropboxusercontent.com.evil.example` lookalike and the
     parent domain are all refused.
-  - The module doc now names this as the one exception to exact host matching in `host.rs`.
+  - The module doc names this as the one exception to exact host matching in `host.rs`.
 - `crates/ddl-core/src/downloads/fetch.rs`
   - Extends the existing redirect-only mechanism (the `DEFAULT_REDIRECT_EXCEPTIONS` list for
     GitHub's signed asset host) rather than adding a parallel one: `check_target` keeps the exact
@@ -25,14 +25,14 @@ check has run yet (build slot not requested); `ddl-core`-targeted `fmt`/`clippy`
     chain began at an allowlisted `www.dropbox.com` URL). `transfer` tracks both per chain.
   - A hop is permitted when `dropbox_entry && is_dropbox_download_host(host) && (from ==
     "www.dropbox.com" || from == host)`: only a chain that entered at `www.dropbox.com` may land
-    on a per-request host, the identity must be exact, and a per-request host may only hand off to
-    **itself**. Everything else stays an exact allowlist match.
+    on a per-request host, the identity must be exact, and a per-request host may redirect only
+    to **itself**. Everything else stays an exact allowlist match.
 - `catalog/hosts.toml`
   - `www.dropbox.com` added to `downloads`; the header comment documents the rule (R3). The
     per-request `dl.dropboxusercontent.com` host is deliberately **not** listed — it is code, and
     any one exact label would be stale before use.
 
-### Amendment to R1 (coordinator, 2026-10-19)
+#### Amendment to R1 (coordinator, 2026-10-19)
 
 R1 as written describes a *single* redirect. The real chain has two:
 
@@ -51,14 +51,33 @@ Three identical `curl -sI` calls to the same share URL returned **three differen
 (`uc3b1e38…`, `uce24a6b2…`, `uc02d3811…`), confirming why the host cannot be allowlisted. A strict
 single-hop rule refuses hop 2 (its origin is the per-request host, not `www.dropbox.com`) and no
 Dropbox download could ever complete, so I asked the coordinator; the answer was option (a)
-**narrowed**: allow a one-label host to redirect only to the **same** host, only when the chain
-began at an allowlisted `www.dropbox.com` URL, with `MAX_REDIRECTS` and the per-hop scheme checks
+**narrowed**: a one-label host may redirect only to the **same** host, only when the chain began
+at an allowlisted `www.dropbox.com` URL, with `MAX_REDIRECTS` and the per-hop scheme checks
 unchanged. That is what is implemented. The reachable set is still exactly
 `{one-label}.dl.dropboxusercontent.com`.
 
+### R2 — Dropbox as the first source for matching DBPs
+
+The 21 recipes pinned to the `dbp-wad-archive` item and not DBP41/60/69 were revisited. The
+Dropbox link for each was read from a Wayback snapshot of its release thread (the live board sits
+behind a proof-of-work challenge), downloaded to `target/038/files/` (never committed), and
+SHA-256 compared with the recipe's pin; nothing was executed.
+
+- **12 match** → `urls = ["https://www.dropbox.com/…?dl=1", "https://ia600903…"]`, so Dropbox is
+  tried first and archive.org is the fallback in the recipe format's existing mirror order. Each
+  recipe also gained one comment recording the 2026-10-19 hash check. The `st=` signed token some
+  links carried was dropped after confirming the link resolves without it (it is short-lived and
+  would rot the catalog).
+- **9 differ** → recipes unchanged, archive.org only, and listed in
+  `docs/research/doomer-boards-projects.md` §Spec 038 phase 2.
+
+### R3 — hosts
+
+`www.dropbox.com` in `downloads`, with the code rule documented in the header comment (R3).
+
 ## Verification
 
-### A1 — unit tests, no network (§Verification)
+### A1 — unit tests, no network
 
 `cargo test -p ddl-core downloads` → **63 passed, 0 failed**. New/updated tests:
 
@@ -74,22 +93,57 @@ unchanged. That is what is implemented. The reachable set is still exactly
 | `fetch::tests::rejects_a_dropbox_lookalike_redirect_from_another_origin` | whole `transfer` chain refuses it, no bytes fetched |
 | `fetch::tests::redirect_exceptions_apply_only_to_redirects`, `does_not_match_subdomains_or_suffixes` | unchanged in substance, still pass |
 
-`does_not_match_subdomains_or_suffixes` keeps passing: there is no suffix matching in
-`HostAllowlist`; the Dropbox rule is a separate, redirect-only predicate.
+### A2 — catalog lint and measured speed
 
-### A3 — lint and static checks (partial, phase 1 scope)
+Method: Dropbox speed is wall time of the full `?dl=1` download as `curl` reports it (includes the
+redirect and TLS setup per file); archive.org speed is a 30 s timed Range read (`-r 0-8388607`) of
+the pinned archive.org copy, so no large archive.org file is downloaded in full. Both were measured
+on 2026-10-19 on the dev host, same connection.
+
+| DBP recipe | Dropbox hash matches pin | Dropbox MiB/s | archive.org MiB/s |
+| --- | --- | --- | --- |
+| avpvtvjvvhvss | **no** | 0.60 | 0.017 |
+| chronicles-of-ghost-town | yes | 1.78 | 0.017 |
+| forgotten-psychedelics | **no** | 3.68 | 0.017 |
+| grief-arbiter | **no** | 0.99 | 0.017 |
+| haunting-hollow | yes | 1.08 | 0.017 |
+| immortal-warfare | **no** | 1.23 | 0.029 |
+| mausoleum-nefarium | yes | 2.41 | 0.017 |
+| narcoleptic-strata | yes | 2.27 | 0.033 |
+| outposts-of-the-wasteland | **no** | 3.15 | 0.033 |
+| patagonian-pilgrimage | yes | 2.18 | 0.017 |
+| phantom-processing | yes | 1.09 | 0.033 |
+| plutonian-sunrise | yes | 1.19 | 0.022 |
+| sanguine-holy-land | yes | 2.73 | 0.020 |
+| stagnant-weather | yes | 2.17 | 0.033 |
+| tempest-enterprise | yes | 1.80 | 0.033 |
+| terminal-voltage | **no** | 1.02 | 0.017 |
+| the-economy-of-the-dead | **no** | 1.62 | 0.033 |
+| the-vast-silence | yes | 1.92 | 0.019 |
+| tomatomania | **no** | 6.30 | 0.033 |
+| wretched-morrow | yes | 1.00 | 0.017 |
+| zeppelin-armada | **no** | 2.55 | 0.017 |
+
+Totals: Dropbox **201.3 MiB in 86.0 s (2.34 MiB/s)**; archive.org **14.7 MiB in 630 s
+(0.023 MiB/s ≈ 1.4 MiB/min)**. Small Dropbox files are dominated by ~2–3 s of setup; the largest
+download (53.8 MiB) reached 6.3 MiB/s. For the 12 matching recipes (~87 MiB of packages) Dropbox
+takes roughly 40 s versus ~1 h from archive.org.
+
+Why the nine differ (bytes differ in both directions, so they are different builds, not truncated
+downloads): DBP32 and DBP70 publish a bare `.wad` on Dropbox while the recipe pins a ZIP; DBP48's
+Dropbox file is the 8-map limit-removing build only, not the 156 MB bundle; DBP58/63/68/71/77 are
+repacked or different builds; both DBP59 Dropbox files differ from the pin.
+
+`ddl catalog lint --fetch` over `catalog/` (A2's pass condition) and the full-workspace checks
+are **pending the build slot**.
+
+### A3 — static checks (partial, pending the build slot)
 
 - `cargo fmt --all --check` → clean.
 - `cargo clippy -p ddl-core --all-targets -- -D warnings` → clean.
-- `cargo test -p ddl-core catalog` → 56 passed (the offline `lint_paths` over the real `catalog/`
-  is included, so `hosts.toml` still lints).
-- Full `cargo clippy --workspace` / `cargo test --workspace` and the Linux e2e are **open**; the
-  build slot will be requested when phase 2 lands.
-
-### Real redirect chain (evidence)
-
-See [Amendment to R1](#amendment-to-r1-coordinator-2026-10-19). Opened 2026-10-19 with `curl -sI`
-and `curl -sL` against `https://www.dropbox.com/scl/fi/…/DBP78.zip?rlkey=…&dl=1`.
+- `cargo test -p ddl-core catalog` → 56 passed (includes the offline `lint_paths` over the real
+  `catalog/`, so the edited recipes and `hosts.toml` lint).
+- Full `cargo clippy --workspace` / `cargo test --workspace` and the Linux e2e are **open**.
 
 ## Dependencies
 
@@ -97,18 +151,16 @@ None added.
 
 ## Open questions
 
-1. **Spec 037 R3 vs spec 038 R1.** 037 says Dropbox needs `www.dropbox.com` *and its redirect
-   target `dl.dropboxusercontent.com`* in `downloads`. 038 (and this implementation) says the
-   redirect target is code, not the allowlist, and the bare suffix would never be the real host.
-   Propose rewording 037 R3 to match 038 when 037's report is folded in. (`docs/decisions.md`
-   D-028 is unaffected: it only says Dropbox links are allowed.)
-2. **R1 wording.** The coordinator said they will amend spec 038 R1 to state the narrowed
-   same-host, chain-entry rule; until then the code is the record.
+1. **The nine differing Dropbox files** are newer or differently packaged builds (e.g. DBP48's
+   limit-removing-only Zip, DBP32's bare WAD). Re-pinning them would need a fresh size/member
+   review and is outside 037/038; left for a follow-up if the owner wants those versions.
+2. **Spec 037 R3 wording.** 037 says Dropbox needs `www.dropbox.com` *and its redirect target
+   `dl.dropboxusercontent.com`* in `downloads`. 038 (and this implementation) says the redirect
+   target is code, not the allowlist, and the bare suffix would never be the real host. Propose
+   rewording 037 R3 to match 038.
+3. **Spec 038 R1 wording** is being amended by the coordinator to state the narrowed same-host,
+   chain-entry rule; the code and the tests above are the record until then.
 
 ## Spec items left open
 
-- **R2 (phase 2):** merge `main` after 037, then for each of the 21 Dropbox-only DBPs compare the
-  Dropbox `?dl=1` SHA-256 with the pinned archive.org hash, add Dropbox as the first source only on
-  a match, and measure both hosts' speed. The report table (DBP · match · Dropbox speed ·
-  archive.org speed) will be added then.
-- **A2** and the Linux e2e remain for phase 2.
+- `ddl catalog lint --fetch` and the full workspace checks (A2/A3), then the Linux e2e (A3).
