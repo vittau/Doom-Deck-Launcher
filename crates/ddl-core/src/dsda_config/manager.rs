@@ -688,7 +688,11 @@ mod tests {
         // the automap toggle to Start (`pad start` = 6).
         let mut edited = v2.config_text();
         for binding in &current.bindings {
-            let joy = if binding.action == "input_map" { 6 } else { binding.upstream_joy().unwrap() };
+            let joy = if binding.action == "input_map" {
+                6
+            } else {
+                binding.upstream_joy().unwrap()
+            };
             let profile = crate::dsda_config::format::BindingProfile {
                 keys: binding.upstream.profiles[0].keys.clone(),
                 mouse: binding.upstream.profiles[0].mouse,

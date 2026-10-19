@@ -165,7 +165,11 @@ mod tests {
         let active = document("input_map 9 -1 21 | 9 -1 21 | 9 -1 21\n");
         let result = merge(&base, &active, &binding_template(4, 21));
         assert_eq!(
-            result.document.get("input_map").map(Value::render).as_deref(),
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
             Some("9 -1 4 | 9 -1 4 | 9 -1 4")
         );
         assert!(result.conflicts.is_empty());
@@ -178,7 +182,11 @@ mod tests {
         let active = document("input_map 9 -1 6 | 9 -1 6 | 9 -1 6\n");
         let result = merge(&base, &active, &binding_template(4, 21));
         assert_eq!(
-            result.document.get("input_map").map(Value::render).as_deref(),
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
             Some("9 -1 6 | 9 -1 6 | 9 -1 6"),
             "the player's own button wins"
         );
@@ -192,7 +200,11 @@ mod tests {
         let active = document("input_map 9 -1 6 | 9 -1 6 | 9 -1 6\n");
         let result = merge(&base, &active, &binding_template(4, 21));
         assert_eq!(
-            result.document.get("input_map").map(Value::render).as_deref(),
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
             Some("9 -1 6 | 9 -1 6 | 9 -1 6")
         );
         assert_eq!(result.conflicts.len(), 1);
@@ -206,7 +218,11 @@ mod tests {
         let active = document("input_map 5 -1 21 | 5 -1 21 | 5 -1 21\n");
         let result = merge(&base, &active, &binding_template(4, 21));
         assert_eq!(
-            result.document.get("input_map").map(Value::render).as_deref(),
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
             Some("5 -1 21 | 5 -1 21 | 5 -1 21")
         );
         assert_eq!(result.conflicts.len(), 1);

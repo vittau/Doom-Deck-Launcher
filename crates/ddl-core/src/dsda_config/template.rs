@@ -391,13 +391,7 @@ impl TemplateBindingFile {
                 self.action
             )));
         }
-        let wanted = binding_for(
-            &self.action,
-            "wanted",
-            &self.keys,
-            self.mouse,
-            self.joy,
-        )?;
+        let wanted = binding_for(&self.action, "wanted", &self.keys, self.mouse, self.joy)?;
         let upstream = binding_for(
             &self.action,
             "upstream",
@@ -631,10 +625,7 @@ mod tests {
                 "{} is not a known input action",
                 binding.action
             );
-            for (label, value) in [
-                ("wanted", &binding.wanted),
-                ("upstream", &binding.upstream),
-            ] {
+            for (label, value) in [("wanted", &binding.wanted), ("upstream", &binding.upstream)] {
                 assert_eq!(
                     value.profiles.len(),
                     PROFILE_COUNT,
