@@ -344,32 +344,24 @@ impl Shell {
         let m = fixtures::mapset(self.mapset);
         let p = &self.profiles[self.index()];
         let heading = match self.screen {
-            Screen::Home => Copy::HomeTitle,
+            Screen::Home => Copy::Home,
             Screen::Discover => Copy::Discover,
             Screen::Library => Copy::LibraryTitle,
             Screen::Settings => Copy::Settings,
             Screen::Detail => Copy::Detail,
             Screen::Setup => Copy::Setup,
         };
-        let sub = match self.screen {
-            Screen::Home => Copy::HomeSub,
-            Screen::Discover => Copy::DiscoverSub,
-            Screen::Library => Copy::LibrarySub,
-            Screen::Settings => Copy::SettingsSub,
-            Screen::Detail => Copy::DetailSub,
-            Screen::Setup => Copy::SetupSub,
-        };
         ui.set_heading(if self.screen == Screen::Setup {
             format!("{} / {}", text(ui, heading), m.title).into()
         } else {
             text(ui, heading)
         });
-        ui.set_subtitle(text(ui, sub));
+        ui.set_status(Default::default());
         if self.screen == Screen::Setup && self.focus == 45 {
-            ui.set_subtitle(text(ui, Copy::PistolHelp));
+            ui.set_status(text(ui, Copy::PistolHelp));
         }
         if self.screen == Screen::Setup && self.focus == 46 {
-            ui.set_subtitle(text(ui, Copy::LockedOrder));
+            ui.set_status(text(ui, Copy::LockedOrder));
         }
         match self.screen {
             Screen::Home => {
@@ -511,7 +503,6 @@ impl Shell {
             }
             Screen::Detail => {
                 b.art(40., 230., 360., 330., m.art);
-                b.nodes.last_mut().unwrap().full_credit = true;
                 b.button(
                     30,
                     40.,
@@ -808,7 +799,7 @@ impl Shell {
                     if m.iwad_ready { 1 } else { 4 },
                 );
                 if !m.iwad_ready {
-                    ui.set_subtitle(text(ui, Copy::Missing));
+                    ui.set_status(text(ui, Copy::Missing));
                 }
             }
             Screen::Settings => {
@@ -1057,8 +1048,6 @@ impl Builder<'_> {
             size,
             art: 0,
             screenshot: Default::default(),
-            credit: Default::default(),
-            full_credit: false,
             fitted_label: false,
             primary,
             actionable,

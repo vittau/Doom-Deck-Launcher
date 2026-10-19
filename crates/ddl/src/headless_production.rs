@@ -810,7 +810,7 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
         ui.get_nodes()
             .iter()
             .filter(|n| n.kind == 4 && n.w >= 160.)
-            .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
+            .all(|n| !n.screenshot.is_empty())
     );
     capture("010-library.png");
     // Spec 015, R5: X marks the focused installed mapset; Library shows the star and sorts it first.
@@ -848,13 +848,7 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
         ui.get_nodes()
             .iter()
             .filter(|n| n.kind == 4 && n.w >= 160.)
-            .all(|n| !n.screenshot.is_empty() && n.credit.starts_with("Screenshot: "))
-    );
-    assert!(
-        ui.get_nodes()
-            .iter()
-            .filter(|n| n.kind == 4 && n.w < 160.)
-            .all(|n| n.credit.is_empty())
+            .all(|n| !n.screenshot.is_empty())
     );
     assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
     capture("010-home-continue.png");
@@ -890,7 +884,7 @@ pub(super) fn blocked_setup_and_settings(scene: &Scene, capture: Captures) {
     assert!(
         ui.get_nodes()
             .iter()
-            .any(|n| n.label == "Check when you are ready. No update check has run.")
+            .any(|n| n.label == "No update check has run.")
     );
     capture("010-settings.png");
 }
@@ -1715,9 +1709,10 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert!(ui.get_category_hint() && ui.get_favorite_hint());
     capture(window, "015-discover-all.png");
 
-    // Spec 023 R3/A2: every catalog card resolves to an embedded image and
-    // the localized caption. Capture each focused card so all thirteen are visible
-    // across the scroll positions, including the two bright-sky compositions.
+    // Spec 023 R3/A2, spec 033 R4: every catalog card resolves to an embedded
+    // image with no caption over it; the credit is plain text on Mapset detail.
+    // Capture each focused card so all thirteen are visible across the scroll
+    // positions, including the two bright-sky compositions.
     for loaded in &catalog.recipes {
         let recipe = &loaded.recipe;
         let index = state
@@ -1729,16 +1724,17 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             .iter()
             .position(|i| i.recipe.id == recipe.id)
             .unwrap();
-        let (asset, caption) = crate::screenshots::presentation(ui, recipe);
+        let asset = crate::screenshots::presentation(recipe);
         assert!(
             !asset.is_empty(),
             "missing embedded screenshot for {}",
             recipe.id
         );
-        assert_eq!(
-            caption,
-            format!("Screenshot: {}", recipe.screenshots[0].credit)
+        let credit = format!(
+            "Screenshots: {}",
+            crate::screenshots::recipe_credits(recipe).join(", ")
         );
+        assert!(credit.contains(&recipe.screenshots[0].credit));
         let image = ui
             .global::<crate::ScreenshotAssets>()
             .invoke_image(asset.clone());
@@ -1749,21 +1745,30 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             r.selected = index;
             r.sync(ui);
         }
-        assert!(ui.get_nodes().iter().any(|n| n.kind == 4
-            && n.screenshot == asset
-            && n.credit == caption
-            && !n.full_credit));
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .any(|n| n.kind == 4 && n.screenshot == asset)
+        );
         assert_eq!(ui.get_band_screenshot(), asset);
-        assert_eq!(ui.get_band_credit(), caption);
+        assert!(
+            !ui.get_nodes()
+                .iter()
+                .any(|n| n.label.contains("Screenshot")),
+            "no caption plate on cards"
+        );
         capture(window, &format!("023-discover-{}.png", recipe.id));
-        // The same first image and caption reach the detail composition.
+        // The same first image reaches the detail composition, with the credit as text.
         press(window, Key::Return);
         assert_eq!(state.borrow().screen, Screen::Detail);
         assert!(
-            ui.get_nodes().iter().any(|n| n.kind == 4
-                && n.screenshot == asset
-                && n.credit == caption
-                && n.full_credit)
+            ui.get_nodes()
+                .iter()
+                .any(|n| n.kind == 4 && n.screenshot == asset)
+        );
+        assert!(
+            ui.get_nodes().iter().any(|n| n.label == credit),
+            "detail lists `{credit}`"
         );
         if matches!(
             recipe.id.as_str(),
@@ -1776,14 +1781,10 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     // Recipe order, rather than filesystem order, selects the image and credit.
     let mut reordered = catalog.recipe("ancient-aliens").unwrap().clone();
     reordered.screenshots.reverse();
-    let (asset, caption) = crate::screenshots::presentation(ui, &reordered);
+    let asset = crate::screenshots::presentation(&reordered);
     assert_eq!(
         asset,
         format!("assets/screenshots/{}", reordered.screenshots[0].asset)
-    );
-    assert_eq!(
-        caption,
-        format!("Screenshot: {}", reordered.screenshots[0].credit)
     );
     // Bright white sky is the second bundled Ancient Aliens shot. A render-only
     // reordered recipe stress-tests the identical caption plate on card/detail/band.
@@ -1814,10 +1815,9 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.sync(ui);
     }
     reordered.screenshots[0].asset = "unbundled-new-release/01.jpg".into();
-    let (asset, caption) = crate::screenshots::presentation(ui, &reordered);
-    assert!(asset.is_empty() && caption.is_empty());
+    assert!(crate::screenshots::presentation(&reordered).is_empty());
 
-    // Long Home credits elide on the hero; tiny history thumbnails omit captions.
+    // Home carries no caption plates, whatever the credit length.
     {
         let mut r = state.borrow_mut();
         let saved = r.snapshot.clone();
@@ -1837,13 +1837,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             ui.get_nodes()
                 .iter()
                 .filter(|n| n.kind == 4 && n.w >= 160.)
-                .all(|n| !n.full_credit && !n.credit.is_empty())
-        );
-        assert!(
-            ui.get_nodes()
-                .iter()
-                .filter(|n| n.kind == 4 && n.w < 160.)
-                .all(|n| n.credit.is_empty())
+                .all(|n| !n.screenshot.is_empty())
         );
         assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
         capture(window, "023-home-long-credit.png");
@@ -1853,7 +1847,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.selected = 0;
         r.sync(ui);
     }
-    // Absence of screenshot metadata must retain the cover and concept plaque,
+    // Absence of screenshot metadata must retain the painted cover,
     // even when the recipe id has bundled assets.
     {
         let mut r = state.borrow_mut();
@@ -1873,9 +1867,11 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
                 .screenshot
                 .is_empty()
         );
-        assert_eq!(
-            ui.global::<crate::WiringStrings>().get_concept_art(),
-            "Original concept art"
+        assert!(
+            !ui.get_nodes()
+                .iter()
+                .any(|n| n.label.contains("concept art")),
+            "the painted cover has no caption either"
         );
         capture(window, "023-discover-fallback.png");
         r.snapshot = saved;
