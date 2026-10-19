@@ -7,6 +7,7 @@ import { WiringStrings } from "wiring-strings.slint";
 import { LocalStrings } from "local-strings.slint";
 export { LocalStrings } from "local-strings.slint";
 import { Tokens } from "tokens.slint";
+import { VectorFrame } from "assets/ember/frame.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
 export struct ViewNode {
@@ -14,14 +15,9 @@ export struct ViewNode {
     kind: int, label: string, detail: string, tone: int, size: float, art: int,
     primary: bool, actionable: bool, fitted-label: bool, screenshot: string,
 }
-component Frame inherits Rectangle {
-    background: transparent;
-    Image { x: 0px; y: 0px; width: parent.width; height: parent.height; source: @image-url("assets/ember/frame.png", nine-slice(28)); image-fit: fill; }
-    Image { x: (parent.width - 96px) / 2; y: 0px; width: 96px; height: 28px; source: @image-url("assets/ember/ornament-top.png"); }
-    Image { x: (parent.width - 96px) / 2; y: parent.height - 28px; width: 96px; height: 28px; source: @image-url("assets/ember/ornament-bottom.png"); }
-    Image { x: 0px; y: (parent.height - 48px) / 2; width: 28px; height: 48px; source: @image-url("assets/ember/ornament-left.png"); }
-    Image { x: parent.width - 28px; y: (parent.height - 48px) / 2; width: 28px; height: 48px; source: @image-url("assets/ember/ornament-right.png"); }
-}
+// Preserve the opaque centre of the former nine-slice, including on sheets.
+component Frame inherits VectorFrame { background: Tokens.surface; }
+
 component Cover inherits Image {
     in property <int> art;
     in property <string> screenshot;

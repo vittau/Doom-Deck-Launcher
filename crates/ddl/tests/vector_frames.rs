@@ -24,7 +24,7 @@ impl Platform for Offscreen {
     }
 }
 #[test]
-fn vector_frame_design_preview() {
+fn vector_frame_seams_and_design_previews() {
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
     slint::platform::set_platform(Box::new(Offscreen(window.clone()))).unwrap();
     let ui = Preview::new().unwrap();
@@ -101,24 +101,38 @@ fn assert_seams(
     // Corner/rail joints, plus the edges of every ornament ground.
     for seam in [x + 28., x + w - 28., x + (w - 96.) / 2., x + (w + 96.) / 2.] {
         for start in [y, y + h - 28.] {
+            let mut profile = std::collections::HashSet::new();
             for row in p(start)..p(start + 28.) {
+                let ink = pixel(p(seam), row);
+                profile.insert((ink.r, ink.g, ink.b));
                 assert_eq!(
                     pixel(p(seam) - 1, row),
                     pixel(p(seam), row),
                     "horizontal rail seam at {seam}, row {row}, scale {scale}"
                 );
             }
+            assert!(
+                profile.len() >= 12,
+                "the full stepped profile must be visible"
+            );
         }
     }
     for seam in [y + 28., y + h - 28., y + (h - 48.) / 2., y + (h + 48.) / 2.] {
         for start in [x, x + w - 28.] {
+            let mut profile = std::collections::HashSet::new();
             for col in p(start)..p(start + 28.) {
+                let ink = pixel(col, p(seam));
+                profile.insert((ink.r, ink.g, ink.b));
                 assert_eq!(
                     pixel(col, p(seam) - 1),
                     pixel(col, p(seam)),
                     "vertical rail seam at {seam}, column {col}, scale {scale}"
                 );
             }
+            assert!(
+                profile.len() >= 12,
+                "the full stepped profile must be visible"
+            );
         }
     }
 }

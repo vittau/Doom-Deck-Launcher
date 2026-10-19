@@ -96,16 +96,13 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
     let buffer = render(window);
     let elapsed = started.elapsed();
     if matches!(name, "010-install-progress.png" | "010-home-continue.png") {
-        let source =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ui/assets/ember/ornament-top.png");
-        let mut reader = png::Decoder::new(std::io::BufReader::new(
-            std::fs::File::open(source).unwrap(),
-        ))
-        .read_info()
-        .unwrap();
-        let mut expected = vec![0; reader.output_buffer_size().unwrap()];
-        let info = reader.next_frame(&mut expected).unwrap();
-        assert_eq!((info.width, info.height), (96, 28));
+        let expected =
+            slint::Image::load_from_svg_data(include_bytes!("../ui/assets/ember/ornament-top.svg"))
+                .unwrap()
+                .to_rgba8()
+                .unwrap();
+        assert_eq!((expected.width(), expected.height()), (96, 28));
+        let mut opaque = 0;
         let x = if name == "010-install-progress.png" {
             592
         } else {
@@ -114,14 +111,20 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
         for row in 0..28 {
             for col in 0..96 {
                 let pixel = buffer.as_slice()[(222 + row) * WIDTH as usize + x + col];
-                let offset = (row * 96 + col) * 3;
-                assert_eq!(
-                    [pixel.r, pixel.g, pixel.b],
-                    expected[offset..offset + 3],
-                    "ornament must render at native size on {name}"
-                );
+                let reference = expected.as_slice()[row * 96 + col];
+                // Transparent engraving margins expose the shared rail below.
+                // Fully opaque crest pixels still verify the exact native size.
+                if reference.a == 255 {
+                    opaque += 1;
+                    assert_eq!(
+                        [pixel.r, pixel.g, pixel.b],
+                        [reference.r, reference.g, reference.b],
+                        "vector ornament must render at native size on {name}"
+                    );
+                }
             }
         }
+        assert!(opaque > 300, "the crest must contain visible carved detail");
     }
     if name == "010-discover.png" {
         // Spec 030 moves the viewport down 20px and scrolls this first row
