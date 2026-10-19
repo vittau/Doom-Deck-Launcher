@@ -65,3 +65,14 @@ The production Home journey asserts exactly three checks at y=100/172/244, tones
 ## Open questions / remaining items
 
 None; R1–R3 and A1–A3 are complete. Physical Deck validation is outside this visual/copy task; no new device-behavior claims are made.
+
+## Post-review fix — expanded spec 037 catalog
+
+Merged `main` through `b369b7b` (merge `54fa870`) following CI run 39304816147. The category/favorites/screenshot journey had two remaining assumptions tied to the earlier catalog:
+
+- The screenshot assertion required exactly 640×360. It now checks both dimensions against the exported `ddl_core::catalog::{MIN,MAX}_SCREENSHOT_{WIDTH,HEIGHT}` bounds, retaining rejection of undersized/oversized images and the existing embedded-image, card/band/detail and credit checks for every recipe declaring screenshots.
+- Favoriting the second recipe happened to select a multi-tag recipe before spec 037. The journey still checks Right navigation to a non-first card, then explicitly selects a non-first recipe with at least two tags for the favorite/detail flow. It retains the exact tag comparison, multiple-tag assertion, persisted favorite identity, first-position sort assertion, and X/button unfavorite checks.
+
+The complete targeted journey passes against the expanded catalog (58.37s), with no further failures. Refreshed README Discover and detail images on the 89-mapset catalog; Home and Play setup remain byte-identical. Visually inspected the off-screen Discover image. `readme-screenshots.py --check` passes: Home 307,043 bytes, Discover 547,647, Play setup 297,068, detail 489,703.
+
+All follow-up validation commands run under `set -o pipefail`, chained with `&&`, with direct stdout/stderr redirection rather than output-filtering pipelines so Cargo failures propagate. `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, and `cargo test --workspace` all pass on the merged catalog. The complete command chain exited 0; no acceptance item remains open. No dependencies or product behavior changed in this follow-up.
