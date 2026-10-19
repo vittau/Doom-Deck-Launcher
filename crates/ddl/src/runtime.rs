@@ -1942,12 +1942,12 @@ impl Runtime {
                             428.,
                             y + 154.,
                             760.,
-                            36.,
+                            28.,
                             item.recipe.page.clone().into(),
                             20.,
                         );
-                        b.label(428., y + 194., 760., 44., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
-                        b.nodes[detail_panel].h = (y + 250.).max(478.);
+                        b.label(428., y + 184., 760., 44., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
+                        b.nodes[detail_panel].h = (y + 218.).max(478.);
                     }
                 }
                 Screen::Setup => {
