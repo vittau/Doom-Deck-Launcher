@@ -176,6 +176,43 @@ pub fn configure_with_user_factor(
     }
 }
 
+/// The largest difference between two factors that still counts as "the same".
+const FACTOR_EPSILON: f32 = 0.01;
+
+/// Whether the backend now reports a different factor than the one DDL applied.
+///
+/// Winit can dispatch its own `ScaleFactorChanged` *after* DDL fitted the window
+/// (for example when gamescope maps the fullscreen window); the physical size
+/// does not change, so only the reported factor reveals the drift.
+#[must_use]
+pub fn factor_drifted(reported: f32, applied: f32) -> bool {
+    (reported - applied).abs() > FACTOR_EPSILON
+}
+
+/// Re-applies the fit when a later backend event changed the reported factor.
+///
+/// Returns the new [`Report`] (and logs it) when a drift was corrected, or
+/// `None` when there is nothing to do. Only fullscreen with no user
+/// `SLINT_SCALE_FACTOR` is refitted: windowed mode keeps the reported factor by
+/// design, and a user value must never be fought.
+pub fn refit_if_drifted(window: &dyn DisplayWindow, mode: Mode, applied: f32) -> Option<Report> {
+    refit_if_drifted_with(window, mode, applied, user_factor())
+}
+
+/// [`refit_if_drifted`] with the user factor supplied explicitly (tests).
+pub fn refit_if_drifted_with(
+    window: &dyn DisplayWindow,
+    mode: Mode,
+    applied: f32,
+    user: Option<f32>,
+) -> Option<Report> {
+    if mode != Mode::Fullscreen || user.is_some() {
+        return None;
+    }
+    factor_drifted(window.reported_scale_factor(), applied)
+        .then(|| configure_with_user_factor(window, mode, user))
+}
+
 fn user_factor() -> Option<f32> {
     parse_user_factor(std::env::var(SCALE_ENV).ok().as_deref())
 }
@@ -346,6 +383,38 @@ mod tests {
         assert_eq!(report.applied, 2.25);
     }
 
+    #[test]
+    fn drift_is_any_meaningful_factor_difference() {
+        assert!(factor_drifted(2.25, 1.0));
+        assert!(factor_drifted(1.0, 1.5));
+        assert!(!factor_drifted(1.0, 1.0));
+        assert!(!factor_drifted(1.0, 1.005));
+    }
+
+    /// R1: a later backend factor drift is corrected, but only for fullscreen
+    /// and never against a user `SLINT_SCALE_FACTOR`.
+    #[test]
+    fn refit_only_corrects_a_fullscreen_drift_without_a_user_value() {
+        let fake = FakeDisplay::new(2.25, PhysicalSize::new(1280, 800));
+        let report = refit_if_drifted_with(&fake, Mode::Fullscreen, 1.0, None)
+            .expect("a drift must be corrected");
+        assert_eq!(report.source, Source::Fitted);
+        assert_eq!(report.applied, 1.0);
+        assert_eq!(fake.applied.get(), 1.0);
+
+        // No drift: nothing to do.
+        let fake = FakeDisplay::new(1.0, PhysicalSize::new(1280, 800));
+        assert!(refit_if_drifted_with(&fake, Mode::Fullscreen, 1.0, None).is_none());
+
+        // Windowed mode keeps the reported factor by design.
+        let fake = FakeDisplay::new(2.25, PhysicalSize::new(1280, 800));
+        assert!(refit_if_drifted_with(&fake, Mode::Windowed, 1.0, None).is_none());
+
+        // A user value is never fought.
+        let fake = FakeDisplay::new(2.25, PhysicalSize::new(1280, 800));
+        assert!(refit_if_drifted_with(&fake, Mode::Fullscreen, 1.0, Some(1.5)).is_none());
+    }
+
     /// A1: a 1280×800 physical window that reports scale 2.25 lays out exactly
     /// like the same window at scale 1.0.
     #[test]
@@ -455,5 +524,44 @@ mod tests {
 
         let frame = crate::headless::render_at(&window, 1920, 1080);
         crate::headless::write_png("029-deck-fit-1920x1080-user-1.5.png", &frame);
+    }
+
+    /// A1/R1: a later backend `ScaleFactorChanged` with no size change (winit
+    /// re-reports the panel DPI when gamescope maps the fullscreen window) must
+    /// not re-scale the UI; the drift is corrected and logged.
+    #[test]
+    fn a_backend_scale_factor_drift_is_refitted() {
+        const CASE: &str = "a_backend_scale_factor_drift_is_refitted";
+        if crate::headless::isolated(module_path!(), CASE) {
+            return;
+        }
+        let (window, ui) = crate::headless::setup_at(2.25, PhysicalSize::new(1280, 800));
+        let target = ui.window();
+        let report = configure(target, Mode::Fullscreen);
+        assert_eq!(report.applied, 1.0);
+
+        // winit takes over again without a resize: same physical size, DPI back.
+        target.dispatch_event(WindowEvent::ScaleFactorChanged { scale_factor: 2.25 });
+        assert_eq!(target.scale_factor(), 2.25);
+        assert_eq!(window.size(), PhysicalSize::new(1280, 800));
+
+        let capture = Capture::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_writer(capture.clone())
+            .with_ansi(false)
+            .with_max_level(tracing::Level::INFO)
+            .finish();
+        let refit = tracing::subscriber::with_default(subscriber, || {
+            refit_if_drifted(target, Mode::Fullscreen, report.applied)
+        });
+
+        let refit = refit.expect("a scale-factor drift must be corrected");
+        assert_eq!(refit.source, Source::Fitted);
+        assert_eq!(refit.applied, 1.0);
+        assert_eq!(target.scale_factor(), 1.0, "the fit is applied again");
+
+        let text = capture.text();
+        assert!(text.contains("reported=2.25"), "drift logged: {text}");
+        assert!(text.contains("applied=1"), "re-fit logged: {text}");
     }
 }

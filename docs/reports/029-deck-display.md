@@ -18,7 +18,10 @@ re-check (S3, F4), which **Needs Deck Validation**.
   factor.
 - `crates/ddl/src/main.rs` — calls `display::configure` after choosing fullscreen
   or the 1280×800 logical window, then re-applies and re-logs whenever the
-  physical size changes (a 250 ms Slint timer).
+  physical size changes or the reported factor drifts (a 250 ms Slint timer).
+  The drift case matters because winit can dispatch its own `ScaleFactorChanged`
+  when gamescope maps the fullscreen window, without changing the physical size;
+  only the reported factor reveals it.
 - `crates/ddl-core/src/dsda_config/template.rs` — the template gains a `[strings]`
   table (optional) and four integer video keys; `Template` owns `strings` and
   `merge`/`reset`/`config_text` handle them.
@@ -71,6 +74,13 @@ template could only hold integers.
     is the window background, not a crop).
   - `a_user_scale_factor_overrides_both`: with `SLINT_SCALE_FACTOR=1.5` in the
     child environment, the applied factor is 1.5 on both screen sizes.
+  - `a_backend_scale_factor_drift_is_refitted`: after the fit, a backend
+    `ScaleFactorChanged(2.25)` with **no** size change (winit re-reporting the
+    panel DPI) is corrected back to 1.0 by `refit_if_drifted`, and the re-fit is
+    logged with `reported=2.25` / `applied=1`.
+  - `refit_only_corrects_a_fullscreen_drift_without_a_user_value` (unit): no
+    drift, windowed mode, or a user `SLINT_SCALE_FACTOR` all leave the factor
+    alone.
   - PNGs (inspected), each under `target/headless/<case>/`:
     - `fitting_ignores_the_reported_dpi_on_the_deck_panel/029-deck-fit-1280x800-reported-2.25.png`
       — all four tabs visible, Settings focused; the fitted frame.
@@ -107,7 +117,8 @@ branch is `vittau/deck-display`, the merge is `f1a737a` (no conflicts).
 
 - `cargo fmt --all --check` — clean.
 - `cargo clippy --workspace --all-targets -- -D warnings` — clean.
-- `cargo test --workspace` — **950 passed, 0 failed** across 16 test binaries.
+- `cargo test --workspace` — **550 passed, 0 failed** across 11 test targets
+  (including the 11 `display::` tests).
 - `python3 scripts/check-readme-links.py` — PASS (32 local links/anchors).
 
 The four A1 PNGs were opened and inspected: the fitted 1280×800 frame shows all

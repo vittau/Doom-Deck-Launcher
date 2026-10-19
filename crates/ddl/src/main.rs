@@ -133,9 +133,11 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
     // Fit the 1280×800 design to the window's physical size, ignoring the DPI
     // Gaming Mode reports, and record what was applied (spec 029, R1/R2). The
     // physical size is only reliable once the window is shown, so apply
-    // immediately and again whenever it changes.
-    display::configure(window, display_mode);
+    // immediately and again whenever it changes or the backend re-reports the
+    // DPI factor (gamescope maps the fullscreen window without resizing it).
+    let initial = display::configure(window, display_mode);
     let mut last_size = window.size();
+    let mut last_applied = initial.applied;
     let weak = ui.as_weak();
     let display_timer = slint::Timer::default();
     display_timer.start(
@@ -146,7 +148,13 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
                 let window = ui.window();
                 if window.size() != last_size {
                     last_size = window.size();
-                    display::configure(window, display_mode);
+                    last_applied = display::configure(window, display_mode).applied;
+                } else if let Some(report) =
+                    display::refit_if_drifted(window, display_mode, last_applied)
+                {
+                    // A backend event changed the reported factor after the fit
+                    // (gamescope mapping the fullscreen window); take it back.
+                    last_applied = report.applied;
                 }
             }
         },
