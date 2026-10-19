@@ -2,6 +2,10 @@
 
 # DoomDeckLauncher
 
+> [!NOTE]
+> This project is developed and maintained with the help of AI agents, under the direction and
+> review of its human maintainer.
+
 **A native, controller-first DOOM mapset launcher for Steam Deck, powered by the official [DSDA-Doom](https://github.com/dsda-org/dsda-doom) AppImage.**
 
 Discover community maps, choose your setup, and play from Gaming Mode.

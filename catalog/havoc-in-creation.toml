@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 52; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "havoc-in-creation"
+title = "Havoc in Creation (Doomer Boards Project 52)"
+authors = ["Doomer Boards Project 52"]
+release = "2022-09-30"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_52"
+description = "DOOM II: MAP01–MAP12 (12 maps). With burning hands, the dark wizard's refusal to accept peace sets this ancient realm ablaze."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/havoc-in-creation/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "havoc-in-creation/01.jpg"
+credit = "Doomer Boards Project 52"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 52", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/2978/havoc-creation"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 52."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_52"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp_52.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp_52.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp_52.zip"]
+size = 5991982
+sha256 = "f059bfd992f0fd96ec7f5833f13485ee773a9efc01e22cd097b6769dd9b7e603"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp_52.zip"
+
+[[packages.members]]
+id = "dbp-52"
+path = "DBP_52.txt"
+size = 3463
+sha256 = "646d21378e5e5573801d33c78084336813ab7b5a6ef7c2d35e69524f95a6ca8e"
+keep = true
+
+[[packages.members]]
+id = "dbp-52-2"
+path = "DBP_52.wad"
+size = 21802220
+sha256 = "e57a8b938a7488fd10e9074eca98b4fc2baae3939913426f0978a451b2e46df5"
+keep = false
+
+[[components]]
+id = "main"
+label = "Havoc in Creation"
+description = "Main episode: MAP01–MAP12."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-52-2"
+role = "maps"

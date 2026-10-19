@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 56; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "augustland-barrens"
+title = "Augustland Barrens (Doomer Boards Project 56)"
+authors = ["Doomer Boards Project 56"]
+release = "2023-02-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_56"
+description = "DOOM II: MAP01–MAP09 (9 maps). The drylands have been devoid of life for generations, but some new visitors have arrived."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/augustland-barrens/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "augustland-barrens/01.jpg"
+credit = "Doomer Boards Project 56"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 56", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/3101/augustland-barrens"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 56; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_56"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp_56.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp_56.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp_56.zip"]
+size = 5951032
+sha256 = "8e42c280e4477f144019827266ba504994f08ad8045bdc915dafd9993645d162"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp_56.zip"
+
+[[packages.members]]
+id = "dbp-56"
+path = "DBP_56.txt"
+size = 3440
+sha256 = "c7c3a800bb723c2cf3629e16092cb35a97b42d7464f74f681b7dda5702185de1"
+keep = true
+
+[[packages.members]]
+id = "dbp-56-2"
+path = "DBP_56.wad"
+size = 18821446
+sha256 = "89d7bb0241956b21bcdfdde1bdd9ed42b16666fc71f8acbc21ca6beb9caf0348"
+keep = false
+
+[[components]]
+id = "main"
+label = "Augustland Barrens"
+description = "Main episode: MAP01–MAP09."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-56-2"
+role = "maps"

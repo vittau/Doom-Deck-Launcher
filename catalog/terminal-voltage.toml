@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 63; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "terminal-voltage"
+title = "Terminal Voltage (Doomer Boards Project 63)"
+authors = ["Doomer Boards Project 63"]
+release = "2023-12-07"
+page = "https://doomer.boards.net/thread/3421/terminal-voltage"
+description = "DOOM II: MAP01–MAP09 (9 maps). An OSHA inspector's dream comes true when a facility of extreme electrical hazards goes awry."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects", "episode"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 63", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/3421/terminal-voltage"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 63; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/3421/terminal-voltage"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp63_terminal-voltage.zip"]
+size = 3052543
+sha256 = "f7618bb966c2f42db73afe31a8085a97c0251e03709c181e8fbd2c1563b1ae31"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-63"
+path = "DBP_63.txt"
+size = 3544
+sha256 = "9f364938e537b4880c04ef14b6cf809519743dce3963f0649e7cae305cc66a4e"
+keep = true
+
+[[packages.members]]
+id = "dbp-63-newhud-wide"
+path = "DBP_63_newHUD_wide.wad"
+size = 19962
+sha256 = "4851f138c02997d3d5bc1686ed2c7d3b17cdec35279105af0dc833d080ef4255"
+keep = false
+
+[[packages.members]]
+id = "dbp63"
+path = "DBP63.wad"
+size = 9626043
+sha256 = "6ea2e499a54b69328acb04eee499346ad142fa7b94f3a6feeafdbaad86b82588"
+keep = false
+
+[[components]]
+id = "main"
+label = "Terminal Voltage"
+description = "Main episode: MAP01–MAP09."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp63"
+role = "maps"

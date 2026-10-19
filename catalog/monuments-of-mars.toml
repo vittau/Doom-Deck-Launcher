@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 1; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "monuments-of-mars"
+title = "Monuments of Mars (Doomer Boards Project 1)"
+authors = ["Doomer Boards Project 1"]
+release = "2018-03-31"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp01"
+description = "DOOM II: MAP01–MAP07 (7 maps). The one that started it all! Demons have attacked the military bases on mars. Has the UAC learned nothing?."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/monuments-of-mars/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "monuments-of-mars/01.jpg"
+credit = "Doomer Boards Project 1"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 1", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/1140/ti-limit-removing-monuments-mars/"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 1; episode = 7 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp01"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp01.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp01.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp01.zip"]
+size = 1500394
+sha256 = "36ddb3edeff9706291eeb7000d1443ccd8c988d2d52d3fb774dee314894c1b76"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp01.zip"
+
+[[packages.members]]
+id = "dbp-01"
+path = "DBP_01.txt"
+size = 2761
+sha256 = "142b4300c09bca76c44f2628c537620960f49b1633a6a4443490aac67a93f187"
+keep = true
+
+[[packages.members]]
+id = "dbp-01-2"
+path = "DBP_01.wad"
+size = 4657278
+sha256 = "4995d2736ea1892835375648d774f26c9f5990d18a6b6ac435bc080a2b1e4a34"
+keep = false
+
+[[components]]
+id = "main"
+label = "Monuments of Mars"
+description = "Main episode: MAP01–MAP07."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-01-2"
+role = "maps"

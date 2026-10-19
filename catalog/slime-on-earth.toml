@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 42; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "slime-on-earth"
+title = "Slime on Earth (Doomer Boards Project 42)"
+authors = ["Doomer Boards Project 42"]
+release = "2021-12-01"
+page = "https://www.doomworld.com/idgames/themes/chex/dbp42"
+description = "DOOM II: MAP01–MAP07 (7 maps). 7 maps of Chex Quest action for Doom 2, designed by the many members of doomer boards."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/slime-on-earth/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "slime-on-earth/01.jpg"
+credit = "Doomer Boards Project 42"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "mbf21"
+complevel = "mbf21"
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 42", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit-removing/MBF21", "Bundled readme \"Tested With\": DSDA-Doom and GZDoom.", "Release thread: https://doomer.boards.net/thread/2343/slime-on-earth"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit-removing/MBF21\". It also names the tested ports: DSDA-Doom and GZDoom.. Confirmed complevel \"mbf21\" (the readme states MBF21; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 42; episode = 7 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/themes/chex/dbp42"
+urls = ["https://www.gamers.org/pub/idgames/themes/chex/dbp42.zip", "https://youfailit.net/pub/idgames/themes/chex/dbp42.zip", "https://ftp.fu-berlin.de/pc/games/idgames/themes/chex/dbp42.zip"]
+size = 4903250
+sha256 = "d7634db741becf81e07af90471531173130e54b38f0a2f30f42a6a374b58e26f"
+kind = "zip"
+idgames_path = "themes/chex/dbp42.zip"
+
+[[packages.members]]
+id = "dbp42"
+path = "dbp42.txt"
+size = 2859
+sha256 = "ee9d9717d2257ffd928e3aba31e0afcc727679d59da94089d5728e150a18c72d"
+keep = true
+
+[[packages.members]]
+id = "dbp42-2"
+path = "dbp42.wad"
+size = 13088155
+sha256 = "792d7555944b99b4707b483f5576878b561500155989609120ffa9fd78ccaba1"
+keep = false
+
+[[components]]
+id = "main"
+label = "Slime on Earth"
+description = "Main episode: MAP01–MAP07."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp42-2"
+role = "maps"

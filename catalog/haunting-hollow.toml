@@ -1,0 +1,84 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 62; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "haunting-hollow"
+title = "Haunting Hollow (Doomer Boards Project 62)"
+authors = ["Doomer Boards Project 62"]
+release = "2023-10-01"
+page = "https://doomer.boards.net/thread/3364/haunting-hollow"
+description = "DOOM II: MAP01–MAP11 (11 maps). The lost village of Lodewood has fallen victim to the creatures of the night."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/haunting-hollow/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "haunting-hollow/01.jpg"
+credit = "Doomer Boards Project 62"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 62", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/3364/haunting-hollow"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 62."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/3364/haunting-hollow"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp62_haunting-hollow-v1-4.zip"]
+size = 4754048
+sha256 = "e153c2badcea0044078464df96e2e75058f496ade7b7216ae9d7f5d5c1521879"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-62"
+path = "DBP_62/DBP_62.txt"
+size = 3705
+sha256 = "b2b36277d8fae4ca68842c4c52decdd0f31caabc14ecc7fd45ad97711ef1e339"
+keep = true
+
+[[packages.members]]
+id = "dbp-62-2"
+path = "DBP_62/DBP_62.wad"
+size = 14166594
+sha256 = "da8a2120de9d7322ee93625f81d4a437d3a22642dbbca3b17a0cdd1c09012a36"
+keep = false
+
+[[packages.members]]
+id = "dbp-62-hud-wide"
+path = "DBP_62/DBP_62_HUD_wide.wad"
+size = 19962
+sha256 = "daece355fbff9bd300394b02e5b78262918aafa925e34a1e486da12af2d183ef"
+keep = false
+
+[[components]]
+id = "main"
+label = "Haunting Hollow"
+description = "Main episode: MAP01–MAP11."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-62-2"
+role = "maps"

@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 33; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "rainy-days-in-casablanca"
+title = "Rainy Days in Casablanca (Doomer Boards Project 33)"
+authors = ["Doomer Boards Project 33"]
+release = "2021-03-02"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp33"
+description = "DOOM II: MAP01–MAP06 (6 maps). From lewd strip shows to shady dealings, this 1940's adventure has it all."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/rainy-days-in-casablanca/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "rainy-days-in-casablanca/01.jpg"
+credit = "Doomer Boards Project 33"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = 9
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 33", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Boom", "Bundled readme \"Tested With\": DSDA-Doom and GZDoom", "Release thread: https://doomer.boards.net/thread/2042/dbp33-rainy-days-casablanca"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Boom\". It also names the tested ports: DSDA-Doom and GZDoom. Confirmed complevel 9 (the readme requires Boom (complevel 9); DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 33; episode = 6 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp33"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp33.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp33.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp33.zip"]
+size = 3260815
+sha256 = "7c1b43f4c04feeb5da9d5cedfeeceab9dccd6c1d9b0130850f7615dcc7474251"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp33.zip"
+
+[[packages.members]]
+id = "dbp33"
+path = "dbp33.txt"
+size = 3133
+sha256 = "30ff63ed9374b17a678e88cd78f35daa8694db82fd2a042ea6eb1f1b0e33c105"
+keep = true
+
+[[packages.members]]
+id = "dbp33-2"
+path = "dbp33.wad"
+size = 9420357
+sha256 = "c1e13009efd1a02661dd58b71d4129956313f6ed303b03a0351a2e93913a02d5"
+keep = false
+
+[[components]]
+id = "main"
+label = "Rainy Days in Casablanca"
+description = "Main episode: MAP01–MAP06."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp33-2"
+role = "maps"

@@ -1691,7 +1691,19 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.sync(ui);
     }
     let all = card_ids(ui);
-    assert_eq!(all.len(), catalog.recipes.len());
+    // The grid draws the cards that fit the viewport, and the active catalog may be a
+    // fetched bundle rather than the embedded one (spec 019), so compare the grid with
+    // the snapshot instead of the embedded recipe count.
+    let shown = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .map_or(0, |s| s.items.len());
+    assert!(shown > 0, "Discover has recipes");
+    assert!(
+        !all.is_empty() && all.len() <= shown,
+        "the grid draws cards"
+    );
     let mut expected = vec!["All".to_owned()];
     expected.extend(used.iter().map(|t| t.label.clone()));
     expected.push("Favorites".into());
@@ -1709,12 +1721,17 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert!(ui.get_category_hint() && ui.get_favorite_hint());
     capture(window, "015-discover-all.png");
 
-    // Spec 023 R3/A2, spec 033 R4: every catalog card resolves to an embedded
-    // image with no caption over it; the credit is plain text on Mapset detail.
-    // Capture each focused card so all thirteen are visible across the scroll
-    // positions, including the two bright-sky compositions.
-    for loaded in &catalog.recipes {
-        let recipe = &loaded.recipe;
+    // Spec 023 R3/A2, spec 033 R4: every card that ships a screenshot resolves to the
+    // embedded image with no caption over it; the credit is plain text on Mapset detail.
+    // Spec 037 R4: a recipe may ship none and fall back to the painted concept art, so
+    // the cards under test are the active catalog's recipes that declare a screenshot.
+    let cards: Vec<ddl_core::catalog::Recipe> = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .map(|s| s.items.iter().map(|i| i.recipe.clone()).collect())
+        .unwrap_or_default();
+    for recipe in cards.iter().filter(|r| !r.screenshots.is_empty()) {
         let index = state
             .borrow()
             .snapshot

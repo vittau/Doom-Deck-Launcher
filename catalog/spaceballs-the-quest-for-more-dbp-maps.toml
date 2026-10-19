@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 24; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "spaceballs-the-quest-for-more-dbp-maps"
+title = "Spaceballs: The Quest For More DBP Maps (Doomer Boards Project 24)"
+authors = ["Doomer Boards Project 24"]
+release = "2020-05-31"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp24_sb"
+description = "DOOM II: MAP01–MAP10 (10 maps). Screening now in reputable forums near you. Grab your popcorn and helmets and play it soon!."
+permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 24", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1749/dbp24-spaceballs-sequel-quest-more"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 24."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp24_sb"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp24_sb.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp24_sb.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp24_sb.zip"]
+size = 4296425
+sha256 = "84b1f3b74e157e21e5b47f850b62963e0fbde26163f253986ba93ffab2d84e47"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp24_sb.zip"
+
+[[packages.members]]
+id = "credits"
+path = "CREDITS.TXT"
+size = 3332
+sha256 = "e3f233a651f5e6c03bcb34c07b65cbce73997369349589d9ceba54296b0c0e91"
+keep = true
+
+[[packages.members]]
+id = "dbp24-sb"
+path = "DBP24_SB.txt"
+size = 3269
+sha256 = "778771f703a6ec773cc0a58956560a3670426ca69f3e9426b93c3811ad328cbd"
+keep = true
+
+[[packages.members]]
+id = "dbp24-sb-2"
+path = "DBP24_SB.wad"
+size = 15012320
+sha256 = "829e76ddd1ec135b54b16fd683b4d136dbd1dcfc4d00ed9c880174874a688d60"
+keep = false
+
+[[components]]
+id = "main"
+label = "Spaceballs: The Quest For More DBP Maps"
+description = "Main episode: MAP01–MAP10."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp24-sb-2"
+role = "maps"
