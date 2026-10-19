@@ -371,6 +371,8 @@ fn shell_navigation_and_focus_render_headlessly() {
     press(&window, Key::LeftArrow);
     assert_eq!(focus(), 1);
     press(&window, Key::UpArrow);
+    assert_eq!(focus(), 3, "compacted Discover is above Continue");
+    press(&window, Key::UpArrow);
     assert_eq!(focus(), -1);
     press(&window, Key::LeftArrow);
     assert_eq!(focus(), -1, "spatial navigation never wraps");
@@ -378,6 +380,10 @@ fn shell_navigation_and_focus_render_headlessly() {
     assert_eq!(focus(), -2);
     press(&window, Key::LeftArrow);
     press(&window, Key::DownArrow);
+    assert_eq!(focus(), 3, "Home remembers the compacted Discover control");
+    press(&window, Key::LeftArrow);
+    assert_eq!(focus(), 2);
+    press(&window, Key::LeftArrow);
     assert_eq!(focus(), 1);
     window.dispatch_event(WindowEvent::WindowActiveChanged(false));
     assert!(!ui.get_input_active());
