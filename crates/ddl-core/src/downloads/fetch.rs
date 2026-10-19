@@ -10,8 +10,11 @@
 //!
 //! - **HTTPS only.** Plain HTTP is refused before a connection is made.
 //! - **Host allowlist.** Every URL *and every redirect target* is checked
-//!   against the caller's [`HostAllowlist`]. The one documented exception is
-//!   GitHub's signed asset host, which appears only as a redirect target.
+//!   against the caller's [`HostAllowlist`]. Two documented exceptions, both
+//!   redirect-target-only: GitHub's signed asset host, accepted from any
+//!   origin, and Dropbox's per-request `*.dl.dropboxusercontent.com` host,
+//!   accepted only inside a chain that began at `www.dropbox.com` and only for
+//!   a same-host hop (spec 038, R1).
 //! - **Bounded.** At most [`MAX_REDIRECTS`] redirects, a connect timeout, a
 //!   response-header timeout, an idle timeout ([`BODY_IDLE_TIMEOUT`]) on the
 //!   gap between body reads, a size-scaled body deadline (see `body_deadline`),
@@ -46,7 +49,7 @@ use ureq::unversioned::transport::{
 use super::cancel::CancellationToken;
 use super::error::Error;
 use super::hash::Sha256;
-use super::host::HostAllowlist;
+use super::host::{DROPBOX_REDIRECT_ORIGIN, HostAllowlist, is_dropbox_download_host};
 
 /// The maximum number of redirects followed per URL (spec 006, R1).
 pub const MAX_REDIRECTS: u32 = 5;
@@ -207,6 +210,19 @@ impl DownloadRequest {
         self.urls = urls.into_iter().map(Into::into).collect();
         self
     }
+}
+
+/// How one hop sits in its redirect chain, for the redirect-only exceptions
+/// (spec 006 R1, spec 038 R1).
+#[derive(Debug, Clone, Copy, Default)]
+struct Hop<'a> {
+    /// The host of the URL that issued this hop's redirect, or `None` for a
+    /// request's first URL. A first URL is never reached by a redirect, so no
+    /// exception may admit it.
+    from: Option<&'a str>,
+    /// Whether the chain began at an allowlisted `www.dropbox.com` URL. Only
+    /// such a chain may land on a Dropbox per-request download host.
+    dropbox_entry: bool,
 }
 
 /// Fetches remote files into a content-addressed cache.
@@ -472,13 +488,26 @@ impl Fetcher {
         progress: &mut dyn FnMut(Progress),
     ) -> Result<Transfer, Error> {
         let mut current = parse_uri(url)?;
+        // Whether this chain began at an allowlisted `www.dropbox.com` URL.
+        // Only such a chain may land on a Dropbox per-request download host
+        // (spec 038, R1); the first URL is checked against the allowlist below,
+        // so a lookalike origin never sets this.
+        let dropbox_entry = host_of(&current)
+            .is_some_and(|host| host.eq_ignore_ascii_case(DROPBOX_REDIRECT_ORIGIN));
         // One body deadline for the whole transfer, derived from the size we
         // expect (or the request's hard cap when it is unknown). Every redirect
         // hop gets the same budget; only one hop ever streams a body.
         let deadline = self.body_deadline_for(request);
         let mut redirects: u32 = 0;
+        // The host of the URL that issued the current redirect; `None` for the
+        // first URL, which no redirect exception may ever admit.
+        let mut redirect_from: Option<String> = None;
         loop {
-            self.check_target(&current, &request.allowed_hosts, redirects > 0)?;
+            let hop = Hop {
+                from: redirect_from.as_deref(),
+                dropbox_entry,
+            };
+            self.check_target(&current, &request.allowed_hosts, hop)?;
             // ureq 3.4.2 exposes `timeout_recv_body` per request through
             // `RequestBuilder::config()`; it is a *total* budget for the body,
             // not restarted per read. See
@@ -508,6 +537,7 @@ impl Fetcher {
                         url: current.to_string(),
                         status: status.as_u16(),
                     })?;
+                redirect_from = host_of(&current);
                 current = resolve_location(&current, location)?;
                 redirects += 1;
                 continue;
@@ -525,12 +555,11 @@ impl Fetcher {
     }
 
     /// Enforces scheme and host policy for one hop.
-    fn check_target(
-        &self,
-        uri: &Uri,
-        allowed: &HostAllowlist,
-        is_redirect: bool,
-    ) -> Result<(), Error> {
+    ///
+    /// `hop` describes where this hop sits in its redirect chain, which is what
+    /// keeps a redirect exception redirect-only: a first URL (no `from`) never
+    /// has one (spec 006 R1, spec 038 R1).
+    fn check_target(&self, uri: &Uri, allowed: &HostAllowlist, hop: Hop<'_>) -> Result<(), Error> {
         let url = uri.to_string();
         let scheme = uri.scheme_str().unwrap_or_default();
         #[allow(unused_mut)]
@@ -549,13 +578,28 @@ impl Fetcher {
         if allowed.permits(&host) {
             return Ok(());
         }
-        if is_redirect
-            && self
+        if let Some(from) = hop.from {
+            // Documented redirect exceptions (spec 006, D-015): GitHub's signed
+            // asset host, accepted from any origin.
+            if self
                 .redirect_exceptions
                 .iter()
                 .any(|exception| exception.eq_ignore_ascii_case(&host))
-        {
-            return Ok(());
+            {
+                return Ok(());
+            }
+            // Dropbox's per-request download host (spec 038, R1) is narrower:
+            // the chain must have begun at the allowlisted `www.dropbox.com`,
+            // the identity is exact, and a per-request host may only hand off to
+            // itself (Dropbox's own root-relative `/cd/0/inline` → `inline2`
+            // hop), never to another label.
+            if hop.dropbox_entry
+                && is_dropbox_download_host(&host)
+                && (from.eq_ignore_ascii_case(DROPBOX_REDIRECT_ORIGIN)
+                    || from.eq_ignore_ascii_case(&host))
+            {
+                return Ok(());
+            }
         }
         Err(Error::HostNotAllowed { host, url })
     }
@@ -980,6 +1024,16 @@ mod tests {
         HostAllowlist::new(["127.0.0.1"])
     }
 
+    /// Builds the redirect context for `check_target`: `from` is the host that
+    /// issued the redirect (`None` for a first URL) and `dropbox_entry` whether
+    /// the chain began at `www.dropbox.com`.
+    fn hop(from: Option<&str>, dropbox_entry: bool) -> Hop<'_> {
+        Hop {
+            from,
+            dropbox_entry,
+        }
+    }
+
     #[test]
     fn happy_path_downloads_verifies_and_caches() {
         let body = b"the quick brown fox".to_vec();
@@ -1108,6 +1162,41 @@ mod tests {
             Error::HostNotAllowed { host, .. } => assert_eq!(host, "evil.example"),
             other => panic!("expected HostNotAllowed, got {other}"),
         }
+    }
+
+    #[test]
+    fn rejects_a_dropbox_lookalike_redirect_from_another_origin() {
+        // The whole chain runs through `transfer`: a redirect from any host
+        // other than `www.dropbox.com` must not admit a Dropbox-looking host,
+        // and nothing is fetched from it (spec 038, R1).
+        let server = Server::start(|_req| {
+            Response::redirect(
+                "https://uc3b1e38517d45e48a062e295c44.dl.dropboxusercontent.com/file?dl=1",
+            )
+        });
+        let dir = TestDir::new("dropbox-other-origin");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let request = DownloadRequest::new(
+            server.url("/start"),
+            Sha256::of(b"whatever"),
+            1024,
+            allow(&[&server]),
+        );
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("only www.dropbox.com may redirect to a Dropbox host");
+        match error {
+            Error::HostNotAllowed { host, .. } => {
+                assert_eq!(
+                    host,
+                    "uc3b1e38517d45e48a062e295c44.dl.dropboxusercontent.com"
+                );
+            }
+            other => panic!("expected HostNotAllowed, got {other}"),
+        }
+        assert_no_temp_files(dir.path());
     }
 
     #[test]
@@ -1279,12 +1368,12 @@ mod tests {
 
         // As an initial URL it is rejected...
         let error = fetcher
-            .check_target(&target, &allowed, false)
+            .check_target(&target, &allowed, hop(None, false))
             .expect_err("initial URL");
         assert!(matches!(error, Error::HostNotAllowed { .. }), "{error}");
         // ...but as a redirect target the documented exception permits it.
         fetcher
-            .check_target(&target, &allowed, true)
+            .check_target(&target, &allowed, hop(Some("github.com"), false))
             .expect("redirect exception");
 
         // A custom exception list replaces the default.
@@ -1293,10 +1382,12 @@ mod tests {
             .with_redirect_exceptions(["cdn.example"]);
         let custom_target: Uri = "https://cdn.example/x".parse().unwrap();
         custom
-            .check_target(&custom_target, &allowed, true)
+            .check_target(&custom_target, &allowed, hop(Some("github.com"), false))
             .expect("custom exception");
         assert!(
-            custom.check_target(&target, &allowed, true).is_err(),
+            custom
+                .check_target(&target, &allowed, hop(Some("github.com"), false))
+                .is_err(),
             "default exception must be gone"
         );
     }
@@ -1309,7 +1400,181 @@ mod tests {
         let target: Uri = "http://127.0.0.1/x".parse().unwrap();
         // With the seam on, loopback HTTP is accepted; the production refusal
         // is covered by `refuses_plain_http`.
-        fetcher.check_target(&target, &allowed, false).unwrap();
+        fetcher
+            .check_target(&target, &allowed, hop(None, false))
+            .unwrap();
+    }
+
+    #[test]
+    fn dropbox_chain_allows_the_per_request_host_and_its_same_host_hop() {
+        let dir = TestDir::new("dropbox-allow");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        // A recipe's first URL is the allowlisted share link; the per-request
+        // host is not (and cannot be) listed.
+        let allowed = HostAllowlist::new(["www.dropbox.com"]);
+        // The share link itself is allowlisted exactly.
+        let share: Uri = "https://www.dropbox.com/scl/fi/x/DBP78.zip?dl=1"
+            .parse()
+            .unwrap();
+        fetcher
+            .check_target(&share, &allowed, hop(None, false))
+            .expect("share link is allowlisted");
+        // Hop 2: `www.dropbox.com` lands on the per-request host.
+        let download: Uri =
+            "https://uc3b1e38517d45e48a062e295c44.dl.dropboxusercontent.com/cd/0/inline/file?dl=1"
+                .parse()
+                .unwrap();
+        fetcher
+            .check_target(&download, &allowed, hop(Some("www.dropbox.com"), true))
+            .expect("Dropbox per-request host is a permitted redirect target");
+        // Hop 3: Dropbox redirects root-relative to `/cd/0/inline2/...` on the
+        // same per-request host (observed with `curl -L`).
+        let inline2: Uri =
+            "https://uc3b1e38517d45e48a062e295c44.dl.dropboxusercontent.com/cd/0/inline2/file?dl=1"
+                .parse()
+                .unwrap();
+        fetcher
+            .check_target(
+                &inline2,
+                &allowed,
+                hop(
+                    Some("uc3b1e38517d45e48a062e295c44.dl.dropboxusercontent.com"),
+                    true,
+                ),
+            )
+            .expect("the same per-request host may redirect a second time");
+    }
+
+    #[test]
+    fn dropbox_rule_never_applies_to_a_first_url() {
+        let dir = TestDir::new("dropbox-first");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let allowed = HostAllowlist::new(["www.dropbox.com"]);
+        let target: Uri = "https://ucXXXX.dl.dropboxusercontent.com/file?dl=1"
+            .parse()
+            .unwrap();
+        // No redirect origin: refused, even with the rule in place.
+        let error = fetcher
+            .check_target(&target, &allowed, hop(None, false))
+            .expect_err("first URL");
+        match error {
+            Error::HostNotAllowed { host, .. } => {
+                assert_eq!(host, "ucxxxx.dl.dropboxusercontent.com");
+            }
+            other => panic!("expected HostNotAllowed, got {other}"),
+        }
+        // The bare suffix is refused too, as a first URL and as a target.
+        let bare: Uri = "https://dl.dropboxusercontent.com/file".parse().unwrap();
+        assert!(
+            fetcher
+                .check_target(&bare, &allowed, hop(None, false))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn dropbox_chain_must_start_at_www_dropbox_com() {
+        let dir = TestDir::new("dropbox-entry");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let allowed = HostAllowlist::new(["www.dropbox.com", "evil.example"]);
+        let target: Uri = "https://ucXXXX.dl.dropboxusercontent.com/file"
+            .parse()
+            .unwrap();
+        // A chain that did not begin at `www.dropbox.com` is refused, even
+        // when the redirecting host is exactly the Dropbox share host.
+        assert!(
+            fetcher
+                .check_target(&target, &allowed, hop(Some("www.dropbox.com"), false))
+                .is_err(),
+            "a chain that did not enter via www.dropbox.com must be refused"
+        );
+    }
+
+    #[test]
+    fn dropbox_rule_refuses_a_lookalike_or_wrong_origin() {
+        let dir = TestDir::new("dropbox-refuse");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let allowed = HostAllowlist::new(["www.dropbox.com", "evil.example"]);
+
+        // Exactly one label: a deeper subdomain is refused.
+        let deep: Uri = "https://a.b.dl.dropboxusercontent.com/file"
+            .parse()
+            .unwrap();
+        assert!(
+            fetcher
+                .check_target(&deep, &allowed, hop(Some("www.dropbox.com"), true))
+                .is_err(),
+            "two labels must be refused"
+        );
+
+        // A lookalike suffix is refused.
+        let lookalike: Uri = "https://dl.dropboxusercontent.com.evil.example/file"
+            .parse()
+            .unwrap();
+        assert!(
+            fetcher
+                .check_target(&lookalike, &allowed, hop(Some("www.dropbox.com"), true))
+                .is_err(),
+            "lookalike suffix must be refused"
+        );
+
+        // The rule belongs to a chain from `www.dropbox.com` alone: any other
+        // origin, even an allowlisted one, cannot redirect there.
+        let target: Uri = "https://ucXXXX.dl.dropboxusercontent.com/file"
+            .parse()
+            .unwrap();
+        for origin in [
+            "evil.example",
+            "notwww.dropbox.com",
+            "www.dropbox.com.evil.example",
+            "dl.dropboxusercontent.com",
+        ] {
+            assert!(
+                fetcher
+                    .check_target(&target, &allowed, hop(Some(origin), true))
+                    .is_err(),
+                "origin {origin} must not permit the Dropbox download host"
+            );
+        }
+
+        // One per-request host may not hand off to a *different* one.
+        let other_label: Uri = "https://ucYYYY.dl.dropboxusercontent.com/file"
+            .parse()
+            .unwrap();
+        assert!(
+            fetcher
+                .check_target(
+                    &other_label,
+                    &allowed,
+                    hop(Some("ucXXXX.dl.dropboxusercontent.com"), true),
+                )
+                .is_err(),
+            "a per-request host may redirect only to itself"
+        );
+
+        // The Dropbox rule admits Dropbox hosts only, not arbitrary ones.
+        let other: Uri = "https://attacker.example/x".parse().unwrap();
+        assert!(
+            fetcher
+                .check_target(&other, &allowed, hop(Some(DROPBOX_REDIRECT_ORIGIN), true))
+                .is_err(),
+            "the Dropbox origin cannot admit arbitrary hosts"
+        );
+    }
+
+    #[test]
+    fn dropbox_rule_is_inert_once_the_host_is_allowlisted_exactly() {
+        // Exact matching still wins and needs no exception: if an operator ever
+        // lists the host, it is permitted as a first URL too.
+        let dir = TestDir::new("dropbox-exact");
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let allowed = HostAllowlist::new(["ucXXXX.dl.dropboxusercontent.com"]);
+        let target: Uri = "https://ucXXXX.dl.dropboxusercontent.com/file"
+            .parse()
+            .unwrap();
+        fetcher
+            .check_target(&target, &allowed, hop(None, false))
+            .unwrap();
     }
 
     #[test]

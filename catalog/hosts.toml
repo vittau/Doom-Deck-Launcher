@@ -2,6 +2,10 @@
 # Doomworld is pages-only. Squarespace is the exact Romero redirect host.
 # github.com (pages) and raw.githubusercontent.com (downloads) serve the pinned-commit
 # widescreen status bars from docs/research/widescreen-statusbars.md §5.2 (spec 017, R3).
+# www.dropbox.com serves Dropbox share links (`?dl=1`). Its redirect target is a
+# per-request `<label>.dl.dropboxusercontent.com` host; the downloader accepts that host
+# only inside a chain that began at www.dropbox.com, only with exactly one label, and only
+# for a hop to that same host (spec 038, R1), so it is intentionally not listed here.
 schema_version = 1
 pages = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "www.doomworld.com", "doomer.boards.net", "github.com"]
-downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com"]
+downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com", "www.dropbox.com"]
