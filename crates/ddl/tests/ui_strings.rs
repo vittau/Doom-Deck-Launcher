@@ -113,3 +113,31 @@ fn removed_decorative_copy_does_not_return() {
         }
     }
 }
+
+/// Spec 045: project validation status belongs in docs, not player copy.
+#[test]
+fn project_process_labels_do_not_return() {
+    let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui");
+    for entry in std::fs::read_dir(ui).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|e| e != "slint") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&path).unwrap();
+        for (_, value) in literals(&source) {
+            let value = value.to_lowercase();
+            for removed in [
+                "verification pending",
+                "needs deck validation",
+                "research reference",
+                "not yet verified",
+            ] {
+                assert!(
+                    !value.contains(removed),
+                    "{}: project-process copy {removed:?} is back",
+                    path.display()
+                );
+            }
+        }
+    }
+}

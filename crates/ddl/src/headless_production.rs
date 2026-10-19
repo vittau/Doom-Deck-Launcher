@@ -837,13 +837,10 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
     let checks: Vec<_> = ui.get_nodes().iter().filter(|n| n.kind == 7).collect();
     assert_eq!(
         checks.iter().map(|n| n.y).collect::<Vec<_>>(),
-        [100., 172., 244., 316.]
+        [100., 172., 244.]
     );
-    assert_eq!(
-        checks.iter().map(|n| n.tone).collect::<Vec<_>>(),
-        [2, 2, 4, 3]
-    );
-    assert!(ui.get_nodes().iter().any(|n| n.id == 2 && n.y == 402.));
+    assert_eq!(checks.iter().map(|n| n.tone).collect::<Vec<_>>(), [2, 2, 4]);
+    assert!(ui.get_nodes().iter().any(|n| n.id == 2 && n.y == 330.));
     assert!(
         ui.get_nodes()
             .iter()
@@ -851,6 +848,10 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
             .all(|n| !n.screenshot.is_empty())
     );
     assert!(!ui.get_nodes().iter().any(|n| n.kind == 16));
+    assert!(ui.get_nodes().iter().all(|n| {
+        let label = n.label.to_lowercase();
+        !label.contains("verification pending") && !label.contains("needs deck validation")
+    }));
     capture("010-home-continue.png");
 }
 

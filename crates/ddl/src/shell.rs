@@ -376,8 +376,7 @@ impl Shell {
                 b.label(872., 254., 344., 40., Copy::Ready, 26., 0);
                 b.label(872., 304., 344., 30., Copy::EngineReady, 22., 2);
                 b.label(872., 346., 344., 30., Copy::DoomReady, 22., 2);
-                b.label(872., 390., 344., 30., Copy::Pending, 20., 3);
-                b.button(3, 872., 450., 344., Copy::DiscoverMapsets, false);
+                b.button(3, 872., 408., 344., Copy::DiscoverMapsets, false);
                 b.label(40., 554., 800., 40., Copy::Recent, 26., 0);
                 b.row(4, 40., 606., 584., Copy::Home, text(ui, Copy::RecentSigil));
                 b.nodes.last_mut().unwrap().label = "SIGIL · John Romero".into();
