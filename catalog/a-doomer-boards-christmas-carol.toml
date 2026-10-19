@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 19; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "a-doomer-boards-christmas-carol"
+title = "A Doomer Boards Christmas Carol (Doomer Boards Project 19)"
+authors = ["Doomer Boards Project 19"]
+release = "2019-12-24"
+page = "https://www.doomworld.com/idgames/themes/xmas/dbp19xmas2"
+description = "DOOM II: MAP01–MAP25 (25 maps). It's that time of year again. Snow is falling, carolers are caroling... and Cyberneezer Scrooge has frozen time to stop Santa's Christmas delivery!."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/a-doomer-boards-christmas-carol/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "a-doomer-boards-christmas-carol/01.jpg"
+credit = "Doomer Boards Project 19"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 19", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, Eternity Engine (-vanilla),", "Release thread: https://doomer.boards.net/thread/1591/community-doomer-boards-christmas-released"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, Eternity Engine (-vanilla),. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 19;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/themes/xmas/dbp19xmas2"
+urls = ["https://www.gamers.org/pub/idgames/themes/xmas/dbp19xmas2.zip", "https://youfailit.net/pub/idgames/themes/xmas/dbp19xmas2.zip", "https://ftp.fu-berlin.de/pc/games/idgames/themes/xmas/dbp19xmas2.zip"]
+size = 9498041
+sha256 = "6de20e3b8190d9372812735fe237a1058e82532a45c85bd22192a6235c10bb98"
+kind = "zip"
+idgames_path = "themes/xmas/dbp19xmas2.zip"
+
+[[packages.members]]
+id = "dbp19xmas2"
+path = "dbp19xmas2.txt"
+size = 5356
+sha256 = "c0427b473b09d062bd76d1078ef1b40cb677a6ab629c783d23dcca7c3d15a604"
+keep = true
+
+[[packages.members]]
+id = "dbp19xmas2-2"
+path = "DBP19xmas2.wad"
+size = 27031368
+sha256 = "fa2b96cca3f71b941570de9a430afaaddfad095d98379d02d7eeecd9deb8272b"
+keep = false
+
+[[components]]
+id = "main"
+label = "A Doomer Boards Christmas Carol"
+description = "Main episode: MAP01–MAP25."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp19xmas2-2"
+role = "maps"

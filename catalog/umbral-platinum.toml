@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 18; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "umbral-platinum"
+title = "Umbral Platinum (Doomer Boards Project 18)"
+authors = ["Doomer Boards Project 18"]
+release = "2019-12-04"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp18_up"
+description = "DOOM II: MAP01–MAP08 (7 maps). When demons meet technology in this classic military techbase - chaos ensues!."
+permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/umbral-platinum/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "umbral-platinum/01.jpg"
+credit = "Doomer Boards Project 18"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 18", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": PRBoom+ 2.5.1.4, ZDoom 2.8.1, Crispy Doom, Marshmallow Doom, GZDoom", "Release thread: https://doomer.boards.net/thread/1587/dbp18-umbral-platinum"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: PRBoom+ 2.5.1.4, ZDoom 2.8.1, Crispy Doom, Marshmallow Doom, GZDoom. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 18; episode = 7 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp18_up"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp18_up.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp18_up.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp18_up.zip"]
+size = 3458081
+sha256 = "c585a3c1d18db14771fda939c01b2ee050a62dee714735fafad355f59d9910e9"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp18_up.zip"
+
+[[packages.members]]
+id = "dbp18-up"
+path = "DBP18_UP.txt"
+size = 5258
+sha256 = "aa3a9304903740ee34fd6662b77bac38eb99c1eeb818aac580594bebe8eb13c1"
+keep = true
+
+[[packages.members]]
+id = "dbp18-up-2"
+path = "DBP18_UP.wad"
+size = 11533126
+sha256 = "99cf48bbcd7e6c617ead399a7102e92bce2a2513d0714f51a0f5f783458a8356"
+keep = false
+
+[[components]]
+id = "main"
+label = "Umbral Platinum"
+description = "Main episode: MAP01–MAP08."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp18-up-2"
+role = "maps"

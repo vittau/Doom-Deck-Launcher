@@ -1,0 +1,85 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 13; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "alien-bastards"
+title = "Alien Bastards! (Doomer Boards Project 13)"
+authors = ["Doomer Boards Project 13"]
+release = "2019-07-04"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp13"
+description = "DOOM II: MAP01–MAP09 (9 maps). Halloween Harry's cosmic escapades are out of this world...literally!."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/alien-bastards/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "alien-bastards/01.jpg"
+credit = "Doomer Boards Project 13"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 13", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1541/dbp13-alien"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 13; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp13"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp13.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp13.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp13.zip"]
+size = 8376534
+sha256 = "1e94670997335e1f651cad1e2d15ef84b454b6ecb824fcccbf945a197a0c3f6a"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp13.zip"
+
+[[packages.members]]
+id = "dbp13"
+path = "dbp13.txt"
+size = 3670
+sha256 = "e2fe91af503b584a3f64d07dc43670edfb6920951c304f5be28b066c62c7158c"
+keep = true
+
+[[packages.members]]
+id = "dbp13-2"
+path = "dbp13.wad"
+size = 24366899
+sha256 = "e1c58a27db27083343f5536796fc1e462073688873241a495aab4444679bb93f"
+keep = false
+
+[[packages.members]]
+id = "dbp13-credits"
+path = "dbp13_credits.txt"
+size = 6866
+sha256 = "84f59662ab68941660f6077619b88b18c76f3d4bc0b2c48afffe44c8805c4cfb"
+keep = true
+
+[[components]]
+id = "main"
+label = "Alien Bastards!"
+description = "Main episode: MAP01–MAP09."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp13-2"
+role = "maps"
