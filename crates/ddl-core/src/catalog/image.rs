@@ -296,7 +296,14 @@ mod tests {
         for name in ["01.jpg", "shot.JPEG"] {
             assert!(accepted_asset_extension(name), "{name}");
         }
-        for name in ["card.png", "x.webp", "01.gif", "card.bmp", "noext", "01.jpg.exe"] {
+        for name in [
+            "card.png",
+            "x.webp",
+            "01.gif",
+            "card.bmp",
+            "noext",
+            "01.jpg.exe",
+        ] {
             assert!(!accepted_asset_extension(name), "{name}");
         }
     }
