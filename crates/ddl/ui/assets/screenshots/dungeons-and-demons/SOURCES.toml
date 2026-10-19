@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 023, D-024; spec 035 JPEG rule).
+# Screenshots are the mapset authors’ material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author’s request (D-024). Never edit the images by
+# hand; regenerate them from the recorded source.
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://i.imgur.com/tyS6hyO.jpg"
+source_page = "https://doomer.boards.net/thread/1606/dbp20-dungeons-demons-rc-1"
+credit = "Doomer Boards Project 20"
+original_size = "1024x576"
+retrieved = "2026-10-19"
+permission = "Community screenshot posted in the mapset’s release thread (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author’s request."

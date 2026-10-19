@@ -77,10 +77,10 @@ mod tests {
         for loaded in &catalog.recipes {
             let id = loaded.recipe.id.as_str();
             let assets = for_recipe(id);
-            assert!(
-                !assets.is_empty(),
-                "recipe `{id}` has no bundled screenshot"
-            );
+            // Spec 037 (R4): a recipe may ship no screenshot at all and fall back to the
+            // painted concept art, so an empty directory is not an error. What must hold
+            // is that everything a recipe declares is bundled and that no directory is
+            // orphaned.
             // The asset inventory agrees; metadata order is exercised by the UI test.
             let mut declared: Vec<&str> = loaded
                 .recipe

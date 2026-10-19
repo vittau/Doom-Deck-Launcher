@@ -1616,9 +1616,8 @@ impl Runtime {
                                 if found { 2 } else { 4 },
                             );
                         }
-                        b.check(852., 316., text(ui, T::Verification), 3);
                     }
-                    b.button(2, 852., 402., 336., text(ui, T::DiscoverAction), false);
+                    b.button(2, 852., 330., 336., text(ui, T::DiscoverAction), false);
                 }
                 Screen::Discover | Screen::Library => {
                     let discover = self.screen == Screen::Discover;
@@ -1953,7 +1952,10 @@ impl Runtime {
                             );
                             notes_y += 28.;
                         }
-                        b.label(428., notes_y, 760., 30., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
+                        if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content)
+                        {
+                            b.label(428., notes_y, 760., 30., text(ui, T::RecipeSaves), 20.);
+                        }
                         b.nodes[detail_panel].h = (notes_y + 34.).max(478.);
                     }
                 }

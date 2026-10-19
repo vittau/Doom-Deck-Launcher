@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 14; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "after-the-fall"
+title = "After the Fall (Doomer Boards Project 14)"
+authors = ["Doomer Boards Project 14"]
+release = "2019-07-30"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp14atf"
+description = "DOOM II: MAP01–MAP10 (10 maps). A short episode for Doom 2, with a new unique theme, designed by the many members of doomer boards."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/after-the-fall/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "after-the-fall/01.jpg"
+credit = "Doomer Boards Project 14"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 14", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": PRBoom+ 2.5.1.4, ZDoom 2.8.1, Crispy Doom", "Release thread: https://doomer.boards.net/thread/1545/limit-removing-dbp14-after-released"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: PRBoom+ 2.5.1.4, ZDoom 2.8.1, Crispy Doom. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 14."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp14atf"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp14atf.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp14atf.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp14atf.zip"]
+size = 5283517
+sha256 = "a908db610731dd9dce149fe0d8209f2b223fcbc9f4f0ea67b769d22d0267f303"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp14atf.zip"
+
+[[packages.members]]
+id = "dbp14atf"
+path = "dbp14ATF.txt"
+size = 4133
+sha256 = "25f1fc7c0eaecc886d8be565c0f4b19aa5ae03e89745be7564f35e7191561e41"
+keep = true
+
+[[packages.members]]
+id = "dbp14atf-2"
+path = "DBP14ATF.wad"
+size = 17414956
+sha256 = "11820d655dd65147388bec82fc8684d87f4df9ace311fdd650095ae31c4f973a"
+keep = false
+
+[[components]]
+id = "main"
+label = "After the Fall"
+description = "Main episode: MAP01–MAP10."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp14atf-2"
+role = "maps"

@@ -6,6 +6,9 @@
 # per-request `<label>.dl.dropboxusercontent.com` host; the downloader accepts that host
 # only inside a chain that began at www.dropbox.com, only with exactly one label, and only
 # for a hop to that same host (spec 038, R1), so it is intentionally not listed here.
+# ia600903.us.archive.org is the pinned download host of the archive.org item
+# `dbp-wad-archive`; archive.org/download/... redirects through a per-request
+# dnNNNNNN.<region>.archive.org host, so the item host is addressed directly (spec 037, D-028).
 schema_version = 1
 pages = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "www.doomworld.com", "doomer.boards.net", "github.com"]
-downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com", "www.dropbox.com"]
+downloads = ["www.gamers.org", "dsdarchive.com", "ftp.fu-berlin.de", "youfailit.net", "lethe.chinstrap.org", "mirrors.lug.mtu.edu", "planetzdoom.com", "ftpmirror.infania.net", "mirror.braindrainlan.nu", "files.xvertigox.com", "romero.com", "static1.squarespace.com", "raw.githubusercontent.com", "www.dropbox.com", "ia600903.us.archive.org"]

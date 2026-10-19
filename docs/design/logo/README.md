@@ -20,14 +20,18 @@ The previous D-023 production masters are kept as history in
 | `horizontal.svg` | Lock-up (small-tier emblem + DDL on a dark tablet), 330×128. Header slot: 154×56, **144 px minimum width**. |
 | `stacked.svg` | Full-tier emblem over DDL and the name, 480×400; **240 px minimum width**. Loading screen. |
 | `full-name.svg` | Full-tier emblem beside the name, 700×160; **350 px minimum width**. Settings → About. |
-| `readme-logo.svg` | `full-name` on a dark tablet (760×200), so it reads on light and dark GitHub themes. |
+| `readme-logo-dark.svg` | Transparent full-name lock-up (760×200), bone name for GitHub's dark theme. |
+| `readme-logo-light.svg` | Same transparent lock-up, dark ink (`#120C0D`) name for GitHub's light theme. |
 
 Never use the full tier below 64 px or the small tier above 64 px. Leave at least one eighth
 of the emblem's height clear on every side. Preserve proportions and colours. The dark outer
 silhouette separates the emblem from light grounds; `horizontal.svg` carries its own dark
 tablet for the lettering. `stacked.svg`, `full-name.svg` and the Steam `logo.png` set the
 name in bone on a transparent ground, so use them on near-black or give them a dark plate
-(that is what `readme-logo.svg` does). Busy art needs a dark plaque.
+or use the matching transparent `readme-logo-dark.svg` / `readme-logo-light.svg` variant.
+The README uses a `<picture>` with a dark-theme `<source>` and the light variant as its
+fallback `<img>`; both retain the same emblem and layout without a background tablet.
+Busy art needs a dark plaque.
 
 SVG rules (spec 013 R2, extended by D-029): paths, `linearGradient`/`radialGradient` and
 `stop` only, in `userSpaceOnUse`; no raster, filters, strokes, masks, live fonts or external
@@ -56,7 +60,8 @@ so `steam/hero.png` is byte-identical to the previous release.
 | `steam/wide-capsule.png` | `wide-capsule.svg` | 920×430 |
 | `steam/hero.png` (no mark, no text) | `hero.svg` | 3840×1240 |
 | `steam/logo.png` (transparent) | `steam-logo.svg` | 1280×720 |
-| `readme-logo.png` (README top logo) | `readme-logo.svg` | 1520×400 |
+| `readme-logo-dark.png` (README, dark theme) | `readme-logo-dark.svg` | 1520×400 |
+| `readme-logo-light.png` (README, light theme / fallback) | `readme-logo-light.svg` | 1520×400 |
 | `social-preview.png` | `social-preview.svg` | 1280×640 |
 | `contact-sheet.png` | `contact-sheet.svg` | 1200×1200 |
 | `social-preview-variants/{threshold,atlas}.png` | matching SVGs | 1280×640 |
@@ -85,6 +90,11 @@ the social compositions, tagline contrast, the social 1 MB ceiling and the brand
 No network is used after installing the tools. Geometry changes belong in
 `../logo-v3/author.py`; this folder's `author.py` then rebuilds everything (including the
 social SVGs through `author-social.py`).
+
+For both README variants, the check also verifies unchanged emblem and name contours,
+fully transparent perimeter pixels (including all four corners), and name contrast of
+at least 4.5:1 against the matching GitHub background (`#0d1117` dark, `#ffffff` light).
+The contact sheet shows each README variant against its corresponding brand background.
 
 ## Social preview
 

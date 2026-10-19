@@ -1,0 +1,85 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 17; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "alone"
+title = "Alone (Doomer Boards Project 17)"
+authors = ["Doomer Boards Project 17"]
+release = "2019-10-31"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp17_alone"
+description = "DOOM II: MAP01–MAP10 (9 maps). Alone is a dark and gritty 9 map set for limit removing ports. I hope you're ready to get spooked because you are . . ."
+permission = "Authors may not use the contents as a base for modification or reuse; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/alone/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "alone/01.jpg"
+credit = "Doomer Boards Project 17"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 17", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1578/ti-limit-removing-dbp17"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 17; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp17_alone"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp17_alone.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp17_alone.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp17_alone.zip"]
+size = 3685483
+sha256 = "9d1f16f910b59fc8dca784ff00f16386cac2c26429c0fda7a72cc8295807e1d2"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp17_alone.zip"
+
+[[packages.members]]
+id = "credits"
+path = "credits.txt"
+size = 2980
+sha256 = "d6bdf8bde33905e24ab2cd92ffb38866e85532ce9320117177bd0afd56c5649e"
+keep = true
+
+[[packages.members]]
+id = "readme"
+path = "readme.txt"
+size = 2920
+sha256 = "42ef9455f6b044b401ef5860003e38caf5c9ce658451dab501dc05b5ab47878e"
+keep = true
+
+[[packages.members]]
+id = "dbp17-alone"
+path = "DBP17_alone.wad"
+size = 11467312
+sha256 = "97a89e94ad61cb591c100ca7a0a43a5b73202560b7bd31c7a11031c724ba3bcd"
+keep = false
+
+[[components]]
+id = "main"
+label = "Alone"
+description = "Main episode: MAP01–MAP10."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp17-alone"
+role = "maps"
