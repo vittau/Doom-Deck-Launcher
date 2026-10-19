@@ -1,0 +1,111 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 47; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "dreamcatcher-apparatus"
+title = "Dreamcatcher Apparatus (Doomer Boards Project 47)"
+authors = ["Doomer Boards Project 47"]
+release = "2022-05-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp47"
+description = "DOOM II: MAP01–MAP19 (20 maps). The threads of fate unravel as mysterious colors spill, bringing with them a menacing presence from hell."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/dreamcatcher-apparatus/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "dreamcatcher-apparatus/01.jpg"
+credit = "Doomer Boards Project 47"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 47", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/2603/dreamcatcher-apparatus"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 47;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp47"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/dbp47.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/megawads/dbp47.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/dbp47.zip"]
+size = 14393944
+sha256 = "8ba7abb9ee586f55c7f484c65ed976175f623e33383e987d9892ea3ab34b5099"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/dbp47.zip"
+
+[[packages.members]]
+id = "dbp47"
+path = "DBP47.txt"
+size = 5502
+sha256 = "75ad627ad85e55b736a1e4d3f18c94be37ee45558458a612ebfa39b9c5d734cd"
+keep = true
+
+[[packages.members]]
+id = "dbp47-2"
+path = "DBP47.wad"
+size = 22419925
+sha256 = "c424433e364fb769fa2ec5e6a2c7ca618fa6de6c78d5084b98076344ccdd92df"
+keep = false
+
+[[packages.members]]
+id = "dbp47-full"
+path = "DBP47_full.wad"
+size = 22508490
+sha256 = "8f0ef0d6e609fb94a3d8a19a4ecfab4075cc3ace34ab3e4d15149b25fe99ea16"
+keep = false
+
+[[packages.members]]
+id = "dbp47-gzdoom-strict-bugfix"
+path = "dbp47_gzdoom_strict_bugfix.wad"
+size = 314642
+sha256 = "0f271e25c3d51ff614aa4106387649c0049e93926de5699b9d89439ccd151e7e"
+keep = false
+
+[[packages.members]]
+id = "dbp-47-gfx"
+path = "DBP_47_gfx.wad"
+size = 88609
+sha256 = "9fd4696c273d6ea30ede578cc9e78b18174a34ed13c2d9a58e032f0ecf40ff48"
+keep = false
+
+[[packages.members]]
+id = "dbp-47-wide"
+path = "dbp_47_wide.wad"
+size = 17502
+sha256 = "998230ea812b301c354636b13ff906958cf9af353a46d9cc995dab5a779ff833"
+keep = false
+
+[[components]]
+id = "main"
+label = "Dreamcatcher Apparatus"
+description = "Main episode: MAP01–MAP19."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp47-2"
+role = "maps"
+
+[[components.members]]
+package = "free"
+member = "dbp-47-gfx"
+role = "graphics"

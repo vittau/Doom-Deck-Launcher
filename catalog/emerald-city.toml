@@ -1,0 +1,85 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 50; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "emerald-city"
+title = "Emerald City (Doomer Boards Project 50)"
+authors = ["Doomer Boards Project 50"]
+release = "2022-08-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp50"
+description = "DOOM II: MAP01–MAP16 (16 maps). The lost remains of Emerald city have been overtaken by nature. But that's not the only inhabitants left behind."
+permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/emerald-city/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "emerald-city/01.jpg"
+credit = "Doomer Boards Project 50"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 50", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": Crispy Doom, GZDoom, PRBoom+, Doom Retro, dsda-doom", "Release thread: https://doomer.boards.net/thread/2929/emerald-city-rc1-2"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: Crispy Doom, GZDoom, PRBoom+, Doom Retro, dsda-doom. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 50;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp50"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp50.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp50.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp50.zip"]
+size = 13530126
+sha256 = "edd57e1595dd9b74448821ea08a488b734ecb0a9609351092e976d705d4151c0"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp50.zip"
+
+[[packages.members]]
+id = "dbp50"
+path = "DBP50/DBP50.txt"
+size = 4399
+sha256 = "6d440c3798917f9ab255008dfbbafc091ad2270a8ba3db4fc78fe129744ba1dc"
+keep = true
+
+[[packages.members]]
+id = "dbp50-2"
+path = "DBP50/DBP50.wad"
+size = 35132240
+sha256 = "da722cb243d39e2c3736742df4b69fa9d5c3b4d5e0de53f4a5404dae770e0fd2"
+keep = false
+
+[[packages.members]]
+id = "dbp50-wide-stbar"
+path = "DBP50/DBP50_wide_STBAR.wad"
+size = 17502
+sha256 = "96b4b4b4bf0d104e18fdfbfc61f10f91cb3e4f4ad269683e3b486738145e853c"
+keep = false
+
+[[components]]
+id = "main"
+label = "Emerald City"
+description = "Main episode: MAP01–MAP16."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp50-2"
+role = "maps"
