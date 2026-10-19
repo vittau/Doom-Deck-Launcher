@@ -1347,13 +1347,47 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     let window = scene.window.as_ref();
     let ui = &scene.ui;
     let state = &scene.state;
-    // Current mapset is installed AUGER;ZENITH, with all game prerequisites ready.
-    state.borrow_mut().focus = 60;
-    state.borrow_mut().sync(ui);
+    // R1: the summary is visible and Edit is reachable by spatial navigation.
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Detail;
+        r.focus = 4;
+        r.sync(ui);
+    }
+    press(window, Key::RightArrow);
+    assert_eq!(ui.get_focused(), 6);
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label.contains("Skill 3 · Pistol start"))
+    );
+    capture("031-detail-profile.png");
+    press(window, Key::Return);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(ui.get_focused(), 60);
+    assert!(!ui.get_tabs_enabled());
+    // Fake launcher sees exactly one request on the real field's focus gain.
+    #[derive(Default)]
+    struct Fake(std::cell::RefCell<Vec<(String, Vec<String>)>>);
+    impl crate::runtime::osk::Launcher for Fake {
+        fn launch(&self, program: &str, args: &[&str]) -> std::io::Result<()> {
+            self.0
+                .borrow_mut()
+                .push((program.into(), args.iter().map(|s| (*s).into()).collect()));
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "fake unavailable",
+            ))
+        }
+    }
+    let launcher = Rc::new(Fake::default());
+    let fake_launcher = launcher.clone();
+    ui.on_profile_name_focused(move || {
+        let _ = crate::runtime::osk::focused(fake_launcher.as_ref());
+    });
     press(window, Key::Return);
     idle(state);
     assert!(ui.get_sheet_open());
-    assert_eq!(ui.get_focused(), 912);
     assert!(
         !ui.get_sheet_nodes()
             .iter()
@@ -1361,56 +1395,88 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
             .unwrap()
             .actionable
     );
-    press(window, Key::Return); // New — copy settings
+    ui.invoke_clicked(912); // Copy settings; numbered default immediately opens input.
     idle(state);
-    assert_eq!(ui.get_focused(), 60);
-    assert!(
-        ui.get_nodes()
-            .iter()
-            .any(|n| n.label == "Active profile: Profile 2")
+    assert!(ui.get_profile_name_open());
+    assert_eq!(ui.get_profile_name(), "Profile 2");
+    render(window); // Apply focus callbacks before synthesizing keyboard events.
+    assert_eq!(
+        &*launcher.0.borrow(),
+        &[("steam".into(), vec!["steam://open/keyboard".into()])]
     );
     let copied = state.borrow().snapshot.as_ref().unwrap().items[0]
         .profile
         .clone();
-    assert_eq!(copied.name, "Profile 2");
+    // Real TextInput accepts virtual keyboard events, including root shortcut letters.
+    window.dispatch_event(WindowEvent::KeyPressed {
+        text: "  Casual xy[]  ".into(),
+    });
+    assert_eq!(ui.get_profile_name(), "  Casual xy[]  ");
+    capture("031-name-input.png");
     press(window, Key::Return);
     idle(state);
-    capture("018-profile-picker.png");
-    // At the last profile, focus begins on copy; Up reaches Previous.
-    press(window, Key::UpArrow);
-    assert_eq!(ui.get_focused(), 910);
-    press(window, Key::Return);
-    idle(state);
-    assert!(ui.get_sheet_title().contains("Default"));
-    assert_eq!(ui.get_focused(), 911); // Disabled Previous cannot strand focus.
-    press(window, Key::Return);
-    idle(state);
-    assert!(ui.get_sheet_title().contains("Profile 2"));
-    press(window, Key::Escape);
-    assert_eq!(ui.get_focused(), 60);
-    // Rename via a D-pad preset, without text entry.
-    press(window, Key::Return);
-    idle(state);
-    press(window, Key::DownArrow); // copy -> rename
-    assert_eq!(ui.get_focused(), 914);
-    press(window, Key::Return);
-    assert_eq!(ui.get_focused(), 910);
-    capture("018-profile-names.png");
-    press(window, Key::RightArrow);
-    press(window, Key::Return); // Casual
-    idle(state);
+    assert!(!ui.get_profile_name_open());
     assert!(
         ui.get_nodes()
             .iter()
-            .any(|n| n.label == "Active profile: Casual")
+            .any(|n| n.label == "Active profile: Casual xy[]")
     );
-    // Confirm names the profile and its data; B preserves both and restores focus.
+    // Rename to the existing default name: stays open and shows the reason inline.
+    ui.invoke_clicked(60);
+    idle(state);
+    ui.invoke_clicked(914);
+    render(window);
+    window.dispatch_event(WindowEvent::KeyPressed {
+        text: "default".into(),
+    });
+    press(window, Key::Return);
+    assert!(ui.get_profile_name_open());
+    assert!(ui.get_profile_name_error().contains("already exists"));
+    capture("031-name-invalid.png");
+    ui.set_profile_name("Casual".into());
+    ui.invoke_clicked(917);
+    idle(state);
+    // Wrapping Previous/Next buttons and L1/R1 all switch within the sheet.
+    ui.invoke_clicked(60);
+    idle(state);
+    capture("031-profile-list.png");
+    let copied_id = copied.id.clone();
+    let active = || {
+        state.borrow().snapshot.as_ref().unwrap().items[0]
+            .profile
+            .id
+            .clone()
+    };
+    ui.invoke_clicked(911);
+    idle(state); // last -> first
+    assert_ne!(active(), copied_id);
+    ui.invoke_clicked(910);
+    idle(state); // first -> last
+    assert_eq!(active(), copied_id);
+    press(window, Key::Tab);
+    idle(state); // R1 mapping
+    assert_ne!(active(), copied_id);
+    state
+        .borrow_mut()
+        .action(ui, crate::input::Action::PreviousTab);
+    idle(state);
+    assert_eq!(active(), copied_id);
+    assert!(ui.get_profile_hint());
+    press(window, Key::Escape);
+    assert_eq!(ui.get_focused(), 60);
+    press(window, Key::Tab);
+    idle(state);
+    assert_ne!(active(), copied_id);
+    state
+        .borrow_mut()
+        .action(ui, crate::input::Action::PreviousTab);
+    idle(state);
+    assert_eq!(active(), copied_id);
+    assert_eq!(state.borrow().screen, Screen::Setup);
     press(window, Key::Return);
     idle(state);
-    press(window, Key::DownArrow);
-    press(window, Key::RightArrow);
-    assert_eq!(ui.get_focused(), 915);
-    press(window, Key::Return);
+    ui.invoke_clicked(915);
+    // Confirm names the profile and its data; B preserves both and restores focus.
     assert_eq!(ui.get_focused(), 900);
     assert!(ui.get_sheet_title().contains("Casual"));
     assert!(ui.get_sheet_title().contains("saves and screenshots"));
@@ -1468,15 +1534,37 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     }
     press(window, Key::Return);
     idle(state);
-    press(window, Key::DownArrow);
-    press(window, Key::RightArrow);
-    press(window, Key::Return);
+    ui.invoke_clicked(915);
     press(window, Key::RightArrow);
     press(window, Key::Return);
     idle(state);
     assert!(store.load_optional(&copied.id).unwrap().is_none());
     assert!(!store.dirs(&copied.id).root.exists());
     assert!(store.dirs("auger-zenith-default").root.exists());
+    // Creation Back retains numbered names; long lists remain reachable by D-pad.
+    for _ in 0..4 {
+        ui.invoke_clicked(60);
+        idle(state);
+        ui.invoke_clicked(913);
+        idle(state);
+        assert!(ui.get_profile_name_open());
+        press(window, Key::Escape);
+    }
+    ui.invoke_clicked(60);
+    idle(state);
+    for _ in 0..4 {
+        press(window, Key::UpArrow);
+    }
+    assert_eq!(ui.get_focused(), 1000);
+    for expected in 1001..=1004 {
+        press(window, Key::DownArrow);
+        assert_eq!(ui.get_focused(), expected);
+    }
+    assert!(ui.get_sheet_nodes().iter().any(|n| n.id == 1004));
+    press(window, Key::Return);
+    idle(state);
+    capture("031-profile-list-scrolled.png");
+    press(window, Key::Escape);
 }
 
 /// Spec 022 review fixes: each Mapset detail action appears once, exactly one is
