@@ -1,0 +1,71 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 8; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "mindblood-genesis"
+title = "Mindblood Genesis (Doomer Boards Project 8)"
+authors = ["Doomer Boards Project 8"]
+release = "2019-02-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp8_mbg"
+description = "DOOM II: MAP01–MAP09 (9 maps). Nightmarish creations breed a chilling atmosphere in this interactive horror tale, deep into the twisted mind of supercupcaketactics."
+permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects", "episode"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 8", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": prboom-plus, Doom Retro, and GZDoom", "Release thread: https://doomer.boards.net/thread/1474/doom-mindblood-genesis-dbp08-released"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: prboom-plus, Doom Retro, and GZDoom. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 8; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp8_mbg"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp8_mbg.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp8_mbg.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp8_mbg.zip"]
+size = 2605338
+sha256 = "8641ba002d582d2b2a640d9aa6e8b255f355c038bdaa7426058aaf993cb214ba"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp8_mbg.zip"
+
+[[packages.members]]
+id = "dbp8-mbg"
+path = "DBP8_MBG.txt"
+size = 4186
+sha256 = "47b58da00f742a4cf06961cab0d23dc4059e4d1d01fe2e8592319649e511f23d"
+keep = true
+
+[[packages.members]]
+id = "dbp8-mbg-2"
+path = "DBP8_MBG.wad"
+size = 7104091
+sha256 = "fe8697ff684287b01f3fb9e4f211f5ee1abe6d18a71229947b0b89fd53ae5d37"
+keep = false
+
+[[components]]
+id = "main"
+label = "Mindblood Genesis"
+description = "Main episode: MAP01–MAP09."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp8-mbg-2"
+role = "maps"

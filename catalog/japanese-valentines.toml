@@ -1,0 +1,71 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 44; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "japanese-valentines"
+title = "Japanese Valentines (Doomer Boards Project 44)"
+authors = ["Doomer Boards Project 44"]
+release = "2022-02-07"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp44"
+description = "DOOM II: MAP01–MAP08 (8 maps). A valentines day themed episode for Doom 2, with a new unique theme, designed by the many members of doomer boards."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 44", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": limit-removing https://doomshack.org/uploads/dbp44rc2-1.zip", "Bundled readme \"Tested With\": DSDA-Doom and GZDoom.", "Release thread: https://doomer.boards.net/thread/2432/japanese-valentines"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: limit-removing https://doomshack.org/uploads/dbp44rc2-1.zip\". It also names the tested ports: DSDA-Doom and GZDoom.. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 44; episode = 8 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp44"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp44.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp44.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp44.zip"]
+size = 4517891
+sha256 = "f7cba08514a51b055ac8d8f3e2de54377aa351eabda64801f6032aebd41ac946"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp44.zip"
+
+[[packages.members]]
+id = "dbp44"
+path = "dbp44.txt"
+size = 3534
+sha256 = "3237cb618fb70cbec4af693ab7996cb14dc7a01cd3ef26a246ace8713fe149cb"
+keep = true
+
+[[packages.members]]
+id = "dbp44-2"
+path = "dbp44.wad"
+size = 12334711
+sha256 = "cce968103928207534c9ccd8237ecf0e6463e12974eca3282cf3d876a57c3b7f"
+keep = false
+
+[[components]]
+id = "main"
+label = "Japanese Valentines"
+description = "Main episode: MAP01–MAP08."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp44-2"
+role = "maps"
