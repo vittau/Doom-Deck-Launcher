@@ -605,4 +605,12 @@
     controller layout the DSDA-Doom default on the Deck, after researching DSDA v0.30.1's
     controller binding keys.
   refs: [docs/specs/033-plain-headers.md, docs/specs/034-dsda-controller-layout.md]
+- date: 2026-10-19
+  type: spec
+  summary: >-
+    Owner: bundled images should be JPEG at most 1280x800 at a relatively low quality so the binary
+    stays small as the community catalog grows (spec 035, lint-enforced), and the screenshot
+    credit plates over images pollute the UI — spec 033 now removes them and shows credits as
+    plain text on Mapset detail and in About (attribution per D-024 kept).
+  refs: [docs/specs/033-plain-headers.md, docs/specs/035-lean-bundled-images.md]
 
