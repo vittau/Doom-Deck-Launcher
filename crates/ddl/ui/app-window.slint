@@ -25,7 +25,7 @@ component Frame inherits Rectangle {
 component Cover inherits Image {
     in property <int> art;
     in property <string> screenshot;
-    source: screenshot != "" ? ScreenshotAssets.image(screenshot) : art == 1 ? @image-url("assets/ember/sigil-ii.png") : art == 2 ? @image-url("assets/ember/auger.png") : art == 3 ? @image-url("assets/ember/eviternity.png") : art == 0 ? @image-url("assets/ember/sigil.png") : @image-url("assets/ember/fallback.png");
+    source: screenshot != "" ? ScreenshotAssets.image(screenshot) : art == 1 ? @image-url("assets/ember/sigil-ii.jpg") : art == 2 ? @image-url("assets/ember/auger.jpg") : art == 3 ? @image-url("assets/ember/eviternity.jpg") : art == 0 ? @image-url("assets/ember/sigil.jpg") : @image-url("assets/ember/fallback.jpg");
     image-fit: cover;
     horizontal-alignment: center;
     vertical-alignment: center;
@@ -310,7 +310,7 @@ export component AppWindow inherits Window {
     forward-focus: keys;
     // Pointer motion never changes the logical target; clicks use the same action path.
     TouchArea { x: 0px; y: 0px; width: parent.width; height: parent.height; mouse-cursor: none; }
-    Image { x: 0px; y: 104px; width: parent.width; height: parent.height - 168px; source: @image-url("assets/ember/wall.png"); image-fit: fill; }
+    Image { x: 0px; y: 104px; width: parent.width; height: parent.height - 168px; source: @image-url("assets/ember/wall.jpg"); image-fit: fill; }
     Rectangle {
         x: 0px; y: 0px; width: parent.width; height: 104px; background: Tokens.deep;
         Image { x: 40px; y: 24px; width: 154px; height: 56px; source: @image-url("assets/logo/horizontal.svg"); image-fit: contain; }
@@ -328,7 +328,7 @@ export component AppWindow inherits Window {
     if root.art-band: Rectangle {
         x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
         clip: true;
-        Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.png") : root.band-art == 2 ? @image-url("assets/ember/auger-band.png") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.png") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.png") : @image-url("assets/ember/fallback-band.png"); image-fit: cover; horizontal-alignment: center; vertical-alignment: center; }
+        Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.jpg") : root.band-art == 2 ? @image-url("assets/ember/auger-band.jpg") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.jpg") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.jpg") : @image-url("assets/ember/fallback-band.jpg"); image-fit: cover; horizontal-alignment: center; vertical-alignment: center; }
     }
     FittedText { x: 40px; y: root.status != "" ? 124px : 144px; width: root.art-band ? 784px : parent.width - 80px; height: 48px;
         label: root.heading; base-size: Tokens.page; smaller-size: Tokens.section; multiline: false;

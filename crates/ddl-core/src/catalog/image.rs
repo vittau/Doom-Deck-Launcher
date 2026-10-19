@@ -1,28 +1,38 @@
-//! Bounded, header-only image inspection for catalog screenshots (spec 023, R1/R2).
+//! Bounded, header-only image inspection for catalog screenshots (spec 023, R1/R2;
+//! spec 035, R1).
 //!
-//! Catalog lint must prove that a referenced screenshot is a real PNG, JPEG or
-//! WebP within the size and dimension bounds **without** decoding pixels, so a
-//! malformed or hostile file can never allocate or expand in CI. Only the magic
-//! bytes and the dimension fields of each container are read, with every offset
-//! checked; no third-party image decoder is pulled into `ddl-core` (D-005).
+//! Catalog lint must prove that a referenced screenshot is a real JPEG within the
+//! size and dimension bounds **without** decoding pixels, so a malformed or
+//! hostile file can never allocate or expand in CI. Only the magic bytes and the
+//! dimension fields of each container are read, with every offset checked; no
+//! third-party image decoder is pulled into `ddl-core` (D-005).
 //!
-//! Formats accepted here mirror what the Slint UI can display: PNG, JPEG and
-//! WebP. The committed assets are small JPEGs (spec 023, R1).
+//! Every image is embedded in the `ddl` binary, so bundled screenshots must be
+//! JPEG, at most 1280×800, at most [`MAX_SCREENSHOT_BYTES`]. PNG and WebP headers
+//! are still recognised so the lint can name the wrong format instead of
+//! reporting an unknown file.
 
 use std::fmt;
 
-/// The largest screenshot file the catalog accepts, in bytes. Spec 023 R1 asks
-/// for "small (aim ≤ 250 KB)"; the hard lint bound is 256 KiB so a rounded
-/// commit still passes.
-pub const MAX_SCREENSHOT_BYTES: u64 = 256 * 1024;
+/// The largest screenshot file the catalog accepts, in bytes (spec 035, R1).
+///
+/// 192 KiB is 1.5 bytes per pixel of a full 1280×800 frame. Measured with macOS
+/// `sips` at the documented quality 60: DOOM screenshots enlarged to 1280×720
+/// encode to 70–160 KB, and the densest textured art in the repository (the
+/// 1280×632 Ember wall) to 181 KB. A file over the cap was saved at a higher
+/// quality than the rule asks for, or is not a DOOM-style frame. It is a quarter
+/// below the previous 256 KiB bound.
+pub const MAX_SCREENSHOT_BYTES: u64 = 192 * 1024;
 
 /// The smallest card-sized screenshot the catalog accepts (spec 023, R1/R2).
 pub const MIN_SCREENSHOT_WIDTH: u32 = 640;
 pub const MIN_SCREENSHOT_HEIGHT: u32 = 360;
 
-/// Hard upper bound on `width * height`, so a decompression-bomb header is
-/// rejected even though no pixels are decoded.
-pub const MAX_SCREENSHOT_PIXELS: u64 = 4096 * 4096;
+/// The largest screenshot the catalog accepts (spec 035, R1): the Steam Deck's
+/// native 1280×800. Also bounds `width * height` to about a megapixel, so a
+/// decompression-bomb header is rejected even though no pixels are decoded.
+pub const MAX_SCREENSHOT_WIDTH: u32 = 1280;
+pub const MAX_SCREENSHOT_HEIGHT: u32 = 800;
 
 /// A recognisable image container.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,7 +104,7 @@ pub fn image_info(bytes: &[u8]) -> Result<(ImageFormat, u32, u32), ImageError> {
     Err(ImageError::UnknownFormat)
 }
 
-/// Whether `text` is a screenshot file name DDL accepts as a bundled asset.
+/// Whether `text` is a screenshot file name DDL accepts as a bundled asset: JPEG only.
 #[must_use]
 pub fn accepted_asset_extension(text: &str) -> bool {
     matches!(
@@ -102,7 +112,7 @@ pub fn accepted_asset_extension(text: &str) -> bool {
             .next()
             .map(str::to_ascii_lowercase)
             .as_deref(),
-        Some("png" | "jpg" | "jpeg" | "webp")
+        Some("jpg" | "jpeg")
     )
 }
 
@@ -283,10 +293,17 @@ mod tests {
 
     #[test]
     fn recognises_accepted_extensions_case_insensitively() {
-        for name in ["01.jpg", "shot.JPEG", "card.png", "x.webp"] {
+        for name in ["01.jpg", "shot.JPEG"] {
             assert!(accepted_asset_extension(name), "{name}");
         }
-        for name in ["01.gif", "card.bmp", "noext", "01.jpg.exe"] {
+        for name in [
+            "card.png",
+            "x.webp",
+            "01.gif",
+            "card.bmp",
+            "noext",
+            "01.jpg.exe",
+        ] {
             assert!(!accepted_asset_extension(name), "{name}");
         }
     }

@@ -16,6 +16,7 @@ follow [Add a mapset](../CONTRIBUTING.md#add-a-mapset).
 
 - [ ] `ddl catalog lint` passes (or `cargo run -p ddl -- catalog lint`).
 - [ ] `ddl catalog lint --fetch` passes for changed recipes.
+- [ ] Screenshots (if any) are JPEG, at most 1280×800 and 192 KiB: `scripts/lean-image.sh <original> crates/ddl/ui/assets/screenshots/<id>/01.jpg`.
 - [ ] Gameplay claims are backed by actual testing; inspection is labeled honestly.
 - [ ] Optional/exclusive/replacement choices and user-supplied imports are documented.
 - [ ] No IWADs, paid downloads, unreviewed hosts, or executable archive content added.
