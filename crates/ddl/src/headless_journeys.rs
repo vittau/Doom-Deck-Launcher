@@ -371,23 +371,27 @@ fn navigation_feedback() {
     r.screen = Screen::Home;
     r.focus = 1;
     r.sync(ui);
+    let assert_hint_pixels = || {
+        let frame = super::render(&scene.window);
+        let hint_pixels = (754..786)
+            .flat_map(|y| (40..240).map(move |x| y * 1280 + x))
+            .filter(|&i| {
+                let p = frame.as_slice()[i];
+                (p.r, p.g, p.b) != (0x12, 0x0c, 0x0d)
+            })
+            .count();
+        assert!(
+            hint_pixels > 100,
+            "dialog A/B hints must be visible above the scrim"
+        );
+    };
+    assert_hint_pixels();
     scene.capture("030-home.png");
     r.action(ui, Action::Menu);
     assert!(ui.get_sheet_open());
     assert!(!ui.get_tabs_enabled());
+    assert_hint_pixels();
     scene.capture("030-dialog.png");
-    let frame = super::render(&scene.window);
-    let hint_pixels = (754..786)
-        .flat_map(|y| (40..240).map(move |x| y * 1280 + x))
-        .filter(|&i| {
-            let p = frame.as_slice()[i];
-            (p.r, p.g, p.b) != (0x12, 0x0c, 0x0d)
-        })
-        .count();
-    assert!(
-        hint_pixels > 100,
-        "dialog A/B hints must be visible above the scrim"
-    );
     r.action(ui, Action::Back);
     r.screen = Screen::Discover;
     let sample = r.snapshot.as_ref().unwrap().items[0].clone();

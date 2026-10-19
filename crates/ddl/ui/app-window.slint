@@ -359,6 +359,7 @@ export component AppWindow inherits Window {
         for item in root.nodes: Node { visible: item.x >= 700; item: item; install-primary: root.install-pulse && item.id == 1; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }
     toast-banner := Rectangle {
+        visible: root.displayed-toast != "";
         opacity: root.toast != "" ? 1 : 0;
         animate opacity { duration: 300ms; }
         x: 40px; y: 172px; width: parent.width - 80px; height: 64px;
@@ -380,7 +381,8 @@ export component AppWindow inherits Window {
     }
     Rectangle {
         x: 0px; width: parent.width; y: parent.height - 64px; height: 64px; background: Tokens.deep;
-        if !root.input-locked: HorizontalLayout {
+        HorizontalLayout {
+            visible: !root.input-locked;
             y: 18px; width: parent.width; height: 28px; alignment: start;
             padding-left: 40px; padding-right: 40px; spacing: 24px;
             Hint { badge: @tr("A"); label: @tr("Select"); }
