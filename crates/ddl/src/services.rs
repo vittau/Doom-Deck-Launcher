@@ -2739,6 +2739,11 @@ impl Services {
         }
         let item = self.base_item(id, overrides.profile.as_deref())?;
         let mut profile = item.profile;
+        if let Some(issue) = local::first_issue(&profile.extras) {
+            return Err(CliFailure::message(format!(
+                "cannot launch `{id}`: {issue}"
+            )));
+        }
         if let Some(skill) = overrides.skill {
             profile.skill = skill;
         }
