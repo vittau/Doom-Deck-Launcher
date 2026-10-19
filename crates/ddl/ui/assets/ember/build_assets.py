@@ -3,6 +3,7 @@ Source: original generated phase-A atlas; exact prompt retained in docs/design/v
 Painted Eviternity/fallback masters (now JPEG) are preserved; prompts retained below.
 Spec 035: opaque art is JPEG quality 60, at most 1280x800; frame and ornaments stay lossless PNG.
 """
+import argparse
 from pathlib import Path
 from PIL import Image, ImageOps, ImageDraw
 # 2026-10-16 cover repaint: built-in image_gen, style references only:
@@ -35,6 +36,9 @@ Constraints: original concept art only; no text, no letters, no logos, no plaque
 ROOT = Path(__file__).resolve().parents[5]
 OUT = Path(__file__).resolve().parent
 SOURCE = ROOT / 'docs/design/visual-v2'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--wall-only', action='store_true', help='Regenerate only wall.jpg from the original PNG atlas')
+args = parser.parse_args()
 a = Image.open(SOURCE/'ember-cathedral/art-atlas.png').convert('RGB')
 def save(im, name):
     if name.endswith('.jpg'):
@@ -43,7 +47,8 @@ def save(im, name):
     else:
         im.save(OUT/name, optimize=True)
 # Mirrored quarters meet with identical edge pixels on both axes: seamless repeat.
-q = a.crop((0, 0, 512, 438)).resize((256, 219))
+# Exclude the atlas cell border before mirroring (spec 045).
+q = a.crop((0, 0, 510, 433)).resize((256, 219))
 tile = Image.new('RGB', (512, 438))
 tile.paste(q, (0,0)); tile.paste(ImageOps.mirror(q), (256,0))
 tile.paste(ImageOps.flip(tile.crop((0,0,512,219))), (0,219))
@@ -52,6 +57,8 @@ wall = Image.new('RGB', (1280,632))
 for y in range(0,632,438):
     for x in range(0,1280,512): wall.paste(tile, (x,y))
 save(wall, 'wall.jpg')
+if args.wall_only:
+    raise SystemExit(0)
 source_frame = a.crop((512,0,1024,438))
 f = source_frame.resize((256,220), Image.Resampling.LANCZOS)
 # Only plain rail cross-sections stretch. Corners and ornaments never scale up.
