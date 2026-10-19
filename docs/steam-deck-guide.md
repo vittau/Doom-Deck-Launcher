@@ -65,7 +65,7 @@ files.
 
 ## Make it look native in Steam
 
-The release includes original Rose Compass artwork in `ddl/art/`. In Desktop Mode,
+The release includes original Rose Compass (Stained Glass) artwork in `ddl/art/`. In Desktop Mode,
 add DDL as a non-Steam game, then apply the images manually:
 
 1. Open the shortcut's **Properties**, click its icon and select `art/icon-256.png`
@@ -443,4 +443,4 @@ no image editor or new dependency is needed. `--check` renders again and compare
 committed bytes. Use the pinned Rust toolchain and bundled fonts for reproducibility.
 
 See [logo v2 concepts](design/logo-v2/README.md) for the separate vector concept exporter.
-The owner selected Rose Compass (D-023); it is used in the app, Steam artwork and README.
+The owner selected Rose Compass (D-023) and then its Stained Glass evolution (D-029, `design/logo-v3/`); it is used in the app, Steam artwork and README. The D-023 production files are kept as history in `design/logo-v2/production-d023/`.

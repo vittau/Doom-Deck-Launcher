@@ -1,5 +1,8 @@
 # Social preview v2 — worker report
 
+> Historical (spec 013/016, D-023 mark). Spec 039 re-composed all three previews with the
+> v3 Stained Glass logo; the scenes, layout and copy described below are unchanged.
+
 ## Result
 
 Replaced the geometric border with **Rose Window**, an original carved oxblood

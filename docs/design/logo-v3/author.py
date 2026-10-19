@@ -2,8 +2,10 @@
 
 Design time only: Python 3 with fonttools==4.60.1 (labels and mock copy are
 outlined from the bundled OFL Barlow and Pirata One faces). Exporting the
-committed SVGs needs only resvg 0.47.0 (see export.py). Production masters in
-../logo/ are read for the comparison sheet and never written.
+committed SVGs needs only resvg 0.47.0 (see export.py). This file is the single
+authoring source of the logo: ../logo/author.py imports its geometry to build the
+production masters (spec 039). The D-023 emblem in ../logo-v2/rose-compass/ is read
+for the comparison sheet and never written.
 """
 from pathlib import Path
 import math
@@ -509,7 +511,7 @@ def contact_sheet(slug, spec):
 
 
 def comparison():
-    production = ET.parse(HERE.parent / 'logo/emblem.svg').getroot()
+    production = ET.parse(HERE.parent / 'logo-v2/rose-compass/emblem.svg').getroot()
     current = ''.join(ET.tostring(el, encoding='unicode') for el in production).replace('ns0:', '').replace(' xmlns:ns0="http://www.w3.org/2000/svg"', '')
     rows = [('Production (D-023)', ('', current), ('', current))]
     rows += [(spec['title'], spec['small'](), spec['full']()) for spec in VARIANTS.values()]

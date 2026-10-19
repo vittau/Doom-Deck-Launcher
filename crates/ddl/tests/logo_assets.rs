@@ -12,7 +12,8 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
         ("steam/hero.png", 3840, 1240, false),
         ("steam/logo.png", 1280, 720, true),
         ("social-preview.png", 1280, 640, false),
-        ("contact-sheet.png", 900, 720, false),
+        ("readme-logo.png", 1520, 400, true),
+        ("contact-sheet.png", 1200, 1200, false),
     ] {
         let mut decoder = png::Decoder::new(std::io::BufReader::new(
             std::fs::File::open(root.join(file)).unwrap(),
@@ -43,7 +44,13 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
 #[test]
 fn compiled_svg_masters_match_documented_sources() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    for name in ["emblem", "horizontal", "stacked", "full-name"] {
+    for name in [
+        "emblem",
+        "emblem-small",
+        "horizontal",
+        "stacked",
+        "full-name",
+    ] {
         let source =
             std::fs::read(root.join(format!("../../docs/design/logo/{name}.svg"))).unwrap();
         assert_eq!(
@@ -51,6 +58,7 @@ fn compiled_svg_masters_match_documented_sources() {
             std::fs::read(root.join(format!("ui/assets/logo/{name}.svg"))).unwrap()
         );
     }
+    // The window icon is the small tier (spec 039 R2); the 256 px Steam icon shares it.
     assert_eq!(
         std::fs::read(root.join("ui/assets/logo/icon.png")).unwrap(),
         std::fs::read(root.join("../../docs/design/logo/steam/icon-256.png")).unwrap()

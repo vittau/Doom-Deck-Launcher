@@ -1,43 +1,44 @@
-"""Author original vector geometry and outline the bundled OFL Barlow face.
-Design time only: fonttools==4.60.1. Exporting committed SVGs needs only resvg.
+"""Author the production logo masters (D-029, spec 039): Rose Compass · Stained Glass.
+
+One authoring source: the geometry, palette and outlined lettering come from
+../logo-v3/author.py (imported, never copied). This file only composes the
+production masters and the Steam compositions from it, then compiles the
+masters into the app. Design time only: fonttools==4.60.1. Exporting the
+committed SVGs needs only resvg (see export.py).
 """
+import importlib.util
+import runpy
 from pathlib import Path
-from fontTools.ttLib import TTFont
-from fontTools.pens.svgPathPen import SVGPathPen
-ROOT = Path(__file__).resolve().parents[3]
-OUT = Path(__file__).resolve().parent
-BLOOD, AMBER = '#52272B', '#FFD078'
-BONE, BRONZE, EMBER, DARK = '#F8EAD5', '#B88960', '#B8583F', '#120C0D'
-def path(d, fill, even=False):
-    return f'<path fill="{fill}"' + (' fill-rule="evenodd"' if even else '') + f' d="{d}"/>'
-def group(body, x=0, y=0, scale=1): return f'<g transform="translate({x} {y}) scale({scale})">{body}</g>'
-def svg(w, h, body): return f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">{body}</svg>\n'
-def save(name, w, h, body): (OUT/name).write_text(svg(w,h,body))
-# Rose Compass production geometry, selected in D-023. Same filled contours as
-# the retained phase-A concept; scenery below stays unchanged.
-mark = path('M80 4H176L252 80V176L176 252H80L4 176V80Z', DARK)
-mark += path('M86 18H170L238 86V170L170 238H86L18 170V86Z', BRONZE)
-mark += path('M92 34H164L222 92V164L164 222H92L34 164V92Z', BLOOD)
-mark += path('M128 42 157 94 128 110 99 94Z M214 128 162 157 146 128 162 99Z M128 214 99 162 128 146 157 162Z M42 128 94 99 110 128 94 157Z', DARK)
-mark += path('M128 56 145 90 128 99 111 90Z M200 128 166 145 157 128 166 111Z M128 200 111 166 128 157 145 166Z M56 128 90 111 99 128 90 145Z', BONE)
-mark += path('M128 111 145 128 128 145 111 128Z', AMBER)
-mark += path('M69 58 80 69 69 80 58 69Z M187 58 198 69 187 80 176 69Z M69 176 80 187 69 198 58 187Z M187 176 198 187 187 198 176 187Z', BRONZE)
-# Original upright wordmark from the selected concept.
-d = path('M0 0H25L42 15V49L25 64H0Z M13 13V51H21L29 43V21L21 13Z', BONE, True)
-ddl = d + group(d, 54) + path('M108 0H122V50H154V64H108Z', BONE)
-font=TTFont(ROOT/'crates/ddl/ui/assets/Barlow-Regular.ttf'); glyphs=font.getGlyphSet(); cmap=font.getBestCmap()
-def lettering(text, size, color=BONE):
-    x=0; body=''; scale=size/font['head'].unitsPerEm
-    for c in text:
-        g=glyphs[cmap[ord(c)]]; pen=SVGPathPen(glyphs); g.draw(pen)
-        body += f'<g transform="translate({x:.4f} {size}) scale({scale:.6f} {-scale:.6f})">'+path(pen.getCommands(),color)+'</g>'
-        x+=g.width*scale
-    return body,x
-name,nw=lettering('DoomDeckLauncher',38)
-save('emblem.svg',256,256,mark)
-save('horizontal.svg',330,128,group(mark,0,0,.5)+group(ddl,152,22,1))
-save('stacked.svg',480,400,group(mark,112,0,1)+group(ddl,161.5,269,1)+group(name,(480-nw)/2,354))
-save('full-name.svg',700,160,group(mark,0,0,.625)+group(name,184,54,1.45))
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[2]
+_spec = importlib.util.spec_from_file_location('logo_v3_author', HERE.parent / 'logo-v3/author.py')
+v3 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(v3)
+path, group, svg, lettering = v3.path, v3.group, v3.svg, v3.lettering
+DARK, BONE, BRONZE, EMBER = v3.DARK, v3.BONE, v3.BRONZE, v3.EMBER
+
+
+def save(name, w, h, body, defs=''):
+    (HERE / name).write_text(svg(w, h, body, defs))
+
+
+# Stained Glass (owner pick, D-029): full tier from 128 px, small tier for 32-64 px.
+spec = v3.VARIANTS['stained-glass']
+full, small = spec['full'](), spec['small']()
+mark = full[1]
+wordmark = spec['ddl']()[1]
+lock = v3.lockup(small, spec['ddl']())
+name, nw = lettering('DoomDeckLauncher', 38, BONE)
+# The v3 wordmark (solid letters with an outline and a carved side) spans
+# x -3.5..160.5 around the D-023 contours; WM_C is its centre.
+WM_C = 78.5
+save('emblem.svg', 256, 256, mark, full[0])
+save('emblem-small.svg', 256, 256, small[1], small[0])
+save('horizontal.svg', 330, 128, lock[1], lock[0])
+save('stacked.svg', 480, 400, group(mark, 112, 0) + group(wordmark, 240 - WM_C, 269) + group(name, (480 - nw) / 2, 354), full[0])
+save('full-name.svg', 700, 160, group(mark, 0, 0, .625) + group(name, 184, 54, 1.45), full[0])
+
 # Original geometric woodcut scenery: repeated carved buttresses, stars, chasm,
 # stairs and tiny arch windows. Eviternity is mood art, never a map screenshot.
 def scene(ivory=False):
@@ -68,26 +69,57 @@ def scene(ivory=False):
         s+=path(f'M{600-half} {y}H{600+half}V{y+9}H{600-half}Z','#B7A58A' if ivory else '#80533B')
     s+=path('M0 875 240 834 414 900H0Z M1200 875 960 834 786 900H1200Z',DARK)
     return s
+
+
+# README logo: the full name on a dark tablet (octagon-style corner cuts), so the bone
+# lettering stays readable on GitHub's light and dark themes alike.
+def readme_logo():
+    content = group(mark, 0, 0, .625) + group(name, 184, 54, 1.45)
+    tablet = path(v3.poly([(14, 0), (746, 0), (760, 14), (760, 186), (746, 200), (14, 200), (0, 186), (0, 14)]), DARK)
+    return tablet + group(content, 30, 20)
+save('readme-logo.svg', 760, 200, readme_logo(), full[0])
+
+# Contact sheet of the production set, itself vector (labels are outlined Barlow).
+def sheet():
+    stacked = group(mark, 112, 0) + group(wordmark, 240 - WM_C, 269) + group(name, (480 - nw) / 2, 354)
+    b = ''
+    for row, (bg, ink) in enumerate([(DARK, v3.MUTED), (BONE, '#4A3A33')]):
+        y0 = row * 600
+        b += path(f'M0 {y0}H1200V{y0 + 600}H0Z', bg)
+        b += v3.label('small tier (window icon, header): 32, 48, 64 px', 40, y0 + 24, 18, ink)
+        x = 40
+        for size in (32, 48, 64):
+            b += group(small[1], x, y0 + 128 - size, size / 256)
+            b += v3.label(str(size), x + size / 2, y0 + 140, 16, ink, centre=True)
+            x += size + 40
+        b += v3.label('full tier: 128 and 256 px', 440, y0 + 24, 18, ink)
+        for size, fx in ((128, 440), (256, 600)):
+            b += group(mark, fx, y0 + 320 - size, size / 256)
+            b += v3.label(f'{size} px', fx + size / 2, y0 + 332, 16, ink, centre=True)
+        b += v3.label('horizontal lock-up, native 330×128', 40, y0 + 180, 18, ink)
+        b += group(lock[1], 40, y0 + 208)
+        b += v3.label('header size 154×56', 40, y0 + 356, 18, ink)
+        b += group(lock[1], 40, y0 + 386, 56 / 128)
+        b += v3.label('stacked 240×200' if row == 0 else 'README logo 380×100', 900 if row == 0 else 40, y0 + 24 if row == 0 else y0 + 462, 18, ink)
+        if row == 0:
+            b += group(stacked, 880, y0 + 60, .5)
+            b += v3.label('full name 350×80', 40, y0 + 462, 18, ink)
+            b += group(group(mark, 0, 0, .625) + group(name, 184, 54, 1.45), 40, y0 + 490, .5)
+        else:
+            b += group(readme_logo(), 40, y0 + 490, .5)
+    return b
+save('contact-sheet.svg', 1200, 1200, sheet(), full[0] + lock[0])
+
+# Exact same masters compiled into Slint, with byte equality verified by export.
+for stem in ['emblem', 'emblem-small', 'horizontal', 'stacked', 'full-name']:
+    (ROOT / f'crates/ddl/ui/assets/logo/{stem}.svg').write_bytes((HERE / f'{stem}.svg').read_bytes())
+
 # Dedicated Steam compositions retain an open central hero safe area.
-art=scene()
-save('library-capsule.svg',600,900,group(art,-300,0)+path('M90 370H510V680H90Z',DARK)+group(mark,172,100,1)+group(ddl,143,398,2)+group(name,(600-nw)/2,620))
-save('wide-capsule.svg',920,430,group(art,0,-240,.767)+path('M40 50H650V370H40Z',DARK)+group(mark,64,90,.9)+group(ddl,320,130,1.3)+group(name,320,268,.8))
-save('hero.svg',3840,1240,group(art,0,-800,3.2))
-save('steam-logo.svg',1280,720,group(mark,465,30,1.37)+group(ddl,443.75,404,2.5)+group(name,(1280-nw*2)/2,618,2))
+art = scene()
+save('library-capsule.svg', 600, 900, group(art, -300, 0) + path('M90 370H510V680H90Z', DARK) + group(mark, 172, 100) + group(wordmark, 300 - WM_C * 2, 398, 2) + group(name, (600 - nw) / 2, 620), full[0])
+save('wide-capsule.svg', 920, 430, group(art, 0, -240, .767) + path('M40 50H650V370H40Z', DARK) + group(mark, 64, 90, .9) + group(wordmark, 320, 130, 1.3) + group(name, 320, 268, .8), full[0])
+save('hero.svg', 3840, 1240, group(art, 0, -800, 3.2))
+save('steam-logo.svg', 1280, 720, group(mark, 465, 30, 1.37) + group(wordmark, 640 - WM_C * 2.5, 404, 2.5) + group(name, (1280 - nw * 2) / 2, 618, 2), full[0])
 # Social scenes have their own original raster layers and outlined copy.
 # Rebuild after the production masters above, never restore the old scenery.
-import runpy
-runpy.run_path(str(OUT/'author-social.py'), run_name='__main__')
-# Contact sheet is itself vector, including labels and dark/light backgrounds.
-body=''
-for row,bg in enumerate([DARK,'#F8EAD5']):
-    body+=path(f'M0 {row*360}H900V{row*360+360}H0Z',bg)
-    for col,size in enumerate([32,64,256]):
-        x=col*300+(300-size)/2; y=row*360+56
-        body+=group(mark,x,y,size/256)
-        label,lw=lettering(f'{size} px',22, BONE if row==0 else DARK)
-        body+=group(label,col*300+(300-lw)/2,row*360+322)
-save('contact-sheet.svg',900,720,body)
-# Exact same masters compiled into Slint, with byte equality verified by export.
-for name in ['emblem','horizontal','stacked','full-name']:
-    (ROOT/f'crates/ddl/ui/assets/logo/{name}.svg').write_bytes((OUT/f'{name}.svg').read_bytes())
+runpy.run_path(str(HERE / 'author-social.py'), run_name='__main__')

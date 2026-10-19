@@ -1,4 +1,4 @@
-"""Author social compositions from production paths and outlined Barlow text.
+"""Author social compositions from the production (v3) paths and outlined Barlow text.
 
 Design-time only: fonttools==4.60.1. Exporting these SVGs does not need fonttools.
 Raster scenes are original built-in image_gen outputs; see layers/prompts.json.
@@ -47,7 +47,7 @@ def text_paths(text, x, y, size, color='#F8EAD5'):
 def main():
     emblem = ET.parse(HERE / 'emblem.svg').getroot()
     horizontal = ET.parse(HERE / 'horizontal.svg').getroot()
-    name = ET.parse(HERE / 'full-name.svg').getroot()[1]
+    name = ET.parse(HERE / 'full-name.svg').getroot()[-1]
     for direction in ['rose-wall', 'threshold', 'atlas']:
         chosen = direction == 'rose-wall'
         prefix = '' if chosen else '../'
@@ -68,7 +68,7 @@ def main():
         if chosen:
             # Exact emblem contours inside the scene's octagonal bronze recess.
             logo.append(placed(emblem, 802, 93, 1.328125))
-            logo.append(placed(horizontal[1], 112, 174, 2.4))
+            logo.append(placed(horizontal[-1], 112, 174, 2.4))
         else:
             logo.append(placed(horizontal, 96, 148, 1.5))
         logo.append(placed(name, 112 if chosen else 96, 354, 1))
