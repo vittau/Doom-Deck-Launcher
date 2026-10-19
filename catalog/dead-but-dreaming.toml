@@ -1,0 +1,92 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 25; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "dead-but-dreaming"
+title = "Dead But Dreaming (Doomer Boards Project 25)"
+authors = ["Doomer Boards Project 25"]
+release = "2020-07-02"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp25_dbd"
+description = "DOOM II: MAP01–MAP11 (11 maps). Three times Randolph Carter dreamed of the marvellous city, and three times he was snatched away while still he paused on the high terrace above it."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/dead-but-dreaming/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "dead-but-dreaming/01.jpg"
+credit = "Doomer Boards Project 25"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 25", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1773/doomer-boards-project-dead-dreaming"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 25;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp25_dbd"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp25_dbd.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp25_dbd.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp25_dbd.zip"]
+size = 4296951
+sha256 = "ced2d45d061015eae9ad1a011dd1e91dcbb2e7f15538eb694fe57cddc0ff09c1"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp25_dbd.zip"
+
+[[packages.members]]
+id = "dbp25-credits"
+path = "dbp25-credits.txt"
+size = 7431
+sha256 = "b7cf159ae990945eb7a0d3b2d3d3e0c496a6d2023db4b9a3e504cd17aa612504"
+keep = true
+
+[[packages.members]]
+id = "dbp25-dead-but-dreaming"
+path = "dbp25-dead_but_dreaming.wad"
+size = 12359299
+sha256 = "93d06069bda118a4910b661ee40a00581714a483159dae2dc105ba58ab838865"
+keep = false
+
+[[packages.members]]
+id = "dbp25-dead-but-dreaming-2"
+path = "dbp25-dead_but_dreaming.txt"
+size = 4798
+sha256 = "ae71c42f8105e1177cadb43bd4698c05de69ca88788c800411e71d919af85614"
+keep = true
+
+[[packages.members]]
+id = "get-some-fucking-culture"
+path = "get_some_fucking_culture.txt"
+size = 1968
+sha256 = "9cd96350cc3a11a3b29843a6bd917c11c73b7218ed0c3e42bf3d6f917eea08e4"
+keep = true
+
+[[components]]
+id = "main"
+label = "Dead But Dreaming"
+description = "Main episode: MAP01–MAP11."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp25-dead-but-dreaming"
+role = "maps"

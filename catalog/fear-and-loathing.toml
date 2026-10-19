@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 28; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "fear-and-loathing"
+title = "Fear and Loathing (Doomer Boards Project 28)"
+authors = ["Doomer Boards Project 28"]
+release = "2020-10-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp28"
+description = "DOOM II: MAP01–MAP10 (10 maps). Due to a plague of photosensitivity caused by cheap gas station cheese and retinal parasites, we've had to enforce a strict low-light policy for the sake of our staff. That won't be a problem, right?."
+permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/fear-and-loathing/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "fear-and-loathing/01.jpg"
+credit = "Doomer Boards Project 28"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 28", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1868/dbp28-fear-loathing"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 28;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp28"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp28.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp28.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp28.zip"]
+size = 13200985
+sha256 = "ce472633405df701403d4c238c258f0c5b4bf4829d0414e4c82f8a6e7a70a88b"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp28.zip"
+
+[[packages.members]]
+id = "dbp28"
+path = "dbp28.txt"
+size = 3460
+sha256 = "1d5f764f657132910f31c27583804746a0affc0547a0f56b8d80343f43b0f708"
+keep = true
+
+[[packages.members]]
+id = "dbp28-2"
+path = "dbp28.wad"
+size = 24176892
+sha256 = "8800b840dd208410ec0152f3884fa9958680b52b2b918ff791049b654c0c5afb"
+keep = false
+
+[[components]]
+id = "main"
+label = "Fear and Loathing"
+description = "Main episode: MAP01–MAP10."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp28-2"
+role = "maps"

@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 30; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "the-magnificent-five"
+title = "The Magnificent Five (Doomer Boards Project 30)"
+authors = ["Doomer Boards Project 30"]
+release = "2020-12-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp30"
+description = "DOOM II: MAP01–MAP06 (6 maps). While you were out hunting game in the prairie an old nemesis of yours \"Black Hand Burt\" murdered your wife & daughter, and robbed you of your fortune. Now you're on a path of Revenge!."
+permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/the-magnificent-five/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "the-magnificent-five/01.jpg"
+credit = "Doomer Boards Project 30"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 30", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing", "Bundled readme \"Tested With\": GZDoom", "Release thread: https://doomer.boards.net/thread/1948/dbp30-magnificent"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing\". It also names the tested ports: GZDoom. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 30; episode = 6 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp30"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp30.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp30.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp30.zip"]
+size = 2782971
+sha256 = "5e848159968fa097f0e2be84bad28dab5d13f9a7563868c8e7e1415b2fefb5dc"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp30.zip"
+
+[[packages.members]]
+id = "dbp30"
+path = "DBP30.txt"
+size = 3992
+sha256 = "9f5376f8d23af92f5efc61659795418d7b30f5be8f67150fa07e10267756a0b2"
+keep = true
+
+[[packages.members]]
+id = "dbp30-2"
+path = "DBP30.WAD"
+size = 6302070
+sha256 = "07fe425d216dd5a7d3919a6e75a2107ae8fc50856079552205646480e1027244"
+keep = false
+
+[[components]]
+id = "main"
+label = "The Magnificent Five"
+description = "Main episode: MAP01–MAP06."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp30-2"
+role = "maps"
