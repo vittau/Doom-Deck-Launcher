@@ -25,6 +25,8 @@ def main():
         text = source.read_text()
         links = re.findall(r'!?\[[^\]]*\]\(([^\s)]+)(?:\s+[^)]*)?\)', text)
         links += re.findall(r'(?:src|href)=[\"\']([^\"\']+)', text)
+        for srcset in re.findall(r'srcset=[\"\']([^\"\']+)', text):
+            links += [candidate.strip().split()[0] for candidate in srcset.split(',') if candidate.strip()]
         for link in links:
             url = urlsplit(link)
             if url.scheme or url.netloc:

@@ -71,13 +71,13 @@ def scene(ivory=False):
     return s
 
 
-# README logo: the full name on a dark tablet (octagon-style corner cuts), so the bone
-# lettering stays readable on GitHub's light and dark themes alike.
-def readme_logo():
-    content = group(mark, 0, 0, .625) + group(name, 184, 54, 1.45)
-    tablet = path(v3.poly([(14, 0), (746, 0), (760, 14), (760, 186), (746, 200), (14, 200), (0, 186), (0, 14)]), DARK)
-    return tablet + group(content, 30, 20)
-save('readme-logo.svg', 760, 200, readme_logo(), full[0])
+# README variants retain the lock-up and padding, with no background tablet.
+def readme_logo(ink=BONE):
+    readme_name, _ = lettering('DoomDeckLauncher', 38, ink)
+    content = group(mark, 0, 0, .625) + group(readme_name, 184, 54, 1.45)
+    return group(content, 30, 20)
+for theme, ink in [('dark', BONE), ('light', DARK)]:
+    save(f'readme-logo-{theme}.svg', 760, 200, readme_logo(ink), full[0])
 
 # Contact sheet of the production set, itself vector (labels are outlined Barlow).
 def sheet():
@@ -100,13 +100,11 @@ def sheet():
         b += group(lock[1], 40, y0 + 208)
         b += v3.label('header size 154×56', 40, y0 + 356, 18, ink)
         b += group(lock[1], 40, y0 + 386, 56 / 128)
-        b += v3.label('stacked 240×200' if row == 0 else 'README logo 380×100', 900 if row == 0 else 40, y0 + 24 if row == 0 else y0 + 462, 18, ink)
         if row == 0:
+            b += v3.label('stacked 240×200', 900, y0 + 24, 18, ink)
             b += group(stacked, 880, y0 + 60, .5)
-            b += v3.label('full name 350×80', 40, y0 + 462, 18, ink)
-            b += group(group(mark, 0, 0, .625) + group(name, 184, 54, 1.45), 40, y0 + 490, .5)
-        else:
-            b += group(readme_logo(), 40, y0 + 490, .5)
+        b += v3.label(f'README {"dark" if row == 0 else "light"} theme 380×100', 40, y0 + 462, 18, ink)
+        b += group(readme_logo(BONE if row == 0 else DARK), 40, y0 + 490, .5)
     return b
 save('contact-sheet.svg', 1200, 1200, sheet(), full[0] + lock[0])
 
