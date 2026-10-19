@@ -7,6 +7,8 @@ use crate::{
 };
 #[path = "local_ui.rs"]
 mod local_ui;
+#[path = "osk.rs"]
+pub(crate) mod osk;
 use local_ui::LocalUi;
 
 use ddl_core::{
@@ -178,13 +180,10 @@ impl Runtime {
         // R2: the checkbox always starts unchecked.
         self.uninstall_delete_profiles = false;
         self.focus = if matches!(sheet, Sheet::Profiles) {
-            if self.item().is_some_and(|i| {
-                i.profiles.len() > 1 && i.profiles.last().is_some_and(|p| p.id != i.profile.id)
-            }) {
-                911
-            } else {
-                912
-            }
+            1000 + self
+                .item()
+                .and_then(|i| i.profiles.iter().position(|p| p.id == i.profile.id))
+                .unwrap_or(0) as i32
         } else {
             900
         };
@@ -315,6 +314,7 @@ impl Runtime {
                                 ));
                             }
                             match command {
+                                Some(Command::NewProfile(..)) => self.edit_profile_name(ui),
                                 Some(Command::Startup) => {
                                     self.screen = if self
                                         .snapshot
@@ -445,17 +445,53 @@ impl Runtime {
                     self.sheet = None;
                     self.focus = self.invoking;
                 }
+                Action::Up | Action::Down
+                    if matches!(self.sheet, Some(Sheet::Profiles)) && self.focus >= 1000 =>
+                {
+                    let count = self.item().map_or(0, |i| i.profiles.len()) as i32;
+                    if action == Action::Up && self.focus > 1000 {
+                        self.focus -= 1;
+                    } else if action == Action::Down && self.focus < 1000 + count - 1 {
+                        self.focus += 1;
+                    } else if action == Action::Down {
+                        self.focus = 912;
+                    }
+                }
+                Action::Up
+                    if matches!(self.sheet, Some(Sheet::Profiles))
+                        && matches!(self.focus, 912 | 913) =>
+                {
+                    self.focus = 1000 + self.item().map_or(1, |i| i.profiles.len()) as i32 - 1;
+                }
                 Action::Up | Action::Down | Action::Left | Action::Right => {
                     let saved =
                         std::mem::replace(&mut self.nodes, ui.get_sheet_nodes().iter().collect());
                     self.move_focus(ui, action);
                     self.nodes = saved;
                 }
+                Action::PreviousTab
+                    if matches!(self.sheet, Some(Sheet::Profiles)) && !self.busy =>
+                {
+                    self.switch_profile(ui, false)
+                }
+                Action::NextTab if matches!(self.sheet, Some(Sheet::Profiles)) && !self.busy => {
+                    self.switch_profile(ui, true)
+                }
                 Action::Confirm if !self.busy => self.profile_action(ui),
                 _ => {}
             }
             self.sync(ui);
             return;
+        }
+        if self.screen == Screen::Setup && self.focus == 60 && !self.busy {
+            match action {
+                Action::PreviousTab | Action::NextTab => {
+                    self.switch_profile(ui, action == Action::NextTab);
+                    self.sync(ui);
+                    return;
+                }
+                _ => {}
+            }
         }
         if self.sheet.is_some() {
             match action {
@@ -711,7 +747,8 @@ impl Runtime {
                     }
                 }
             }
-            (Screen::Detail, 4) | (Screen::Setup, 60) => {
+            (Screen::Detail, 6) => self.enter(Screen::Setup, 60),
+            (Screen::Setup, 60) => {
                 if let Some(item) = self.item() {
                     // Materialise an implicit Default before any management action.
                     self.start(ui, Command::Save(item.profile.clone()));
@@ -1066,38 +1103,35 @@ impl Runtime {
             return;
         };
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
-            let names = services::profile_names();
-            let index = self.focus - 910;
-            let name = if (0..6).contains(&index) {
-                names[index as usize].to_owned()
-            } else if index == 6 {
-                self.free_profile_name(&item)
-            } else {
-                return;
-            };
-            self.sheet = None;
-            self.focus = self.invoking;
-            self.start(ui, Command::RenameProfile(item.profile.id, name));
+            if self.focus == 917 {
+                match ddl_core::profiles::validate_name(
+                    &ui.get_profile_name(),
+                    &item.recipe.id,
+                    Some(&item.profile.id),
+                    &item.profiles,
+                ) {
+                    Ok(name) => {
+                        self.sheet = None;
+                        self.focus = self.invoking;
+                        self.start(ui, Command::RenameProfile(item.profile.id, name));
+                    }
+                    Err(reason) => ui.set_profile_name_error(reason.into()),
+                }
+            } else if self.focus == 916 {
+                self.sheet = None;
+                self.focus = self.invoking;
+            }
             return;
         }
         match self.focus {
-            910 | 911 => {
-                let index = item
-                    .profiles
-                    .iter()
-                    .position(|p| p.id == item.profile.id)
-                    .unwrap_or(0);
-                let next = if self.focus == 910 {
-                    index.checked_sub(1)
-                } else {
-                    (index + 1 < item.profiles.len()).then_some(index + 1)
-                };
-                if let Some(next) = next {
-                    self.start(
-                        ui,
-                        Command::SelectProfile(item.recipe.id, item.profiles[next].id.clone()),
-                    );
-                }
+            id if id >= 1000 && (id - 1000) < item.profiles.len() as i32 => {
+                self.start(
+                    ui,
+                    Command::SelectProfile(
+                        item.recipe.id,
+                        item.profiles[(id - 1000) as usize].id.clone(),
+                    ),
+                );
             }
             912 | 913 => {
                 let copy = self.focus == 912;
@@ -1106,8 +1140,7 @@ impl Runtime {
                 self.start(ui, Command::NewProfile(item.recipe.id, copy));
             }
             914 => {
-                self.sheet = Some(Sheet::ProfileNames);
-                self.focus = 910;
+                self.edit_profile_name(ui);
             }
             915 if item.profiles.len() > 1 => {
                 self.sheet = Some(Sheet::DeleteProfile(item.profile.id, item.profile.name));
@@ -1120,77 +1153,103 @@ impl Runtime {
             _ => {}
         }
     }
-    fn free_profile_name(&self, item: &Item) -> String {
-        let n = (2..)
-            .find(|n| {
-                !item
-                    .profiles
-                    .iter()
-                    .any(|p| p.name == format!("Profile {n}"))
-            })
-            .unwrap();
-        format!("Profile {n}")
+    fn edit_profile_name(&mut self, ui: &AppWindow) {
+        if let Some(item) = self.item() {
+            ui.set_profile_name(item.profile.name.clone().into());
+            ui.set_profile_name_error("".into());
+            self.sheet = Some(Sheet::ProfileNames);
+            self.focus = 918;
+        }
+    }
+    fn switch_profile(&mut self, ui: &AppWindow, next: bool) {
+        let Some(item) = self.item() else { return };
+        let count = item.profiles.len();
+        if count == 0 {
+            return;
+        }
+        let index = item
+            .profiles
+            .iter()
+            .position(|p| p.id == item.profile.id)
+            .unwrap_or(0);
+        let index = if next {
+            (index + 1) % count
+        } else {
+            (index + count - 1) % count
+        };
+        let command =
+            Command::SelectProfile(item.recipe.id.clone(), item.profiles[index].id.clone());
+        if matches!(self.sheet, Some(Sheet::Profiles)) {
+            self.focus = 1000 + index as i32;
+        }
+        self.start(ui, command);
     }
     fn profile_sheet(&self, ui: &AppWindow) {
-        let Some(item) = self.item() else {
-            return;
-        };
+        let Some(item) = self.item() else { return };
         let mut b = Nodes::new(ui);
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
             ui.set_sheet_title(text(ui, T::RenameProfile));
-            let keys = [
-                T::PresetDefault,
-                T::PresetCasual,
-                T::PresetUv,
-                T::PresetPistol,
-                T::PresetCoop,
-                T::PresetSpeedrun,
-            ];
-            for (i, key) in keys.into_iter().enumerate() {
-                b.button(
-                    910 + i as i32,
-                    32. + (i % 2) as f32 * 336.,
-                    136. + (i / 2) as f32 * 88.,
-                    304.,
-                    text(ui, key),
-                    false,
-                );
-            }
-            let name = self.free_profile_name(item);
-            b.button(
-                916,
-                32.,
-                400.,
-                304.,
-                value(ui, T::PresetNumber, name.trim_start_matches("Profile ")),
-                false,
-            );
+            // Invisible navigation anchor forwards controller focus to TextInput.
+            b.button(918, 32., 140., 656., "".into(), false);
+            b.nodes.last_mut().unwrap().kind = 0;
+            b.button(917, 32., 360., 304., text(ui, T::SaveProfileName), true);
+            b.button(916, 368., 360., 304., text(ui, T::Cancel), false);
         } else {
-            ui.set_sheet_title(value(ui, T::ActiveProfile, &item.profile.name));
-            b.label(
-                32.,
-                96.,
-                656.,
-                32.,
-                profile_count(ui, item.profiles.len()),
-                22.,
-            );
-            let index = item
+            ui.set_sheet_title(text(ui, T::Profiles));
+            let active = item
                 .profiles
                 .iter()
                 .position(|p| p.id == item.profile.id)
                 .unwrap_or(0);
-            b.button(910, 32., 152., 304., text(ui, T::PreviousProfile), false);
-            b.nodes.last_mut().unwrap().actionable = index > 0;
-            b.button(911, 368., 152., 304., text(ui, T::NextProfile), false);
-            b.nodes.last_mut().unwrap().actionable = index + 1 < item.profiles.len();
-            b.button(912, 32., 240., 304., text(ui, T::CopyProfile), false);
-            b.button(913, 368., 240., 304., text(ui, T::DefaultProfile), false);
-            b.button(914, 32., 328., 304., text(ui, T::RenameProfile), false);
+            let selected = if self.focus >= 1000 {
+                (self.focus - 1000) as usize
+            } else {
+                active
+            };
+            let start = selected
+                .saturating_sub(2)
+                .min(item.profiles.len().saturating_sub(3));
+            for (index, profile) in item.profiles.iter().enumerate().skip(start).take(3) {
+                b.button(
+                    1000 + index as i32,
+                    32.,
+                    96. + (index - start) as f32 * 62.,
+                    656.,
+                    format!(
+                        "{}{}",
+                        if profile.id == item.profile.id {
+                            "●  "
+                        } else {
+                            "    "
+                        },
+                        profile.name
+                    )
+                    .into(),
+                    false,
+                );
+            }
+            let actions_y = 116. + item.profiles.len().min(3) as f32 * 62.;
+            b.button(912, 32., actions_y, 304., text(ui, T::CopyProfile), false);
+            b.button(
+                913,
+                368.,
+                actions_y,
+                304.,
+                text(ui, T::DefaultProfile),
+                false,
+            );
+            b.button(
+                914,
+                32.,
+                actions_y + 68.,
+                304.,
+                text(ui, T::RenameProfile),
+                false,
+            );
             b.button(
                 915,
                 368.,
-                328.,
+                actions_y + 68.,
                 304.,
                 text(
                     ui,
@@ -1203,7 +1262,7 @@ impl Runtime {
                 false,
             );
             b.nodes.last_mut().unwrap().actionable = item.profiles.len() > 1;
-            b.button(916, 32., 432., 656., text(ui, T::Cancel), false);
+            b.button(916, 32., actions_y + 136., 656., text(ui, T::Done), false);
         }
         ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
     }
@@ -1749,20 +1808,12 @@ impl Runtime {
                             false,
                         );
                         action_y += 68.;
-                        b.button(
-                            4,
-                            12.,
-                            action_y,
-                            360.,
-                            value(ui, T::ActiveProfile, &item.profile.name),
-                            false,
-                        );
-                        action_y += 68.;
                         // R1: Uninstall is offered only for installed mapsets,
                         // including ones no longer in the catalog (spec 020 R5).
                         if installed {
                             b.button(5, 12., action_y, 360., text(ui, T::Uninstall), false);
                         }
+                        let detail_panel = b.nodes.len();
                         b.panel(404., 12., 808., 478.);
                         b.title(428., 24., 760., 96., item.recipe.title.clone().into(), 44.);
                         b.nodes.last_mut().unwrap().kind = 22;
@@ -1806,15 +1857,15 @@ impl Runtime {
                         b.label(
                             428.,
                             y,
-                            760.,
+                            200.,
                             36.,
                             game(ui, item.recipe.base_game.game),
                             26.,
                         );
                         b.label(
-                            428.,
-                            y + 44.,
-                            760.,
+                            650.,
+                            y,
+                            538.,
                             44.,
                             text(
                                 ui,
@@ -1830,15 +1881,68 @@ impl Runtime {
                             ),
                             22.,
                         );
-                        b.label(428., y + 104., 760., 52., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
                         b.label(
                             428.,
-                            y + 148.,
+                            y + 52.,
+                            600.,
+                            32.,
+                            value(ui, T::ActiveProfile, &item.profile.name),
+                            22.,
+                        );
+                        b.label(
+                            428.,
+                            y + 86.,
+                            600.,
+                            64.,
+                            text(ui, T::ProfileSummary)
+                                .as_str()
+                                .replace("{skill}", &item.profile.skill.to_string())
+                                .replace(
+                                    "{pistol}",
+                                    text(
+                                        ui,
+                                        if item.profile.pistol_start {
+                                            T::On
+                                        } else {
+                                            T::Off
+                                        },
+                                    )
+                                    .as_str(),
+                                )
+                                .replace(
+                                    "{addons}",
+                                    &if item.profile.components.is_empty() {
+                                        text(ui, T::None).to_string()
+                                    } else {
+                                        item.profile
+                                            .components
+                                            .iter()
+                                            .map(|id| {
+                                                item.recipe
+                                                    .components
+                                                    .iter()
+                                                    .find(|c| &c.id == id)
+                                                    .map_or(id.as_str(), |c| c.label.as_str())
+                                            })
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    },
+                                )
+                                .replace("{extras}", &item.profile.extras.len().to_string())
+                                .into(),
+                            20.,
+                        );
+                        b.button(6, 1052., y + 52., 136., text(ui, T::EditProfile), false);
+                        b.label(
+                            428.,
+                            y + 154.,
                             760.,
-                            36.,
+                            28.,
                             item.recipe.page.clone().into(),
                             20.,
                         );
+                        b.label(428., y + 184., 760., 44., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
+                        b.nodes[detail_panel].h = (y + 218.).max(478.);
                     }
                 }
                 Screen::Setup => {
@@ -2665,10 +2769,19 @@ impl Runtime {
         ui.set_category_hint(self.screen == Screen::Discover && !self.playing);
         ui.set_detail_hint(false);
         ui.set_import_hint(false);
+        ui.set_profile_hint(
+            matches!(self.sheet, Some(Sheet::Profiles))
+                || (self.screen == Screen::Setup && self.focus == 60),
+        );
+        ui.set_profile_name_open(matches!(self.sheet, Some(Sheet::ProfileNames)));
         ui.set_sheet_open(self.sheet.is_some());
         ui.set_sheet_height(
             if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
-                560.
+                if matches!(self.sheet, Some(Sheet::Profiles)) {
+                    340. + self.item().map_or(0, |i| i.profiles.len().min(3)) as f32 * 62.
+                } else {
+                    460.
+                }
             } else if matches!(self.sheet, Some(Sheet::DeleteProfile(..))) {
                 340.
             } else if matches!(self.sheet, Some(Sheet::Uninstall(_))) {
@@ -3157,6 +3270,11 @@ pub fn attach_environment(ui: &AppWindow, env: Environment) -> Rc<RefCell<Runtim
     ui.on_services_ready(move || {
         if let Some(ui) = weak.upgrade() {
             s.borrow_mut().drain(&ui);
+        }
+    });
+    ui.on_profile_name_focused(|| {
+        if let Err(error) = osk::focused(&osk::SystemLauncher) {
+            tracing::debug!(%error, "Steam keyboard unavailable; use Steam + X");
         }
     });
     state.borrow_mut().start(ui, Command::Startup);

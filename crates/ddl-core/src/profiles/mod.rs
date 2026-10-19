@@ -17,9 +17,11 @@
 //! store.save(&profile).expect("save");
 //! ```
 
+mod names;
 mod profile;
 mod store;
 
+pub use names::validate_name;
 pub use profile::{DEFAULT_SKILL, Profile, ProfileError, SCHEMA_VERSION};
 pub use store::{CONFIG_DIR, DATA_DIR, ProfileDirs, ProfileStore};
 

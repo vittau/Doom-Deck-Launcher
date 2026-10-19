@@ -1614,8 +1614,10 @@ impl Services {
                     .map_err(|e| logged(Problem::State, e))?;
                 let n = (2..)
                     .find(|n| {
-                        !all.iter()
-                            .any(|p| p.recipe_id == recipe_id && p.name == format!("Profile {n}"))
+                        !all.iter().any(|p| {
+                            p.recipe_id == recipe_id
+                                && p.name.to_lowercase() == format!("profile {n}")
+                        })
                     })
                     .ok_or(Problem::State)?;
                 let suffix = (2..)
@@ -1648,10 +1650,17 @@ impl Services {
                     .profiles
                     .load(&id)
                     .map_err(|e| logged(Problem::State, e))?;
-                if !profile_names().contains(&name.as_str()) && !is_numbered_profile(&name) {
-                    return Err(Problem::State);
-                }
-                profile.name = name;
+                let all = self
+                    .profiles
+                    .list()
+                    .map_err(|e| logged(Problem::State, e))?;
+                profile.name = ddl_core::profiles::validate_name(
+                    &name,
+                    &profile.recipe_id,
+                    Some(&profile.id),
+                    &all,
+                )
+                .map_err(|e| logged(Problem::State, e))?;
                 self.profiles
                     .save(&profile)
                     .map_err(|e| logged(Problem::Storage, e))?;
@@ -3190,22 +3199,6 @@ fn selected_profile(profiles: &[Profile], remembered: Option<&String>) -> Profil
         .expect("at least one profile")
         .clone()
 }
-pub fn profile_names() -> [&'static str; 6] {
-    [
-        "Default",
-        "Casual",
-        "UV",
-        "Pistol start",
-        "Co-op",
-        "Speedrun",
-    ]
-}
-fn is_numbered_profile(name: &str) -> bool {
-    name.strip_prefix("Profile ")
-        .and_then(|n| n.parse::<u32>().ok())
-        .is_some_and(|n| n >= 2)
-}
-
 /// The registry source for a GOG candidate's launcher (spec 021, R2).
 fn store_source(launcher: iwads::GogLauncher) -> iwads::Source {
     match launcher {
@@ -3325,9 +3318,14 @@ mod tests {
         assert_eq!(third.components, ["wide-status-bar"]);
         command(
             &mut s,
-            Command::RenameProfile(second.id.clone(), "Casual".into()),
+            Command::RenameProfile(second.id.clone(), "  Casual  ".into()),
         )
         .unwrap();
+        let renamed = s.profiles.load(&second.id).unwrap();
+        let mut expected = second.clone();
+        expected.name = "Casual".into();
+        assert_eq!(renamed, expected, "rename changes only the display name");
+        assert_eq!(s.profiles.dirs(&renamed.id), s.profiles.dirs(&second.id));
         command(
             &mut s,
             Command::SelectProfile("sigil".into(), second.id.clone()),
@@ -3366,20 +3364,12 @@ mod tests {
             ..Default::default()
         };
         assert!(s.effective_profile(&recipe, &wrong).is_err());
-        command(
-            &mut s,
-            Command::RenameProfile(third.id.clone(), "Casual".into()),
-        )
-        .unwrap();
-        let ambiguous = LaunchOverrides {
-            profile: Some("Casual".into()),
-            ..Default::default()
-        };
         assert!(
-            s.effective_profile(&recipe, &ambiguous)
-                .unwrap_err()
-                .to_string()
-                .contains("ambiguous")
+            command(
+                &mut s,
+                Command::RenameProfile(third.id.clone(), "casUAL".into()),
+            )
+            .is_err()
         );
         command(&mut s, Command::DeleteProfile(second.id)).unwrap();
         command(&mut s, Command::DeleteProfile(third.id)).unwrap();
