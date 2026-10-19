@@ -124,7 +124,8 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
         }
     }
     if name == "010-discover.png" {
-        for y in 294..318 {
+        // Spec 030 moves the clipped Discover viewport 20px below the header.
+        for y in 314..338 {
             for x in 32..432 {
                 assert_eq!(
                     buffer.as_slice()[y * WIDTH as usize + x],

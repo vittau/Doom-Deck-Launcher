@@ -233,7 +233,7 @@ component Hint inherits Rectangle {
     horizontal-stretch: 0;
     width: (pill ? 54px : 28px) + 8px + caption.preferred-width;
     height: 28px;
-    Badge { label: root.badge; pill: root.pill; }
+    Badge { x: 0px; y: 0px; label: root.badge; pill: root.pill; }
     caption := Text {
         x: root.pill ? 62px : 36px; width: parent.width - self.x; height: parent.height;
         text: root.label; color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center;
