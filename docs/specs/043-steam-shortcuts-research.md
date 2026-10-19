@@ -15,7 +15,7 @@ This is a **feasibility research** task. No code.
   and any supported alternative (e.g. `steam://` URLs, Steam's own "Add a Non-Steam Game").
   Cite upstream sources (Steam, Valve docs, maintained open-source tools such as Steam ROM
   Manager or BoilR) with pinned versions.
-- **R2** — **Fit for DDL:** what a shortcut for one mapset would launch (`ddl play <id>
+- **R2** — **Fit for DDL:** what a shortcut for one mapset would launch (`ddl launch <id>
   --profile …`, spec 014 CLI), how DDL could add/remove it safely (atomic write, backup, never
   while Steam runs), multi-user/`userdata` selection, SD card, and the risks (file corruption,
   Steam updates changing the format).
