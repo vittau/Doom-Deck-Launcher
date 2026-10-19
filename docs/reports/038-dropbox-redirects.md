@@ -1,8 +1,9 @@
 # 038 — Dropbox as a fast mirror — worker report
 
-**Status:** Phase 1 (**R1**, **R3**) and phase 2 (**R2**) implemented. A1 verified; A2's
-`ddl catalog lint --fetch` and A3's full-workspace checks are pending the shared build slot; the
-Linux e2e is the coordinator's. No new dependency.
+**Status:** Phase 1 (**R1**, **R3**) and phase 2 (**R2**) implemented. A1 verified; A2 verified
+(`lint --fetch` for the 12 changed recipes plus an offline lint of the whole catalog). A3's
+full-workspace checks wait for the coordinator's build slot (main is red on an unrelated headless
+test until the 045 merge lands); the Linux e2e is the coordinator's. No new dependency.
 
 ## What changed
 
@@ -134,8 +135,9 @@ downloads): DBP32 and DBP70 publish a bare `.wad` on Dropbox while the recipe pi
 Dropbox file is the 8-map limit-removing build only, not the 156 MB bundle; DBP58/63/68/71/77 are
 repacked or different builds; both DBP59 Dropbox files differ from the pin.
 
-`ddl catalog lint --fetch` over `catalog/` (A2's pass condition) and the full-workspace checks
-are **pending the build slot**.
+`ddl catalog lint catalog/` (whole catalog, offline) → **passed**. `ddl catalog lint --fetch`
+was run on each of the 12 changed recipe files individually (not the whole directory, so no other
+mapset was re-downloaded); all 12 → **passed (fetched packages verified)** on 2026-10-19.
 
 ### A3 — static checks (partial, pending the build slot)
 
@@ -143,7 +145,10 @@ are **pending the build slot**.
 - `cargo clippy -p ddl-core --all-targets -- -D warnings` → clean.
 - `cargo test -p ddl-core catalog` → 56 passed (includes the offline `lint_paths` over the real
   `catalog/`, so the edited recipes and `hosts.toml` lint).
-- Full `cargo clippy --workspace` / `cargo test --workspace` and the Linux e2e are **open**.
+- Full `cargo clippy --workspace` / `cargo test --workspace` are **waiting for the build slot**:
+  `main` is red on an unrelated headless test (13-recipe assumption) until the coordinator's 045
+  merge lands. Then: merge `main`, run fmt, clippy, test in that order with `set -o pipefail`.
+  The Linux e2e is the coordinator's (A3).
 
 ## Dependencies
 
@@ -163,4 +168,5 @@ None added.
 
 ## Spec items left open
 
-- `ddl catalog lint --fetch` and the full workspace checks (A2/A3), then the Linux e2e (A3).
+- Full workspace `fmt`/`clippy`/`test` (A3) after the coordinator's "main ready + slot go", then
+  the Linux e2e (A3, coordinator-run).
