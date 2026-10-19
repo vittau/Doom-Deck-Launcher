@@ -2283,12 +2283,18 @@ impl Runtime {
                         .set_other(subject.clone());
                     ui.set_heading(text(ui, T::ContextTitle));
                     b.title(36., 36., 1100., 68., subject, 36.);
-                    let stage = self.progress.map_or(T::Working, |p| match p.stage {
-                        InstallStage::Download => T::Download,
-                        InstallStage::Verify => T::Verify,
-                        InstallStage::Extract => T::Extract,
-                        InstallStage::Commit => T::Commit,
-                    });
+                    let download = download_row(self.progress);
+                    let stage = if download.resuming {
+                        // Spec 040 R6: the range request is in flight.
+                        T::Resuming
+                    } else {
+                        self.progress.map_or(T::Working, |p| match p.stage {
+                            InstallStage::Download => T::Download,
+                            InstallStage::Verify => T::Verify,
+                            InstallStage::Extract => T::Extract,
+                            InstallStage::Commit => T::Commit,
+                        })
+                    };
                     let stage_help = match self.progress.map(|p| p.stage) {
                         Some(InstallStage::Download) => T::DownloadHelp,
                         Some(InstallStage::Verify) => T::VerifyHelp,
@@ -2355,16 +2361,7 @@ impl Runtime {
                         false,
                         false,
                     );
-                    b.nodes.last_mut().unwrap().art = self
-                        .progress
-                        .filter(|p| p.stage == InstallStage::Download)
-                        .and_then(|p| p.transfer)
-                        .and_then(|p| {
-                            p.total
-                                .filter(|t| *t > 0)
-                                .map(|t| (p.downloaded.saturating_mul(1000) / t).min(1000) as i32)
-                        })
-                        .unwrap_or(-1);
+                    b.nodes.last_mut().unwrap().art = download.fraction.unwrap_or(-1);
                     if let Some(p) = self.progress.and_then(|p| p.transfer) {
                         let label = if let Some(total) = p.total {
                             ui.global::<crate::WiringStrings>()
@@ -3374,6 +3371,33 @@ fn catalog_summary(ui: &AppWindow, info: &services::CatalogInfo) -> SharedString
     }
 }
 
+/// The download row's fill fraction and resume state (spec 040, R6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DownloadRow {
+    /// 0..=999 of the bar, or `None` when no total is known.
+    pub(crate) fraction: Option<i32>,
+    /// Whether a range request is in flight ("Resuming…").
+    pub(crate) resuming: bool,
+}
+
+/// Reads the download row from the latest install progress.
+///
+/// A resumed transfer reports the bytes already on disk, so the fraction
+/// starts there instead of jumping back to zero (spec 040, R6).
+pub(crate) fn download_row(progress: Option<InstallProgress>) -> DownloadRow {
+    let transfer = progress
+        .filter(|p| p.stage == InstallStage::Download)
+        .and_then(|p| p.transfer);
+    DownloadRow {
+        fraction: transfer.and_then(|p| {
+            p.total
+                .filter(|total| *total > 0)
+                .map(|total| (p.downloaded.saturating_mul(1000) / total).min(1000) as i32)
+        }),
+        resuming: transfer.is_some_and(|p| p.resuming),
+    }
+}
+
 /// IEC byte units preserve useful transfer precision without invented speed estimates.
 fn human_bytes(bytes: u64) -> String {
     const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
@@ -3407,6 +3431,7 @@ fn elide_path_start(path: &str, limit: usize) -> String {
 #[cfg(test)]
 mod visual_copy_tests {
     use super::*;
+    use ddl_core::downloads::Progress;
     #[test]
     fn recipe_art_selects_bundled_covers_and_generic_fallback() {
         assert_eq!(art("sigil"), 0);
@@ -3422,6 +3447,31 @@ mod visual_copy_tests {
             assert_eq!(art(id), 4);
         }
     }
+    #[test]
+    fn a_resumed_download_row_starts_at_the_bytes_on_disk() {
+        let fresh = download_row(Some(InstallProgress::transfer(Progress::new(
+            500,
+            Some(1000),
+        ))));
+        assert_eq!(fresh.fraction, Some(500));
+        assert!(!fresh.resuming);
+
+        let resumed = download_row(Some(InstallProgress::transfer(Progress {
+            downloaded: 620,
+            total: Some(1000),
+            resuming: true,
+        })));
+        assert_eq!(resumed.fraction, Some(620), "no jump back to 0%");
+        assert!(resumed.resuming);
+
+        // Only a download stage feeds the row; verify/commit carry no bytes.
+        assert_eq!(
+            download_row(Some(InstallProgress::stage(InstallStage::Verify))).fraction,
+            None
+        );
+        assert!(!download_row(None).resuming);
+    }
+
     #[test]
     fn byte_units_and_unicode_breadcrumbs_are_human_readable() {
         assert_eq!(human_bytes(0), "0 B");
