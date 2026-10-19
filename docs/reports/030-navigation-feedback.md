@@ -22,15 +22,15 @@ No dependencies added. Existing D-020/D-021 tokens, bundled fonts and Ember artw
 
 ## Inspected PNGs
 
-Generated originals are under `target/headless/navigation_feedback/`; losslessly compressed copies are attached here for durable review:
+Generated under `target/headless/navigation_feedback/` by `cargo test -p ddl headless::journeys::navigation_feedback` (not committed; regenerate to review):
 
-| View | Original inspected PNG | Attached copy |
-| --- | --- | --- |
-| First run | `target/headless/navigation_feedback/030-first-run.png` | [First run](../screenshots/030-first-run.png) |
-| Home | `target/headless/navigation_feedback/030-home.png` | [Home](../screenshots/030-home.png) |
-| Discover, scrolled | `target/headless/navigation_feedback/030-discover-scrolled.png` | [Scrolled Discover](../screenshots/030-discover-scrolled.png) |
-| Dialog | `target/headless/navigation_feedback/030-dialog.png` | [Dialog](../screenshots/030-dialog.png) |
-| Mapset detail | `target/headless/navigation_feedback/030-detail.png` | [Detail](../screenshots/030-detail.png) |
+| View | Inspected PNG |
+| --- | --- |
+| First run | `target/headless/navigation_feedback/030-first-run.png` |
+| Home | `target/headless/navigation_feedback/030-home.png` |
+| Discover, scrolled | `target/headless/navigation_feedback/030-discover-scrolled.png` |
+| Dialog | `target/headless/navigation_feedback/030-dialog.png` |
+| Mapset detail | `target/headless/navigation_feedback/030-detail.png` |
 
 ## Open items
 
