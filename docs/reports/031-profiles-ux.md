@@ -45,7 +45,13 @@ Only off-screen software rendering was used; no visible windows or screen captur
 
 ## Final checks
 
-Pending shared build slot: fmt, clippy and full workspace tests.
+After merging local `main` (merge commit `fee408e`):
+
+- `cargo fmt --all --check`: passed.
+- `cargo clippy --workspace --all-targets -- -D warnings`: passed.
+- `cargo test --workspace`: passed, 538 tests including doctests (126 ddl unit/headless tests and 381 core unit tests; zero failures).
+- Final detail PNG re-inspected after preserving verification/update notices;
+  profile summary, Edit, source and verification all fit in the viewport.
 
 ## Remaining validation / proposals
 
