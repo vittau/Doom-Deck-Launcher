@@ -72,6 +72,8 @@ pub struct StoreCandidate {
 pub struct StoreDiscovery {
     /// Candidate WAD files, sorted and de-duplicated.
     pub candidates: Vec<StoreCandidate>,
+    /// Existing directories actually inspected, including empty ones (spec 032).
+    pub folders: Vec<(PathBuf, GogLauncher)>,
     /// Record files that exist but could not be read or parsed. The caller
     /// logs these; they are never an error and never a dialog.
     pub unreadable: Vec<PathBuf>,
@@ -246,7 +248,13 @@ pub fn discover(home: &Path) -> StoreDiscovery {
 
     let mut seen = std::collections::BTreeSet::new();
     for (root, launcher, depth) in roots {
-        for path in wad_candidates(&root, depth) {
+        let mut found = Vec::new();
+        let mut visited = Vec::new();
+        walk(&root, depth.levels(), &mut found, &mut visited);
+        discovery
+            .folders
+            .extend(visited.into_iter().map(|path| (path, launcher)));
+        for path in found {
             if discovery.candidates.len() >= MAX_CANDIDATES {
                 break;
             }
@@ -300,6 +308,19 @@ pub fn standard_paths(home: &Path, env: &dyn Fn(&str) -> Option<String>) -> Vec<
     found
 }
 
+/// Existing standard directories inspected when the opt-in search is enabled.
+#[must_use]
+pub fn standard_folders(home: &Path, env: &dyn Fn(&str) -> Option<String>) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    let mut folders = Vec::new();
+    for root in standard_roots(home, env) {
+        walk(&root, RootDepth::Doom.levels(), &mut found, &mut folders);
+    }
+    folders.sort();
+    folders.dedup();
+    folders
+}
+
 /// How deep below a root DDL looks for `*.wad`.
 #[derive(Debug, Clone, Copy)]
 enum RootDepth {
@@ -328,20 +349,23 @@ impl RootDepth {
 /// regular file.
 fn wad_candidates(root: &Path, depth: RootDepth) -> Vec<PathBuf> {
     let mut found = Vec::new();
-    walk(root, depth.levels(), &mut found);
+    walk(root, depth.levels(), &mut found, &mut Vec::new());
     found.sort();
     found.dedup();
     found
 }
 
 /// Walks `dir` `remaining` levels deep, collecting `*.wad` regular files.
-fn walk(dir: &Path, remaining: usize, found: &mut Vec<PathBuf>) {
+fn walk(dir: &Path, remaining: usize, found: &mut Vec<PathBuf>, visited: &mut Vec<PathBuf>) {
     if found.len() >= MAX_CANDIDATES {
         return;
     }
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
+    if visited.len() < MAX_CANDIDATES {
+        visited.push(dir.to_path_buf());
+    }
     for entry in entries.flatten().take(MAX_ENTRIES) {
         let path = entry.path();
         let Ok(file_type) = entry.file_type() else {
@@ -359,7 +383,7 @@ fn walk(dir: &Path, remaining: usize, found: &mut Vec<PathBuf>) {
             }
         } else if file_type.is_dir() {
             if remaining > 0 {
-                walk(&path, remaining - 1, found);
+                walk(&path, remaining - 1, found, visited);
             }
         } else if file_type.is_file() && is_wad(&path) {
             found.push(path);
@@ -413,6 +437,20 @@ mod tests {
             fs::create_dir_all(parent).expect("mkdir");
         }
         fs::write(path, b"fake wad").expect("write fixture");
+    }
+
+    #[test]
+    fn source_folders_include_empty_automatic_directories() {
+        let home = tempfile::TempDir::new().unwrap();
+        let heroic = heroic_default_dir(home.path());
+        let empty = heroic.join("Doom/base");
+        std::fs::create_dir_all(&empty).unwrap();
+        let discovered = discover(home.path());
+        assert!(discovered.candidates.is_empty());
+        assert!(discovered.folders.contains(&(empty, GogLauncher::Heroic)));
+        let standard = home.path().join(".local/share/games/doom");
+        std::fs::create_dir_all(&standard).unwrap();
+        assert!(standard_folders(home.path(), &|_| None).contains(&standard));
     }
 
     #[test]
