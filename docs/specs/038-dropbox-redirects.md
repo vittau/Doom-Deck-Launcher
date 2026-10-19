@@ -18,7 +18,11 @@ that host are slow.
   exact matching everywhere else; the existing `does_not_match_subdomains_or_suffixes` test keeps
   passing, and new tests cover the allowed and refused cases (wrong origin, two labels, a lookalike
   suffix such as `dl.dropboxusercontent.com.evil.example`, plain `dl.dropboxusercontent.com` as
-  a first URL).
+  a first URL). Dropbox then redirects once more on the **same** per-request host
+  (`/cd/0/inline/…` → root-relative `/cd/0/inline2/…`, observed 2026-10-19), so such a host may
+  redirect to itself (exact match) within a chain that began at `www.dropbox.com`; a hop to any
+  other host, including another one-label `dl.dropboxusercontent.com` host, is refused. The
+  redirect limit and scheme checks are unchanged.
 - **R2** — **Mirrors:** for each of the 21 DBPs whose Dropbox link still serves the same file
   (same SHA-256 as the pinned archive.org copy), add the Dropbox `?dl=1` URL as the **first**
   source and keep archive.org as the fallback, using the recipe format's existing mirror order.
