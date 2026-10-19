@@ -42,6 +42,9 @@ pub struct Profile {
     /// Optional IWAD variant override (spec 007); `None` picks the best match.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub iwad_variant: Option<String>,
+    /// Preferred physical copy for a base game (spec 032), rechecked at launch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iwad_path: Option<std::path::PathBuf>,
     /// Unix seconds of the last launch, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_played: Option<u64>,
@@ -73,6 +76,7 @@ impl Profile {
             skill: DEFAULT_SKILL,
             pistol_start: false,
             iwad_variant: None,
+            iwad_path: None,
             last_played: None,
             overrides: BTreeMap::new(),
             extras: Vec::new(),

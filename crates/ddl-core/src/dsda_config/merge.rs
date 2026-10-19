@@ -12,10 +12,18 @@
 //! Rules, in order:
 //!
 //! 1. `A == B` -> take `T` (the user never changed it).
-//! 2. `T == B` -> keep `A` (the user changed it, DDL did not).
-//! 3. `A == T` -> keep `A` (nothing to do).
-//! 4. `A` is absent -> take `T` (a partial active file must not lose the key).
-//! 5. otherwise -> **conflict**: keep `A` and report it.
+//! 2. `B` is absent and `A` is the binding's `upstream` default -> take `T`
+//!    (the template starts owning a binding the player never touched; spec 034).
+//! 3. `T == B` -> keep `A` (the user changed it, DDL did not).
+//! 4. `A == T` -> keep `A` (nothing to do).
+//! 5. `A` is absent -> take `T` (a partial active file must not lose the key).
+//! 6. otherwise -> **conflict**: keep `A` and report it.
+//!
+//! Rule 2 exists because DSDA rewrites every binding when it saves, so the first
+//! template version that binds an action sees the engine's default in `A` while
+//! `B` (written by the previous, binding-less template) has nothing. Comparing
+//! against the researched v0.30.1 default tells "untouched" from "rebound in
+//! DSDA's menu"; a rebound binding falls through to rule 6 and is kept.
 //!
 //! Keys the user changed that the template does not own are always kept, and a
 //! key removed from the template reverts to user ownership (it is left alone).
@@ -46,12 +54,33 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
     let mut user_changed = Vec::new();
     let mut updated = Vec::new();
 
-    for (key, template_value) in &template.values {
-        let wanted = Value::Int(*template_value);
-        let current = active.get(key);
-        let previous = base.get(key);
+    let wanted_entries = template
+        .values
+        .iter()
+        .map(|(key, value)| (key.clone(), Value::Int(*value), None))
+        .chain(
+            template
+                .strings
+                .iter()
+                .map(|(key, value)| (key.clone(), Value::Str(value.clone()), None)),
+        )
+        .chain(template.bindings.iter().map(|binding| {
+            (
+                binding.action.clone(),
+                Value::Binding(binding.wanted.clone()),
+                Some(Value::Binding(binding.upstream.clone())),
+            )
+        }));
+
+    for (key, wanted, upstream) in wanted_entries {
+        let current = active.get(&key);
+        let previous = base.get(&key);
 
         let chosen = if current == previous {
+            updated.push(key.clone());
+            Some(wanted)
+        } else if previous.is_none() && upstream.as_ref() == current {
+            // The key is new to the template and still holds DSDA's own default.
             updated.push(key.clone());
             Some(wanted)
         } else if previous == Some(&wanted) {
@@ -74,8 +103,8 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
         };
 
         match chosen {
-            Some(value) => document.set(key, value),
-            None => document.remove(key),
+            Some(value) => document.set(&key, value),
+            None => document.remove(&key),
         }
     }
 
@@ -90,6 +119,8 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dsda_config::format::{Binding, BindingProfile};
+    use crate::dsda_config::template::TemplateBinding;
 
     fn template(version: &str, values: &[(&str, i64)]) -> Template {
         Template {
@@ -100,7 +131,101 @@ mod tests {
                 .iter()
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
+            strings: Vec::new(),
+            bindings: Vec::new(),
         }
+    }
+
+    fn binding(joy: i64) -> Binding {
+        let profile = BindingProfile {
+            keys: vec![9],
+            mouse: -1,
+            joy,
+        };
+        Binding {
+            profiles: vec![profile.clone(), profile.clone(), profile],
+        }
+    }
+
+    fn binding_template(wanted: i64, upstream: i64) -> Template {
+        let mut template = template("2", &[]);
+        template.bindings.push(TemplateBinding {
+            action: "input_map".to_owned(),
+            wanted: binding(wanted),
+            upstream: binding(upstream),
+        });
+        template
+    }
+
+    #[test]
+    fn an_untouched_new_binding_takes_the_template_button() {
+        // The previous template owned no bindings, so the base has nothing;
+        // DSDA saved its own default. That is not a user change.
+        let base = document("sensitivity 10\n");
+        let active = document("input_map 9 -1 21 | 9 -1 21 | 9 -1 21\n");
+        let result = merge(&base, &active, &binding_template(4, 21));
+        assert_eq!(
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
+            Some("9 -1 4 | 9 -1 4 | 9 -1 4")
+        );
+        assert!(result.conflicts.is_empty());
+        assert_eq!(result.updated, vec!["input_map"]);
+    }
+
+    #[test]
+    fn a_new_binding_the_user_rebound_is_kept_and_reported() {
+        let base = document("sensitivity 10\n");
+        let active = document("input_map 9 -1 6 | 9 -1 6 | 9 -1 6\n");
+        let result = merge(&base, &active, &binding_template(4, 21));
+        assert_eq!(
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
+            Some("9 -1 6 | 9 -1 6 | 9 -1 6"),
+            "the player's own button wins"
+        );
+        assert_eq!(result.conflicts.len(), 1);
+        assert_eq!(result.conflicts[0].key, "input_map");
+    }
+
+    #[test]
+    fn a_user_changed_binding_survives_a_later_template_change() {
+        let base = document("input_map 9 -1 21 | 9 -1 21 | 9 -1 21\n");
+        let active = document("input_map 9 -1 6 | 9 -1 6 | 9 -1 6\n");
+        let result = merge(&base, &active, &binding_template(4, 21));
+        assert_eq!(
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
+            Some("9 -1 6 | 9 -1 6 | 9 -1 6")
+        );
+        assert_eq!(result.conflicts.len(), 1);
+    }
+
+    #[test]
+    fn a_keyboard_change_to_a_new_binding_is_also_kept() {
+        // The player changed only the keyboard key and left the pad button at
+        // DSDA's default: the whole binding is a user choice.
+        let base = document("sensitivity 10\n");
+        let active = document("input_map 5 -1 21 | 5 -1 21 | 5 -1 21\n");
+        let result = merge(&base, &active, &binding_template(4, 21));
+        assert_eq!(
+            result
+                .document
+                .get("input_map")
+                .map(Value::render)
+                .as_deref(),
+            Some("5 -1 21 | 5 -1 21 | 5 -1 21")
+        );
+        assert_eq!(result.conflicts.len(), 1);
     }
 
     fn document(text: &str) -> Document {

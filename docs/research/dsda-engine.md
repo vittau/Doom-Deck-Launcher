@@ -2,6 +2,8 @@
 
 Desk research, 2026-10-16. Scope: upstream source and packaging; no engine build,
 IWAD execution, Linux runtime test or physical Deck test was performed.
+§4's controller-layout subsection was added 2026-10-19 for spec 034 (the owner's
+Deck controller layout), from the same pinned tag.
 
 **Confirmed** means read directly in the tagged source. **Proposed** means a DDL
 design implication or an inference. **Needs Deck Validation** marks runtime or
@@ -531,9 +533,149 @@ names below are abbreviated to their suffix, with the numeric mapping above.
 | `input_script_8` | `0` | -1 | `-1` | [prboom2/src/m_misc.c:579](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L579) |
 | `input_script_9` | `0` | -1 | `-1` | [prboom2/src/m_misc.c:580](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L580) |
 
+### Controller layout semantics (spec 034)
+
+Facts below were read in the pinned tag; the numbered line links name the exact
+block. Button codes are the enum in [prboom2/src/dsda/game_controller.h:21–47](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.h#L21-L47)
+(the file says "Must match SDL" and publishes the same order as the SDL
+GameController button enum); the display names come from
+[prboom2/src/dsda/game_controller.c:47–72](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.c#L47-L72).
+
+**Confirmed — how a button is stored.** Each action is one `input_*` config line.
+`input_defs[]` gives every action its name and its default keyboard, mouse and
+gamepad codes through `INPUT_SETTING(name, id, key, mouse, joy)`
+[prboom2/src/m_misc.c:391–581](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L391-L581);
+[prboom2/src/m_misc.c:75](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L75). The runtime shape is
+`dsda_input_t { int* key; int num_keys; int mouseb; int joyb; }`
+[prboom2/src/dsda/input.h:212–218](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L212-L218):
+
+- `num_keys` keyboard codes are allowed (DSDA's writer joins them with commas);
+- at most **one** mouse button and **one** gamepad button per action per profile;
+- codes beyond the accepted ranges are silently ignored when a file is read:
+  keyboard `1`–`511` (`0` and the writer's `0` mean "none"), mouse `-1`–`7`,
+  gamepad `-1`–`22`
+  [prboom2/src/dsda/input.h:24–27](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L24-L27);
+  [prboom2/src/dsda/input.c:289–318](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.c#L289-L318).
+
+**Confirmed — file grammar and the three profiles.** A line is
+`action key[,key…] mouse joy | key[,key…] mouse joy | key[,key…] mouse joy`, one
+segment per input profile; `input_profile` selects which profile is live.
+DSDA writes all three segments, printing `0` for "no keyboard key"
+[prboom2/src/m_misc.c:642–670](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L642-L670). The reader
+resets each segment as it parses it and adds the codes it recognises
+[prboom2/src/m_misc.c:766–806](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L766-L806). At startup the
+same default triple is installed in **all three** profiles
+[prboom2/src/m_misc.c:696–701](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L696-L701), so a
+Deck layout should set the pad button of every profile.
+
+**Confirmed — one button can drive several actions.** Pad state is posted as one
+bitmask per event: `PollButton` shifts the button's state into its enum bit
+[prboom2/src/dsda/game_controller.c:118–167](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.c#L118-L167).
+The tracker records per-button press/release
+[prboom2/src/dsda/input.c:44–70](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.c#L44-L70), and each
+action's `dsda_InputActivated` independently tests the one button stored in
+`dsda_input[...].joyb`
+[prboom2/src/dsda/input.c:158–176](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.c#L158-L176). There is no
+exclusivity: two actions may name the same button and both fire. That is why the
+spec-034 layout can add automap zoom to D-pad Up/Down without taking those
+buttons away from the menu or fly defaults.
+
+**Confirmed — button codes.** The enum is contiguous from `0`; the integers are
+what a config file stores (menu names are display-only):
+
+| Code | `game_controller.h` enum | Menu name | Steam Deck control (**Proposed**, Needs Deck Validation) |
+| --- | --- | --- | --- |
+| 0 | `DSDA_CONTROLLER_BUTTON_A` | `pad a` | A |
+| 1 | `..._B` | `pad b` | B |
+| 2 | `..._X` | `pad x` | X |
+| 3 | `..._Y` | `pad y` | Y |
+| 4 | `..._BACK` | `pad back` | View (Select) |
+| 5 | `..._GUIDE` | `pad guide` | Steam button (not normally visible to games) |
+| 6 | `..._START` | `pad start` | Menu (Start) |
+| 7 | `..._LEFTSTICK` | `lstick` | L3 |
+| 8 | `..._RIGHTSTICK` | `rstick` | R3 |
+| 9 | `..._LEFTSHOULDER` | `pad l` | L1 |
+| 10 | `..._RIGHTSHOULDER` | `pad r` | R1 |
+| 11–14 | `..._DPAD_UP`, `_DOWN`, `_LEFT`, `_RIGHT` | `dpad u/d/l/r` | D-pad |
+| 15–20 | `..._MISC1`, `..._PADDLE1`–`4`, `..._TOUCHPAD` | `misc 1`, `paddle 1`–`4`, `touchpad` | varies; not used by the layout |
+| 21–22 | `..._TRIGGERLEFT`, `..._TRIGGERRIGHT` | `pad lt`, `pad rt` | L2 / R2 |
+
+The enum order is a **Confirmed** source fact
+[prboom2/src/dsda/game_controller.h:21–47](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.h#L21-L47), but the
+mapping from a printed Deck control to an SDL button is Steam Input behaviour and
+is **Proposed** until checked on hardware. Steam's View button, for example,
+sends SDL's back button; DSDA calls that `pad back` = 4.
+
+**Confirmed — automap zoom is automap-only.** `input_map_zoomin` and
+`input_map_zoomout` ship with keyboard `=` and `-` and **no** gamepad button by
+default
+[prboom2/src/m_misc.c:443–444](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L443-L444). They are
+handled only inside `AM_Responder`, which runs while the full automap is open:
+pressing starts a zoom, releasing stops it
+[prboom2/src/am_map.c:1073–1104](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/am_map.c#L1073-L1104);
+[prboom2/src/am_map.c:1156–1187](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/am_map.c#L1156-L1187);
+[prboom2/src/am_map.c:1244–1256](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/am_map.c#L1244-L1256). `G_Responder`
+calls `AM_Responder` first and returns when the automap consumed the event, so a
+button shared with a play action does the play action only when the map is
+closed
+[prboom2/src/g_game.c:1295–1305](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L1295-L1305). The
+automap has no gamepad pan binding on the D-pad: `input_map_left/right/up/down`
+stay keyboard-only
+[prboom2/src/m_misc.c:445–448](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L445-L448). Because
+`AM_Responder` handles only what it recognises, D-pad Left/Right bound to
+previous/next weapon still change weapons while the map is open.
+
+**Confirmed — the 180° turn exists.** The action is `input_reverse`, default
+keyboard `/` and Right Stick click
+[prboom2/src/m_misc.c:401](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L401). It is a one-shot
+turn, not a held action: `G_BuildTiccmd` adds `QUICKREVERSE` (`32768`, a half
+turn in the game's angle units) on the tick the button is first activated
+[prboom2/src/g_game.c:206](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L206);
+[prboom2/src/g_game.c:554–563](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L554-L563). It is
+skipped while the strafe modifier is held, and prints "180 key disabled by
+strict mode" instead of turning while a strict-mode demo records (research §5).
+
+**Confirmed — quick save/load.** `input_quicksave` is F6 and `input_quickload`
+F9, both with no gamepad default
+[prboom2/src/m_misc.c:436–437](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L436-L437). They are
+handled by the menu responder while playing
+[prboom2/src/m_menu.c:5640–5659](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L5640-L5659), which runs
+before the game responder
+[prboom2/src/d_main.c:252–259](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L252-L259).
+
+**Confirmed — menu first, then game.** The event loop offers each event to the
+menu before `G_Responder`
+[prboom2/src/d_main.c:252–259](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L252-L259); the menu
+bindings keep the D-pad (`input_menu_up`–`right`, `input_menu_enter`,
+`input_menu_backspace`, `input_menu_escape`)
+[prboom2/src/m_misc.c:472–479](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L472-L479), so adding a
+play action to the D-pad cannot break menu navigation.
+
+**Confirmed — the upstream defaults the layout replaces.** These are the
+`INPUT_SETTING` values DDL's template records as `upstream`, with the keyboard
+codes resolved from the key definitions
+[prboom2/src/doomdef.h:344–365](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/doomdef.h#L344-L365):
+
+| Action | Keyboard default | Mouse | Gamepad default | Source |
+| --- | --- | --- | --- | --- |
+| `input_map` | `KEYD_TAB` = 9 | -1 | 21 `TRIGGERLEFT` | [m_misc.c:425](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L425) |
+| `input_map_zoomin` | `'='` = 61 | -1 | -1 | [m_misc.c:443](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L443) |
+| `input_map_zoomout` | `'-'` = 45 | -1 | -1 | [m_misc.c:444](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L444) |
+| `input_autorun` | `KEYD_CAPSLOCK` = 186 | -1 | 7 `LEFTSTICK` | [m_misc.c:400](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L400) |
+| `input_nextweapon` | 0 (none) | -1 | 3 `Y` | [m_misc.c:418](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L418) |
+| `input_prevweapon` | 0 (none) | -1 | 2 `X` | [m_misc.c:419](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L419) |
+| `input_quicksave` | `KEYD_F6` = 192 | -1 | -1 | [m_misc.c:436](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L436) |
+| `input_quickload` | `KEYD_F9` = 195 | -1 | -1 | [m_misc.c:437](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L437) |
+| `input_reverse` | `'/'` = 47 | -1 | 8 `RIGHTSTICK` | [m_misc.c:401](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L401) |
+
+`input_use` (default A, `' '`) is not in the table: the owner's layout asks for
+A, which is already DSDA's default, so DDL does not claim the key.
+
 Implications for DDL:
 
 - **Proposed:** Generate numeric binding triples for all three profiles; preserve extra keyboard bindings and each independent profile on migration.
+- **Proposed:** Bind a pad button by writing all three profile segments; a gamepad button may drive several actions, so an automap-only action can share the D-pad with the menu and fly defaults (spec 034).
+- **Proposed:** When a template version starts owning a binding, compare the active file against the recorded `upstream` default to tell an untouched binding from one the player rebound in DSDA's menu (spec 034, R2).
 - **Proposed:** Start sensitivity templates from these audited values, then calibrate on Deck; leave controller selection/hotplug promises behind a validation gate.
 - **Proposed:** Do not invent axis-binding keys or use display names in config files.
 - **Needs Deck Validation:** Native pad identity, rear-button visibility, gyro-as-mouse coexistence, SDL mapping and comfortable sensitivity/deadzone values.
@@ -731,6 +873,82 @@ Implications for DDL:
 
 - **Proposed:** Show upstream attribution, license, exact version and corresponding tagged source link in engine details.
 - **Proposed:** Keep engine acquisition upstream-direct for the initial design; record redistribution obligations before introducing mirrors or bundled installers.
+
+## 9. Video, aspect ratio and HUD/status-bar scaling
+
+Desk research, 2026-10-19, for spec 029. **Confirmed** rows were read in the same
+pinned tag `v0.30.1` = `8ed581ad5c868b4dba1c39eb21d29e4ddbed9fad`; no engine build,
+window or Deck test was performed. Every default and limit below comes from the
+tagged `dsda_config` table, whose macro arguments are
+`type, lower_limit, upper_limit, { default }, …`
+([configuration.c:75–82](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L75-L82)).
+
+**Confirmed — video keys, defaults and accepted ranges.** These are the keys that
+decide how the game is rendered; all of them are ordinary, persisted config values
+(already owned by DSDA, so DDL may claim them in its template).
+
+| Key | Type | Default | Range / values | Tagged source |
+| --- | --- | --- | --- | --- |
+| `videomode` | string | `"Software"` | software / OpenGL renderer | [configuration.c:1165–1168](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1165-L1168) |
+| `screen_resolution` | string | `"640x480"` | `WIDTHxHEIGHT`, parsed with `sscanf("%dx%d")`; invalid data falls back to 640×480 | [configuration.c:1169–1172](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1169-L1172); [i_video.c:740–758](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L740-L758) |
+| `custom_resolution` | string | `""` | extra `%4dx%4d` entry added to the resolution list when non-empty | [configuration.c:1173–1176](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1173-L1176); [i_video.c:810–825](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L810-L825) |
+| `use_fullscreen` | bool | `0` | 0 windowed / 1 fullscreen | [configuration.c:1177–1180](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1177-L1180) |
+| `exclusive_fullscreen` | bool | `0` | 0 desktop fullscreen / 1 exclusive mode change | [configuration.c:1181–1184](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1181-L1184) |
+| `render_vsync` | bool | `0` | 0/1 | [configuration.c:1185–1188](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1185-L1188) |
+| `screenblocks` | int | `10` | 10–11 (the full-screen range only) | [configuration.c:1205–1208](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1205-L1208) |
+| `render_screen_multiply` | int | `1` | 1–5 (internal render scale, then scaled to the window) | [configuration.c:1233–1236](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1233-L1236) |
+| `integer_scaling` | bool | `0` | 0/1 | [configuration.c:1237–1240](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1237-L1240) |
+| `render_aspect` | int | `0` | 0–4; see the mapping below | [configuration.c:1241–1244](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1241-L1244); [v_video.c:1357–1376](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1357-L1376) |
+| `render_stretch_hud` | int | `patch_stretch_doom_format` (`1`) | 0 `not_adjusted`, 1 `doom_format`, 2 `fit_to_width` | [configuration.c:1254–1258](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1254-L1258); [stretch.h:41–52](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/stretch.h#L41-L52) |
+| `render_patches_scalex` / `render_patches_scaley` | int | `0` | 0–16; `0` = automatic (`min(SCREENWIDTH/320, SCREENHEIGHT/200)`, clamped up to the user value) | [configuration.c:1259–1266](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1259-L1266); [stretch.c:260–276](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/stretch.c#L260-L276) |
+| `aspect_ratio_correction` | bool | `1` | applies the VGA 5:6 pixel aspect for 200/400-high modes | [configuration.c:1275–1278](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1275-L1278); [v_video.c:1339–1346](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1339-L1346) |
+| `hud_displayed` | bool | `0` | the DSDA advanced HUD (`R_FullView` tracks it as a feature) | [configuration.c:872–875](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L872-L875); [configuration.c:154–155](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L154-L155) |
+| `dsda_exhud` / `dsda_exhud_*` | bool | `0` | the extended HUD (`R_PartialView`); the sub-toggles live under `dsda_config_hudadd_*` | [configuration.c:375–378](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L375-L378); [configuration.c:151–152](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L151-L152) |
+| `sts_solid_bg_color` | bool | `0` | colour of the status bar's leftover side area | [configuration.c:331–334](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L331-L334) |
+
+**Confirmed — `render_aspect` values.** `SetRatio()` first derives the storage and
+display aspect from the window and `aspect_ratio_correction`, then a user
+`render_aspect` overrides it. The hard-coded switch is, in order:
+`0` = keep the derived ratio (Auto), `1` = 16:9, `2` = **16:10**, `3` = 4:3,
+`4` = 5:4. Any other value logs an error and is ignored.
+[v_video.c:1357–1376](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1357-L1376).
+`WIDE_SCREENWIDTH`/`WIDE_SCREENHEIGHT` are then the wider virtual screen the
+renderer draws into ([v_video.c:1420–1430](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1420-L1430)).
+
+**Confirmed — what a wide `STBAR` needs.** A widescreen status bar is an ordinary
+replacement patch named `STBAR`; there is no flag for it. `ST_SetScaledWidth()`
+scales the loaded patch by `render_stretch_hud`, rounds the width to a multiple of
+4, caps it to `SCREENWIDTH`, and centres it:
+- `patch_stretch_not_adjusted` (0): `width * patches_scalex`;
+- `patch_stretch_doom_format` (1, default): `width * WIDE_SCREENWIDTH / 320`;
+- `patch_stretch_fit_to_width` (2): `width * SCREENWIDTH / 320`.
+[st_stuff.c:399–426](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/st_stuff.c#L399-L426).
+The leftover side area is filled from the bar's palette (`sts_solid_bg_color`) or
+the `grnrock`/`brdr_b` texture; with `patch_stretch_fit_to_width` the borders are
+skipped entirely ([v_video.c:1269–1273](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1269-L1273),
+[i_video.c:1115](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1115)).
+At 1280×800 with `screen_resolution "1280x800"` and 16:10, both `doom_format` and
+`fit_to_width` produce `SCREENWIDTH/320 = SCREENHEIGHT/200 = 4`, i.e. a uniform 4×
+scaling of a stock 320-wide bar and full-width display of a wider one; the wide bar
+of spec 017 therefore needs **no extra key**, and `render_stretch_hud = 2` is the
+explicit "fill the panel width" choice.
+
+**Confirmed — where DDL's own template stands.** The `steam-deck-default`
+template v1 owned only controller and mouse keys (see §4); DSDA's own defaults had
+`use_fullscreen = 0` and `render_aspect = 0`, so on a fresh Deck the game opened
+windowed at 4:3, matching the spec-029 F4 finding.
+
+Implications for DDL (spec 029, all **Proposed** until the Deck re-check):
+
+- **Proposed:** template v2 sets `screen_resolution "1280x800"`, `use_fullscreen 1`,
+  `exclusive_fullscreen 0`, `render_aspect 2` (16:10) and `render_stretch_hud 2`
+  (status bar fills the panel). Every value is inside a confirmed range.
+- **Proposed:** do not set `render_screen_multiply`, `render_patches_scale*`,
+  `integer_scaling`, `hud_displayed` or `dsda_exhud`; their automatic behaviour is
+  correct and claiming them would fight the player's own menu choices.
+- **Needs Deck Validation:** the real fullscreen mode gamescope grants, that
+  `exclusive_fullscreen 0` composites correctly, and that the 16:10 bar fills the
+  panel with no side texture.
 
 ## Open questions and validation gates
 

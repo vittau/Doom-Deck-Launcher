@@ -292,6 +292,12 @@ impl DsdaConfigManager {
         for (key, value) in &self.template.values {
             document.set(key, Value::Int(*value));
         }
+        for (key, value) in &self.template.strings {
+            document.set(key, Value::Str(value.clone()));
+        }
+        for binding in &self.template.bindings {
+            document.set(&binding.action, Value::Binding(binding.wanted.clone()));
+        }
 
         let now = self.clock.now_unix_secs();
         let backup = backups::create(
@@ -421,6 +427,8 @@ mod tests {
                 .iter()
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
+            strings: Vec::new(),
+            bindings: Vec::new(),
         }
     }
 
@@ -592,6 +600,175 @@ mod tests {
             read(&second.base_path("2")),
             merged,
             "the new baseline is exactly what was written"
+        );
+    }
+
+    /// A3 (spec 029, R4): migrating the shipped v1 baseline to the current
+    /// template adds the Deck video defaults while a value the player changed in
+    /// DSDA's menu survives.
+    #[test]
+    fn a_version_bump_adds_deck_defaults_and_keeps_a_user_change() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        // The v1 baseline the current install would have: the same control and
+        // mouse keys, without the spec-029 video keys or spec-034 bindings.
+        let mut v1 = Template::embedded().expect("valid template");
+        v1.template_version = "1".to_owned();
+        v1.values.retain(|(key, _)| {
+            !matches!(
+                key.as_str(),
+                "use_fullscreen" | "exclusive_fullscreen" | "render_aspect" | "render_stretch_hud"
+            )
+        });
+        v1.strings.clear();
+        v1.bindings.clear();
+
+        let first = manager(&config, v1, &clock);
+        first.provision().expect("first use");
+
+        // The player turns the gamepad off and picks a different resolution in
+        // DSDA's own menu (DSDA rewrites the file, adding its own keys).
+        let edited = "use_game_controller 0\nuse_mouse 1\nscreen_resolution \"1920x1080\"\ndsda_engine_key 7\n";
+        fs::write(first.active_path(), edited).expect("simulate a DSDA rewrite");
+
+        let second = DsdaConfigManager::with_template(&config, Template::embedded().unwrap())
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert!(migration.migrated);
+        assert_eq!(migration.from_version, "1");
+        assert_eq!(migration.to_version, "3");
+
+        let merged = read(&second.active_path());
+        assert!(
+            merged.contains("use_game_controller 0\n"),
+            "the player's change is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("screen_resolution \"1920x1080\"\n"),
+            "a user-changed string value is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("dsda_engine_key 7\n"),
+            "keys DDL does not own are kept:\n{merged}"
+        );
+        // The new defaults the player never touched are added.
+        assert!(merged.contains("use_fullscreen 1\n"), "{merged}");
+        assert!(merged.contains("exclusive_fullscreen 0\n"), "{merged}");
+        assert!(merged.contains("render_aspect 2\n"), "{merged}");
+        assert!(merged.contains("render_stretch_hud 2\n"), "{merged}");
+        assert!(
+            merged.contains("input_reverse 47 -1 2 | 47 -1 2 | 47 -1 2\n"),
+            "the spec-034 bindings are added:\n{merged}"
+        );
+    }
+
+    /// A2 (spec 034, R2): migrating the shipped v2 baseline to v3 applies the
+    /// owner's controller layout while a binding the player rebound in DSDA's
+    /// menu is kept. DSDA's own save rewrites every binding, so the previous
+    /// baseline has none of them.
+    #[test]
+    fn a_version_bump_applies_the_deck_layout_and_keeps_a_rebound_button() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        let current = Template::embedded().expect("valid template");
+
+        // v2: the same scalars and strings, no bindings.
+        let mut v2 = current.clone();
+        v2.template_version = "2".to_owned();
+        v2.bindings.clear();
+
+        let first = manager(&config, v2.clone(), &clock);
+        first.provision().expect("first use");
+
+        // DSDA saves the whole config on exit: every scalar DDL wrote plus every
+        // binding, including the defaults DDL does not own. The player rebound
+        // the automap toggle to Start (`pad start` = 6).
+        let mut edited = v2.config_text();
+        for binding in &current.bindings {
+            let joy = if binding.action == "input_map" {
+                6
+            } else {
+                binding.upstream_joy().unwrap()
+            };
+            let profile = crate::dsda_config::format::BindingProfile {
+                keys: binding.upstream.profiles[0].keys.clone(),
+                mouse: binding.upstream.profiles[0].mouse,
+                joy,
+            };
+            let stored = crate::dsda_config::format::Binding {
+                profiles: vec![profile.clone(), profile.clone(), profile],
+            };
+            edited.push_str(&format!(
+                "{} {}\n",
+                binding.action,
+                crate::dsda_config::format::Value::Binding(stored).render()
+            ));
+        }
+        fs::write(first.active_path(), &edited).expect("simulate a DSDA save");
+
+        let second = DsdaConfigManager::with_template(&config, current.clone())
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert!(migration.migrated);
+        assert_eq!(migration.from_version, "2");
+        assert_eq!(migration.to_version, "3");
+
+        let merged = second.active_path();
+        let document = crate::dsda_config::format::Document::parse(&read(&merged));
+        let joy = |action: &str| {
+            let value = document.get(action).expect(action);
+            let crate::dsda_config::format::Value::Binding(binding) = value else {
+                panic!("{action} is not a binding: {value:?}");
+            };
+            binding.profiles[0].joy
+        };
+
+        assert_eq!(
+            joy("input_map"),
+            6,
+            "the player's rebound button is kept:\n{}",
+            read(&merged)
+        );
+        assert_eq!(
+            migration.conflicts.len(),
+            1,
+            "only the rebound binding conflicts: {:?}",
+            migration.conflicts
+        );
+        assert_eq!(migration.conflicts[0].key, "input_map");
+
+        for (action, button) in [
+            ("input_map_zoomin", 11),
+            ("input_map_zoomout", 12),
+            ("input_autorun", 1),
+            ("input_nextweapon", 14),
+            ("input_prevweapon", 13),
+            ("input_quicksave", 9),
+            ("input_quickload", 10),
+            ("input_reverse", 2),
+        ] {
+            assert_eq!(
+                joy(action),
+                button,
+                "the untouched binding takes the new button:\n{}",
+                read(&merged)
+            );
+        }
+
+        // Keyboard defaults survive the pad rebinding.
+        assert!(
+            read(&merged).contains("input_quicksave 192 -1 9 | 192 -1 9 | 192 -1 9\n"),
+            "{}",
+            read(&merged)
+        );
+        assert!(
+            read(&merged).contains("input_quickload 195 -1 10 | 195 -1 10 | 195 -1 10\n"),
+            "{}",
+            read(&merged)
         );
     }
 

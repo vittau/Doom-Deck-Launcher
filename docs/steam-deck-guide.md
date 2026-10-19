@@ -12,12 +12,16 @@ real gameplay; see the [hardware checklist](deck-testing.md).
 - [Konsole troubleshooting](#troubleshooting-from-konsole)
 - [FAQ](#faq)
 
-**Confirmed (source inspection):** the controller bindings below follow DSDA-Doom
-[v0.30.1 defaults](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c).
-The [engine research](research/dsda-engine.md) records pinned upstream evidence, including
-strict recording and mixed input. The [runtime research](research/steam-runtime-build.md)
-records the Compatibility tool / glibc constraint. Suggested layouts are **Proposed**;
-physical Deck results remain **Needs Deck Validation**.
+**Confirmed (source inspection):** the controller bindings below are the
+DSDA-Doom settings DDL itself provisions (baseline template v3, spec 034). They
+change nine bindings from DSDA-Doom [v0.30.1 defaults](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c);
+everything the table does not name stays at DSDA's own default. The
+[engine research](research/dsda-engine.md) §4 records the pinned upstream
+evidence — button codes, the three profile segments and the untouched defaults.
+Steam Input itself is still manual; the [runtime research](research/steam-runtime-build.md)
+records the Compatibility tool / glibc constraint. The layout is **Proposed**
+until the deck test confirms it; physical Deck results remain **Needs Deck
+Validation**.
 
 ## Install (from a GitHub Release)
 
@@ -130,30 +134,37 @@ Save** so it stays attached to this shortcut.
 
 ### 2. Suggested layout A — Classic (no gyro)
 
-In **Edit Layout**, pick a control from the left-hand list and assign the command from
-the table. The right-hand column is what DSDA-Doom itself does with that input, using
-its own defaults — **you do not need to rebind any buttons inside DSDA-Doom.**
+In **Edit Layout**, pick a control from the left-hand list and assign the command
+from the table. The right-hand column is what DSDA-Doom does with that input
+under DDL's baseline: **you do not need to rebind any buttons inside
+DSDA-Doom.**
 
-| Deck control | Steam Input assignment | What DSDA-Doom does with it (its default) |
+| Deck control | Steam Input assignment | What DSDA-Doom does with it (DDL's baseline) |
 | --- | --- | --- |
 | Left stick | Left joystick (leave as-is) | Move: `input_forward`, `input_backward`, `input_strafeleft`, `input_straferight` |
 | Right stick | Right joystick (leave as-is) | Turn / look |
-| Right trigger | Right trigger | **Fire** — `input_fire` |
-| Left trigger | Left trigger | **Automap** toggle — `input_map` |
-| A | A | Use / open doors — `input_use` |
-| B | B | Jump — `input_jump` |
-| X / Y | X / Y | Previous / next weapon — `input_prevweapon` / `input_nextweapon` |
-| Left bumper (L1) | Left bumper | Strafe modifier — `input_strafe` |
-| Right bumper (R1) | Leave unassigned | `input_use_artifact` exists for Heretic/Hexen artifacts, but DOOM does not use it |
-| L3 / R3 (stick clicks) | Stick clicks | Autorun toggle — `input_autorun`; 180° reverse — `input_reverse` (disabled while recording, see §6) |
-| D-pad | D-pad | Menu navigation — `input_menu_up`, `input_menu_down`, `input_menu_left`, `input_menu_right` |
+| Right trigger | Right trigger | **Fire** — `input_fire` (DSDA default) |
+| A | A | Use / open doors — `input_use` (DSDA default) |
+| B | B | **Toggle run (autorun)** — `input_autorun`; jump still keeps its DSDA default on B, so on maps that allow jumping B does both |
+| X | X | **Quick 180° turn** — `input_reverse` (disabled while a strict-mode demo records, see §6) |
+| Y | Y | Nothing: previous/next weapon moved to the D-pad |
+| Left bumper (L1) | Left bumper | **Quick save** — `input_quicksave` |
+| Right bumper (R1) | Right bumper | **Quick load** — `input_quickload` |
+| L2 (left trigger) | Left trigger | Nothing: the automap moved to View |
+| View (Select) | Back | **Toggle the automap** — `input_map` |
+| D-pad Up / Down | D-pad | **Automap zoom in / out** while the map is open — `input_map_zoomin` / `input_map_zoomout`. Outside the map these buttons keep their menu (and DOOM fly/Hexen) defaults, because DSDA lets one button carry several actions |
+| D-pad Left / Right | D-pad | **Previous / next weapon** — `input_prevweapon` / `input_nextweapon`. They still navigate menus, and they also switch weapons while the automap is open |
+| L3 / R3 (stick clicks) | Stick clicks | Nothing: autorun moved to B and the 180° turn to X |
+| Start | Start | Open/close the game menu — `input_menu_escape` (DSDA default) |
 | A / B in menus | A / B | Confirm — `input_menu_enter`; go back — `input_menu_backspace` |
-| Start | Start | Open/close the game menu — `input_menu_escape` |
-| View (Back) | Back | Clear a binding in DSDA-Doom's controls menu — `input_menu_clear` |
 | Right trackpad | **As Mouse** | Aiming and menu clicking |
 
-Most of these already match the default gamepad template, so on a fresh shortcut you
-may only need to set the right trackpad.
+DSDA-Doom's own defaults put the automap on L2, weapons on X/Y, autorun on L3
+and the 180° turn on R3, and have no quick save/load buttons. DDL changes only
+those nine bindings and keeps every keyboard binding, so keyboard play is
+unchanged. If you change a binding yourself in DSDA-Doom's own **Controls**
+menu, DDL keeps your version: it only re-applies a baseline when its template
+version changes, and it backs the old file up first (spec 005).
 
 ### 3. Suggested layout B — Modern + Gyro
 
@@ -178,7 +189,7 @@ The result:
 | Gyro | **Gyro To Mouse**, activated by **Right Stick Touch** | Fine aim while your thumb is on the stick |
 | Right trackpad | **As Mouse** | Precision aim and menus |
 | Rear buttons (L4/R4, optional) | Gyro button, set to toggle on/off | Only if you prefer a manual on/off over touch activation |
-| Triggers, face buttons, bumpers | Same as Classic | Fire, use, weapons, map |
+| Triggers, face buttons, bumpers | Same as Classic | Fire, use, weapons, map, autorun and the 180° turn |
 
 ### 4. Gamepad and mouse at the same time — avoid double input
 
@@ -188,10 +199,11 @@ The result:
   `use_game_controller 1` **and** `use_mouse 1`. The pad drives movement, turning and
   buttons; the mouse path drives gyro and the right trackpad. That coexistence is the
   whole point of the Modern + Gyro layout.
-- **Bind one action once.** DSDA-Doom already binds the right trigger, A, the bumpers
-  and so on by default, so do not *also* send a mouse click or a keyboard key from the
-  same Deck control in Steam. If you want to change something, change it in Steam and
-  leave DSDA-Doom at its default, or change it in DSDA-Doom's own menu — never both.
+- **Bind one action once.** DSDA-Doom's baseline already binds the right trigger,
+  A, B, X, the bumpers and the D-pad, so do not *also* send a mouse click or a
+  keyboard key from the same Deck control in Steam. If you want to change
+  something, change it in Steam and leave DSDA-Doom at its default, or change it
+  in DSDA-Doom's own menu — never both.
 - DDL's own launcher UI **ignores pointer motion**: it hides the cursor and only reacts
   to a click, so a gyro or trackpad mouse layout will not fling a pointer around the
   menu. Navigating DDL is gamepad-first — D-pad or left stick to move, A to select, B to
@@ -383,6 +395,11 @@ Common fixes:
   (missing IWAD, not installed, a component you must import, …).
 - **An install failed** — the logs are in `~/.local/state/ddl/logs/ddl.log`
   (the exact path is in `ddl doctor`); attach that file.
+- **The DDL window looks too big or too small** — you do not need a Steam launch
+  option for this: DDL fits its 1280×800 design to the window's physical size, so
+  Gaming Mode shows it at 1:1. If you want to override that on purpose, set
+  `SLINT_SCALE_FACTOR` (for example `SLINT_SCALE_FACTOR=1 %command%` as a launch
+  option); a user value always wins and is logged in `ddl.log`.
 
 ## FAQ
 

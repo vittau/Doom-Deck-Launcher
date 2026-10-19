@@ -30,7 +30,7 @@ pub use manager::{Clock, DSDA_DIR, DsdaConfigManager, Migration, Provision, Rese
 pub use merge::{MergeResult, merge};
 pub use overrides::{ALLOWED_KEYS, OverrideError, Overrides};
 pub use state::{Conflict, State, shorten_home};
-pub use template::{Template, TemplateError, VersionRange};
+pub use template::{Template, TemplateBinding, TemplateError, VersionRange};
 
 /// Why a configuration operation failed.
 #[derive(Debug)]
