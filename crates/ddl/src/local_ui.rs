@@ -64,6 +64,11 @@ impl Runtime {
             .iter()
             .find(|b| b.base.id() == *id)
     }
+    pub(super) fn base_profile_context(&self) -> Option<(String, Profile, Vec<Profile>)> {
+        self.local.view?;
+        let item = self.base_item()?;
+        Some((item.base.id(), item.profile.clone(), item.profiles.clone()))
+    }
     fn local_profile(&self) -> Option<Profile> {
         if let Some(base) = self.base_item() {
             return Some(base.profile.clone());
@@ -109,7 +114,7 @@ impl Runtime {
         self.local_open(View::Picker);
         self.local_op(ui, Op::Browse(self.env.home.clone()));
     }
-    pub(super) fn local_finished(&mut self, command: &Option<Command>) {
+    pub(super) fn local_finished(&mut self, ui: &AppWindow, command: &Option<Command>) {
         if let Some(Command::Local(operation)) = command {
             match operation {
                 Op::Create(name, ..) => {
@@ -120,6 +125,11 @@ impl Runtime {
                         .map(|s| s.id.clone());
                     self.local.creating = None;
                     self.local_open(View::Detail);
+                }
+                Op::BaseNew(..) => {
+                    self.local_open(View::BaseSetup);
+                    self.invoking = 3;
+                    self.edit_profile_name(ui);
                 }
                 Op::Browse(_) => {
                     self.local.view = Some(View::Picker);
@@ -549,6 +559,9 @@ impl Runtime {
                 if let Some(base) = self.base_item() {
                     if self.focus == 1 || self.focus == 2 {
                         self.local_op(ui, Op::BaseNew(base.base.id(), self.focus == 2));
+                    } else if self.focus == 4 {
+                        self.invoking = 4;
+                        self.edit_profile_name(ui);
                     } else if self.focus == 3 && base.profiles.len() > 1 {
                         self.show_sheet(Sheet::DeleteProfile(
                             base.profile.id.clone(),
@@ -915,10 +928,11 @@ impl Runtime {
                 }
                 View::BaseProfiles => {
                     if let Some(item) = self.base_item() {
-                        b.button(1, 36., 30., 358., "New profile".into(), true);
-                        b.button(2, 418., 30., 358., "Copy profile".into(), false);
+                        b.button(1, 36., 30., 270., text(ui, T::DefaultProfile), true);
+                        b.button(2, 330., 30., 270., text(ui, T::CopyProfile), false);
+                        b.button(4, 624., 30., 270., text(ui, T::RenameProfile), false);
                         if item.profiles.len() > 1 {
-                            b.button(3, 800., 30., 388., "Delete profile".into(), false);
+                            b.button(3, 918., 30., 270., text(ui, T::DeleteProfile), false);
                         }
                         for (index, p) in item.profiles.iter().enumerate() {
                             b.row(

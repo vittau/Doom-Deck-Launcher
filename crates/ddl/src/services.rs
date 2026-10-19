@@ -644,7 +644,17 @@ impl Services {
                         self.fresh_base_profile(&item.base)?
                     };
                     profile.id = self.free_base_profile_id(item.base.game)?;
-                    profile.name = format!("Profile {}", item.profiles.len() + 1);
+                    profile.name = (2..)
+                        .find_map(|n| {
+                            ddl_core::profiles::validate_name(
+                                &format!("Profile {n}"),
+                                &id,
+                                None,
+                                &item.profiles,
+                            )
+                            .ok()
+                        })
+                        .expect("a free numbered name");
                     profile.last_played = None;
                     self.profiles
                         .save(&profile)

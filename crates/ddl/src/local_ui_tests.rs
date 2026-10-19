@@ -605,13 +605,27 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     assert_eq!(r.base_item().unwrap().profiles.len(), 2);
     let profiles = &r.base_item().unwrap().profiles;
     assert_ne!(profiles[0].id, profiles[1].id);
+    assert!(matches!(r.sheet, Some(Sheet::ProfileNames)));
+    ui.set_profile_name("Weekend Doom II".into());
+    click(&mut r, &ui, 917);
+    assert_eq!(r.base_item().unwrap().profile.name, "Weekend Doom II");
+    click(&mut r, &ui, 3);
+    click(&mut r, &ui, 4);
+    assert!(matches!(r.sheet, Some(Sheet::ProfileNames)));
+    ui.set_profile_name("default".into());
+    click(&mut r, &ui, 917);
+    assert!(!ui.get_profile_name_error().is_empty());
+    ui.set_profile_name("My Doom II run".into());
+    write_png("032-base-profile-name.png", &render(&window));
+    click(&mut r, &ui, 917);
+    assert_eq!(r.base_item().unwrap().profile.name, "My Doom II run");
     click(&mut r, &ui, 10);
     assert_eq!(r.local.view, Some(View::BaseSetup));
     click(&mut r, &ui, 6);
     assert_eq!(r.local.view, Some(View::Order));
     act(&mut r, &ui, Action::Back);
     assert_eq!(r.local.view, Some(View::BaseSetup));
-    // Check sources through the actual Settings renderer; automatic rows have no action.
+    // Automatic source actions show information and never offer removal.
     r.local = LocalUi::default();
     r.screen = Screen::Settings;
     r.settings_section = 1;

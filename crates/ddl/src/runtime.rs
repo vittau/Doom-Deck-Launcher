@@ -298,7 +298,7 @@ impl Runtime {
                     match result {
                         Ok(snapshot) => {
                             self.snapshot = Some(*snapshot);
-                            self.local_finished(&command);
+                            self.local_finished(ui, &command);
                             self.problem = None;
                             if let Some(Command::UpdateMapset(id)) = &command
                                 && let Some(item) = self
@@ -1110,21 +1110,29 @@ impl Runtime {
         }
     }
     fn profile_action(&mut self, ui: &AppWindow) {
-        let Some(item) = self.item().cloned() else {
+        let Some((target, profile, profiles)) = self.base_profile_context().or_else(|| {
+            self.item().map(|item| {
+                (
+                    item.recipe.id.clone(),
+                    item.profile.clone(),
+                    item.profiles.clone(),
+                )
+            })
+        }) else {
             return;
         };
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
             if self.focus == 917 {
                 match ddl_core::profiles::validate_name(
                     &ui.get_profile_name(),
-                    &item.recipe.id,
-                    Some(&item.profile.id),
-                    &item.profiles,
+                    &target,
+                    Some(&profile.id),
+                    &profiles,
                 ) {
                     Ok(name) => {
                         self.sheet = None;
                         self.focus = self.invoking;
-                        self.start(ui, Command::RenameProfile(item.profile.id, name));
+                        self.start(ui, Command::RenameProfile(profile.id, name));
                     }
                     Err(reason) => ui.set_profile_name_error(reason.into()),
                 }
@@ -1135,26 +1143,23 @@ impl Runtime {
             return;
         }
         match self.focus {
-            id if id >= 1000 && (id - 1000) < item.profiles.len() as i32 => {
+            id if id >= 1000 && (id - 1000) < profiles.len() as i32 => {
                 self.start(
                     ui,
-                    Command::SelectProfile(
-                        item.recipe.id,
-                        item.profiles[(id - 1000) as usize].id.clone(),
-                    ),
+                    Command::SelectProfile(target, profiles[(id - 1000) as usize].id.clone()),
                 );
             }
             912 | 913 => {
                 let copy = self.focus == 912;
                 self.sheet = None;
                 self.focus = self.invoking;
-                self.start(ui, Command::NewProfile(item.recipe.id, copy));
+                self.start(ui, Command::NewProfile(target, copy));
             }
             914 => {
                 self.edit_profile_name(ui);
             }
-            915 if item.profiles.len() > 1 => {
-                self.sheet = Some(Sheet::DeleteProfile(item.profile.id, item.profile.name));
+            915 if profiles.len() > 1 => {
+                self.sheet = Some(Sheet::DeleteProfile(profile.id, profile.name));
                 self.focus = 900;
             }
             916 => {
@@ -1165,8 +1170,12 @@ impl Runtime {
         }
     }
     fn edit_profile_name(&mut self, ui: &AppWindow) {
-        if let Some(item) = self.item() {
-            ui.set_profile_name(item.profile.name.clone().into());
+        let profile = self
+            .base_profile_context()
+            .map(|(_, profile, _)| profile)
+            .or_else(|| self.item().map(|item| item.profile.clone()));
+        if let Some(profile) = profile {
+            ui.set_profile_name(profile.name.into());
             ui.set_profile_name_error("".into());
             self.sheet = Some(Sheet::ProfileNames);
             self.focus = 918;
@@ -1196,7 +1205,6 @@ impl Runtime {
         self.start(ui, command);
     }
     fn profile_sheet(&self, ui: &AppWindow) {
-        let Some(item) = self.item() else { return };
         let mut b = Nodes::new(ui);
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
             ui.set_sheet_title(text(ui, T::RenameProfile));
@@ -1206,6 +1214,7 @@ impl Runtime {
             b.button(917, 32., 360., 304., text(ui, T::SaveProfileName), true);
             b.button(916, 368., 360., 304., text(ui, T::Cancel), false);
         } else {
+            let Some(item) = self.item() else { return };
             ui.set_sheet_title(text(ui, T::Profiles));
             let active = item
                 .profiles
