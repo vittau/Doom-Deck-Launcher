@@ -752,7 +752,6 @@ impl Runtime {
                             .is_some_and(|_| selected.is_none());
                         if view == View::Base {
                             b.art(36., 36., 270., 284., 4);
-                            b.label(36., 344., 270., 100., "Original game".into(), 26.);
                             b.title(340., 28., 824., 52., base.title().into(), 34.);
                             b.label(
                                 340.,
@@ -772,7 +771,7 @@ impl Runtime {
                                 132.,
                                 824.,
                                 60.,
-                                elide_path_middle(&entry.path.display().to_string(), 78).into(),
+                                elide_path_middle(&tilde(&entry.path, &self.env.home), 78).into(),
                                 20.,
                             );
                             if missing {
@@ -804,10 +803,9 @@ impl Runtime {
                             );
                         } else {
                             b.art(36., 36., 270., 224., 4);
-                            b.label(36., 284., 270., 44., "Original game".into(), 26.);
                             b.label(
                                 36.,
-                                334.,
+                                284.,
                                 270.,
                                 52.,
                                 format!(
@@ -820,10 +818,10 @@ impl Runtime {
                             );
                             b.label(
                                 36.,
-                                394.,
+                                344.,
                                 270.,
                                 68.,
-                                elide_path_middle(&entry.path.display().to_string(), 38).into(),
+                                elide_path_middle(&tilde(&entry.path, &self.env.home), 38).into(),
                                 18.,
                             );
                             b.title(340., 20., 824., 44., base.title().into(), 32.);
@@ -920,7 +918,7 @@ impl Runtime {
                                     entry.variant.as_deref().unwrap_or_default()
                                 )
                                 .into(),
-                                elide_path_middle(&entry.path.display().to_string(), 100).into(),
+                                elide_path_middle(&tilde(&entry.path, &self.env.home), 100).into(),
                                 true,
                             );
                         }
@@ -1315,19 +1313,18 @@ impl Runtime {
             }
             for node in &mut b.nodes {
                 if node.y >= 96. {
-                    node.y += 252.;
+                    node.y += 202.;
                 }
             }
             b.title(12., 96., 1200., 42., "Base games".into(), 30.);
             for (index, item) in s.base_games.iter().enumerate() {
                 let x = 12. + index as f32 * 306.;
-                b.card(BASE + index as i32, x, 152., 282., 132.);
+                b.card(BASE + index as i32, x, 152., 282., 84.);
                 b.title(x + 18., 166., 246., 64., item.base.title().into(), 24.);
-                b.label(x + 18., 238., 246., 32., "Original game".into(), 20.);
             }
             b.title(
                 12.,
-                302.,
+                252.,
                 1200.,
                 42.,
                 "Mapsets and custom setups".into(),
@@ -1412,17 +1409,8 @@ impl Runtime {
                 b.nodes.retain(|n| n.x >= 800. || n.y > 330. || n.kind == 1);
                 b.art(36., 36., 240., 300., 4);
                 b.title(308., 56., 448., 80., item.base.title().into(), 36.);
-                b.label(308., 156., 448., 64., "Original game".into(), 22.);
-                b.label(308., 212., 448., 28., item.profile.name.clone().into(), 22.);
+                b.label(308., 132., 448., 36., item.profile.name.clone().into(), 22.);
                 b.nodes.retain(|n| !(n.x == 852. && n.y == 316.));
-                b.label(
-                    852.,
-                    316.,
-                    336.,
-                    64.,
-                    format!("Original game · {}", item.base.iwad.source.label()).into(),
-                    22.,
-                );
                 b.button(
                     BASE + index as i32,
                     308.,
@@ -1485,7 +1473,7 @@ impl Runtime {
                 for (index, (_, title, profile, recipe)) in recent.into_iter().take(2).enumerate() {
                     let x = 36. + index as f32 * 360.;
                     if let Some(recipe) = recipe {
-                        b.recipe_art(ui, x, 400., 56., 66., recipe);
+                        b.recipe_art(x, 400., 56., 66., recipe);
                     } else {
                         b.art(x, 400., 56., 66., 4);
                     }
@@ -1557,7 +1545,6 @@ impl Runtime {
             if custom_time.is_some_and(|time| catalog_time.is_none_or(|old| time >= old)) {
                 ui.set_band_art(4);
                 ui.set_band_screenshot(Default::default());
-                ui.set_subtitle(text(ui, T::HomeSub));
             }
         }
         if self.screen == Screen::Home
@@ -1579,7 +1566,6 @@ impl Runtime {
             if base_time.is_some_and(|t| other.is_none_or(|old| t >= old)) {
                 ui.set_band_art(4);
                 ui.set_band_screenshot(Default::default());
-                ui.set_subtitle(text(ui, T::HomeSub));
             }
         }
         let c = ui.global::<LocalStrings>();
@@ -1623,19 +1609,21 @@ impl Runtime {
                 View::Compat => c.get_compat(),
                 View::Picker => c.get_picker(),
             });
-            ui.set_subtitle(match view {
-                View::Base | View::BaseSetup | View::BaseCopies | View::BaseProfiles => {
-                    "Original game".into()
-                }
+            ui.set_status(match view {
                 View::New => c.get_new_help(),
                 View::Order => c.get_order_help(),
                 View::Iwad => c.get_iwad_help(),
-                View::Compat => c.get_auto(),
                 View::Picker => self
                     .directory
                     .as_ref()
                     .map_or(c.get_picker_help(), |d| d.path.display().to_string().into()),
-                View::Detail => c.get_badge(),
+                // The page itself names the base game, badge and options.
+                View::Base
+                | View::BaseSetup
+                | View::BaseCopies
+                | View::BaseProfiles
+                | View::Compat
+                | View::Detail => Default::default(),
             });
             if view == View::Order && self.local_row_index().is_some() {
                 ui.set_a_hint(if self.local.moving.is_some() {
@@ -1770,6 +1758,14 @@ fn page_start(index: usize, start: usize, capacity: usize) -> usize {
         index + 1 - capacity
     } else {
         start
+    }
+}
+/// A path under the home directory shown with `~` (spec 033, R5).
+fn tilde(path: &std::path::Path, home: &std::path::Path) -> String {
+    match path.strip_prefix(home) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".into(),
+        Ok(rest) => format!("~/{}", rest.display()),
+        Err(_) => path.display().to_string(),
     }
 }
 fn elide_path_middle(path: &str, limit: usize) -> String {

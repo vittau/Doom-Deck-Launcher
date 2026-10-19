@@ -1,11 +1,12 @@
 """Offline Ember production compositor. Run with Pillow 12.3.0; no runtime dependency.
 Source: original generated phase-A atlas; exact prompt retained in docs/design/visual-v2/ember-cathedral/prompt.txt.
-Painted Eviternity/fallback PNG masters are preserved; prompts retained below.
+Painted Eviternity/fallback masters (now JPEG) are preserved; prompts retained below.
+Spec 035: opaque art is JPEG quality 60, at most 1280x800; frame and ornaments stay lossless PNG.
 """
 from pathlib import Path
-from PIL import Image, ImageOps, ImageDraw, ImageFont
+from PIL import Image, ImageOps, ImageDraw
 # 2026-10-16 cover repaint: built-in image_gen, style references only:
-# sigil.png and sigil-ii.png. Original concept art under repository GPL-3.0-or-later.
+# sigil.jpg and sigil-ii.jpg. Original concept art under repository GPL-3.0-or-later.
 # Generated covers are committed raster masters; offline regeneration keeps them
 # and deterministically derives their bands. Re-generation is not byte reproducible.
 COVER_PROMPTS = {
@@ -36,18 +37,21 @@ OUT = Path(__file__).resolve().parent
 SOURCE = ROOT / 'docs/design/visual-v2'
 a = Image.open(SOURCE/'ember-cathedral/art-atlas.png').convert('RGB')
 def save(im, name):
-    im.save(OUT/name, optimize=True)
+    if name.endswith('.jpg'):
+        assert im.width <= 1280 and im.height <= 800, name
+        im.save(OUT/name, quality=60, optimize=True)
+    else:
+        im.save(OUT/name, optimize=True)
 # Mirrored quarters meet with identical edge pixels on both axes: seamless repeat.
 q = a.crop((0, 0, 512, 438)).resize((256, 219))
 tile = Image.new('RGB', (512, 438))
 tile.paste(q, (0,0)); tile.paste(ImageOps.mirror(q), (256,0))
 tile.paste(ImageOps.flip(tile.crop((0,0,512,219))), (0,219))
 tile = Image.blend(tile, Image.new('RGB', tile.size, '#120C0D'), .38)
-save(tile, 'wall-tile.png')
 wall = Image.new('RGB', (1280,632))
 for y in range(0,632,438):
     for x in range(0,1280,512): wall.paste(tile, (x,y))
-save(wall, 'wall.png')
+save(wall, 'wall.jpg')
 source_frame = a.crop((512,0,1024,438))
 f = source_frame.resize((256,220), Image.Resampling.LANCZOS)
 # Only plain rail cross-sections stretch. Corners and ornaments never scale up.
@@ -69,12 +73,12 @@ for name, box, size in [
 for i, name in enumerate(['sigil','sigil-ii','auger','eviternity','fallback']):
     if i < 3:
         cover=a.crop((i*512,438,(i+1)*512,1024))
-        save(cover,name+'.png')
+        save(cover,name+'.jpg')
     else:
         # Committed painted masters: never replace these with SVG exports.
-        cover=Image.open(OUT/(name+'.png')).convert('RGB')
+        cover=Image.open(OUT/(name+'.jpg')).convert('RGB')
         assert cover.size == (512,586), name
-        assert (OUT/(name+'.png')).stat().st_size <= 600_000, name
+        assert (OUT/(name+'.jpg')).stat().st_size <= 200_000, name
     # One continuous source crop, with the transition into the title baked in.
     band=ImageOps.fit(cover,(400,88),centering=(.5,.35))
     fade=Image.new('L',band.size)
@@ -83,18 +87,10 @@ for i, name in enumerate(['sigil','sigil-ii','auger','eviternity','fallback']):
         alpha=round(255 * t*t*(3-2*t))
         ImageDraw.Draw(fade).line((x,0,x,87),fill=alpha)
     band=Image.composite(band,Image.new('RGB',band.size,'#120C0D'),fade)
-    save(band,name+'-band.png')
-    assert (OUT/(name+'-band.png')).stat().st_size <= 600_000, name
-emblem = a.crop((1024,0,1536,438))
-save(ImageOps.fit(emblem,(64,64)), 'emblem.png')
-# Legible Barlow letterforms; original bronze inset / bone face, no franchise shapes.
-logo=Image.new('RGBA',(116,56))
-d=ImageDraw.Draw(logo); f=ImageFont.truetype(str(SOURCE/'fonts/barlow-Barlow-Regular.ttf'),46)
-d.text((2,-3),'DDL',font=f,fill='#80533B',stroke_width=1)
-d.text((1,-5),'DDL',font=f,fill='#F8EAD5')
-d.line((2,52,94,52),fill='#B8583F',width=2)
-save(logo,'logotype.png')
-for p in sorted(OUT.glob('*.png')): print(p.name, p.stat().st_size)
-assert sum(p.stat().st_size for p in OUT.glob('*.png')) < 6_000_000
+    save(band,name+'-band.jpg')
+    assert (OUT/(name+'-band.jpg')).stat().st_size <= 200_000, name
+outputs = sorted([*OUT.glob('*.png'), *OUT.glob('*.jpg')])
+for p in outputs: print(p.name, p.stat().st_size)
+assert sum(p.stat().st_size for p in outputs) < 1_000_000
 assert list(tile.crop((0,0,1,438)).get_flattened_data()) == list(tile.crop((511,0,512,438)).get_flattened_data())
 assert list(tile.crop((0,0,512,1)).get_flattened_data()) == list(tile.crop((0,437,512,438)).get_flattened_data())

@@ -1465,44 +1465,25 @@ impl Runtime {
             self.item()
         };
         ui.set_band_art(band_item.map_or(4, |i| art(&i.recipe.id)));
-        let (image, credit) = band_item.map_or_else(Default::default, |i| {
-            crate::screenshots::presentation(ui, &i.recipe)
-        });
-        ui.set_band_screenshot(image);
-        ui.set_band_credit(credit);
-        ui.set_subtitle(text(
-            ui,
-            if self.playing {
-                T::PlayingSub
-            } else if self.screen == Screen::FirstRun {
-                T::FirstSub
-            } else if self.busy {
-                T::Working
-            } else {
-                match self.screen {
-                    Screen::FirstRun => T::FirstHelp,
-                    Screen::Home => {
-                        if self
-                            .snapshot
-                            .as_ref()
-                            .is_some_and(|s| s.items.iter().any(|i| i.last_played.is_some()))
-                        {
-                            T::HomeSub
-                        } else {
-                            T::HomeIntro
-                        }
-                    }
-                    Screen::Review | Screen::Browser => T::ScanHelp,
-                    Screen::Setup => T::SetupSub,
-                    Screen::Detail => T::DetailSub,
-                    Screen::Discover => T::DiscoverSub,
-                    Screen::Library => T::LibrarySub,
-                    Screen::Progress => T::InstallTitle,
-                    Screen::Settings => T::SettingsSub,
-                    Screen::Loading => T::Loading,
-                }
-            },
-        ));
+        ui.set_band_screenshot(band_item.map_or_else(Default::default, |i| {
+            crate::screenshots::presentation(&i.recipe)
+        }));
+        // A header is its title alone; the status line only reports a state,
+        // a requirement or the next step (spec 033).
+        let status = if self.playing {
+            Some(T::PlayingSub)
+        } else if self.screen == Screen::FirstRun {
+            None
+        } else if self.busy {
+            Some(T::Working)
+        } else {
+            match self.screen {
+                Screen::Review | Screen::Browser => Some(T::ScanHelp),
+                Screen::Loading => Some(T::Loading),
+                _ => None,
+            }
+        };
+        ui.set_status(status.map_or_else(Default::default, |key| text(ui, key)));
         let mut b = Nodes::new(ui);
         if self.playing {
             b.panel(12., 12., 1200., 478.);
@@ -1547,7 +1528,7 @@ impl Runtime {
                     b.panel(12., 12., 784., 478.);
                     b.panel(828., 12., 384., 478.);
                     if let Some(item) = latest {
-                        b.recipe_art(ui, 36., 36., 240., 300., &item.recipe);
+                        b.recipe_art(36., 36., 240., 300., &item.recipe);
                         b.title(
                             308.,
                             56.,
@@ -1579,8 +1560,7 @@ impl Runtime {
                         );
                         b.button(1, 308., 252., 448., text(ui, T::Continue), true);
                     } else {
-                        b.label(36., 42., 720., 100., text(ui, T::HomeEmpty), 36.);
-                        b.label(36., 160., 720., 80., text(ui, T::NoHistory), 22.);
+                        b.label(36., 42., 720., 100., text(ui, T::NoHistory), 36.);
                         b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), true);
                     }
                     b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
@@ -1593,7 +1573,7 @@ impl Runtime {
                         }
                         for (n, i) in recent.into_iter().take(2).enumerate() {
                             let x = 36. + n as f32 * 360.;
-                            b.recipe_art(ui, x, 400., 56., 66., &i.recipe);
+                            b.recipe_art(x, 400., 56., 66., &i.recipe);
                             b.title(
                                 x + 72.,
                                 400.,
@@ -1654,7 +1634,7 @@ impl Runtime {
                             let x = 12. + 408. * (visible % 3) as f32;
                             let y = 12. + top + 438. * (visible / 3) as f32;
                             b.card(10 + i as i32, x, y, 384., 410.);
-                            b.recipe_art(ui, x + 16., y + 16., 352., 142., &item.recipe);
+                            b.recipe_art(x + 16., y + 16., 352., 142., &item.recipe);
                             if item.favorite {
                                 b.favorite(x + 316., y + 26.);
                             }
@@ -1774,8 +1754,7 @@ impl Runtime {
                 }
                 Screen::Detail => {
                     if let Some(item) = self.item() {
-                        b.recipe_art(ui, 12., 12., 360., 262., &item.recipe);
-                        b.nodes.last_mut().unwrap().full_credit = true;
+                        b.recipe_art(12., 12., 360., 262., &item.recipe);
                         if item.favorite {
                             b.favorite(316., 22.);
                         }
@@ -1911,9 +1890,9 @@ impl Runtime {
                         );
                         b.label(
                             428.,
-                            y + 86.,
+                            y + 84.,
                             600.,
-                            64.,
+                            56.,
                             text(ui, T::ProfileSummary)
                                 .as_str()
                                 .replace("{skill}", &item.profile.skill.to_string())
@@ -1955,14 +1934,27 @@ impl Runtime {
                         b.button(6, 1052., y + 52., 136., text(ui, T::EditProfile), false);
                         b.label(
                             428.,
-                            y + 154.,
+                            y + 142.,
                             760.,
                             28.,
                             item.recipe.page.clone().into(),
                             20.,
                         );
-                        b.label(428., y + 184., 760., 44., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
-                        b.nodes[detail_panel].h = (y + 218.).max(478.);
+                        let mut notes_y = y + 170.;
+                        let credits = crate::screenshots::recipe_credits(&item.recipe);
+                        if !credits.is_empty() {
+                            b.label(
+                                428.,
+                                notes_y,
+                                760.,
+                                28.,
+                                value(ui, T::ScreenshotsCredit, credits.join(", ")),
+                                20.,
+                            );
+                            notes_y += 28.;
+                        }
+                        b.label(428., notes_y, 760., 30., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
+                        b.nodes[detail_panel].h = (notes_y + 34.).max(478.);
                     }
                 }
                 Screen::Setup => {
@@ -2224,7 +2216,7 @@ impl Runtime {
                                 if self.focus == 50 {
                                     self.focus = 1;
                                 }
-                                ui.set_subtitle(text(ui, T::ErrorConfig));
+                                ui.set_status(text(ui, T::ErrorConfig));
                             }
                         } else if let Err(blocker) = &item.launch {
                             let (reason, action) = blocker_copy(blocker);
@@ -2304,16 +2296,18 @@ impl Runtime {
                         Some(InstallStage::Commit) => T::CommitHelp,
                         None => T::Working,
                     };
-                    ui.set_subtitle(text(
-                        ui,
-                        if self.problem.is_some() {
-                            T::InstallErrorSub
-                        } else if self.cancel.is_cancelled() {
-                            T::CancelPending
-                        } else {
-                            stage_help
-                        },
-                    ));
+                    ui.set_status(if self.problem.is_some() {
+                        Default::default()
+                    } else {
+                        text(
+                            ui,
+                            if self.cancel.is_cancelled() {
+                                T::CancelPending
+                            } else {
+                                stage_help
+                            },
+                        )
+                    });
                     b.label(
                         36.,
                         112.,
@@ -2458,7 +2452,7 @@ impl Runtime {
                 }
                 Screen::Browser => {
                     if let Some(d) = &self.directory {
-                        ui.set_subtitle(elide_path_start(&d.path.display().to_string(), 88).into());
+                        ui.set_status(elide_path_start(&d.path.display().to_string(), 88).into());
                         b.panel(12., 12., 360., 478.);
                         b.label(36., 36., 312., 38., text(ui, T::Shortcuts), 26.);
                         for (i, p) in d.shortcuts.iter().enumerate() {
@@ -2507,6 +2501,14 @@ impl Runtime {
                 }
                 Screen::Settings => {
                     b.panel(12., 12., 312., 360.);
+                    // Spec 033, R4: About lists every screenshot credit as plain text,
+                    // about 85 characters to a 20 px line.
+                    let credits = value(
+                        ui,
+                        T::ScreenshotsCredit,
+                        crate::screenshots::all_credits().join(", "),
+                    );
+                    let credit_height = credits.chars().count().div_ceil(85).max(1) as f32 * 28.;
                     let height = match self.settings_section {
                         0 => 700.,
                         1 => self.snapshot.as_ref().map_or(316., |s| {
@@ -2514,10 +2516,9 @@ impl Runtime {
                                 .max(316.)
                         }),
                         2 => 280.,
-                        // 478 like the Engine section so the spec 017 R6 widescreen
-                        // status-bar credit under the version block stays inside
-                        // the panel instead of spilling past its lower border.
-                        _ => 478.,
+                        // Tall enough for the spec 017 R6 widescreen status-bar credit and
+                        // the spec 033 screenshot credits under the version block.
+                        _ => (384. + credit_height + 12.).max(478.),
                     };
                     b.panel(348., 12., 864., height);
                     for (i, label) in [T::Engine, T::Folders, T::Config, T::Diagnostics]
@@ -2756,15 +2757,16 @@ impl Runtime {
                                     372.,
                                     96.,
                                     816.,
-                                    100.,
+                                    64.,
                                     s.logs.display().to_string().into(),
                                     22.,
                                 );
-                                b.logo(372., 220., 560., 128., false);
-                                b.label(960., 252., 228., 44., text(ui, T::AppVersion), 26.);
-                                b.label(960., 314., 228., 44., crate::cli::VERSION.into(), 22.);
+                                b.logo(372., 170., 560., 128., false);
+                                b.label(960., 202., 228., 44., text(ui, T::AppVersion), 26.);
+                                b.label(960., 264., 228., 44., crate::cli::VERSION.into(), 22.);
                                 // Spec 017, R6: credit the widescreen status bars.
-                                b.label(372., 372., 816., 60., text(ui, T::StatusBarCredit), 20.);
+                                b.label(372., 316., 816., 56., text(ui, T::StatusBarCredit), 20.);
+                                b.label(372., 384., 816., credit_height, credits.clone(), 20.);
                             }
                         }
                     }
@@ -3058,8 +3060,6 @@ impl Nodes {
             tone: 0,
             art: 0,
             screenshot: Default::default(),
-            credit: Default::default(),
-            full_credit: false,
             fitted_label: false,
         });
     }
@@ -3096,24 +3096,9 @@ impl Nodes {
         );
         self.nodes.last_mut().unwrap().art = art;
     }
-    fn recipe_art(
-        &mut self,
-        ui: &AppWindow,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        recipe: &ddl_core::catalog::Recipe,
-    ) {
+    fn recipe_art(&mut self, x: f32, y: f32, w: f32, h: f32, recipe: &ddl_core::catalog::Recipe) {
         self.art(x, y, w, h, art(&recipe.id));
-        let (image, credit) = crate::screenshots::presentation(ui, recipe);
-        let node = self.nodes.last_mut().unwrap();
-        node.screenshot = image;
-        node.credit = if w >= 160. {
-            credit
-        } else {
-            Default::default()
-        };
+        self.nodes.last_mut().unwrap().screenshot = crate::screenshots::presentation(recipe);
     }
     fn label(&mut self, x: f32, y: f32, w: f32, h: f32, label: SharedString, size: f32) {
         self.push(-999, x, y, w, h, 0, label, Default::default(), false, false);

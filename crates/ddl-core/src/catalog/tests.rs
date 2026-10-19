@@ -1373,6 +1373,82 @@ fn screenshots_lint_accepts_a_carded_asset_with_sources() {
     assert_eq!(lint_screenshot_repo(&temp), vec![]);
 }
 
+/// A header-only PNG: signature, IHDR length, `IHDR`, width and height.
+fn png_header(width: u32, height: u32) -> Vec<u8> {
+    let mut bytes = b"\x89PNG\r\n\x1a\n".to_vec();
+    bytes.extend_from_slice(&13u32.to_be_bytes());
+    bytes.extend_from_slice(b"IHDR");
+    bytes.extend_from_slice(&width.to_be_bytes());
+    bytes.extend_from_slice(&height.to_be_bytes());
+    bytes.extend_from_slice(&[8, 2, 0, 0, 0, 0, 0, 0, 0]);
+    bytes
+}
+
+/// Lints a repository whose single screenshot has the given bytes.
+fn lint_screenshot_bytes(bytes: Vec<u8>) -> Vec<Diagnostic> {
+    let temp = screenshot_repo(Some(&sources_toml("Test author")));
+    fs::write(
+        temp.0.join("crates/ddl/ui/assets/screenshots/sigil/01.jpg"),
+        bytes,
+    )
+    .unwrap();
+    lint_screenshot_repo(&temp)
+}
+
+#[test]
+fn screenshots_lint_enforces_jpeg_1280x800_and_the_byte_cap() {
+    // Both edges of the dimension bound and the byte cap pass.
+    assert_eq!(lint_screenshot_bytes(jpeg_header(1280, 800)), vec![]);
+    let mut at_cap = jpeg_header(1280, 800);
+    at_cap.resize(192 * 1024, 0);
+    assert_eq!(lint_screenshot_bytes(at_cap), vec![]);
+
+    // A PNG is rejected, even at an accepted size, under a `.jpg` name.
+    let errors = lint_screenshot_bytes(png_header(640, 360));
+    assert!(
+        errors.iter().any(|e| e.message.contains("must be JPEG")),
+        "{errors:?}"
+    );
+
+    // An oversize JPEG is rejected on either axis.
+    for (width, height) in [(1281, 800), (1280, 801), (1920, 1080)] {
+        let errors = lint_screenshot_bytes(jpeg_header(width, height));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.message.contains("larger than 1280x800")),
+            "{width}x{height}: {errors:?}"
+        );
+    }
+
+    // A JPEG one byte over the cap is rejected.
+    let mut over = jpeg_header(1280, 800);
+    over.resize(192 * 1024 + 1, 0);
+    let errors = lint_screenshot_bytes(over);
+    assert!(
+        errors.iter().any(|e| e.message.contains("over the")),
+        "{errors:?}"
+    );
+}
+
+#[test]
+fn screenshots_lint_rejects_non_jpeg_asset_names() {
+    for name in ["sigil/01.png", "sigil/01.webp"] {
+        let mut r = recipe("sigil");
+        r.screenshots = vec![Screenshot {
+            asset: name.into(),
+            credit: "Test author".into(),
+        }];
+        let errors = validate(&r, Path::new("sigil.toml"), &hosts());
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.message.contains("invalid or duplicate screenshot asset")),
+            "{name}: {errors:?}"
+        );
+    }
+}
+
 #[test]
 fn screenshots_lint_reports_missing_oversize_small_and_uncredited_assets() {
     // A referenced asset that is not committed.
@@ -1386,7 +1462,7 @@ fn screenshots_lint_reports_missing_oversize_small_and_uncredited_assets() {
         "{errors:?}"
     );
 
-    // Over the 256 KiB hard bound.
+    // Over the 192 KiB hard bound.
     let temp = screenshot_repo(Some(&sources_toml("Test author")));
     let mut big = jpeg_header(640, 360);
     big.resize(300 * 1024, 0);

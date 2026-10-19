@@ -110,9 +110,16 @@ the mapset authors' material: DDL commits them, credits them and removes one on 
 request. Add them in the same pull request as the recipe.
 
 1. Commit a representative **in-game** view (a recognisable map, not a title screen, logo or box
-   art) under `crates/ddl/ui/assets/screenshots/<id>/`, named `01.jpg`, `02.jpg`, …. Use a card
-   crop: **16:9, 640×360, JPEG, ≤ 250 KB** (any editor; keep the original colours, add no border
-   or text). One to three per recipe. Never commit the full-size original.
+   art) under `crates/ddl/ui/assets/screenshots/<id>/`, named `01.jpg`, `02.jpg`, …. The rule
+   (spec 035; every bundled image is embedded in the `ddl` binary): **JPEG only, 640×360 up to
+   1280×800, ≤ 192 KiB**, saved at quality 60 (lower if the file is still over the cap). Prefer
+   a 16:9 crop; keep the original colours, add no border or text. One to three per recipe. Never
+   commit the full-size original. One command produces a compliant file (macOS `sips`, or
+   ImageMagick on Linux):
+
+   ```sh
+   scripts/lean-image.sh original.png crates/ddl/ui/assets/screenshots/<id>/01.jpg
+   ```
 2. Record where each file came from in `crates/ddl/ui/assets/screenshots/<id>/SOURCES.toml`
    (schema 1), one `[[screenshot]]` entry per file: `file`, `source_url`, `source_page`,
    `credit` (who made the mapset, or who took the shot), `original_size` (`WxH` before the
@@ -130,13 +137,20 @@ request. Add them in the same pull request as the recipe.
    the UI shows next to the image. Omit the field for a mapset you could not source — the painted
    fallback art stays.
 4. Run the lint (see step 6 above). It rejects a missing image, a duplicate or traversing
-   `asset`, a missing `credit`, a file over 256 KiB, an image smaller than 640×360, a file that
-   is not PNG/JPEG/WebP, and a file with no `SOURCES.toml` entry carrying a credit and source URL.
+   `asset`, a missing `credit`, a file over 192 KiB, an image smaller than 640×360 or larger than
+   1280×800, a file that is not a JPEG (PNG and WebP are rejected), and a file with no
+   `SOURCES.toml` entry carrying a credit and source URL.
 
 Prefer the mapset's own site or release page, the project repository, an author page, or a
 community screenshot posted in the official release thread. Doomworld and DoomWiki block
 automated fetches; when a page is reachable only through the Wayback Machine, record the page you
 read and the exact image URL you downloaded.
+
+The same rule covers the UI art in `crates/ddl/ui/assets/`: raster art with no real transparency
+is a JPEG of at most 1280×800 (`scripts/lean-image.sh`). The exceptions are art that uses its alpha
+channel, and the 9-slice `frame.png` and the four `ornament-*.png` sprites in `ember/` (each under
+8 KB). Those stay lossless PNG: JPEG would save about 12 KB in total and would blur their 1-pixel
+bevels. Art with alpha is also capped at 1280×800 and recompressed losslessly.
 
 ### Copy-paste template and annotated example
 

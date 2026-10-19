@@ -268,7 +268,7 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
             format!("{key}.asset"),
             !screenshot_asset(&s.asset) || !screenshot_assets.insert(&s.asset),
             "invalid or duplicate screenshot asset",
-            "use a unique relative path like <id>/01.jpg with a .jpg/.jpeg/.png/.webp extension",
+            "use a unique relative path like <id>/01.jpg with a .jpg or .jpeg extension (JPEG only)",
         );
         issue(
             format!("{key}.credit"),
@@ -857,14 +857,14 @@ fn cosmetic_member_paths<'a>(r: &'a Recipe, package: &'a Package) -> Vec<&'a str
         .collect()
 }
 
-/// Checks each referenced screenshot exists on disk, is a PNG/JPEG/WebP within
-/// the size and dimension bounds, and has a `SOURCES.toml` entry with a credit
-/// and source URL (spec 023, R1/R2). Offline and filesystem-bound: used only by
+/// Checks each referenced screenshot exists on disk, is a JPEG within the byte
+/// and 1280×800 dimension bounds, and has a `SOURCES.toml` entry with a credit
+/// and source URL (spec 023, R1/R2; spec 035, R1). Offline and filesystem-bound: used only by
 /// `lint_paths`, which has real paths, never by the embedded loader.
 fn validate_screenshots(r: &Recipe, recipe_path: &Path) -> Vec<Violation> {
     use super::image::{
-        MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_PIXELS, MIN_SCREENSHOT_HEIGHT, MIN_SCREENSHOT_WIDTH,
-        image_info,
+        ImageFormat, MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_HEIGHT, MAX_SCREENSHOT_WIDTH,
+        MIN_SCREENSHOT_HEIGHT, MIN_SCREENSHOT_WIDTH, image_info,
     };
     if r.screenshots.is_empty() {
         return Vec::new();
@@ -915,11 +915,20 @@ fn validate_screenshots(r: &Recipe, recipe_path: &Path) -> Vec<Violation> {
                     bytes.len(),
                     MAX_SCREENSHOT_BYTES
                 ),
-                "resize the image to 640x360 JPEG (spec 023, R1)",
+                "re-save as JPEG at quality 60 and at most 1280x800: scripts/lean-image.sh (spec 035, R1)",
             );
         }
         match image_info(&bytes) {
-            Ok((_, width, height)) => {
+            Ok((format, width, height)) => {
+                if format != ImageFormat::Jpeg {
+                    asset_issue(
+                        format!(
+                            "screenshot `{}` is a {format} image; bundled screenshots must be JPEG",
+                            s.asset
+                        ),
+                        "convert it with scripts/lean-image.sh (spec 035, R1)",
+                    );
+                }
                 if width < MIN_SCREENSHOT_WIDTH || height < MIN_SCREENSHOT_HEIGHT {
                     asset_issue(
                         format!(
@@ -928,19 +937,19 @@ fn validate_screenshots(r: &Recipe, recipe_path: &Path) -> Vec<Violation> {
                         ),
                         "use a card-sized image at least 640x360",
                     );
-                } else if u64::from(width) * u64::from(height) > MAX_SCREENSHOT_PIXELS {
+                } else if width > MAX_SCREENSHOT_WIDTH || height > MAX_SCREENSHOT_HEIGHT {
                     asset_issue(
                         format!(
-                            "screenshot `{}` is {width}x{height}, too many pixels",
+                            "screenshot `{}` is {width}x{height}, larger than {MAX_SCREENSHOT_WIDTH}x{MAX_SCREENSHOT_HEIGHT}",
                             s.asset
                         ),
-                        "use a card-sized image; DDL rejects decompression-bomb dimensions",
+                        "shrink it to at most 1280x800: scripts/lean-image.sh (spec 035, R1)",
                     );
                 }
             }
             Err(error) => asset_issue(
                 format!("screenshot `{}`: {error}", s.asset),
-                "commit a PNG, JPEG or WebP image",
+                "commit a JPEG image (spec 035, R1)",
             ),
         }
         match sources_entry(&full) {

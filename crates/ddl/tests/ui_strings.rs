@@ -77,3 +77,39 @@ fn visible_slint_literals_are_translatable() {
         );
     }
 }
+
+/// Spec 033: decorative subtitles, taglines and caption plates stay out of the UI.
+#[test]
+fn removed_decorative_copy_does_not_return() {
+    let removed = [
+        "Curated worlds",
+        "Choose your next descent",
+        "Requirements, content and source",
+        "Your last profile, ready again",
+        "Build your library and begin a new session",
+        "Installed worlds, ready for your next session",
+        "Review components and gameplay before launching",
+        "Manage your engine, base games and settings",
+        "Prepare the engine and bring your own base games",
+        "Review the error and choose your next step",
+        "Your next mapset starts here",
+        "Original concept art",
+        "Screenshot: {}",
+        "Original game",
+    ];
+    let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui");
+    for entry in std::fs::read_dir(ui).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|e| e != "slint") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&path).unwrap();
+        for text in removed {
+            assert!(
+                !source.contains(text),
+                "{}: removed copy {text:?} is back",
+                path.display()
+            );
+        }
+    }
+}
