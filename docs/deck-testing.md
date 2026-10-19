@@ -23,12 +23,12 @@ Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| S1 | `./ddl --version` in Konsole prints `ddl <version>` | Desktop | ⏳ | |
+| S1 | `./ddl --version` in Konsole prints `ddl <version>` | Desktop | ✅ | 0.0.6: prints `ddl 0.0.6` |
 | S2 | `./ddl --windowed` opens a 1280×800 window with the menu | Desktop | ⏳ | |
-| S3 | Launched from Steam, DDL opens fullscreen, text is readable at arm's length | Gaming | ⏳ | |
-| S4 | D-pad / stick moves the focus highlight; A activates; B or Quit exits back to Steam | Gaming | ⏳ | keyboard-only build: note what the controller does |
+| S3 | Launched from Steam, DDL opens fullscreen, text is readable at arm's length | Gaming | ❌ | 0.0.6: Gaming Mode renders at ~2× (winit reads the panel DPI); only Home/Discover tabs fit. `SLINT_SCALE_FACTOR=1 %command%` fixes it → spec 029 |
+| S4 | D-pad / stick moves the focus highlight; A activates; B or Quit exits back to Steam | Gaming | ✅ | 0.0.6: D-pad/stick/A/B work. Tabs locked on first run look active (spec 030) |
 | S5 | No crash on exit; Steam returns to the library | Gaming | ⏳ | |
-| S6 | Output of `ldd ddl` — any "not found" libraries? | Desktop | ⏳ | paste missing ones |
+| S6 | Output of `ldd ddl` — any "not found" libraries? | Desktop | ✅ | 0.0.6: no missing libraries |
 
 ## Release 0.0.2+ — first playable build (spec 010); 0.0.3 adds Ember UI, logo, Eviternity
 
@@ -38,13 +38,13 @@ the controller now work (gilrs).
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| F1 | First run: **Install DSDA-Doom** downloads, shows progress, finishes; cancel mid-way then retry works | Gaming | ⏳ | covers E1/E2 |
-| F2 | IWADs: Steam DOOM + DOOM II found automatically, or **Add IWAD folder** browser reaches `/run/media/*` (SD card) with D-pad only | Gaming | ⏳ | covers C3; note paths |
-| F3 | Discover → SIGIL → **Install**: download + extraction with progress; then SIGIL II and AUGER;ZENITH | Gaming | ⏳ | note any error text |
-| F4 | Play setup shows base game found, numbered load order, complevel; **Play** starts DSDA fullscreen | Gaming | ⏳ | covers E4 |
-| F5 | Quit DSDA (menu → Quit): DDL comes back with focus on Play, no stray input | Gaming | ⏳ | covers E4/I1 |
+| F1 | First run: **Install DSDA-Doom** downloads, shows progress, finishes; cancel mid-way then retry works | Gaming | ⚠️ | 0.0.6: install finished quickly; cancel not exercised (too fast) |
+| F2 | IWADs: Steam DOOM + DOOM II found automatically, or **Add IWAD folder** browser reaches `/run/media/*` (SD card) with D-pad only | Gaming | ❌ | 0.0.6: only `Ultimate Doom/base/DOOM.WAD` found — Steam app 2280 installs to `Ultimate Doom/` with `base/doom2/`, `base/tnt/`, `base/plutonia/`, `rerelease/` → spec 028. No SD card on this Deck |
+| F3 | Discover → SIGIL → **Install**: download + extraction with progress; then SIGIL II and AUGER;ZENITH | Gaming | ✅ | 0.0.6: SIGIL installs |
+| F4 | Play setup shows base game found, numbered load order, complevel; **Play** starts DSDA fullscreen | Gaming | ⚠️ | 0.0.6: SIGIL plays, but DSDA opens 4:3 — DDL sets no video keys → spec 029 |
+| F5 | Quit DSDA (menu → Quit): DDL comes back with focus on Play, no stray input | Gaming | ✅ | 0.0.6: returns with focus on Play |
 | F6 | AUGER;ZENITH add-on choice (None / Alternate / Deckard) persists after relaunch of DDL | Gaming | ⏳ | |
-| F7 | Missing IWAD (e.g. no Ultimate DOOM): Play disabled with the reason and **Add IWAD folder** | Gaming | ⏳ | |
+| F7 | Missing IWAD (e.g. no Ultimate DOOM): Play disabled with the reason and **Add IWAD folder** | Gaming | ✅ | 0.0.6: AUGER;ZENITH shows "Base game missing" (Doom II not found, see F2) |
 | F9 | **0.0.3:** Ember Cathedral look is readable at arm's length; screens render without lag (S3) | Gaming | ⏳ | spec 012 A4 |
 | F10 | **0.0.3:** Eviternity installs (≈50 MB) and plays at complevel 11 (MAP01, music, DEHACKED changes active) | Gaming | ⏳ | complevel Proposed |
 | F11 | **0.0.3:** Steam artwork from `ddl/art/` set by hand per the [Steam Deck guide](steam-deck-guide.md#make-it-look-native-in-steam) looks right in the library | Gaming | ⏳ | spec 013 A4 |
@@ -54,11 +54,11 @@ the controller now work (gilrs).
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| E1 | DDL installs DSDA-Doom v0.30.1; `-v` smoke test passes | Gaming | ⏳ | |
+| E1 | DDL installs DSDA-Doom v0.30.1; `-v` smoke test passes | Gaming | ✅ | 0.0.6 |
 | E2 | Official AppImage runs directly (FUSE available?) | Gaming | ⏳ | |
 | E3 | Extraction fallback runs on purpose: in Konsole `./ddl engine install --force-extract` finishes and `./ddl engine status` shows `extracted`; a launch from that install works | Desktop | ⏳ | covers the D-013 fallback (spec 014 R1); `--force-extract` takes the fallback even when the AppImage would run |
-| E4 | A launch from DDL starts DSDA fullscreen; quitting DSDA returns focus to DDL | Gaming | ⏳ | |
-| E5 | Controller works in DSDA with the DDL config (`use_game_controller 1`) | Gaming | ⏳ | |
+| E4 | A launch from DDL starts DSDA fullscreen; quitting DSDA returns focus to DDL | Gaming | ✅ | 0.0.6 |
+| E5 | Controller works in DSDA with the DDL config (`use_game_controller 1`) | Gaming | ✅ | 0.0.6: works; owner wants a different layout later |
 
 ## Config and profiles (specs 005, 007)
 
@@ -67,13 +67,13 @@ the controller now work (gilrs).
 | C1 | Change a DSDA menu option, quit, relaunch from DDL: it persists | Gaming | ⏳ | |
 | C2 | A standalone DSDA install's config (`~/.dsda-doom/` or `~/.local/share/dsda-doom/`) is untouched | Desktop | ⏳ | |
 | C3 | DDL finds the DOOM + DOOM II Steam install and identifies its IWADs (`base/` and `rerelease/`) | Gaming | ⏳ | |
-| C4 | Saves for two profiles stay separate | Gaming | ⏳ | Spec 018: create two runs, change skill/components, save and screenshot in each; switch and Continue after restart; verify isolation and named delete confirmation (Needs Deck Validation) |
+| C4 | Saves for two profiles stay separate | Gaming | ✅ | 0.0.6: saves separate. Profile sheet UX confusing (spec 031) |
 
 ## Uninstall (spec 022) — needs Deck validation
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| U1 | Detail → **Uninstall** → confirm with the checkbox **unchecked**: the mapset leaves Library; its profiles and saves survive a restart and reappear on reinstall | Gaming | ⏳ | Spec 022 A5; Cancel is focused first and starts the sheet |
+| U1 | Detail → **Uninstall** → confirm with the checkbox **unchecked**: the mapset leaves Library; its profiles and saves survive a restart and reappear on reinstall | Gaming | ✅ | 0.0.6 |
 | U2 | Repeat with the checkbox **checked**: profiles and their saves/screenshots are gone after a restart | Gaming | ⏳ | A toggles the checkbox; no text entry |
 | U3 | An installed mapset that is no longer in the catalog still shows **Uninstall** on detail and removes cleanly | Gaming | ⏳ | spec 020 R5 |
 
@@ -81,15 +81,15 @@ the controller now work (gilrs).
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| S1 | Discover, Library, Home and Mapset detail show real in-game screenshots with a small "Screenshot: <credit>" caption, sharp on the Deck LCD | Gaming | ⏳ | Spec 023 A4; caption legible at arm's length |
-| S2 | Settings → Engine shows `Catalog: <date> (built-in)`; **Check for catalog updates** succeeds online and reports `updated` or "already current" | Gaming | ⏳ | Spec 019; needs Wi-Fi |
+| S1 | Discover, Library, Home and Mapset detail show real in-game screenshots with a small "Screenshot: <credit>" caption, sharp on the Deck LCD | Gaming | ✅ | 0.0.6: shown and sharp. Discover header needs a margin above the list; L2/R2 strip needs hold-repeat and wrap (spec 030) |
+| S2 | Settings → Engine shows `Catalog: <date> (built-in)`; **Check for catalog updates** succeeds online and reports `updated` or "already current" | Gaming | ⚠️ | 0.0.6: "Catalog is up to date", but the toast never disappears (spec 030) |
 | S3 | Airplane mode: start DDL — no error or delay from the automatic catalog check; the manual check shows a clear network error | Gaming | ⏳ | Automatic check is silent offline |
 
 ## Local content (spec 026) — needs Deck validation
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| L1 | Library → **New custom setup** → add a PWAD and a DEH from the SD card (file picker, A to select, Start to add), pick the IWAD, reorder with A/D-pad/A, launch | Gaming | ⏳ | Badge "Custom — not verified"; files stay where they are |
+| L1 | Library → **New custom setup** → add a PWAD and a DEH from the SD card (file picker, A to select, Start to add), pick the IWAD, reorder with A/D-pad/A, launch | Gaming | ⚠️ | 0.0.6: custom setup with no files + Ultimate Doom plays (used to play the base game; spec 032). PWAD/DEH from SD not run |
 | L2 | Installed mapset → Play setup → **Extra files** → add a PWAD on top; it loads after the recipe files; saves warning shows when the profile has saves | Gaming | ⏳ | Recipe files locked at the top |
 | L3 | Move or edit an added file in Desktop Mode, then launch: the missing-file / changed-file dialog names the file; "Use the changed file" works | Gaming | ⏳ | A user-file IWAD's campaign follows its file name (D-017 note) |
 
@@ -113,7 +113,7 @@ layout.
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| M1 | SIGIL: episode 5 reachable, complevel 3 plays correctly | Gaming | ⏳ | promotes recipe to verified |
+| M1 | SIGIL: episode 5 reachable, complevel 3 plays correctly | Gaming | ⚠️ | 0.0.6: SIGIL plays; episode 5 and complevel not checked explicitly |
 | M2 | SIGIL compat variant replaces E3 | Gaming | ⏳ | |
 | M3 | SIGIL II: episode 6 reachable, complevel 3 | Gaming | ⏳ | |
 | M4 | AUGER;ZENITH at complevel 2: MAP01–MAP21 behave; no visual errors | Gaming | ⏳ | complevel still Proposed |

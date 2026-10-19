@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Rose Compass logo, real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; Deck validation pending  ·  **Updated:** 2026-10-18
+**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Rose Compass logo, real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-19
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -49,3 +49,14 @@
 | Local content: arbitrary user WADs/patches, player-set load order, extras on top of catalog mapsets (D-026) | 026 | **Done** (A5 needs Deck): core + CLI (WAD/ZIP/DEH/BEX by content, `.pk3` rejected per DSDA source, SHA-256 identity check, `ddl custom …`, `ddl profile extras …`) and UI (controller file picker with multi-select and SD-card shortcuts, grouped order editor with pick-up/move/drop, New custom setup in Library, custom setups in Home, Extra files on Play setup with locked recipe files, IWAD/compatibility pickers, missing/changed-file and delete dialogs). Also fixed a real state-lock race: `StateLock` now unlocks on drop (a spawned child briefly held the lock between fork and exec). Deck: L1–L3 |
 | Lutris IWAD discovery | — | Deferred (owner, 2026-10-17: "não precisa ainda") |
 | Split the headless production journey into smaller tests (owner, 2026-10-17: "esse teste tá muito longo") | 027 | **Done**: the 355 s journey is now 25 isolated, named headless tests (subprocess per test, own XDG root and artifact dir; worst 37.5 s); full workspace ~2 min warm, 3 parallel runs green; "Running UI tests" note in the guide |
+
+## Deck test 2026-10-19 fixes (`v0.0.6-local`, results in `deck-testing.md`)
+
+| Item | Spec | State |
+| --- | --- | --- |
+| Steam scan misses Doom II/TNT/Plutonia: app 2280 installs to `Ultimate Doom/` with `base/doom2/`, `base/tnt/`, `base/plutonia/`, `rerelease/` | 028 | Ready |
+| Gaming Mode renders at ~2× (DPI); DSDA opens 4:3 — fit-to-screen scale and Deck video defaults | 029 | Ready |
+| Tab bar disabled where it can't be used, first-run emphasis, button hints, header, Discover margin, L2/R2 hold+wrap, toasts fade | 030 | Ready |
+| Profiles: summary on detail, free-text names with Steam keyboard, wrap and L1/R1 switching | 031 | Ready (after 030) |
+| Play base games without a mapset (D-027); IWAD folders lists automatic sources | 032 | Ready (after 028, 030) |
+

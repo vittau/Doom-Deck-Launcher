@@ -574,3 +574,16 @@
     green. Every capture and assertion is mapped in the report; README regeneration uses the new
     tests (the Play setup render was refreshed for spec 026's Extra files row).
   refs: [docs/reports/027-split-headless-journey.md]
+- date: 2026-10-19
+  type: finding
+  summary: >-
+    First Steam Deck LCD test of v0.0.6-local in Gaming Mode. Passed: version and libraries,
+    controller in DDL and DSDA, engine install, SIGIL install and play, return to DDL with focus on
+    Play, missing-base-game message, separate saves per profile, uninstall/reinstall, catalog check.
+    Found: ~2x UI scale under gamescope (SLINT_SCALE_FACTOR=1 works around it), Steam scan misses
+    the real `Ultimate Doom/` layout (only DOOM.WAD found), DSDA opens 4:3, no easy way to play a
+    base game, and several navigation and profile UX issues. Specs 028–032 written; D-027 added.
+  refs: [docs/deck-testing.md, docs/specs/028-steam-iwad-layout.md, docs/specs/029-deck-display.md,
+         docs/specs/030-navigation-feedback.md, docs/specs/031-profiles-ux.md,
+         docs/specs/032-base-games-and-iwad-sources.md]
+
