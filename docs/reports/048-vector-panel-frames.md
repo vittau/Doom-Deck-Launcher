@@ -83,8 +83,10 @@ native-size opaque SVG crest pixels. A pixel comparison against the old Home
 render found every pixel outside its two 28 px frame perimeters byte-identical.
 The centre remains opaque `Tokens.surface`, preserving sheet backgrounds too.
 
-Frame asset bytes: **23,645 B** (five PNGs) → **60,570 B** (twelve SVGs),
-+36,925 B embedded source in exchange for consistent scalable vector art.
+Frame asset bytes: **23,645 B** (five PNGs) → **25,163 B** (twelve SVGs),
++1,518 B embedded source. Each SVG contains only its visible profile/casting,
+with no off-canvas copies of the other corners. Before/after optimization renders
+are pixel-identical at both 1× and 1.35×; the approved artwork is unchanged.
 
 ## Dependencies and remaining work
 
@@ -95,11 +97,42 @@ Existing Pillow 12.3.0 was used only to assemble review PNGs; existing resvg
 Owner approval ("Melhor") and coordinator design approval were relayed through
 the design gate on 2026-10-19; production wiring followed that approval.
 
-Pending: coordinator's "main ready + slot go" signal, then merge `main` including
-045, production screen comparisons and README images, full checks in that slot,
-and owner/coordinator final visual review. No protected source-of-truth
+Merged green `main` (`68c4e5e`, including 045) in `72107ea`; the sole conflict
+was resolved by retaining 045's `--wall-only` path and the vector-frame removal.
+Pending: final production comparisons and the coordinator's "slot go" signal,
+then README images, full checks in that slot and final visual review. No protected source-of-truth
 files were edited.
 
 Proposal outside this task's ownership: update the obsolete `CONTRIBUTING.md`
 UI-art exception that says the frame and ornaments remain PNG. They are now
 script-authored SVGs; historical spec 035 reports should retain their history.
+
+
+## Coordinator-authorized offline fixture audit
+
+The coordinator expanded this task after the pre-merge categories journey
+fetched a live catalog (13 embedded recipes versus 65 runtime cards). The main
+fix adjusted count assertions, but `Environment { test: None }` still enabled
+Runtime's production automatic update. No production behaviour was changed.
+
+A `#[cfg(test)]` fixture helper persists `SetCatalogAutoUpdate(false)` through
+the existing Services command before a Runtime can start. All five test
+constructors without a test seam use it. The categories journey now asserts
+updates are disabled, the catalog was not replaced, and `last_check` is `None`.
+
+| Construction audited in `crates/ddl/src/` | Network isolation |
+| --- | --- |
+| `headless_production.rs::categories_journey` | Scratch state disables automatic updates before `attach_environment`; asserts no check was attempted. |
+| `local_ui_tests.rs::environment` | Same fixture helper before any Runtime/service operation. |
+| `services.rs::tests::env` | Same fixture helper. The cancellation test deliberately removes the seed to preserve its absent-file precondition; its cancelled direct Services command cannot dispatch Runtime's automatic check. The schema-migration test deliberately writes an old schema and still verifies the production default is on. |
+| `services.rs::steam_wiring_tests` | Same fixture helper; startup only scans synthetic local IWADs. |
+| `services.rs::store_wiring_tests::home_env` | Same fixture helper; startup scans synthetic local store records. |
+| `headless_production.rs::scene`, `recipe_change_tests.rs::{setup,catalog_env}`, `services.rs::catalog_update_tests::environment`, `cli_exec.rs::tests::fixture` | Existing `TestEnvironment` uses canned release responses, fake engine runners and explicit loopback package/catalog endpoints; automatic production checks are disabled by the seam. |
+| `runtime.rs::attach`, `cli_exec.rs::environment` | Production entry points, not invoked by the unit/headless test constructors; unchanged. |
+
+`rg` audit covered every `Environment` construction, `test: None`,
+`attach_environment` and catalog/engine HTTP dispatch in `crates/ddl/src/`.
+Intentional HTTP transport tests use synthetic loopback servers, never public
+upstream endpoints. Targeted Services suite: **36 passed**, including default
+schema migration and the unchanged cancellation/no-write contract. The seven
+local UI tests also pass with the offline fixture.

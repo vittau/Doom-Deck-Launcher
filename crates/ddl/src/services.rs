@@ -510,6 +510,21 @@ struct CatalogOrigin {
 }
 
 impl Environment {
+    /// Seed scratch fixture state before a Runtime can dispatch its automatic
+    /// check. This exercises production services without contacting the catalog.
+    #[cfg(test)]
+    pub(crate) fn without_catalog_auto_updates(self) -> Self {
+        let mut services = Services::open(self.clone()).expect("open scratch fixture services");
+        services
+            .execute(
+                Command::SetCatalogAutoUpdate(false),
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .expect("disable catalog updates in scratch fixture state");
+        self
+    }
+
     /// Whether this is a production run (no test seam installed). The automatic
     /// catalog check is dispatched only in production; tests drive the command
     /// themselves with a loopback URL (spec 019, A3).
@@ -3572,6 +3587,7 @@ mod tests {
             home,
             test: None,
         }
+        .without_catalog_auto_updates()
     }
     #[test]
     fn browser_sorts_without_case_and_places_hidden_entries_last() {
@@ -3822,6 +3838,9 @@ mod tests {
     fn state_rejects_unknown_schema_and_cancelled_work_does_not_change_user_state() {
         let temp = tempfile::tempdir().unwrap();
         let env = env(temp.path());
+        // This cancellation case deliberately starts without a state file;
+        // it drives Services directly and cannot dispatch Runtime's HTTP check.
+        fs::remove_file(env.paths.config.join("app.json")).unwrap();
         let mut s = Services::open(env.clone()).unwrap();
         let cancel = CancellationToken::new();
         cancel.cancel();
@@ -4019,11 +4038,14 @@ mod steam_wiring_tests {
         }
         fs::write(game.join("renamed.wad"), &bytes).unwrap();
         fs::write(home.join("not-authorized.wad"), &bytes).unwrap();
-        let mut services = Services::open(Environment {
-            paths,
-            home: home.clone(),
-            test: None,
-        })
+        let mut services = Services::open(
+            Environment {
+                paths,
+                home: home.clone(),
+                test: None,
+            }
+            .without_catalog_auto_updates(),
+        )
         .unwrap();
         services
             .execute(Command::Startup, &CancellationToken::new(), &mut |_| {})
@@ -4075,6 +4097,7 @@ mod store_wiring_tests {
             home,
             test: None,
         }
+        .without_catalog_auto_updates()
     }
 
     #[test]

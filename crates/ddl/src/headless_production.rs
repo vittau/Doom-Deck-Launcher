@@ -1672,9 +1672,23 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         paths,
         home,
         test: None,
-    };
+    }
+    .without_catalog_auto_updates();
     let state = crate::runtime::attach_environment(ui, env.clone());
     idle(&state);
+    {
+        let state = state.borrow();
+        let snapshot = state.snapshot.as_ref().unwrap();
+        assert!(!snapshot.catalog.auto_update, "the fixture stays offline");
+        assert!(
+            !snapshot.catalog.updated,
+            "only the embedded catalog is used"
+        );
+        assert_eq!(
+            snapshot.catalog.last_check, None,
+            "no HTTP check was attempted"
+        );
+    }
     let catalog = Catalog::embedded();
     let used: Vec<_> = catalog
         .tags
