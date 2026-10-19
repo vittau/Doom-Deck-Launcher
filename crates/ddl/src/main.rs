@@ -6,6 +6,7 @@ mod cli;
 mod cli_exec;
 #[cfg(test)]
 mod copy;
+mod display;
 #[cfg(test)]
 mod fixtures;
 #[cfg(test)]
@@ -116,17 +117,40 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let window = slint::ComponentHandle::window(&ui);
-    if options.windowed {
+    use slint::ComponentHandle;
+    let window = ui.window();
+    let display_mode = if options.windowed {
         window.set_fullscreen(false);
         window.set_size(slint::LogicalSize::new(1280.0, 800.0));
         debug!("using a 1280x800 window instead of fullscreen");
+        display::Mode::Windowed
     } else {
         window.set_fullscreen(true);
         debug!("using the full screen");
-    }
+        display::Mode::Fullscreen
+    };
 
-    use slint::ComponentHandle;
+    // Fit the 1280×800 design to the window's physical size, ignoring the DPI
+    // Gaming Mode reports, and record what was applied (spec 029, R1/R2). The
+    // physical size is only reliable once the window is shown, so apply
+    // immediately and again whenever it changes.
+    display::configure(window, display_mode);
+    let mut last_size = window.size();
+    let weak = ui.as_weak();
+    let display_timer = slint::Timer::default();
+    display_timer.start(
+        slint::TimerMode::Repeated,
+        std::time::Duration::from_millis(250),
+        move || {
+            if let Some(ui) = weak.upgrade() {
+                let window = ui.window();
+                if window.size() != last_size {
+                    last_size = window.size();
+                    display::configure(window, display_mode);
+                }
+            }
+        },
+    );
     let weak = ui.as_weak();
     let timer = slint::Timer::default();
     let mut gamepads = input::Gamepads::new();

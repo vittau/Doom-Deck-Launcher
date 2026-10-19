@@ -49,6 +49,16 @@ impl Platform for HeadlessPlatform {
 /// Installs the headless platform and creates the fixture component at
 /// 1280×800 with a scale factor of 1 (what the Deck reports).
 pub(crate) fn setup() -> (Rc<MinimalSoftwareWindow>, AppWindow) {
+    setup_at(1.0, PhysicalSize::new(WIDTH, HEIGHT))
+}
+
+/// Like [`setup`], but the window reports `reported_scale` and is `size`
+/// physical pixels (spec 029, A1): the display fit is exercised against a
+/// window that lies about its DPI.
+pub(crate) fn setup_at(
+    reported_scale: f32,
+    size: PhysicalSize,
+) -> (Rc<MinimalSoftwareWindow>, AppWindow) {
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
     slint::platform::set_platform(Box::new(HeadlessPlatform {
         window: window.clone(),
@@ -65,8 +75,10 @@ pub(crate) fn setup() -> (Rc<MinimalSoftwareWindow>, AppWindow) {
     );
     assert!(include_str!("../ui/app-window.slint").contains("icon: app-icon;"));
 
-    window.dispatch_event(WindowEvent::ScaleFactorChanged { scale_factor: 1.0 });
-    window.set_size(PhysicalSize::new(WIDTH, HEIGHT));
+    window.dispatch_event(WindowEvent::ScaleFactorChanged {
+        scale_factor: reported_scale,
+    });
+    window.set_size(size);
     (window, ui)
 }
 
@@ -77,10 +89,20 @@ fn press(window: &MinimalSoftwareWindow, key: Key) {
 
 /// Draws one frame into a fresh 1280×800 buffer with the software renderer.
 pub(crate) fn render(window: &MinimalSoftwareWindow) -> SharedPixelBuffer<Rgb8Pixel> {
-    let mut buffer = SharedPixelBuffer::<Rgb8Pixel>::new(WIDTH, HEIGHT);
+    render_at(window, WIDTH, HEIGHT)
+}
+
+/// Draws one frame into a fresh `width`×`height` buffer (spec 029, A1): the
+/// display fit renders the same design at a scaled physical size.
+pub(crate) fn render_at(
+    window: &MinimalSoftwareWindow,
+    width: u32,
+    height: u32,
+) -> SharedPixelBuffer<Rgb8Pixel> {
+    let mut buffer = SharedPixelBuffer::<Rgb8Pixel>::new(width, height);
     window.request_redraw();
     let drew = window.draw_if_needed(|renderer| {
-        renderer.render(buffer.make_mut_slice(), WIDTH as usize);
+        renderer.render(buffer.make_mut_slice(), width as usize);
     });
     assert!(drew, "the software renderer must produce a frame");
     buffer
@@ -119,6 +141,13 @@ fn headless_dir() -> PathBuf {
 /// (`<root>/<case>`) and its scratch state; the parent returns at once, keeping
 /// the default parallel harness free of shared platform or artifact state.
 pub(crate) fn isolated(module: &str, case: &str) -> bool {
+    isolated_env(module, case, &[])
+}
+
+/// Like [`isolated`], but also sets `vars` in the child process (spec 029, A1:
+/// a user `SLINT_SCALE_FACTOR` must reach the test without touching the parent
+/// process environment, which the parallel harness shares).
+pub(crate) fn isolated_env(module: &str, case: &str, vars: &[(&str, &str)]) -> bool {
     const KEY: &str = "DDL_HEADLESS_CASE";
     if std::env::var(KEY).as_deref() == Ok(case) {
         return false;
@@ -130,12 +159,15 @@ pub(crate) fn isolated(module: &str, case: &str) -> bool {
         .unwrap_or(module);
     let dir = headless_root().join(case);
     std::fs::create_dir_all(&dir).expect("create the per-case snapshot directory");
-    let output = std::process::Command::new(std::env::current_exe().unwrap())
+    let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+    command
         .args(["--exact", &format!("{module}::{case}"), "--nocapture"])
         .env(KEY, case)
-        .env("DDL_HEADLESS_DIR", &dir)
-        .output()
-        .unwrap();
+        .env("DDL_HEADLESS_DIR", &dir);
+    for (name, value) in vars {
+        command.env(name, value);
+    }
+    let output = command.output().unwrap();
     assert!(
         output.status.success(),
         "{}\n{}",
