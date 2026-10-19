@@ -21,11 +21,13 @@ franchise marks, game imagery or franchise lettering.
 | Variant | Idea | Strengths | Risks |
 | --- | --- | --- | --- |
 | [A · Carved Rose](carved-rose/contact-sheet.png) | Craft through carving: flat fills only, with no gradients. A two-slope bronze moulding with eight rivets, a carved recess wall, a round tracery ring with eight bosses, bevelled bone cardinals, bronze ordinals and a faceted ember gem. | Closest to D-023. The small tier keeps the production leads and petals **exactly** and adds only bevel shading and an ember ring, so there is no risk at 32 px. Flat fills render the same in every renderer. | Least new colour: mostly new tones of the existing hues, which may undershoot "more colours". At 128 px the bosses and rivets are 1–2 px. Eight points and a ring lean towards a generic nautical compass rose. |
-| [B · Stained Glass](stained-glass/contact-sheet.png) | Colour through lit glass. Sixteen panes of radial-gradient glass (ruby and warm, alternating), a lead ring, eight ruby roundels, a metal-gradient frame with rivets and a glowing round ember oculus. | Answers "more detail **and** more colour" most directly, and reads most like a rose window. The bright oculus is unmistakably the one focus. Its small tier (a bone star on red glass) is the most legible of all at 32 px, on dark and light. | The busiest at 128 px: roundels and the lead ring become specks there. It uses the most red, which sits near the UI's ember and danger accents. It depends on gradients; the Slint renderer check below covers them. |
+| [B · Stained Glass](stained-glass/contact-sheet.png) — **owner's pick, refined in round 2** | Colour through real leaded glass. A lead-came network cuts each 45° bay into an inner quarry, a deep-amber pointed lancet and two ruby side panes whose came runs out to the octagon's corner. A lead ring carries faceted amber jewels where it crosses the diagonal leads. The frame is gradient metal with rivets, and the ember is a small faceted amber lozenge (the D-023 diamond). | Answers "more detail **and** more colour" most directly, with two glass hues (ruby and deep amber) and varied pane shapes. The four bone points lead the read again, and the small ember stays the brightest point. The small tier (bone star over ruby glass with eight deep-amber lancets) stays legible at 32 and 48 px on dark and light. | The most detailed of the three: at 128 px the cames are about 1 px and the jewels are specks. At 32 px the lancets blur into warm patches behind the star. It uses the most red, near the UI's ember and danger accents. It depends on gradients; the Slint renderer check below covers them. |
 | [C · Furnace Rose](furnace-rose/contact-sheet.png) | A carved stone plate, backlit. The compass star and oculus are cut through dark stone, so a furnace glow shines through. A bronze dial ring has bosses on all eight points, and a hot lip lines the frame. | The strongest DOOM mood (hell-glow behind carved stone) and the most distinctive. The ember literally lights the whole mark. The dial composition is clean. | Furthest from D-023: no bone petals, so the emblem is darker overall and less recognisable as the current mark. At 32 px the orange star on near-black has the lowest contrast of the three. It can read as a "fire" or "sun" icon. |
 
-**Recommendation from the author:** B is the best answer to the brief. A is
-the safe fallback, and C is the bold option.
+**Status:** after the coordinator's review, the owner picked **B** for a
+second round (refined as described above) and kept the solid DDL wordmark on
+the dark tablet. A and C remain as the comparison record; they share the
+updated lock-up tablet.
 
 ## Scale tiers (R3)
 
@@ -48,7 +50,9 @@ with three additions:
 - the DDL sits on a **dark tablet** that has the octagon's 45° corner cuts.
   The tablet is the header's own `#120C0D`, so it is invisible in the app; on
   light grounds it keeps the bone letters from bleeding into the background.
-  The production wordmark disappears there entirely.
+  The production wordmark disappears there entirely. The tablet hugs the
+  letters with about 8 units of margin and leaves a clear gap to the emblem,
+  so it weighs as little as possible on light grounds.
 - each letter is an exact extruded solid: a continuous dark outline and a
   carved side in the variant's depth colour, built as convex sweeps with
   see-through counters, so no seams or light slivers appear.
@@ -84,9 +88,9 @@ id defined in the same file.
 
 | File | A · Carved Rose | B · Stained Glass | C · Furnace Rose |
 | --- | ---: | ---: | ---: |
-| `emblem.svg` | 5,979 B | 5,341 B | 6,255 B |
-| `emblem-small.svg` | 1,630 B | 1,817 B | 1,510 B |
-| `horizontal.svg` | 2,906 B | 3,093 B | 3,027 B |
+| `emblem.svg` | 5,979 B | 7,882 B | 6,255 B |
+| `emblem-small.svg` | 1,630 B | 4,203 B | 1,510 B |
+| `horizontal.svg` | 2,906 B | 5,479 B | 3,027 B |
 
 For comparison, the production `emblem.svg` is 814 B.
 

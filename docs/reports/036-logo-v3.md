@@ -13,7 +13,7 @@ art) is untouched (R6). No Rust or Slint code changed.
 | Variant | What it adds to D-023 |
 | --- | --- |
 | **A · Carved Rose** | Craft through carving, with flat fills only. It has a two-slope bronze moulding with rivets, a carved recess wall, a shaded round tracery ring with eight bosses, bevelled bone cardinals, detached bronze ordinals and a faceted ember gem. |
-| **B · Stained Glass** | Colour through glass. It has 16 radial-gradient panes (ruby and warm), a lead ring, ruby roundels, a metal-gradient frame and a glowing round ember oculus. |
+| **B · Stained Glass** (owner's pick, refined in round 2) | Colour through real leaded glass. A lead-came network cuts each bay into an inner quarry, a deep-amber pointed lancet and two ruby side panes. Faceted amber jewels sit in the ring lead, the frame is gradient metal, and the ember is a small faceted amber lozenge. |
 | **C · Furnace Rose** | A carved stone plate, backlit. The compass star and oculus are cut through it, a furnace glow shines through, and it adds a bronze dial ring and a hot frame lip. |
 
 All three share the following (R1):
@@ -68,7 +68,7 @@ grounds. The DDL is centred on the emblem.
   | Variant | `emblem.svg` | `emblem-small.svg` | `horizontal.svg` |
   | --- | ---: | ---: | ---: |
   | A | 5,979 | 1,630 | 2,906 |
-  | B | 5,341 | 1,817 | 3,093 |
+  | B | 7,882 | 4,203 | 5,479 |
   | C | 6,255 | 1,510 | 3,027 |
 
   The production emblem is 814 B.
@@ -157,8 +157,56 @@ side, and the bone letters seemed to bleed into the light background.
   octagon's 45° cuts and the header's own colour, so it is invisible in the
   app. The DDL is also centred vertically on the emblem.
 
-The operator confirmed it looked better. The final pass re-checked all three
-variants at native scale with no new findings.
+The operator confirmed it looked better.
+
+## Round 2: owner picked B (coordinator review)
+
+The owner picked **B · Stained Glass** for one more round and kept the solid
+DDL wordmark on the dark tablet. The coordinator asked for four changes:
+
+1. **Read as real stained glass.** The 8 large gradient wedges are gone.
+   `glass_panes()` builds a lead-came network: in each 45° bay, an inner
+   quarry, a lead ring, a pointed lancet on the bisector and two side panes
+   whose came runs to the octagon's corner. Cells are inset by half the came
+   width, so the dark ground reads as continuous lead. Two glass hues: deep
+   amber lancets and ruby or warm-red panes, each with its own radial
+   gradient.
+2. **Ring dots.** The ruby roundels are gone. Small faceted amber jewels
+   (lit and shaded halves in a lead setting) now sit where the ring lead
+   crosses the diagonal leads.
+3. **Smaller ember.** The round oculus (r 21) became a faceted amber lozenge
+   (r 13, lead r 18), back to the D-023 diamond. The bone points lead the
+   read.
+4. **Lighter on light grounds.** The emblem's outer dark rim is thinner (from
+   4 to 2.5 units in the full tier and from 8 to 6 in the small tier). The DDL
+   tablet now hugs the letters (about 8 units of margin, from 192×104 to
+   182×90) with a wider gap to the emblem. The tablet is shared, so the A and
+   C lock-ups changed the same way. The tablet stays `#120C0D`, so the header
+   is unchanged and contrast on light is kept.
+
+**Self-critique in round 2:**
+
+- **First render.** The detached bronze ordinals, the jewels and the lancets
+  crowded every bay, and a heavy dark disc surrounded the ember. I removed the
+  ordinals, so B is back to D-023's four points and the eight lancets carry
+  the eight-fold richness. I thinned the cames and brought the glass closer
+  to the centre.
+- **Jewels.** Placed at the foot of each lancet, they read as sparks stuck to
+  it. I moved them to the lead crossings.
+- **Small tier.** Alternating amber and ruby wedges made a pinwheel that did
+  not match the full tier, and the ember shrank to a dot. I made it
+  symmetric: ruby glass with one lancet per bay, and an ember of r 19. The
+  first lancets were bright and turned the 32 px mark into a daisy, so I made
+  them narrower and a deeper amber. The bone star now dominates at 32 and
+  48 px.
+- **Centre.** At 128 px, 16 inner quarries sent 16 leads converging on the
+  ember. I merged them to one quarry per bay, which calmed the centre.
+
+**Verification in round 2:** `export.py --check` passes. The Slint 1.18.1
+software-renderer probe matched resvg 0.47.0 within 1/255 for the B emblems
+at 32, 48, 56, 256 and 512 px and for the lock-up at 165×64, 330×128 and
+660×256. I inspected the final B sheet at native scale on dark and light,
+including 6× enlargements of 32, 48 and 64 px.
 
 ## Dependencies
 

@@ -217,41 +217,81 @@ def carved_small():
 
 
 # --- Variant B: Stained Glass — colour through lit glass panes ----------------
-def glass_full(p='gl'):
-    defs = linear(f'{p}-metal', [(0, '#EDCB98'), (0.45, '#B88960'), (1, '#5C3A27')], 40, 20, 216, 236)
-    defs += radial(f'{p}-warm', [(0, '#F2A24B'), (0.35, '#D9693A'), (0.7, '#9E2C29'), (1, '#4E1A1E')], 104)
-    defs += radial(f'{p}-ruby', [(0, '#E98845'), (0.35, '#C24A33'), (0.7, '#7E2027'), (1, '#3E1519')], 104)
-    defs += radial(f'{p}-ember', [(0, HOT), (0.4, AMBER), (0.8, '#EE9A45'), (1, '#C2603F')], 21)
-    b = path(poly(octagon(0)), DARK)
-    b += path(ring(4, 20), f'url(#{p}-metal)', True)
-    b += path(ring(10.5, 12.5), '#F6DDB2', True, 0.55)
-    b += path(''.join(circle(x, y, 3) for x, y in octagon(11.5)), '#3E271C')
-    b += path(poly(octagon(20)), DARK)
-    # Sixteen panes: eight wedges between the spokes, split by a circular lead.
-    wall = octagon(26)
+def arc(r, a1, a2, steps=4):
+    return [local(a1 + (a2 - a1) * i / steps, r, 0) for i in range(steps + 1)]
+
+
+def lancet(angle, base, shoulder, tip, half):
+    """A pointed-arch light pointing outwards along `angle`."""
+    return [local(angle, base, -half), local(angle, base, half), local(angle, shoulder, half),
+            local(angle, (shoulder + tip) / 2, half * 0.72), local(angle, tip, 0),
+            local(angle, (shoulder + tip) / 2, -half * 0.72), local(angle, shoulder, -half)]
+
+
+def glass_panes(wall, came):
+    """The rose window's glass, cut by a lead-came network.
+
+    Per 45-degree bay: one inner quarry, a ring of lead,
+    an amber pointed lancet on the bisector and two ruby side panes that meet
+    in a lead running out to the octagon's corner. Cells are inset by half the
+    came width, so the dark ground between them reads as continuous lead.
+    """
+    panes = {'amber': '', 'warm': '', 'ruby': ''}
     for k in range(8):
         a1, a2 = k * 45, k * 45 + 45
-        wedge = [local(a1, 20, 3), local(a1, 300, 3), local(a2, 300, -3), local(a2, 20, -3)]
-        b += path(poly(clip(wedge, wall)), f'url(#{p}-{"warm" if k % 2 else "ruby"})')
-    b += path(circle(C, C, 66) + circle(C, C, 60), DARK, True)
-    roundels = [local(a + 22.5, 84, 0) for a in range(0, 360, 45)]
-    b += path(''.join(circle(x, y, 8) for x, y in roundels), DARK)
-    b += path(''.join(circle(x, y, 5) for x, y in roundels), '#7A2026')
-    b += path(''.join(circle(x - 1.2, y - 1.2, 2) for x, y in roundels), '#D9693A')
-    b += blade(ORDINAL, 70, 50, 10, 40, BRONZE_RAMP[5], BRONZE_RAMP[2], DARK, 4)
-    b += blade(CARDINAL, 88, 40, 17, 30, BONE_LIT, BONE_SHADE, DARK, 5)
-    b += path(circle(C, C, 27), DARK) + path(circle(C, C, 21), f'url(#{p}-ember)')
+        m = a1 + 22.5
+        panes['warm'] += poly(offset(arc(15, a1, a2, 4) + arc(58, a2, a1, 6), -came))
+        light = lancet(m, 64, 82, 96, 9)
+        panes['amber'] += poly(offset(light, -came))
+        left = arc(62, a1, m - 7.5, 3) + [light[0], light[6], light[5], light[4]]
+        left += [local(m, 300, 0), local(a1, 300, 0)]
+        right = [local(a2, 300, 0), local(m, 300, 0), light[4], light[3], light[2], light[1]]
+        right += arc(62, m + 7.5, a2, 3)
+        for side in (left, right):
+            panes['ruby'] += poly(offset(clip(side, wall), -came))
+    return panes
+
+
+def glass_full(p='gl'):
+    defs = linear(f'{p}-metal', [(0, '#EDCB98'), (0.45, '#B88960'), (1, '#5C3A27')], 40, 20, 216, 236)
+    defs += radial(f'{p}-warm', [(0, '#E0703A'), (0.5, '#B83A2C'), (1, '#7A2026')], 60)
+    defs += radial(f'{p}-ruby', [(0.55, '#B23A2E'), (0.8, '#7E2027'), (1, '#43161B')], 106)
+    defs += radial(f'{p}-amber', [(0.55, '#E7A246'), (0.8, '#B8682A'), (1, '#7A3E1C')], 100)
+    defs += radial(f'{p}-ember', [(0, HOT), (0.45, AMBER), (1, '#E2853F')], 13)
+    b = path(poly(octagon(0)), DARK)
+    b += path(ring(2.5, 20), f'url(#{p}-metal)', True)
+    b += path(ring(10, 12), '#F6DDB2', True, 0.55)
+    b += path(''.join(circle(x, y, 3) for x, y in octagon(11)), '#3E271C')
+    b += path(poly(octagon(20)), DARK)
+    panes = glass_panes(octagon(26), 1.8)
+    for name in ('warm', 'ruby', 'amber'):
+        b += path(panes[name], f'url(#{p}-{name})')
+    b += path(circle(C, C, 62) + circle(C, C, 58), DARK, True)
+    # Faceted amber jewels set where the ring lead crosses the diagonal leads.
+    b += blade(ORDINAL, 67, 60, 5, 53, '#FFD58A', '#B8682A', DARK, 2.2)
+    b += blade(CARDINAL, 90, 38, 16, 24, BONE_LIT, BONE_SHADE, DARK, 4.5)
+    b += diamond(18, DARK) + diamond(13, f'url(#{p}-ember)')
     return defs, b
 
 
 def glass_small(p='gls'):
     defs = linear(f'{p}-metal', [(0, '#EDCB98'), (0.45, '#B88960'), (1, '#5C3A27')], 40, 20, 216, 236)
-    defs += radial(f'{p}-glass', [(0, '#E57B3C'), (0.5, '#A8302A'), (1, '#4E1A1E')], 104)
-    defs += radial(f'{p}-ember', [(0, HOT), (0.5, AMBER), (1, '#E08A3E')], 20)
-    b = path(poly(octagon(0)), DARK) + path(ring(8, 26), f'url(#{p}-metal)', True)
-    b += path(poly(octagon(26)), f'url(#{p}-glass)')
-    b += blade(CARDINAL, 82, 36, 22, 24, BONE_LIT, BONE_SHADE, DARK, 10)
-    b += path(circle(C, C, 28), DARK) + path(circle(C, C, 20), f'url(#{p}-ember)')
+    defs += radial(f'{p}-ruby', [(0, '#D2553A'), (0.6, '#A02E2A'), (1, '#5A1A1E')], 104)
+    defs += radial(f'{p}-amber', [(0.4, '#DA9440'), (0.75, '#A85E24'), (1, '#74391A')], 100)
+    defs += radial(f'{p}-ember', [(0, HOT), (0.5, AMBER), (1, '#E08A3E')], 19)
+    b = path(poly(octagon(0)), DARK) + path(ring(6, 26), f'url(#{p}-metal)', True)
+    b += path(poly(octagon(26)), DARK)
+    # The full tier's bays, simplified: ruby ground and one broad amber lancet each.
+    wall = octagon(26)
+    for k in range(8):
+        a1, a2 = k * 45, k * 45 + 45
+        wedge = [local(a1, 20, 4), local(a1, 300, 4), local(a2, 300, -4), local(a2, 20, -4)]
+        b += path(poly(clip(wedge, wall)), f'url(#{p}-ruby)')
+    lights = [lancet(a + 22.5, 50, 72, 92, 10) for a in range(0, 360, 45)]
+    b += path(''.join(poly(offset(l, 4)) for l in lights), DARK)
+    b += path(''.join(poly(l) for l in lights), f'url(#{p}-amber)')
+    b += blade(CARDINAL, 84, 36, 22, 24, BONE_LIT, BONE_SHADE, DARK, 9)
+    b += diamond(23, DARK) + diamond(19, f'url(#{p}-ember)')
     return defs, b
 
 
@@ -397,8 +437,10 @@ def lockup(small, ddl):
     """Same 330x128 frame as the production horizontal master (header drop-in)."""
     # A dark tablet with the octagon's 45-degree cuts: invisible on the dark
     # header, and on light grounds it keeps the bone letters from bleeding out.
-    tablet = path(poly([(146, 12), (314, 12), (326, 24), (326, 104), (314, 116), (146, 116),
-                        (134, 104), (134, 24)]), DARK)
+    # Kept tight to the letters (about 8 units of margin) so it weighs little
+    # beside the emblem on light grounds.
+    tablet = path(poly([(149, 19), (315, 19), (323, 27), (323, 101), (315, 109), (149, 109),
+                        (141, 101), (141, 27)]), DARK)
     return small[0] + ddl[0], group(small[1], 0, 0, 0.5) + tablet + group(ddl[1], 152, 30)
 
 
