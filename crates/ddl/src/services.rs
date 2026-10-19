@@ -286,7 +286,36 @@ pub struct Item {
     pub update_notice: Vec<String>,
 }
 #[derive(Debug, Clone)]
+pub struct BaseItem {
+    pub base: iwads::base_games::BaseGame,
+    pub profile: Profile,
+    pub profiles: Vec<Profile>,
+    pub last_played: Option<u64>,
+}
+impl BaseItem {
+    pub fn copy_notice(&self, entries: &[RegistryEntry]) -> Option<&'static str> {
+        self.profile
+            .iwad_path
+            .as_ref()
+            .filter(|path| {
+                !path.is_file()
+                    || !entries.iter().any(|e| {
+                        &e.path == *path && e.game == Some(self.base.game) && e.variant.is_some()
+                    })
+            })
+            .map(|_| "Selected copy unavailable. Using the preferred IWAD copy.")
+    }
+}
+#[derive(Debug, Clone)]
+pub struct IwadFolder {
+    pub path: PathBuf,
+    pub source: iwads::Source,
+    pub games: Vec<String>,
+}
+#[derive(Debug, Clone)]
 pub struct Snapshot {
+    pub base_games: Vec<BaseItem>,
+    pub automatic_folders: Vec<IwadFolder>,
     pub items: Vec<Item>,
     pub custom: Vec<CustomSetup>,
     pub custom_profiles: Vec<Profile>,
@@ -346,6 +375,8 @@ pub enum LocalCommand {
     Delete(String, bool),
     Accept(String, Option<String>),
     Play(String),
+    BaseSave(Profile),
+    BaseNew(String, bool),
 }
 #[derive(Debug, Clone)]
 pub enum Command {
@@ -591,9 +622,45 @@ impl Services {
                         self.accept_extra_changes(&id, profile.as_deref())?;
                     }
                 }
+                LocalCommand::BaseSave(profile) => {
+                    let _lock = self.lock_cli()?;
+                    self.base_item(&profile.recipe_id, None)?;
+                    self.save_extras(profile.clone())?;
+                    self.state
+                        .last_profiles
+                        .insert(profile.recipe_id, profile.id);
+                    self.save()
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                }
+                LocalCommand::BaseNew(id, copy) => {
+                    let _lock = self.lock_cli()?;
+                    let item = self.base_item(&id, None)?;
+                    self.profiles
+                        .save(&item.profile)
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                    let mut profile = if copy {
+                        item.profile
+                    } else {
+                        self.fresh_base_profile(&item.base)?
+                    };
+                    profile.id = self.free_base_profile_id(item.base.game)?;
+                    profile.name = format!("Profile {}", item.profiles.len() + 1);
+                    profile.last_played = None;
+                    self.profiles
+                        .save(&profile)
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                    self.state.last_profiles.insert(id, profile.id);
+                    self.save()
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                }
                 LocalCommand::Play(id) => {
                     emit(Event::Playing);
-                    emit(Event::EngineExit(self.run_custom(&id, None, false)?));
+                    let outcome = if id.starts_with("base:") {
+                        self.run_base(&id, &LaunchOverrides::default(), false)?
+                    } else {
+                        self.run_custom(&id, None, false)?
+                    };
+                    emit(Event::EngineExit(outcome));
                 }
             }
             Ok(())
@@ -1266,7 +1333,7 @@ impl Services {
         }
         let config = self.config.state().ok();
         let setups = self.custom.list().map_err(|e| logged(Problem::State, e))?;
-        let local_issues = setups
+        let mut local_issues: BTreeMap<String, (PathBuf, bool)> = setups
             .iter()
             .filter_map(|setup| {
                 local::verify_setup(setup)
@@ -1284,7 +1351,21 @@ impl Services {
             })
             .map(|p| p.id.clone())
             .collect();
+        let base_games: Vec<BaseItem> = iwads::base_games::list(&self.registry)
+            .into_iter()
+            .map(|base| {
+                self.base_item(&base.id(), None)
+                    .map_err(|e| logged(Problem::State, e))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        for base in &base_games {
+            if let Some(issue) = local::first_issue(&base.profile.extras) {
+                local_issues.insert(base.base.id(), identity_issue(issue));
+            }
+        }
         Ok(Snapshot {
+            base_games,
+            automatic_folders: self.automatic_iwad_folders(),
             local_issues,
             profiles_with_saves,
             custom: setups,
@@ -2549,6 +2630,12 @@ impl Services {
                 .items
                 .iter()
                 .map(|i| (i.recipe.id.clone(), i.profiles.clone()))
+                .chain(
+                    snapshot
+                        .base_games
+                        .iter()
+                        .map(|b| (b.base.id(), b.profiles.clone())),
+                )
                 .collect(),
             paths: self.env.paths.clone(),
             engine,
@@ -2561,6 +2648,211 @@ impl Services {
             logs: snapshot.logs,
             engine_state: self.engine.state_path(),
         })
+    }
+
+    // ---- spec 032: original games, without recipes or installs -----------
+    fn free_base_profile_id(&self, game: iwads::Game) -> Result<String, CliFailure> {
+        for n in 1.. {
+            let id = format!("base-{game}-profile-{n}");
+            if !self
+                .profiles
+                .path(&id)
+                .map_err(|e| CliFailure::message(e.to_string()))?
+                .exists()
+                && !self.profiles.dirs(&id).root.exists()
+            {
+                return Ok(id);
+            }
+        }
+        unreachable!()
+    }
+    fn fresh_base_profile(
+        &self,
+        base: &iwads::base_games::BaseGame,
+    ) -> Result<Profile, CliFailure> {
+        Ok(Profile::new(
+            self.free_base_profile_id(base.game)?,
+            "Default",
+            base.id(),
+        ))
+    }
+    pub fn base_item(&self, id: &str, selector: Option<&str>) -> Result<BaseItem, CliFailure> {
+        let base = iwads::base_games::list(&self.registry)
+            .into_iter()
+            .find(|b| b.id() == id)
+            .ok_or_else(|| {
+                CliFailure::message(format!(
+                    "no identified base game `{id}`; rescan IWAD folders"
+                ))
+            })?;
+        let mut profiles: Vec<_> = self
+            .profiles
+            .list()
+            .map_err(|e| CliFailure::message(e.to_string()))?
+            .into_iter()
+            .filter(|p| p.recipe_id == id)
+            .collect();
+        if profiles.is_empty() {
+            profiles.push(self.fresh_base_profile(&base)?);
+        }
+        let profile = if let Some(selector) = selector {
+            let exact = profiles.iter().find(|p| p.id == selector);
+            let names: Vec<_> = profiles.iter().filter(|p| p.name == selector).collect();
+            exact
+                .or_else(|| {
+                    if names.len() == 1 {
+                        names.first().copied()
+                    } else {
+                        None
+                    }
+                })
+                .cloned()
+                .ok_or_else(|| {
+                    CliFailure::message(format!(
+                        "unknown or ambiguous profile `{selector}` for `{id}`"
+                    ))
+                })?
+        } else {
+            selected_profile(&profiles, self.state.last_profiles.get(id))
+        };
+        let last_played = profiles.iter().filter_map(|p| p.last_played).max();
+        Ok(BaseItem {
+            base,
+            profile,
+            profiles,
+            last_played,
+        })
+    }
+    pub fn base_resolution(
+        &mut self,
+        id: &str,
+        overrides: &LaunchOverrides,
+        accept_changes: bool,
+    ) -> Result<CustomLaunch, CliFailure> {
+        if !overrides.components.is_empty() {
+            return Err(CliFailure::message(
+                "base games have no components; drop `--with`",
+            ));
+        }
+        if accept_changes {
+            self.accept_extra_changes(id, overrides.profile.as_deref())?;
+        }
+        let item = self.base_item(id, overrides.profile.as_deref())?;
+        let mut profile = item.profile;
+        if let Some(skill) = overrides.skill {
+            profile.skill = skill;
+        }
+        if overrides.pistol_start {
+            profile.pistol_start = true;
+        }
+        let engine = self
+            .engine
+            .active_engine()
+            .map_err(|e| CliFailure::message(e.to_string()))?
+            .ok_or_else(|| CliFailure::message("DSDA-Doom is not installed"))?;
+        let plan = iwads::base_games::build_plan(
+            &item.base,
+            &profile,
+            &local::Engine {
+                executable: engine.path,
+                version: engine.version,
+            },
+            &self.registry,
+            &self.env.paths.data,
+            &self.config,
+        )
+        .map_err(|e| CliFailure::message(e.to_string()))?;
+        plan.prepare_dirs()
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        plan.validate(&local::assign_allowlist())
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        Ok(CustomLaunch { plan, profile })
+    }
+    pub fn run_base(
+        &mut self,
+        id: &str,
+        overrides: &LaunchOverrides,
+        accept_changes: bool,
+    ) -> Result<dsda::LaunchOutcome, CliFailure> {
+        let launch = self.base_resolution(id, overrides, accept_changes)?;
+        let guard = self
+            .config
+            .run_guard()
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        {
+            let _lock = self.lock_cli()?;
+            let mut saved = self.base_item(id, overrides.profile.as_deref())?.profile;
+            saved.touch(now_unix_secs());
+            self.profiles
+                .save(&saved)
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+            self.state.last_profiles.insert(id.into(), saved.id);
+            self.save()
+                .map_err(|e| CliFailure::message(e.to_string()))?;
+        }
+        let outcome = self.run_plan(&launch.plan)?;
+        guard
+            .end()
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        Ok(outcome)
+    }
+    fn automatic_iwad_folders(&self) -> Vec<IwadFolder> {
+        let mut sources: Vec<_> = iwads::steam::source_folders(&self.env.home)
+            .into_iter()
+            .map(|p| (p, iwads::Source::Steam))
+            .collect();
+        sources.extend(
+            iwads::stores::discover(&self.env.home)
+                .folders
+                .into_iter()
+                .map(|(p, launcher)| (p, store_source(launcher))),
+        );
+        if self.state.search_standard_folders {
+            sources.extend(
+                iwads::stores::standard_folders(&self.env.home, &|key| std::env::var(key).ok())
+                    .into_iter()
+                    .map(|p| (p, iwads::Source::StandardFolder)),
+            );
+        }
+        // Also retain identified automatic folders whose launcher record disappeared.
+        sources.extend(
+            self.registry
+                .entries()
+                .iter()
+                .filter(|e| !matches!(e.source, iwads::Source::Manual | iwads::Source::UserFolder))
+                .filter_map(|e| e.path.parent().map(|p| (p.to_path_buf(), e.source))),
+        );
+        let mut folders: Vec<IwadFolder> = Vec::new();
+        for (path, source) in sources {
+            if folders.iter().any(|f| f.path == path && f.source == source) {
+                continue;
+            }
+            let mut games: Vec<_> = iwads::base_games::list(&self.registry)
+                .iter()
+                .filter(|b| {
+                    self.registry.entries().iter().any(|e| {
+                        e.game == Some(b.game)
+                            && e.source == source
+                            && e.path.parent() == Some(path.as_path())
+                    })
+                })
+                .map(|b| b.title().to_owned())
+                .collect();
+            games.sort();
+            games.dedup();
+            folders.push(IwadFolder {
+                path,
+                source,
+                games,
+            });
+        }
+        folders.sort_by(|a, b| {
+            a.source
+                .label()
+                .cmp(b.source.label())
+                .then(a.path.cmp(&b.path))
+        });
+        folders
     }
 
     // ---- spec 026: local content (custom setups and extra files) ----------
@@ -2874,7 +3166,7 @@ impl Services {
         recipe_id: &str,
         selector: Option<&str>,
     ) -> Result<Profile, CliFailure> {
-        let (_recipe, profile) = self.extras_profile(recipe_id, selector)?;
+        let profile = self.extras_profile(recipe_id, selector)?;
         Ok(profile)
     }
 
@@ -2892,7 +3184,7 @@ impl Services {
         paths: &[PathBuf],
     ) -> Result<ExtrasOutcome, CliFailure> {
         let _lock = self.lock_cli()?;
-        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let mut profile = self.extras_profile(recipe_id, selector)?;
         for path in paths {
             let path = absolute_path(path)?;
             let file =
@@ -2922,7 +3214,7 @@ impl Services {
         index: usize,
     ) -> Result<ExtrasOutcome, CliFailure> {
         let _lock = self.lock_cli()?;
-        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let mut profile = self.extras_profile(recipe_id, selector)?;
         let indices = local::group_indices(&profile.extras, group);
         let at = *indices.get(index).ok_or_else(|| {
             CliFailure::message(format!(
@@ -2949,7 +3241,7 @@ impl Services {
         to: usize,
     ) -> Result<ExtrasOutcome, CliFailure> {
         let _lock = self.lock_cli()?;
-        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let mut profile = self.extras_profile(recipe_id, selector)?;
         let indices = local::group_indices(&profile.extras, group);
         if from >= indices.len() || to >= indices.len() {
             return Err(CliFailure::message(format!(
@@ -2981,7 +3273,7 @@ impl Services {
         selector: Option<&str>,
     ) -> Result<usize, CliFailure> {
         let _lock = self.lock_cli()?;
-        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let mut profile = self.extras_profile(recipe_id, selector)?;
         let accepted = local::accept_changed(&mut profile.extras)
             .map_err(|error| CliFailure::message(error.to_string()))?;
         if !accepted.is_empty() {
@@ -3003,7 +3295,7 @@ impl Services {
         selector: Option<&str>,
     ) -> Result<ExtrasOutcome, CliFailure> {
         let _lock = self.lock_cli()?;
-        let (_recipe, mut profile) = self.extras_profile(recipe_id, selector)?;
+        let mut profile = self.extras_profile(recipe_id, selector)?;
         profile.extras.clear();
         self.save_extras(profile)
     }
@@ -3074,7 +3366,10 @@ impl Services {
         &self,
         recipe_id: &str,
         selector: Option<&str>,
-    ) -> Result<(Recipe, Profile), CliFailure> {
+    ) -> Result<Profile, CliFailure> {
+        if recipe_id.starts_with("base:") {
+            return Ok(self.base_item(recipe_id, selector)?.profile);
+        }
         let recipe = self
             .recipe(recipe_id)
             .map_err(|_| CliFailure::message(format!("no catalog recipe with id `{recipe_id}`")))?;
@@ -3085,7 +3380,7 @@ impl Services {
                 ..LaunchOverrides::default()
             },
         )?;
-        Ok((recipe, profile))
+        Ok(profile)
     }
 
     /// Saves a profile whose extras changed and reports whether it has saves.

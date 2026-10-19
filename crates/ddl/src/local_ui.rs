@@ -5,6 +5,7 @@ use crate::services::{LocalCommand as Op, NewIwad};
 use ddl_core::local::{self, Compatibility, CustomIwad, CustomSetup, Group, UserFile};
 use ddl_core::profiles::Profile;
 
+const BASE: i32 = 6300;
 const NEW: i32 = 6000;
 const CUSTOM: i32 = 6100;
 const EXTRAS: i32 = 6200;
@@ -16,6 +17,10 @@ const PICK: i32 = 300_000;
 pub(super) enum View {
     New,
     Detail,
+    Base,
+    BaseSetup,
+    BaseCopies,
+    BaseProfiles,
     Order,
     Iwad,
     Compat,
@@ -51,7 +56,18 @@ impl Runtime {
         let id = self.local.target.as_ref()?;
         self.snapshot.as_ref()?.custom.iter().find(|s| &s.id == id)
     }
+    fn base_item(&self) -> Option<&services::BaseItem> {
+        let id = self.local.target.as_ref()?;
+        self.snapshot
+            .as_ref()?
+            .base_games
+            .iter()
+            .find(|b| b.base.id() == *id)
+    }
     fn local_profile(&self) -> Option<Profile> {
+        if let Some(base) = self.base_item() {
+            return Some(base.profile.clone());
+        }
         if let Some(setup) = self.local_setup() {
             self.snapshot
                 .as_ref()?
@@ -255,6 +271,20 @@ impl Runtime {
                 return false;
             }
             match (self.screen, action, self.focus) {
+                (Screen::Library | Screen::Home, Action::Confirm, id)
+                    if (BASE..BASE + 20).contains(&id) =>
+                {
+                    self.local.target = self
+                        .snapshot
+                        .as_ref()
+                        .and_then(|s| s.base_games.get((id - BASE) as usize))
+                        .map(|b| b.base.id());
+                    if self.local.target.is_none() {
+                        return false;
+                    }
+                    self.local.return_focus = id;
+                    self.local_open(View::Base);
+                }
                 (Screen::Library, Action::Y, _) | (Screen::Library, Action::Confirm, NEW) => {
                     self.local_begin(ui)
                 }
@@ -302,9 +332,15 @@ impl Runtime {
             return true;
         }
         let view = self.local.view.unwrap();
+        if action == Action::Menu && view != View::Picker {
+            return false;
+        }
         if action == Action::Back {
             self.local.moving = None;
             match view {
+                View::BaseSetup => self.local_open(View::Base),
+                View::BaseCopies | View::BaseProfiles => self.local_open(View::BaseSetup),
+                View::Order if self.base_item().is_some() => self.local_open(View::BaseSetup),
                 View::Picker => {
                     self.local.view = self.local.picker_return.take();
                     self.local.selected.clear();
@@ -415,6 +451,115 @@ impl Runtime {
             return true;
         }
         match view {
+            View::Base => match self.focus {
+                1 => {
+                    if let Some(issue) = self.local_issue() {
+                        self.local_show_issue(issue);
+                    } else if let Some(base) = self.base_item() {
+                        let missing = base.profile.iwad_path.as_ref().is_some_and(|p| {
+                            !p.is_file()
+                                || self.snapshot.as_ref().is_none_or(|s| {
+                                    !s.iwads
+                                        .iter()
+                                        .any(|e| &e.path == p && e.game == Some(base.base.game))
+                                })
+                        });
+                        if missing {
+                            ui.invoke_show_toast(
+                                "Selected copy unavailable. Using the preferred IWAD copy.".into(),
+                            );
+                        }
+                        self.local_op(ui, Op::Play(base.base.id()));
+                    }
+                }
+                2 => self.local_open(View::BaseSetup),
+                _ => {}
+            },
+            View::BaseSetup => match self.focus {
+                1 => {
+                    if let Some(issue) = self.local_issue() {
+                        self.local_show_issue(issue);
+                    } else if let Some(base) = self.base_item() {
+                        let missing = base.profile.iwad_path.as_ref().is_some_and(|p| {
+                            !p.is_file()
+                                || self.snapshot.as_ref().is_none_or(|s| {
+                                    !s.iwads
+                                        .iter()
+                                        .any(|e| &e.path == p && e.game == Some(base.base.game))
+                                })
+                        });
+                        if missing {
+                            ui.invoke_show_toast(
+                                "Selected copy unavailable. Using the preferred IWAD copy.".into(),
+                            );
+                        }
+                        self.local_op(ui, Op::Play(base.base.id()));
+                    }
+                }
+                2 => self.local_open(View::BaseCopies),
+                3 => self.local_open(View::BaseProfiles),
+                4 => {
+                    if let Some(mut p) = self.local_profile() {
+                        p.skill = p.skill % 5 + 1;
+                        self.local_op(ui, Op::BaseSave(p));
+                    }
+                }
+                5 => {
+                    if let Some(mut p) = self.local_profile() {
+                        p.pistol_start = !p.pistol_start;
+                        self.local_op(ui, Op::BaseSave(p));
+                    }
+                }
+                6 => {
+                    self.local_open(View::Order);
+                    if self.local_profile().is_some_and(|p| {
+                        self.snapshot
+                            .as_ref()
+                            .is_some_and(|s| s.profiles_with_saves.contains(&p.id))
+                    }) {
+                        self.local.dialog = Some(Dialog::Saves);
+                        self.local.dialog_focus = 1;
+                        self.focus = 900;
+                    }
+                }
+                _ => {}
+            },
+            View::BaseCopies => {
+                if let Some(base) = self.base_item() {
+                    let path = self
+                        .snapshot
+                        .as_ref()
+                        .and_then(|s| {
+                            s.iwads
+                                .iter()
+                                .filter(|e| e.game == Some(base.base.game) && e.variant.is_some())
+                                .nth((self.focus - 10) as usize)
+                        })
+                        .map(|e| e.path.clone());
+                    if let Some(path) = path {
+                        let mut p = base.profile.clone();
+                        p.iwad_path = Some(path);
+                        p.iwad_variant = None;
+                        self.local_op(ui, Op::BaseSave(p));
+                        self.local_open(View::BaseSetup);
+                    }
+                }
+            }
+            View::BaseProfiles => {
+                if let Some(base) = self.base_item() {
+                    if self.focus == 1 || self.focus == 2 {
+                        self.local_op(ui, Op::BaseNew(base.base.id(), self.focus == 2));
+                    } else if self.focus == 3 && base.profiles.len() > 1 {
+                        self.show_sheet(Sheet::DeleteProfile(
+                            base.profile.id.clone(),
+                            base.profile.name.clone(),
+                        ));
+                    } else if let Some(p) = base.profiles.get((self.focus - 10) as usize).cloned() {
+                        self.local_op(ui, Op::BaseSave(p));
+                        self.local_open(View::BaseSetup);
+                    }
+                }
+            }
             View::New | View::Detail => match self.focus {
                 1 if view == View::Detail => {
                     if let Some(issue) = self.local_issue() {
@@ -576,6 +721,228 @@ impl Runtime {
                 b.panel(12., 12., 1200., 478.);
             }
             match view {
+                View::Base | View::BaseSetup => {
+                    if let Some(item) = self.base_item() {
+                        let base = &item.base;
+                        let selected = self.snapshot.as_ref().and_then(|s| {
+                            item.profile.iwad_path.as_ref().and_then(|p| {
+                                s.iwads.iter().find(|e| {
+                                    &e.path == p && e.game == Some(base.game) && p.is_file()
+                                })
+                            })
+                        });
+                        let entry = selected.unwrap_or(&base.iwad);
+                        let missing = item
+                            .profile
+                            .iwad_path
+                            .as_ref()
+                            .is_some_and(|_| selected.is_none());
+                        if view == View::Base {
+                            b.art(36., 36., 270., 284., 4);
+                            b.label(36., 344., 270., 100., "Original game".into(), 26.);
+                            b.title(340., 28., 824., 52., base.title().into(), 34.);
+                            b.label(
+                                340.,
+                                88.,
+                                824.,
+                                36.,
+                                format!(
+                                    "{} · Vanilla · Complevel {}",
+                                    entry.source.label(),
+                                    base.complevel()
+                                )
+                                .into(),
+                                22.,
+                            );
+                            b.label(
+                                340.,
+                                132.,
+                                824.,
+                                60.,
+                                elide_path_middle(&entry.path.display().to_string(), 78).into(),
+                                20.,
+                            );
+                            if missing {
+                                b.label(
+                                    340.,
+                                    196.,
+                                    824.,
+                                    60.,
+                                    "Selected copy unavailable. Using the preferred IWAD copy."
+                                        .into(),
+                                    20.,
+                                );
+                            }
+                            b.button(1, 340., 284., 394., c.get_play(), true);
+                            b.button(2, 758., 284., 406., "Play setup".into(), false);
+                            b.label(
+                                340.,
+                                376.,
+                                824.,
+                                56.,
+                                format!(
+                                    "{} · Skill {} · {} extra files",
+                                    item.profile.name,
+                                    item.profile.skill,
+                                    item.profile.extras.len()
+                                )
+                                .into(),
+                                22.,
+                            );
+                        } else {
+                            b.art(36., 36., 270., 224., 4);
+                            b.label(36., 284., 270., 44., "Original game".into(), 26.);
+                            b.label(
+                                36.,
+                                334.,
+                                270.,
+                                52.,
+                                format!(
+                                    "{} · Complevel {}",
+                                    entry.source.label(),
+                                    base.complevel()
+                                )
+                                .into(),
+                                20.,
+                            );
+                            b.label(
+                                36.,
+                                394.,
+                                270.,
+                                68.,
+                                elide_path_middle(&entry.path.display().to_string(), 38).into(),
+                                18.,
+                            );
+                            b.title(340., 20., 824., 44., base.title().into(), 32.);
+                            b.button(1, 340., 76., 824., c.get_play(), true);
+                            b.row(
+                                2,
+                                340.,
+                                148.,
+                                824.,
+                                c.get_iwad(),
+                                if missing {
+                                    "Selected copy unavailable. Using preferred copy.".into()
+                                } else {
+                                    entry.variant.as_deref().unwrap_or_default().into()
+                                },
+                                true,
+                            );
+                            b.nodes.last_mut().unwrap().h = 72.;
+                            b.row(
+                                3,
+                                340.,
+                                228.,
+                                824.,
+                                "Profile".into(),
+                                item.profile.name.clone().into(),
+                                true,
+                            );
+                            b.nodes.last_mut().unwrap().h = 72.;
+                            b.row(
+                                4,
+                                340.,
+                                308.,
+                                394.,
+                                "Skill".into(),
+                                item.profile.skill.to_string().into(),
+                                true,
+                            );
+                            b.nodes.last_mut().unwrap().h = 72.;
+                            b.row(
+                                5,
+                                758.,
+                                308.,
+                                406.,
+                                "Pistol start".into(),
+                                if item.profile.pistol_start {
+                                    "On"
+                                } else {
+                                    "Off"
+                                }
+                                .into(),
+                                true,
+                            );
+                            b.nodes.last_mut().unwrap().h = 72.;
+                            b.row(
+                                6,
+                                340.,
+                                388.,
+                                824.,
+                                c.get_extras(),
+                                format!("{} files", item.profile.extras.len()).into(),
+                                true,
+                            );
+                            b.nodes.last_mut().unwrap().h = 72.;
+                        }
+                    }
+                }
+                View::BaseCopies => {
+                    if let Some(item) = self.base_item() {
+                        b.label(
+                            36.,
+                            30.,
+                            1152.,
+                            44.,
+                            "Choose an identified IWAD copy".into(),
+                            28.,
+                        );
+                        for (index, entry) in self
+                            .snapshot
+                            .as_ref()
+                            .unwrap()
+                            .iwads
+                            .iter()
+                            .filter(|e| e.game == Some(item.base.game) && e.variant.is_some())
+                            .enumerate()
+                        {
+                            b.row(
+                                10 + index as i32,
+                                36.,
+                                96. + index as f32 * 104.,
+                                1152.,
+                                format!(
+                                    "{} · {}",
+                                    entry.source.label(),
+                                    entry.variant.as_deref().unwrap_or_default()
+                                )
+                                .into(),
+                                elide_path_middle(&entry.path.display().to_string(), 100).into(),
+                                true,
+                            );
+                        }
+                    }
+                }
+                View::BaseProfiles => {
+                    if let Some(item) = self.base_item() {
+                        b.button(1, 36., 30., 358., "New profile".into(), true);
+                        b.button(2, 418., 30., 358., "Copy profile".into(), false);
+                        if item.profiles.len() > 1 {
+                            b.button(3, 800., 30., 388., "Delete profile".into(), false);
+                        }
+                        for (index, p) in item.profiles.iter().enumerate() {
+                            b.row(
+                                10 + index as i32,
+                                36.,
+                                120. + index as f32 * 100.,
+                                1152.,
+                                p.name.clone().into(),
+                                format!(
+                                    "Skill {} · {} extra files{}",
+                                    p.skill,
+                                    p.extras.len(),
+                                    if p.id == item.profile.id {
+                                        " · Selected"
+                                    } else {
+                                        ""
+                                    }
+                                )
+                                .into(),
+                                true,
+                            );
+                        }
+                    }
+                }
                 View::New | View::Detail => {
                     b.art(36., 36., 270., 330., 4);
                     let setup = self.local_setup();
@@ -913,6 +1280,39 @@ impl Runtime {
                 }
             }
         }
+        if self.screen == Screen::Library
+            && let Some(s) = &self.snapshot
+            && !s.base_games.is_empty()
+        {
+            if self.library_items().is_empty() && s.custom.is_empty() {
+                b.nodes.clear();
+                b.button(NEW, 12., 12., 1200., c.get_new(), true);
+                b.label(36., 96., 1152., 56., "No installed mapsets yet".into(), 26.);
+            }
+            if !b.nodes.iter().any(|n| n.id == self.focus && n.actionable) {
+                self.focus = BASE;
+            }
+            for node in &mut b.nodes {
+                if node.y >= 96. {
+                    node.y += 252.;
+                }
+            }
+            b.title(12., 96., 1200., 42., "Base games".into(), 30.);
+            for (index, item) in s.base_games.iter().enumerate() {
+                let x = 12. + index as f32 * 306.;
+                b.card(BASE + index as i32, x, 152., 282., 132.);
+                b.title(x + 18., 166., 246., 64., item.base.title().into(), 24.);
+                b.label(x + 18., 238., 246., 32., "Original game".into(), 20.);
+            }
+            b.title(
+                12.,
+                302.,
+                1200.,
+                42.,
+                "Mapsets and custom setups".into(),
+                28.,
+            );
+        }
         if self.screen == Screen::Home
             && let Some(s) = &self.snapshot
         {
@@ -966,6 +1366,111 @@ impl Runtime {
                     text(ui, T::Continue),
                     true,
                 );
+            }
+        }
+        if self.screen == Screen::Home
+            && let Some(s) = &self.snapshot
+        {
+            let other = s
+                .items
+                .iter()
+                .filter_map(|i| i.last_played)
+                .chain(s.custom_profiles.iter().filter_map(|p| p.last_played))
+                .max();
+            if let Some((index, item)) = s
+                .base_games
+                .iter()
+                .enumerate()
+                .filter(|(_, b)| b.last_played.is_some())
+                .max_by_key(|(_, b)| b.last_played)
+                && other.is_none_or(|old| item.last_played.unwrap() >= old)
+            {
+                if self.focus == 1 {
+                    self.focus = BASE + index as i32;
+                }
+                b.nodes.retain(|n| n.x >= 800. || n.y > 330. || n.kind == 1);
+                b.art(36., 36., 240., 300., 4);
+                b.title(308., 56., 448., 80., item.base.title().into(), 36.);
+                b.label(308., 156., 448., 64., "Original game".into(), 22.);
+                b.label(308., 212., 448., 28., item.profile.name.clone().into(), 22.);
+                b.nodes.retain(|n| !(n.x == 852. && n.y == 316.));
+                b.label(
+                    852.,
+                    316.,
+                    336.,
+                    64.,
+                    format!("Original game · {}", item.base.iwad.source.label()).into(),
+                    22.,
+                );
+                b.button(
+                    BASE + index as i32,
+                    308.,
+                    252.,
+                    448.,
+                    text(ui, T::Continue),
+                    true,
+                );
+                b.nodes
+                    .retain(|n| !(n.y >= 400. && n.y <= 466. && n.x < 800.));
+                b.art(36., 400., 56., 66., 4);
+                b.title(108., 400., 600., 34., item.base.title().into(), 26.);
+                b.label(108., 436., 600., 30., item.profile.name.clone().into(), 20.);
+            }
+        }
+        if self.screen == Screen::Home
+            && let Some(s) = &self.snapshot
+        {
+            let mut recent: Vec<_> = s
+                .items
+                .iter()
+                .filter_map(|i| {
+                    i.last_played.map(|time| {
+                        (
+                            time,
+                            display_title(&i.recipe).to_owned(),
+                            i.profile.name.clone(),
+                            Some(&i.recipe),
+                        )
+                    })
+                })
+                .collect();
+            recent.extend(s.base_games.iter().filter_map(|i| {
+                i.last_played.map(|time| {
+                    (
+                        time,
+                        i.base.title().to_owned(),
+                        i.profile.name.clone(),
+                        None,
+                    )
+                })
+            }));
+            recent.extend(s.custom.iter().filter_map(|setup| {
+                let p = s
+                    .custom_profiles
+                    .iter()
+                    .filter(|p| p.recipe_id == setup.id && p.last_played.is_some())
+                    .max_by_key(|p| p.last_played)?;
+                Some((
+                    p.last_played.unwrap(),
+                    setup.name.clone(),
+                    p.name.clone(),
+                    None,
+                ))
+            }));
+            if !recent.is_empty() {
+                recent.sort_by_key(|i| std::cmp::Reverse(i.0));
+                b.nodes
+                    .retain(|n| !(n.y >= 400. && n.y <= 466. && n.x < 800.));
+                for (index, (_, title, profile, recipe)) in recent.into_iter().take(2).enumerate() {
+                    let x = 36. + index as f32 * 360.;
+                    if let Some(recipe) = recipe {
+                        b.recipe_art(ui, x, 400., 56., 66., recipe);
+                    } else {
+                        b.art(x, 400., 56., 66., 4);
+                    }
+                    b.title(x + 72., 400., 270., 34., title.into(), 26.);
+                    b.label(x + 72., 436., 270., 30., profile.into(), 20.);
+                }
             }
         }
         if self.screen == Screen::Setup && self.item().is_some_and(|i| !i.profile.extras.is_empty())
@@ -1034,7 +1539,32 @@ impl Runtime {
                 ui.set_subtitle(text(ui, T::HomeSub));
             }
         }
+        if self.screen == Screen::Home
+            && self.local.view.is_none()
+            && let Some(s) = &self.snapshot
+        {
+            let base_time = s.base_games.iter().filter_map(|b| b.last_played).max();
+            let other = s
+                .items
+                .iter()
+                .filter_map(|i| i.last_played)
+                .chain(
+                    s.custom_profiles
+                        .iter()
+                        .filter(|p| s.custom.iter().any(|c| c.id == p.recipe_id))
+                        .filter_map(|p| p.last_played),
+                )
+                .max();
+            if base_time.is_some_and(|t| other.is_none_or(|old| t >= old)) {
+                ui.set_band_art(4);
+                ui.set_band_screenshot(Default::default());
+                ui.set_subtitle(text(ui, T::HomeSub));
+            }
+        }
         let c = ui.global::<LocalStrings>();
+        if (BASE..BASE + 20).contains(&self.focus) {
+            ui.set_favorite_hint(false);
+        }
         ui.set_local_add_hint(
             self.local.view == Some(View::Order)
                 || self.screen == Screen::Library && self.local.view.is_none(),
@@ -1051,6 +1581,12 @@ impl Runtime {
             ui.set_category_hint(false);
             ui.set_import_hint(false);
             ui.set_heading(match view {
+                View::Base => self
+                    .base_item()
+                    .map_or_else(SharedString::default, |b| b.base.title().into()),
+                View::BaseSetup => "Play setup".into(),
+                View::BaseCopies => "IWAD copies".into(),
+                View::BaseProfiles => "Profiles".into(),
                 View::New => c.get_new(),
                 View::Detail => self
                     .local_setup()
@@ -1067,6 +1603,9 @@ impl Runtime {
                 View::Picker => c.get_picker(),
             });
             ui.set_subtitle(match view {
+                View::Base | View::BaseSetup | View::BaseCopies | View::BaseProfiles => {
+                    "Original game".into()
+                }
                 View::New => c.get_new_help(),
                 View::Order => c.get_order_help(),
                 View::Iwad => c.get_iwad_help(),

@@ -942,6 +942,17 @@ impl Runtime {
                     self.start(ui, Command::SetCatalogAutoUpdate(!s.catalog.auto_update));
                 }
             }
+            (Screen::Settings, id) if self.settings_section == 1 && id >= 1000 => {
+                if let Some(folder) = self
+                    .snapshot
+                    .as_ref()
+                    .and_then(|s| s.automatic_folders.get((id - 1000) as usize))
+                {
+                    ui.invoke_show_toast(
+                        format!("{} · {}", folder.source.label(), folder.path.display()).into(),
+                    );
+                }
+            }
             (Screen::Settings, 100..) => {
                 if self.settings_section == 1
                     && let Some(path) = self
@@ -2385,10 +2396,10 @@ impl Runtime {
                     b.panel(12., 12., 312., 360.);
                     let height = match self.settings_section {
                         0 => 700.,
-                        1 => self
-                            .snapshot
-                            .as_ref()
-                            .map_or(316., |s| (316. + s.folders.len() as f32 * 112.).max(316.)),
+                        1 => self.snapshot.as_ref().map_or(316., |s| {
+                            (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
+                                .max(316.)
+                        }),
                         2 => 280.,
                         // 478 like the Engine section so the spec 017 R6 widescreen
                         // status-bar credit under the version block stays inside
@@ -2530,18 +2541,72 @@ impl Runtime {
                                 );
                                 b.button(70, 372., 128., 380., text(ui, T::AddFolder), true);
                                 b.button(71, 776., 128., 412., text(ui, T::Rescan), false);
-                                if s.folders.is_empty() {
-                                    b.label(372., 220., 816., 84., text(ui, T::NoFolders), 22.);
-                                }
-                                for (i, p) in s.folders.iter().enumerate() {
+                                for (i, folder) in s.automatic_folders.iter().enumerate() {
                                     b.row(
-                                        100 + i as i32,
+                                        1000 + i as i32,
                                         372.,
                                         220. + i as f32 * 112.,
                                         816.,
-                                        text(ui, T::Remove),
-                                        p.display().to_string().into(),
+                                        format!(
+                                            "{} · {}",
+                                            folder.source.label(),
+                                            if folder.games.is_empty() {
+                                                "No games identified".into()
+                                            } else {
+                                                folder.games.join(", ")
+                                            }
+                                        )
+                                        .into(),
+                                        folder.path.display().to_string().into(),
                                         true,
+                                    );
+                                }
+                                if s.folders.is_empty() {
+                                    b.label(
+                                        372.,
+                                        220. + s.automatic_folders.len() as f32 * 112.,
+                                        816.,
+                                        84.,
+                                        text(ui, T::NoFolders),
+                                        22.,
+                                    );
+                                }
+                                for (i, p) in s.folders.iter().enumerate() {
+                                    let y = 220. + (i + s.automatic_folders.len()) as f32 * 112.;
+                                    let games: Vec<_> = s
+                                        .base_games
+                                        .iter()
+                                        .filter(|b| {
+                                            s.iwads.iter().any(|e| {
+                                                e.game == Some(b.base.game) && e.path.starts_with(p)
+                                            })
+                                        })
+                                        .map(|b| b.base.title())
+                                        .collect();
+                                    b.row(
+                                        0,
+                                        372.,
+                                        y,
+                                        636.,
+                                        format!(
+                                            "User folder · {}",
+                                            if games.is_empty() {
+                                                "No games identified".into()
+                                            } else {
+                                                games.join(", ")
+                                            }
+                                        )
+                                        .into(),
+                                        p.display().to_string().into(),
+                                        false,
+                                    );
+                                    b.button(
+                                        100 + i as i32,
+                                        968.,
+                                        y + 8.,
+                                        220.,
+                                        text(ui, T::Remove),
+                                        false,
                                     );
                                 }
                             }
@@ -3348,6 +3413,8 @@ mod category_tests {
         let recipe = catalog.recipe("eviternity").unwrap();
         let s = Snapshot {
             items: vec![],
+            base_games: vec![],
+            automatic_folders: vec![],
             custom: vec![],
             custom_profiles: vec![],
             local_issues: Default::default(),
