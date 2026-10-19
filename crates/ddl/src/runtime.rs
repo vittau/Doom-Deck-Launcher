@@ -1818,6 +1818,7 @@ impl Runtime {
                         if installed {
                             b.button(5, 12., action_y, 360., text(ui, T::Uninstall), false);
                         }
+                        let detail_panel = b.nodes.len();
                         b.panel(404., 12., 808., 478.);
                         b.title(428., 24., 760., 96., item.recipe.title.clone().into(), 44.);
                         b.nodes.last_mut().unwrap().kind = 22;
@@ -1945,6 +1946,8 @@ impl Runtime {
                             item.recipe.page.clone().into(),
                             20.,
                         );
+                        b.label(428., y + 194., 760., 44., text(ui, if matches!(&item.recipe_status, ddl_core::library::RecipeStatus::Update(c) if c.content) { T::RecipeSaves } else { T::Verification }), 20.);
+                        b.nodes[detail_panel].h = (y + 250.).max(478.);
                     }
                 }
                 Screen::Setup => {
