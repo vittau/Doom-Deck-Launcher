@@ -21,8 +21,8 @@ pub use bundle::{
 };
 pub use fetch::{Fetch, HttpsFetch, check_package};
 pub use image::{
-    ImageError, ImageFormat, MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_PIXELS, MIN_SCREENSHOT_HEIGHT,
-    MIN_SCREENSHOT_WIDTH, accepted_asset_extension, image_info,
+    ImageError, ImageFormat, MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_HEIGHT, MAX_SCREENSHOT_WIDTH,
+    MIN_SCREENSHOT_HEIGHT, MIN_SCREENSHOT_WIDTH, accepted_asset_extension, image_info,
 };
 pub use lint::{
     Diagnostic, SCREENSHOTS_DIR, check_status_bar_lumps, lint_paths, validate, validate_tags,
