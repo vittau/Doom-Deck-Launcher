@@ -653,4 +653,11 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     assert!(r.nodes.iter().any(|n| n.label == "Doom II"));
     assert_eq!(r.focus, BASE + 1);
     write_png("032-home-base-game.png", &render(&window));
+    r.snapshot.as_mut().unwrap().items[0].last_played = Some(5678);
+    r.focus = 1;
+    r.sync(&ui);
+    assert!(
+        r.nodes.iter().any(|n| n.label == "Doom II" && n.y == 400.),
+        "base games remain in mixed recent history"
+    );
 }

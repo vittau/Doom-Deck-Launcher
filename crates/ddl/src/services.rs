@@ -2832,6 +2832,7 @@ impl Services {
                 .filter(|b| {
                     self.registry.entries().iter().any(|e| {
                         e.game == Some(b.game)
+                            && e.path.is_file()
                             && e.source == source
                             && e.path.parent() == Some(path.as_path())
                     })

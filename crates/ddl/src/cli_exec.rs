@@ -1450,6 +1450,25 @@ exit 1
                 .is_none()
         );
         assert!(s.custom_list().unwrap().is_empty());
+        let mut profile = s.base_item("base:doom2", None).unwrap().profile;
+        profile.iwad_path = Some(fx.env.home.join("missing-doom2.wad"));
+        ddl_core::profiles::ProfileStore::new(&fx.env.paths.config, &fx.env.paths.data)
+            .save(&profile)
+            .unwrap();
+        let (_, err) = run(
+            &fx,
+            cli::Command::Launch {
+                id: "base:doom2".into(),
+                dry_run: true,
+                profile: None,
+                components: vec![],
+                skill: None,
+                pistol_start: false,
+                accept_changes: false,
+            },
+        )
+        .unwrap();
+        assert!(err.contains("Selected copy unavailable"));
     }
 
     #[test]

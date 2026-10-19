@@ -228,5 +228,11 @@ mod tests {
                 .unwrap()
                 .contains("iwad_path")
         );
+        let recipe_profile = Profile::new("sigil-default", "Default", "sigil");
+        assert!(
+            !serde_json::to_string(&recipe_profile)
+                .unwrap()
+                .contains("iwad_path")
+        );
     }
 }

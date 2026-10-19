@@ -2603,11 +2603,12 @@ impl Runtime {
                                     b.button(
                                         100 + i as i32,
                                         968.,
-                                        y + 8.,
+                                        y,
                                         220.,
                                         text(ui, T::Remove),
                                         false,
                                     );
+                                    b.nodes.last_mut().unwrap().h = 88.;
                                 }
                             }
                             2 => {
