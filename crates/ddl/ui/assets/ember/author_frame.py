@@ -30,13 +30,19 @@ def svg(w, h, body):
             '<defs><linearGradient id="bronze" x1="0" y1="0" x2="0.7" y2="1"><stop stop-color="#b8865e"/><stop offset=".35" stop-color="#815137"/><stop offset=".65" stop-color="#311c18"/><stop offset="1" stop-color="#885138"/></linearGradient></defs>\n' + body + '\n</svg>\n')
 
 
-def profile(w, h):
+def corner_profile():
     body = ''
     for i, (d, color) in enumerate(PROFILE):
         e = PROFILE[i+1][0] if i+1 < len(PROFILE) else 28
-        # An opposite-winding ring has a true miter: identical distance to both rails.
-        body += path(f'M{d} {d}H{w-d}V{h-d}H{d}Z M{e} {e}V{h-e}H{w-e}V{e}Z', color)
+        # The same L-shaped band joins the two mitered rail profiles. Keep
+        # geometry inside its canvas: software rendering needs no hidden art.
+        body += path(f'M{d} {d}H28V{e}H{e}V28H{d}Z', color)
     return body
+
+
+def rail():
+    return ''.join(path(f'M0 {d}H72V{PROFILE[i+1][0] if i+1 < len(PROFILE) else 28}H0Z', color)
+                   for i, (d, color) in enumerate(PROFILE))
 
 
 def corner():
@@ -76,18 +82,19 @@ def ornament(length):
 
 
 def assets():
-    b = profile(128, 128) + path('M28 28H100V100H28Z', '#211719')
-    for x, y, sx, sy in [(0, 0, 1, 1), (128, 0, -1, 1), (0, 128, 1, -1), (128, 128, -1, -1)]:
-        b += f'<g transform="translate({x} {y}) scale({sx} {sy})">{corner()}</g>'
     result = {}
-    # Each slice has its own intrinsic canvas, so Slint rasterizes corners at
-    # their physical size, rather than shrinking a full SVG for each slice.
-    boxes = {'top-left': (0, 0, 28, 28), 'top-right': (100, 0, 28, 28),
-             'bottom-left': (0, 100, 28, 28), 'bottom-right': (100, 100, 28, 28),
-             'top': (28, 0, 72, 28), 'bottom': (28, 100, 72, 28),
-             'left': (0, 28, 28, 72), 'right': (100, 28, 28, 72)}
-    for name, (x, y, w, h) in boxes.items():
-        result[f'frame-{name}.svg'] = svg(w, h, f'<g transform="translate({-x} {-y})">{b}</g>')
+    casting = corner_profile() + corner()
+    corners = {'top-left': '', 'top-right': 'translate(28 0) scale(-1 1)',
+               'bottom-left': 'translate(0 28) scale(1 -1)',
+               'bottom-right': 'translate(28 28) scale(-1 -1)'}
+    for name, transform in corners.items():
+        result[f'frame-{name}.svg'] = svg(28, 28, f'<g transform="{transform}">{casting}</g>' if transform else casting)
+    rails = {'top': (72, 28, ''), 'bottom': (72, 28, 'translate(0 28) scale(1 -1)'),
+             'left': (28, 72, 'translate(0 72) rotate(-90)'),
+             'right': (28, 72, 'translate(28 0) rotate(90)')}
+    for name, (w, h, transform) in rails.items():
+        art = rail()
+        result[f'frame-{name}.svg'] = svg(w, h, f'<g transform="{transform}">{art}</g>' if transform else art)
     for name, length in [('top', 96), ('bottom', 96), ('left', 48), ('right', 48)]:
         # Undistorted carving with transparency in the existing ornament box.
         art = ornament(length)
