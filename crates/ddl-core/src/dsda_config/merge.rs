@@ -46,10 +46,20 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
     let mut user_changed = Vec::new();
     let mut updated = Vec::new();
 
-    for (key, template_value) in &template.values {
-        let wanted = Value::Int(*template_value);
-        let current = active.get(key);
-        let previous = base.get(key);
+    let wanted_values = template
+        .values
+        .iter()
+        .map(|(key, value)| (key.clone(), Value::Int(*value)))
+        .chain(
+            template
+                .strings
+                .iter()
+                .map(|(key, value)| (key.clone(), Value::Str(value.clone()))),
+        );
+
+    for (key, wanted) in wanted_values {
+        let current = active.get(&key);
+        let previous = base.get(&key);
 
         let chosen = if current == previous {
             updated.push(key.clone());
@@ -74,8 +84,8 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
         };
 
         match chosen {
-            Some(value) => document.set(key, value),
-            None => document.remove(key),
+            Some(value) => document.set(&key, value),
+            None => document.remove(&key),
         }
     }
 
@@ -100,6 +110,7 @@ mod tests {
                 .iter()
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
+            strings: Vec::new(),
         }
     }
 
