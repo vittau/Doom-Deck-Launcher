@@ -115,4 +115,29 @@ were used only to inspect and resize screenshots.
 
 ## Final checks
 
-<!-- filled in after the workspace checks -->
+- `cargo fmt --all --check` — clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean.
+- `cargo test --workspace` — green: 400 tests in `ddl-core`, 139 in the `ddl` binary and every
+  integration/doctest suite passed (see the note below about the catalog-bundle test
+  environment).
+- `ddl catalog lint` and `ddl catalog lint --fetch <recipe>` — pass for all 76 new recipes and
+  for the whole directory; `ddl catalog bundle` writes 89 recipes.
+- Screenshot rule: all 67 bundled images are JPEG, ≤ 1280×800, ≤ 192 KiB (checked with `sips`
+  and a byte loop), so they also satisfy spec 035's lint once it lands on main.
+
+### Test adjustment note
+
+Three UI tests assumed the old 13-recipe catalog in ways that no longer hold:
+
+- `headless::journeys::categories_favorites_and_screenshots` asserted that the Discover grid
+  renders exactly one card per embedded recipe. The grid draws only the cards that fit the
+  viewport, so it now compares the grid with the snapshot and iterates the snapshot's recipes
+  that declare a screenshot.
+- `services::tests::{startup_provisions_…, unreadable_config_…}` asserted `13`. They now compare
+  with the catalog the service actually loaded: the app prefers a newer fetched catalog bundle
+  (spec 019), so on a dev machine with network the active catalog can differ from the embedded
+  one until CI republishes the bundle after the merge.
+- `screenshots::tests::embedded_screenshots_match_the_catalog` required every recipe to have a
+  bundled screenshot. Spec 037 R4 allows a recipe without one (the painted fallback shows), so
+  the test now checks that every *declared* screenshot exists and that no screenshot directory is
+  orphaned.

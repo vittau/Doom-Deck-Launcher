@@ -144,7 +144,7 @@ IWAD/complevel/gameplay: no DSDA-Doom run was performed on a Deck.
 | 45 | [Vrack Botanicals](https://doomer.boards.net/thread/2462/vrack-botanicals) | 2022-03-01 | 10 | doom2 | limit-removing, cl2 (stated) | — (not published there) | [dsdarchive](https://dsdarchive.com/files/wads/doom2/3695/DBP_45.zip); Doomshack (dead), TSPG (Zandronum) | Playable — recipe `vrack-botanicals`; evidence: [DSDA archive page](https://dsdarchive.com/wads/dbp_45) (demos recorded on DSDA-Doom) |
 | 46 | [Monuments of Mars 2](https://doomer.boards.net/thread/2527/monuments-mars-2) | 2022-04-02 | 10 | doom2 | limit-removing, cl2 (stated) | `levels/doom2/Ports/d-f/dbp_46_rc2.zip` | MediaFire (not allowlisted), TSPG (Zandronum) | Playable — recipe `monuments-of-mars-2`; evidence: [readme](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp_46_rc2.txt) |
 | 47 | [Dreamcatcher Apparatus](https://doomer.boards.net/thread/2603/dreamcatcher-apparatus) | 2022-05-01 | 20 | doom2 | limit-removing, cl2 (stated) | `levels/doom2/Ports/megawads/dbp47.zip` | TSPG (Zandronum) | Playable — recipe `dreamcatcher-apparatus`; evidence: [readme](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/dbp47.txt) |
-| 48 | [AvPvTvJVvHvSS](https://doomer.boards.net/thread/2649/dbp-avp-terminator-jason-seagal) | 2022-06-04 | 11 | doom2 | limit-removing, cl2 (stated) | — (not published there) | [Dropbox](https://www.dropbox.com/s/dy2mlhiay8ut9xx/DBP_48.zip?dl=1); Dropbox, ModDB page | Playable — recipe `avpvtvjvvhvss`; evidence: [release thread](https://doomer.boards.net/thread/2649/dbp-avp-terminator-jason-seagal) |
+| 48 | [AvPvTvJVvHvSS](https://doomer.boards.net/thread/2649/dbp-avp-terminator-jason-seagal) | 2022-06-04 | 8 (limit-removing build) | doom2 | limit-removing, cl2 | — (not published there) | [archive.org copy](https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp48_aliens-vs-predator-vs-terminator-vs-jason-vs-hell-vs-steven-seagal.zip); Dropbox, ModDB page | Playable — recipe `avpvtvjvvhvss`; evidence: [archive.org item](https://archive.org/details/dbp-wad-archive) |
 | 49 | [Mausoleum Nefarium](https://doomer.boards.net/thread/2666/mausoleum-nefarium) | 2022-07-01 | 11 | doom2 | limit-removing, cl2 | — (not published there) | [archive.org copy](https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp49_mausoleum-nefarium-v1-01.zip); Dropbox, TSPG (Zandronum) | Playable — recipe `mausoleum-nefarium`; evidence: [archive.org item](https://archive.org/details/dbp-wad-archive) |
 | 50 | [Emerald City](https://doomer.boards.net/thread/2929/emerald-city-rc1-2) | 2022-08-01 | 16 | doom2 | limit-removing, cl2 | `levels/doom2/Ports/d-f/dbp50.zip` | — | Playable — recipe `emerald-city`; evidence: [readme](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp50.txt) |
 | 51 | [Deadly Ritual](https://doomer.boards.net/thread/2960/deadly-ritual) | 2022-09-01 | 12 | doom2 | limit-removing, cl2 (stated) | `levels/doom2/Ports/d-f/dbp_51.zip` | MediaFire (not allowlisted) | Playable — recipe `deadly-ritual`; evidence: [readme](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp_51.txt) |
@@ -192,8 +192,10 @@ IWAD/complevel/gameplay: no DSDA-Doom run was performed on a Deck.
 - **DBP25 — Dead, But Dreaming**: `Advanced engine needed: UMAPINFO compatible/Limit Removing`;
   maps are `1–11, 33`, so the recipe notes the MAP33 slot.
 - **DBP48 — AvPvTvJVvHvSS**: the readme documents a GZDoom original version and a
-  limit-removing version; the catalog pins the limit-removing package, which also ships
-  `DBP_48_MAPINFO.wad` (not loaded: it only carries map names for MAPINFO-capable ports).
+  limit-removing version. The archive.org copy is a 156 MB bundle whose limit-removing release
+  is the nested `dbp48-limit-removing.zip` (8 maps, MAP01–MAP08); the recipe crosses it with
+  `!/` member paths (spec 002, R4) and never loads the RZDoom or RAR builds. `DBP_48_MAPINFO.wad`
+  is not loaded: it only carries map names for MAPINFO-capable ports.
 - **DBP47 — Dreamcatcher Apparatus**: the readme names `DBP47_gfx.wad` as part of the release,
   so the recipe loads `DBP47.wad` + `DBP47_gfx.wad`. `DBP_47_full.wad` (merged copy),
   `dbp_47_wide.wad` (NightFright widescreen status bar) and `dbp47_gzdoom_strict_bugfix.wad`
