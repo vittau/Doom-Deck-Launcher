@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 9; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "legend-of-the-hidden-tech"
+title = "Legend of the Hidden Tech (Doomer Boards Project 9)"
+authors = ["Doomer Boards Project 9"]
+release = "2019-03-03"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_09"
+description = "DOOM II: MAP01–MAP09 (9 maps). Who knew those 'accidental' injuries weren't part of the prize package on this violent game show?."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/legend-of-the-hidden-tech/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "legend-of-the-hidden-tech/01.jpg"
+credit = "Doomer Boards Project 9"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 9", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Eternity, and (G)ZDoom", "Release thread: https://doomer.boards.net/thread/1491/limit-removing-legend-hidden-released"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Eternity, and (G)ZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 9; episode = 9 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_09"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp_09.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp_09.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp_09.zip"]
+size = 5419400
+sha256 = "3c8d6f51bd8247ad8136e0f971e02d487dfa26b63e597df7cff6903d1297c137"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp_09.zip"
+
+[[packages.members]]
+id = "dbp-09"
+path = "DBP_09.txt"
+size = 6843
+sha256 = "b4cef261e43d6154948811df6ea5fdf6c1afc28fb0ff9188ec36e808ca4452ce"
+keep = true
+
+[[packages.members]]
+id = "dbp-09-2"
+path = "DBP_09.wad"
+size = 15918755
+sha256 = "56bcae84b2b6c73bdbd88eda2ca3030ac7af944748f98cce72cb7c9596203867"
+keep = false
+
+[[components]]
+id = "main"
+label = "Legend of the Hidden Tech"
+description = "Main episode: MAP01–MAP09."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-09-2"
+role = "maps"

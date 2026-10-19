@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 38; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "chronicles-of-ghost-town"
+title = "Chronicles of Ghost Town (Doomer Boards Project 38)"
+authors = ["Doomer Boards Project 38"]
+release = "2021-08-01"
+page = "https://doomer.boards.net/thread/2218/chronicles-ghost-town"
+description = "DOOM II: MAP01–MAP17 (17 maps). Whispers of the ghost town, haunted by a forbidden poltergeist... designed by the many members of doomer boards."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/chronicles-of-ghost-town/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "chronicles-of-ghost-town/01.jpg"
+credit = "Doomer Boards Project 38"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 38", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/2218/chronicles-ghost-town"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 38."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/2218/chronicles-ghost-town"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp38_chronicles-of-ghost-town-v1-5.zip"]
+size = 7121451
+sha256 = "850ca8fa8fdde58ebce5928896caed78fec44f4ee6e6d0ba44fdee29d177ea27"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-38-v1-5"
+path = "DBP_38_v1.5.wad"
+size = 20358193
+sha256 = "1f5c52760bc3cd8d117738fa419ed0e64a559e390ad2eb70041056f218d4f48b"
+keep = false
+
+[[packages.members]]
+id = "dbp-38-v1-5-2"
+path = "DBP_38_v1.5.txt"
+size = 4074
+sha256 = "84e82e9ea0760c4a3c74c1f6c20b1dfbe5a5fece8d73578150088b725e133751"
+keep = true
+
+[[components]]
+id = "main"
+label = "Chronicles of Ghost Town"
+description = "Main episode: MAP01–MAP17."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-38-v1-5"
+role = "maps"

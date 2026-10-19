@@ -1,0 +1,84 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 71; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "grief-arbiter"
+title = "Grief Arbiter (Doomer Boards Project 71)"
+authors = ["Doomer Boards Project 71"]
+release = "2025-03-01"
+page = "https://doomer.boards.net/thread/3908/grief-arbiter"
+description = "DOOM II: MAP01–MAP08 (8 maps). Calcified remains of the deceased formed these cold cement structures in the cosmic void."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/grief-arbiter/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "grief-arbiter/01.jpg"
+credit = "Doomer Boards Project 71"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 71", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/3908/grief-arbiter"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 71; episode = 8 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://doomer.boards.net/thread/3908/grief-arbiter"
+urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp71_grief-arbiter.zip"]
+size = 3500730
+sha256 = "e40aa0503b5a9831c01aaa3f2c2be21a520e198799ba239a0781fc75cb92b128"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-71"
+path = "DBP_71.txt"
+size = 3359
+sha256 = "852f971bad366564e161477abb9726855429c9399163c48feb44633a1a69f41c"
+keep = true
+
+[[packages.members]]
+id = "dbp-71-2"
+path = "DBP_71.wad"
+size = 10867053
+sha256 = "9f72e1a208e1797a0d65b78c34cc2bb1c9a4e04762d965a9bd6620cf58524edc"
+keep = false
+
+[[packages.members]]
+id = "dbp71-widescreenaddon"
+path = "DBP71-WideScreenAddon.wad"
+size = 205606
+sha256 = "e6191f64ffeea3a47ee6ff35dcadb62912aa5eda3eeec3e3ffd45041035ad0a7"
+keep = false
+
+[[components]]
+id = "main"
+label = "Grief Arbiter"
+description = "Main episode: MAP01–MAP08."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-71-2"
+role = "maps"

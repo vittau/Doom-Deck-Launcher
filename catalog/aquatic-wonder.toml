@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 36; gathered 2026-10-19.
+# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "aquatic-wonder"
+title = "Aquatic Wonder (Doomer Boards Project 36)"
+authors = ["Doomer Boards Project 36"]
+release = "2021-06-01"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp36"
+description = "DOOM II: MAP01–MAP08 (8 maps). An underwater themed episode, where you explore the sea life, and explore underwater ruins of ships, and ancient buildings."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/aquatic-wonder/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "aquatic-wonder/01.jpg"
+credit = "Doomer Boards Project 36"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "proposed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 36", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": limit-removing", "Bundled readme \"Tested With\": DSDA-Doom, GZDoom, Zandronum, Zdaemon", "Release thread: https://doomer.boards.net/thread/2139/dbp36-aquatic-wonder"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: limit-removing\". It also names the tested ports: DSDA-Doom, GZDoom, Zandronum, Zdaemon. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 36; episode = 8 maps."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp36"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dbp36.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/d-f/dbp36.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/d-f/dbp36.zip"]
+size = 4390469
+sha256 = "7a68fb21c6690d0263962ed8ec173f772e4c3b35e7e14a70e44c8e2148b898a2"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/d-f/dbp36.zip"
+
+[[packages.members]]
+id = "dbp36"
+path = "dbp36.txt"
+size = 4445
+sha256 = "3006ae64d41825825b0016034d317687229a6382da19de2dab8ac62baf267a59"
+keep = true
+
+[[packages.members]]
+id = "dbp36-2"
+path = "dbp36.wad"
+size = 10833979
+sha256 = "047e00f44586fb128a17f2b4e8af28711dfc134b0959a1be9b66472834f55b8d"
+keep = false
+
+[[components]]
+id = "main"
+label = "Aquatic Wonder"
+description = "Main episode: MAP01–MAP08."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp36-2"
+role = "maps"

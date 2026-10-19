@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 16; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "cybs-freaky-colonoscopy"
+title = "Cyb's Freaky Colonoscopy (Doomer Boards Project 16)"
+authors = ["Doomer Boards Project 16"]
+release = "2019-10-05"
+page = "https://dsdarchive.com/wads/dbp16_v0_99a"
+description = "DOOM II: MAP01–MAP12 (12 maps). Did you know that Ass Demons are one of the leading causes of death for cybernetically enhanced demons over 3,000 eons of age?."
+permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/cybs-freaky-colonoscopy/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "cybs-freaky-colonoscopy/01.jpg"
+credit = "Doomer Boards Project 16"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 16", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1570/limit-removing-cybs-freaky-colonoscopy"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 16."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp16_v0_99a"
+urls = ["https://dsdarchive.com/files/wads/doom2/4895/dbp16_v0.99a.zip"]
+size = 4340274
+sha256 = "53e5411d3a3af8921d6c8d74af0237c6586df2fe2ecf5298a696c8165daa9e44"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp16-credits"
+path = "dbp16 credits.txt"
+size = 3068
+sha256 = "ae3f3f8d072988a1b900b364b2235d2d83277692887f36045acce72944d960e6"
+keep = true
+
+[[packages.members]]
+id = "dbp16-distro-v0-99a"
+path = "dbp16_distro_v0.99a.wad"
+size = 11457281
+sha256 = "76a5f6f352c8cad2675beca612da70bea7c5ac50e94b60851bb119e0052e3a37"
+keep = false
+
+[[components]]
+id = "main"
+label = "Cyb's Freaky Colonoscopy"
+description = "Main episode: MAP01–MAP12."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp16-distro-v0-99a"
+role = "maps"
