@@ -44,7 +44,8 @@ limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and 
 [[packages]]
 id = "free"
 page = "https://doomer.boards.net/thread/3531/dbp65-sanguine-holy-land"
-urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp65_sanguine-holy-land-v3.zip"]
+# Dropbox mirror (spec 038, R2): the ?dl=1 file downloaded 2026-10-19 hashes to the pin below.
+urls = ["https://www.dropbox.com/scl/fi/i1pedwbr4rvtfrmfd16gj/DBP65_v3.zip?rlkey=19qyh4meu1cz2le6faobyln6q&dl=1", "https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp65_sanguine-holy-land-v3.zip"]
 size = 12656806
 sha256 = "fcc88d330aeb7b231f319985da0ae66cd417aa889cb3673030e500d39a2085e2"
 kind = "zip"
