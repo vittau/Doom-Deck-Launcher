@@ -1,9 +1,12 @@
 """SVG exports. resvg 0.47.0 + Pillow 12.3.0, design-time only.
 
-Identity masters remain paths only. Social compositions additionally reference
-committed original raster scenes, then use a deterministic PNG palette export.
+Identity masters are paths and local gradients only (D-029). Social compositions
+additionally reference committed original raster scenes, then use a deterministic
+PNG palette export. Run with a Python that has Pillow==12.3.0.
 """
 import argparse
+import importlib.util
+import re
 from pathlib import Path
 import struct
 import subprocess
@@ -14,25 +17,35 @@ HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
 ASSETS=ROOT/'crates/ddl/ui/assets'
 ART=HERE/'steam'
-JOBS=[('emblem.svg', ASSETS/'logo/icon.png',256,256),
-      ('emblem.svg',ART/'icon-256.png',256,256),('emblem.svg',ART/'icon-512.png',512,512),
+# The v3 exporter owns the SVG allowlist and the production silhouette check.
+_spec=importlib.util.spec_from_file_location('logo_v3_export',HERE.parent/'logo-v3/export.py')
+v3=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(v3)
+MASTERS=['emblem','emblem-small','horizontal','stacked','full-name']
+# Window icon and the 256 px Steam icon use the small tier (spec 039 R2); the
+# 512 px Steam icon is large enough for the full tier.
+JOBS=[('emblem-small.svg', ASSETS/'logo/icon.png',256,256),
+      ('emblem-small.svg',ART/'icon-256.png',256,256),('emblem.svg',ART/'icon-512.png',512,512),
       ('library-capsule.svg',ART/'library-capsule.png',600,900),
       ('wide-capsule.svg',ART/'wide-capsule.png',920,430),('hero.svg',ART/'hero.png',3840,1240),
       ('steam-logo.svg',ART/'logo.png',1280,720),
       ('social-preview.svg',HERE/'social-preview.png',1280,640),
       ('social-preview-variants/threshold.svg',HERE/'social-preview-variants/threshold.png',1280,640),
       ('social-preview-variants/atlas.svg',HERE/'social-preview-variants/atlas.png',1280,640),
-      ('contact-sheet.svg',HERE/'contact-sheet.png',900,720)]
+      ('readme-logo.svg',HERE/'readme-logo.png',1520,400),
+      ('contact-sheet.svg',HERE/'contact-sheet.png',1200,1200)]
 SOCIAL={'social-preview.svg','social-preview-variants/threshold.svg','social-preview-variants/atlas.svg'}
 BRAND_COLORS=['F8EAD5','B88960','52272B','FFD078','120C0D']
 
 def validate_social(master):
     tree=ET.parse(master)
+    ids={el.get('id') for el in tree.iter() if el.get('id')}
     images=[]
     for el in tree.iter():
         tag=el.tag.rsplit('}',1)[-1]
-        assert tag in {'svg','g','path','image','defs','linearGradient','stop'},(master,tag)
-        assert not any('font' in k or ('url(' in v and v!='url(#copy-fade)') for k,v in el.attrib.items()),master
+        assert tag in v3.ELEMENTS|{'image'},(master,tag)
+        assert not any('font' in k for k in el.attrib),master
+        for v in el.attrib.values():
+            for ref in re.findall(r'url\(([^)]*)\)',v): assert ref.startswith('#') and ref[1:] in ids,(master,ref)
         if tag=='image':
             source=(master.parent/el.attrib['href']).resolve()
             assert source.parent==HERE/'social-preview-layers',source
@@ -43,9 +56,9 @@ def validate_social(master):
             assert not any('href' in k for k in el.attrib),master
     assert len(images)==1,master
     logo=next(el for el in tree.getroot() if el.get('id')=='production-logo')
-    sources=([ET.parse(HERE/'emblem.svg').getroot(),ET.parse(HERE/'horizontal.svg').getroot()[1]]
+    sources=([ET.parse(HERE/'emblem.svg').getroot(),ET.parse(HERE/'horizontal.svg').getroot()[-1]]
              if master.name=='social-preview.svg' else [ET.parse(HERE/'horizontal.svg').getroot()])
-    sources.append(ET.parse(HERE/'full-name.svg').getroot()[1])
+    sources.append(ET.parse(HERE/'full-name.svg').getroot()[-1])
     assert len(logo)==len(sources)
     for group,source in zip(logo,sources):
         assert [ET.tostring(el) for el in group]==[ET.tostring(el) for el in source], 'logo contours changed'
@@ -68,19 +81,17 @@ def main():
     version=subprocess.check_output([args.resvg,'--version'],text=True).strip()
     assert version=='0.47.0',version
     assert pillow_version=='12.3.0',pillow_version
-    # D-023: production must retain the owner-selected Rose Compass contours.
-    assert (HERE/'emblem.svg').read_bytes()==(HERE.parent/'logo-v2/rose-compass/emblem.svg').read_bytes()
+    # D-029: production masters are exactly the owner-approved Stained Glass files,
+    # produced by the one authoring source (logo-v3/author.py).
+    for name in ['emblem','emblem-small','horizontal']:
+        assert (HERE/f'{name}.svg').read_bytes()==(HERE.parent/f'logo-v3/stained-glass/{name}.svg').read_bytes(),f'{name}.svg differs from v3 source'
     for master in HERE.glob('*.svg'):
         if master.name in SOCIAL:
             validate_social(master)
-            continue
-        tree=ET.parse(master)
-        for el in tree.iter():
-            assert el.tag.rsplit('}',1)[-1] in {'svg','g','path'},(master,el.tag)
-            assert not any('href' in k or 'url(' in v or 'font' in k for k,v in el.attrib.items()),master
+        else: v3.validate(master)
     for name in sorted(SOCIAL-{'social-preview.svg'}): validate_social(HERE/name)
-    for name in ['emblem','horizontal','stacked','full-name']:
-        assert (ASSETS/f'logo/{name}.svg').read_bytes()==(HERE/f'{name}.svg').read_bytes()
+    for name in MASTERS:
+        assert (ASSETS/f'logo/{name}.svg').read_bytes()==(HERE/f'{name}.svg').read_bytes(),f'compiled copy differs: {name}'
     with tempfile.TemporaryDirectory(prefix='ddl-logo-') as scratch:
         for src,dest,w,h in JOBS:
             out=Path(scratch)/dest.name

@@ -45,3 +45,10 @@ name outlines without consulting system fonts. The exporter checks SVG element t
 absence of font/image references, PNG dimensions and byte equality in `--check` mode.
 No image generation was used. Rose Compass application is tracked in spec 016 R2/A2. Production exports use
 `../logo/export.py`; this exporter preserves the three historical comparison sheets.
+
+## Production history
+
+`production-d023/` keeps the D-023 production masters (emblem, horizontal, stacked,
+full-name and the Steam compositions) as they shipped until spec 039 replaced them with
+logo v3 · Stained Glass (D-029). Nothing in the app or release uses them; Git history has
+the matching PNG exports.

@@ -3,8 +3,10 @@
 Three candidate evolutions of the Rose Compass (D-023). Each one keeps the
 octagonal rose window, the compass reading, a single ember focus and the
 upright DDL wordmark, and adds craft: carved mouldings, tracery, glass, metal
-and ember tones. **Nothing here is in production.** The owner picks a variant
-after the coordinator's review, and applying it is a follow-up task (R6).
+and ember tones. The owner picked **B · Stained Glass** (D-029) and spec 039 made it the
+production logo: `../logo/author.py` imports this folder's `author.py` (the one
+authoring source) and its masters are byte-identical to `stained-glass/`.
+A and C remain here as the comparison record.
 
 ![Production and the three variants at 32, 48, 64 and 200 px](comparison.png)
 
@@ -130,6 +132,6 @@ python3 docs/design/logo-v3/export.py --resvg /tmp/ddl-logo-tools/bin/resvg --ch
 
 To change geometry, edit `author.py` and run it with `fonttools==4.60.1`
 (`python3 -m venv /tmp/ddl-logo-author-venv && /tmp/ddl-logo-author-venv/bin/pip install fonttools==4.60.1`),
-then export again. `author.py` reads the production `../logo/emblem.svg` only
+then export again. `author.py` reads the D-023 emblem `../logo-v2/rose-compass/emblem.svg` only
 for the comparison sheet, and never writes outside this folder. No image
 generation was used.
