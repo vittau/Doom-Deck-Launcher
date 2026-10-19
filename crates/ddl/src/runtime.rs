@@ -146,15 +146,20 @@ impl Runtime {
         matches!(
             self.screen,
             Screen::Home | Screen::Discover | Screen::Library | Screen::Settings
-        )
+        ) && self.sheet.is_none()
+            && self.local.dialog.is_none()
+            && self.local.view.is_none()
     }
     fn enter(&mut self, screen: Screen, focus: i32) {
         self.history.push((self.screen, self.focus));
         self.screen = screen;
         self.focus = focus;
     }
-    fn tab(&mut self, tab: usize) {
+    fn tab(&mut self, ui: &AppWindow, tab: usize) {
         if self.root() {
+            if self.tab_index() != tab.min(3) {
+                ui.invoke_show_toast(SharedString::default());
+            }
             if self.focus >= 0 {
                 self.remembered[self.tab_index()] = self.focus;
             }
@@ -198,7 +203,7 @@ impl Runtime {
             self.neutral = true;
         }
         self.problem = None;
-        ui.set_toast(SharedString::default());
+        ui.invoke_show_toast(SharedString::default());
         self.progress = None;
         self.cancel = CancellationToken::new();
         if self.screen != Screen::Progress {
@@ -269,17 +274,21 @@ impl Runtime {
                         services::CatalogOutcome::Updated { serial, .. } => {
                             let date = ddl_core::catalog::serial_date(*serial)
                                 .unwrap_or_else(|| "unknown".into());
-                            ui.set_toast(value(ui, T::CatalogUpdated, date));
+                            ui.invoke_show_toast(value(ui, T::CatalogUpdated, date));
                         }
                         services::CatalogOutcome::Current { .. } if !automatic => {
-                            ui.set_toast(text(ui, T::CatalogCurrent));
+                            ui.invoke_show_toast(text(ui, T::CatalogCurrent));
                         }
                         _ => {}
                     }
                 }
                 Event::EngineExit(outcome) => {
                     if !outcome.exit_status.is_clean() {
-                        ui.set_toast(value(ui, T::EngineFailed, outcome.log_path.display()));
+                        ui.invoke_show_toast(value(
+                            ui,
+                            T::EngineFailed,
+                            outcome.log_path.display(),
+                        ));
                     }
                     self.last_exit = Some(outcome);
                 }
@@ -299,7 +308,7 @@ impl Runtime {
                                     .and_then(|s| s.items.iter().find(|i| &i.recipe.id == id))
                                 && !item.update_notice.is_empty()
                             {
-                                ui.set_toast(value(
+                                ui.invoke_show_toast(value(
                                     ui,
                                     T::RecipeNotice,
                                     item.update_notice.join(" · "),
@@ -361,7 +370,7 @@ impl Runtime {
                                     self.history.pop();
                                 }
                                 Some(Command::Uninstall(id, _)) => {
-                                    ui.set_toast(value(ui, T::Uninstalled, &id));
+                                    ui.invoke_show_toast(value(ui, T::Uninstalled, &id));
                                     self.screen = Screen::Library;
                                     self.focus = 10;
                                     self.history.clear();
@@ -409,7 +418,7 @@ impl Runtime {
     }
     pub fn hotplug(&self, ui: &AppWindow, connected: bool) {
         if !self.playing {
-            ui.set_toast(text(
+            ui.invoke_show_toast(text(
                 ui,
                 if connected {
                     T::Connected
@@ -439,7 +448,7 @@ impl Runtime {
                 Action::Up | Action::Down | Action::Left | Action::Right => {
                     let saved =
                         std::mem::replace(&mut self.nodes, ui.get_sheet_nodes().iter().collect());
-                    self.move_focus(action);
+                    self.move_focus(ui, action);
                     self.nodes = saved;
                 }
                 Action::Confirm if !self.busy => self.profile_action(ui),
@@ -453,7 +462,7 @@ impl Runtime {
                 Action::Up | Action::Down | Action::Left | Action::Right => {
                     let saved =
                         std::mem::replace(&mut self.nodes, ui.get_sheet_nodes().iter().collect());
-                    self.move_focus(action);
+                    self.move_focus(ui, action);
                     self.nodes = saved;
                 }
                 Action::Back => {
@@ -518,7 +527,7 @@ impl Runtime {
             // The strip is entered at the selected chip and left for the first card, so
             // the way in and out never depends on column geometry.
             Action::Up if self.screen == Screen::Discover && (10..=99).contains(&self.focus) => {
-                self.move_focus(action);
+                self.move_focus(ui, action);
                 if (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
                     self.focus = CHIP + self.category_index() as i32;
                 }
@@ -530,7 +539,7 @@ impl Runtime {
             {
                 self.focus = 10 + self.discover_items()[0] as i32;
             }
-            Action::Up | Action::Down | Action::Left | Action::Right => self.move_focus(action),
+            Action::Up | Action::Down | Action::Left | Action::Right => self.move_focus(ui, action),
             Action::PreviousCategory | Action::NextCategory if self.screen == Screen::Discover => {
                 self.step_category(if action == Action::NextCategory {
                     1
@@ -539,10 +548,13 @@ impl Runtime {
                 });
             }
             Action::X => self.toggle_favorite(ui),
-            Action::Tab(tab) => self.tab(tab),
+            Action::Tab(tab) => self.tab(ui, tab),
             Action::PreviousTab | Action::NextTab => {
                 let tab = self.tab_index();
-                self.tab((tab + if action == Action::NextTab { 1 } else { 3 }) % 4);
+                self.tab(
+                    ui,
+                    (tab + if action == Action::NextTab { 1 } else { 3 }) % 4,
+                );
             }
             Action::Menu => {
                 if self.busy {
@@ -599,7 +611,7 @@ impl Runtime {
     }
     fn activate(&mut self, ui: &AppWindow) {
         if self.focus < 0 && self.root() {
-            self.tab((-self.focus - 1) as usize);
+            self.tab(ui, (-self.focus - 1) as usize);
             return;
         }
         if self.focus == 800 {
@@ -771,7 +783,7 @@ impl Runtime {
                 }
             }
             (Screen::Setup, 42) => self.advanced = !self.advanced,
-            (Screen::Setup, 43) => ui.set_toast(text(ui, T::OrderHelp)),
+            (Screen::Setup, 43) => ui.invoke_show_toast(text(ui, T::OrderHelp)),
             (Screen::Setup, 100..=199) => {
                 if let Some(c) = self
                     .item()
@@ -1003,11 +1015,11 @@ impl Runtime {
         shown.sort_by_key(|&i| !s.items[i].favorite);
         shown
     }
-    /// Moves the category by `delta` without wrapping; the strip chip keeps focus
+    /// Moves the category by `delta` with wrapping; the strip chip keeps focus
     /// when it had it, otherwise focus enters the new grid (or the chip when empty).
     fn step_category(&mut self, delta: isize) {
         let list = self.categories();
-        let next = (self.category_index() as isize + delta).clamp(0, list.len() as isize - 1);
+        let next = (self.category_index() as isize + delta).rem_euclid(list.len() as isize);
         self.category = list[next as usize].clone();
         if !(CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
             self.focus = self
@@ -1253,14 +1265,14 @@ impl Runtime {
         b.button(901, 368., 312., 304., text(ui, T::Uninstall), false);
         ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
     }
-    fn move_focus(&mut self, direction: Action) {
+    fn move_focus(&mut self, ui: &AppWindow, direction: Action) {
         if self.focus < 0 && self.root() {
             match direction {
                 Action::Left if self.focus < -1 => self.focus += 1,
                 Action::Right if self.focus > -4 => self.focus -= 1,
                 Action::Down => {
                     let tab = (-self.focus - 1) as usize;
-                    self.tab(tab);
+                    self.tab(ui, tab);
                     self.focus = self.remembered[tab];
                 }
                 _ => {}
@@ -2600,12 +2612,15 @@ impl Runtime {
             self.focus = self.nodes.iter().find(|n| n.actionable).map_or(0, |n| n.id);
         }
         let setup = self.screen == Screen::Setup;
-        let viewport = (ui.window().size().height as f32 - 294.).max(64.);
+        let discover = self.screen == Screen::Discover;
+        let viewport =
+            (ui.window().size().height as f32 - if discover { 298. } else { 294. }).max(64.);
+        let focus_inset = if discover { 24. } else { 12. };
         let offset = self
             .nodes
             .iter()
             .find(|n| n.id == self.focus && (!setup || n.x < 700.))
-            .map_or(0., |n| (n.y + n.h + 12. - viewport).max(0.));
+            .map_or(0., |n| (n.y + n.h + focus_inset - viewport).max(0.));
         ui.set_scroll_offset(offset);
         ui.set_nodes(ModelRc::new(VecModel::from(self.nodes.clone())));
         ui.set_focused(self.focus);
@@ -2613,6 +2628,13 @@ impl Runtime {
         ui.set_root_screen(self.root() && !self.playing);
         ui.set_input_locked(self.playing);
         ui.set_setup_screen(setup && !self.playing);
+        ui.set_install_pulse(
+            self.screen == Screen::FirstRun
+                && !self.playing
+                && !self.busy
+                && self.snapshot.as_ref().is_some_and(|s| s.engine.is_none()),
+        );
+        ui.set_discover_screen(self.screen == Screen::Discover);
         ui.set_a_hint(
             self.nodes
                 .iter()

@@ -220,7 +220,7 @@ impl Runtime {
                 Action::Up | Action::Down | Action::Left | Action::Right => {
                     let saved =
                         std::mem::replace(&mut self.nodes, ui.get_sheet_nodes().iter().collect());
-                    self.move_focus(action);
+                    self.move_focus(ui, action);
                     self.nodes = saved;
                 }
                 Action::Confirm if self.focus == 902 => {
@@ -404,7 +404,7 @@ impl Runtime {
             action,
             Action::Up | Action::Down | Action::Left | Action::Right
         ) {
-            self.move_focus(action);
+            self.move_focus(ui, action);
             return true;
         }
         if view == View::Picker && action == Action::Menu {
