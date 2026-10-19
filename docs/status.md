@@ -64,5 +64,10 @@
 | Bundled images as JPEG ≤ 1280×800 at low quality, lint-enforced for community screenshots; UI art recompressed | 035 | **Done**: lint requires JPEG 640×360–1280×800, ≤ 192 KiB (q60); UI art without alpha → JPEG q60, 4 unused assets removed, ornaments/frame stay lossless PNG; assets 8.3 → 2.8 MB (embedded 5.3 → 2.8 MB); `scripts/lean-image.sh` |
 | Logo v3: richer Rose Compass, SVG only, more detail and colour (owner routing: Opus 5.5 high) | 036 | **Done**: three directions, owner picked B Stained Glass after a second round (lead came, amber + red glass, jewels, smaller ember); small tier for 32–64 px; reproducible exporter with `--check`; D-029 |
 | Every Doomer Boards Project (DBP 01–99) that DSDA-Doom can play, /idgames first, Dropbox fallback (D-028) | 037 | In progress |
-| Dropbox as a fast first mirror (narrow `*.dl.dropboxusercontent.com` redirect rule) for the 21 DBPs now on slow archive.org | 038 | Ready (after 037) |
+| Dropbox as a fast first mirror (narrow `*.dl.dropboxusercontent.com` redirect rule) for the 21 DBPs now on slow archive.org | 038 | Phase 1 **merged** (redirect rule: one-label host, only in a chain entering at `www.dropbox.com`, same-host second hop); phase 2 (mirrors) after 037 |
+| Resumable downloads: keep pinned partials, `Range`/`If-Range` resume, 3 retries, bounded partial cache | 040 | Ready |
+| Research: /idgames browse as an unverified tier (data source without the blocked API, labels, safety, UX, follow-up specs) | 041 | Ready |
+| Research: Cacowards inventory with /idgames availability and DSDA verdicts | 042 | Ready |
+| Research: optional Steam shortcuts for installed mapsets (feasibility) | 043 | Ready |
+| Weekly catalog link health (`ddl catalog check-links`, headers only, issue on failure) | 044 | Ready (after 040) |
 | Apply logo v3 (D-029) in production: masters, header, loading, About, window icon, Steam art, social preview | 039 | **Done**: masters authored from `logo-v3/author.py` (v2 kept in `logo-v2/production-d023/`), every PNG regenerated with resvg 0.47.0 (`export.py --check`), small tier for the header and window icon, README logo and screenshots refreshed; social preview regenerated — **owner uploads it to GitHub by hand**. Deck: logo check |
