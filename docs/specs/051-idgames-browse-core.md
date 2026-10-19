@@ -15,9 +15,13 @@ single `.txt` on demand for the entry page.
   `If-Modified-Since`; cache atomically at `<XDG data>/ddl/idgames/index.json` with fetch time;
   background refresh ≤ once per 24 h; manual refresh; a failed refresh keeps the old index; a
   corrupt cache is ignored and logged.
-- **R3** — search API: case/diacritic-insensitive substring over title, author and filename
-  (2-character minimum), filters (game, era, port class, txt availability), sort (newest, title,
-  size), offset/limit paging with a deterministic order; pure `ddl-core`, no network.
+- **R3** — search API: case/diacritic-insensitive matching over title, author and filename
+  (2-character minimum), filters (game, era, port class, txt availability), sort (**relevance**
+  default, newest, title, size), offset/limit paging with a deterministic order; pure `ddl-core`,
+  no network. **Relevance (D-031):** exact title, then title prefix, then title word, then author,
+  then filename; ties broken by quality signals from the index (Cacoward winner, in the DDL
+  catalog, map count, latest version), then newest. With no query, the default list is
+  "Highlights" in the same signal order.
 - **R4** — entry detail: on-demand `.txt` fetch (64 KiB, ETag, encoding fallback) with a small
   on-disk cache; the list never blocks on it; the parsed fields and the raw permission text are
   returned to the UI.

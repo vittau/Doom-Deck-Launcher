@@ -1,7 +1,7 @@
 # 050 — `/idgames` index build and publish
 
-**Status:** Ready (first index publish waits for the owner: spec 041 report Q1, Q5, Q6)  ·  **Milestone:** M4  ·  **Depends on:** 006, 019, 041
-**Origin:** spec 041 research (`docs/research/idgames-browse.md`, report R5), 2026-10-19; owner: advance M4 while Deck testing waits.
+**Status:** Ready (after 040)  ·  **Milestone:** M4  ·  **Depends on:** 006, 019, 041
+**Decision:** D-031  ·  **Origin:** spec 041 research (`docs/research/idgames-browse.md`, report R5), 2026-10-19; owner: advance M4 while Deck testing waits.
 
 **Goal:** one small, versioned index that gives DDL titles, authors, dates, sizes, base game and a
 port hint for the archive, built from `ls-laR.gz` + sidecar txts, without the Doomworld API.
@@ -26,8 +26,18 @@ port hint for the archive, built from `ls-laR.gz` + sidecar txts, without the Do
 - **R5** — workflow `.github/workflows/idgames-index.yml`: daily schedule + `workflow_dispatch`;
   builds/validates, publishes `index.json` to the `idgames-index` branch as one ordinary commit,
   keeps the last good index on failure, `contents: write` only for this job; no force push.
-- **R6** — politeness: one mirror at a time, ≤ 4 requests in flight, `DoomDeckLauncher/<version>`
-  UA, stop on 403/429/5xx, never crawl the master for the bulk pass.
+- **R6** — **very slow, polite crawl (D-031):** one mirror, **one request in flight**, at least
+  3 s between requests (plus random jitter), a daily budget of at most 1,500 txt requests so the
+  first full pass spans about a week and later runs fetch only new or changed entries;
+  `DoomDeckLauncher/<version>` UA with the repo URL; on 403, 429 or 5xx stop the run, keep
+  everything fetched so far and resume on the next scheduled run; never crawl the master for the
+  bulk pass. The crawl is resumable (state committed with the index).
+- **R7** — **crawl order by relevance:** Cacoward winners first (`docs/research/cacowards.md`, spec
+  042, when present), then `*/megawads/`, then episode-sized entries, then the rest, so the index is
+  useful after the first day.
+- **R8** — **ranking signals in the index:** per entry, `cacoward` (year, if any), `in_catalog`
+  (recipe id, if a DDL recipe pins it), `maps` (count from the txt, when stated) and a
+  `latest_version` flag when several uploads share a title, for spec 051's ranking.
 
 ## Acceptance criteria
 
