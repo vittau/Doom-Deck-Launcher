@@ -18,8 +18,8 @@ Labels: **Confirmed** = observed/quoted from a primary source in this session; *
 1. **There is no 1994 Cacowards edition.** The official archive says "Since 2004, the year following 10 years of Doom". A CDX search for `doomworld.com/cacowards/1994*` returns no captures. The 1994–2003 period is covered by *5 Years of Doom* (1998) and *10 Years of Doom* (2003) top-WAD lists, which are not Cacowards. The inventory therefore starts at **2004**; if the coordinator wants the retrospective top-100 lists too, that is separate scope. **Confirmed.**
 2. **The award list is stable in shape but not in size.** 2004–2020 published a Top Ten; 2021 and 2023–2025 published a Top Twelve; 2022 returned to a Top Ten. 2016 published eleven Top Ten entries (observed on the page, not a parsing artefact). Runner-ups exist every year except 2011, which has none. **Confirmed.**
 3. **Special awards are a moving target.** Mordeth Award and Mockaward run through most of the period; Best DM/Multiplayer is a mapset award in most years; Best Gameplay Mod, Codeaward, Machaward, Dootaward and Mapper/Creator of the Year are not mapsets. From 2018 the special-award page is mostly feature columns, so only Mordeth (and occasional Machaward mapset winners) remain in scope. **Confirmed.**
-4. **Availability is good but not automatic.** Of the 380 Top Ten/Twelve + runner-up entries, 278 have a verified `/idgames` path in this pass. The remainder are contemporary releases published only on forums/itch/ModDB, commercial or console-only releases, or old entries whose archive filename does not match the award title; the table says `not matched`, never `not on /idgames`. **Confirmed** for the matches; **Proposed** for the reason on each unmatched row.
-5. **Port fit splits the list.** 181 of the 380 are *playable* from the quoted evidence, 62 are *not playable* (GZDoom/ZDoom/Zandronum/Doom 3/standalone), and 137 are *unknown* (mostly older text files that do not state an engine). The playable share rises sharply after 2012 as pages start printing a port/format line. **Confirmed** for the quotes; **Needs Deck Validation** for play.
+4. **Availability is good but not automatic.** Of the 391 Top Ten/Twelve + runner-up entries, 281 have a verified `/idgames` path in this pass. The remainder are contemporary releases published only on forums/itch/ModDB, commercial or console-only releases, or old entries whose archive filename does not match the award title; the table says `not matched`, never `not on /idgames`. **Confirmed** for the matches; **Proposed** for the reason on each unmatched row.
+5. **Port fit splits the list.** 180 of the 391 are *playable* from the quoted evidence, 60 are *not playable* (GZDoom/ZDoom/Zandronum/Doom 3/standalone), and 151 are *unknown* (mostly older text files that do not state an engine). The playable share rises sharply after 2012 as pages start printing a port/format line. **Confirmed** for the quotes; **Needs Deck Validation** for play.
 6. **DDL coverage is narrow.** 10 recipes match an award entry: 9 carry `cacowards` and 1 does not. **`going-down` (2014 Top Ten) is missing the tag and its notes say the category was unconfirmed; this page settles it.** AUGER;ZENITH is the only Doomer Boards recipe with a Cacoward (2021 runner-up). **Confirmed.**
 
 ## Inventory
@@ -65,7 +65,7 @@ Source: [Cacowards 2005 index](https://web.archive.org/web/2026id_/https://www.d
 | Runner-up | Altar of Evil | Dutch Devil | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/12years/best3.php) | [`levels/doom2/Ports/a-c/altar666.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/altar666.zip) | 3.0 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Runner-up | For Whom the Bell Tolls | didy | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/12years/best3.php) | [`levels/doom2/Ports/a-c/belltoll.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/belltoll.zip) | 1.7 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 
-### 2006 — 10 winners, 1 runner-up
+### 2006 — 10 winners, 2 runner-ups
 
 Source: [Cacowards 2006 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/13years/) — read 2026-10-19.
 
@@ -81,9 +81,10 @@ Source: [Cacowards 2006 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Crucified Dreams | Various Artists | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/13years/best3.php) | [`levels/doom2/deathmatch/Ports/megawads/crudream.zip`](https://www.gamers.org/pub/idgames/levels/doom2/deathmatch/Ports/megawads/crudream.zip) | 9.5 MB | Doom II | BOOM compatible | Playable — Confirmed (txt) | — |
 | Top Ten p3 | Foreverhood v1.0 | Skadoomer | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/13years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 | Top Ten p3 | Phobia: The Age | Kristus | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/13years/best3.php) | [`levels/doom2/Ports/p-r/phobiata.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/p-r/phobiata.zip) | 36.0 MB | Doom II | — | Unknown | — |
+| Runner-up | Oniria | Aluqah | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/13years/best3.php) | [`levels/doom2/Ports/m-o/oniria.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/m-o/oniria.zip) | 296 kB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Zen Dynamics | Xaser | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/13years/best3.php) | [`levels/doom2/Ports/v-z/zendyn_x.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/zendyn_x.zip) | 21.0 MB | Doom II | Zdoom (2.1.0 or higher) | Not playable — Confirmed (txt) | — |
 
-### 2007 — 10 winners, 1 runner-up
+### 2007 — 10 winners, 2 runner-ups
 
 Source: [Cacowards 2007 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/14years/) — read 2026-10-19.
 
@@ -99,6 +100,7 @@ Source: [Cacowards 2007 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Epic | Deadall | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/14years/best3.php) | [`levels/doom2/Ports/d-f/epic.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/epic.zip) | 3.4 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Top Ten p3 | The Outer Darkness | Varun Abhirama Krishna | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/14years/best3.php) | [`levels/doom/Ports/m-o/odark.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/m-o/odark.zip) | 389 kB | Ultimate Doom *(Proposed: path)* | — | Unknown | — |
 | Top Ten p3 | Ultimate Torment and Torture | Tormentor667 | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/14years/best3.php) | [`levels/doom2/Ports/s-u/tutnt.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/tutnt.zip) | 71.2 MB | Doom II *(Proposed: path)* | — | Unknown | — |
+| Runner-up | Demons of Problematique | Dennis "Exl" Meuwissen | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/14years/best3.php) | [`levels/doom2/Ports/d-f/dop.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dop.zip) | 10.6 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Wonderful Doom | Wraith | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/14years/best3.php) | [`levels/doom/megawads/wd13.zip`](https://www.gamers.org/pub/idgames/levels/doom/megawads/wd13.zip) | 1.7 MB | Ultimate Doom *(Proposed: path)* | — | Unknown | — |
 
 ### 2008 — 10 winners, 2 runner-ups
@@ -175,7 +177,7 @@ Source: [Cacowards 2011 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Khorus' Speedy Shit | Adam "Khorus" Woodmansey | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/18years/best3.php) | [`levels/doom2/megawads/kssht.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/kssht.zip) | 1.2 MB | Doom II | — | Unknown | — |
 | Top Ten p3 | Mandrill Ass Project | Aluqah | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/18years/best3.php) | [`levels/doom2/Ports/m-o/mandrill.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/m-o/mandrill.zip) | 3.5 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 
-### 2012 — 10 winners, 5 runner-ups
+### 2012 — 10 winners, 8 runner-ups
 
 Source: [Cacowards 2012 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/) — read 2026-10-19.
 
@@ -193,11 +195,14 @@ Source: [Cacowards 2012 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Winter's Fury | Pyroscourge | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Beyond Reality | Jack101 | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best1.php) | [`levels/doom2/Ports/a-c/brfinal.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/brfinal.zip) | 21.9 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Masters of Chaos | Caleb & Doom_Warrior | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best1.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | Mitchell "engineer" Keesee | and Doom Wad Station staple Jean-Yves "Jive" Delpech . A scant year later, we lost Callum | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best1.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Frozen Time | Eternal | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best2.php) | [`levels/doom2/Ports/d-f/frozent.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/frozent.zip) | 5.3 MB | Doom II | — | Unknown | — |
 | Runner-up | Planisphere 2 | Perro Seco | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best2.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | Voodoo Guns | ). Frozen Time is a beast of a level for graphically advanced source ports, and a fun map | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best2.php) | [`levels/doom2/Ports/v-z/vg.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/vg.zip) | 141.7 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Coffee Break Episode I | Matt Tropiano | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best3.php) | [`levels/doom2/Ports/a-c/cafebrk1.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/cafebrk1.zip) | 1.5 MB | Doom II *(Proposed: path)* | — | Unknown | — |
+| Runner-up | maps by Purist's 6 year-old son Dylan | , published here -- by his father -- in our very own forums. Although I don't suppose I'd | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/19years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 
-### 2013 — 10 winners, 6 runner-ups
+### 2013 — 10 winners, 7 runner-ups
 
 Source: [Cacowards 2013 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/) — read 2026-10-19.
 
@@ -217,6 +222,7 @@ Source: [Cacowards 2013 index](https://web.archive.org/web/2026id_/https://www.d
 | Runner-up | Interception | The Interceptors (Various) | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best1.php) | [`levels/doom2/megawads/intercep.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/intercep.zip) | 3.9 MB | Doom II | — | Unknown | — |
 | Runner-up | Hellbound | Z86 | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best2.php) | [`levels/doom2/Ports/megawads/hellbnd.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/hellbnd.zip) | 17.5 MB | Doom II | Limit Remover. Freelook is advised, but not necessary. DEH reading is only needed for mapnames | Unknown | — |
 | Runner-up | High / Low 5 | Chris Hansen | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best2.php) | [`levels/doom2/g-i/highlow5.zip`](https://www.gamers.org/pub/idgames/levels/doom2/g-i/highlow5.zip) | 461 kB | Doom II | Yes | Unknown | — |
+| Runner-up | Doom 2 in Name Only | and has shown a marked desire to improve his skill as a level designer. Obsidian, albeit | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Soulcrusher | Alter-Zero | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Stomper | Pawel "NMN" Zarczynski | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 
@@ -244,7 +250,7 @@ Source: [Cacowards 2014 index](https://web.archive.org/web/2026id_/https://www.d
 | Runner-up | The Wailing Horde | Chris Hansen | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/21years/best3.php) | [`levels/doom/Ports/v-z/wailhord.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/v-z/wailhord.zip) | 362 kB | Ultimate Doom | Limit removing | Playable — Confirmed (txt) | — |
 | Runner-up | You Dig | Tuxlar | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/21years/best3.php) | [`levels/doom2/Ports/v-z/youdig.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/youdig.zip) | 871 kB | Doom II | — | Unknown | — |
 
-### 2015 — 10 winners, 8 runner-ups
+### 2015 — 10 winners, 12 runner-ups
 
 Source: [Cacowards 2015 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/) — read 2026-10-19.
 
@@ -262,14 +268,18 @@ Source: [Cacowards 2015 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Sheer Poison | zan-zan-zawa-veia (a.k.a. yakfak) | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | [`levels/doom/s-u/shpo1.zip`](https://www.gamers.org/pub/idgames/levels/doom/s-u/shpo1.zip) | 454 kB | Ultimate Doom *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Crumpets | Ribbiks | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best1.php) | [`levels/doom2/Ports/a-c/crumpets.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/crumpets.zip) | 1.4 MB | Doom II *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Doomed Space Wars | Paul Corfiatis | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best1.php) | [`levels/doom2/Ports/s-u/spacwars.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/spacwars.zip) | 57.9 MB | Doom II | Zdoom compatible with 3D floors | Not playable — Confirmed (txt) | — |
+| Runner-up | Contra Doom | Hocus Doom sans. Doom: The Golden Souls Hotline 666 | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best2.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Pinnacle of Darkness | Hobomaster22 | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best2.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Prime Directive | Ethan "Gooberman" Watson | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best2.php) | [`levels/doom2/Ports/g-i/ge5-pd.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/g-i/ge5-pd.zip) | 36.7 MB | Doom II | GZDoom 2.0 or greater | Not playable — Confirmed (txt) | — |
+| Runner-up | 24 hour stint | this November to raise an impressive sum for children in need. | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | 32in24-14 | Yeoman Engineers and Designers of Software | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | [`levels/doom2/Ports/megawads/32in2414.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/32in2414.zip) | 14.2 MB | Doom II | Boom compatible | Playable — Confirmed (txt) | — |
 | Runner-up | Click here | for a conclusive list of Doom's most prominent Twitchilites, courtesy of Dime. | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | not matched | — | Unknown | — | Unknown | — |
-| Runner-up | It Runs Doom! | is a little tumblr chronicling exactly that, posting about the different bits and pieces of hardware our favorite murde | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | It Runs Doom! | is a little tumblr chronicling exactly that, posting about the different bits and pieces | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Ol' No Name | Octavarium | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | [`levels/doom2/Ports/m-o/olnoname.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/m-o/olnoname.zip) | 5.3 MB | Doom II | Boom | Playable — Confirmed (txt) | — |
+| Runner-up | Two Big, Stupid Maps | . Already a proven charmer of detail, Doc Ock takes it one further in employing textures | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | Way Too Many Dead Guys | combines geometric architecture, Imperial scale, and vanilla textures to give us a | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/22years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 
-### 2016 — 11 winners, 9 runner-ups
+### 2016 — 11 winners, 12 runner-ups
 
 Source: [Cacowards 2016 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/) — read 2026-10-19.
 
@@ -286,17 +296,20 @@ Source: [Cacowards 2016 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Japanese Community Project | Various | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | [`levels/doom2/Ports/megawads/jpcp.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/jpcp.zip) | 13.6 MB | Doom II | Limit Removing | Playable — Confirmed (txt) | — |
 | Top Ten p3 | Miasma | tourniquet | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | [`levels/doom2/Ports/m-o/miasma.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/m-o/miasma.zip) | 2.5 MB | Doom II | — | Unknown | — |
 | Top Ten p3 | WolfenDoom - Blade of Agony Episode 1 | Daniel "Tormentor667" Gimmer et al | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | D**mRL | was recently hit with a lawyerly nastygram from ZeniMax Media, the corporate overlords of | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best1.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | THT: Threnody | Various | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best1.php) | [`levels/doom2/Ports/megawads/thtthren.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/thtthren.zip) | 13.6 MB | Doom II | Boom compatible | Playable — Confirmed (txt) | — |
 | Runner-up | Warp House | Ed C. | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best1.php) | [`levels/doom2/Ports/m-o/ma_wrp.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/m-o/ma_wrp.zip) | 11.5 MB | Doom II | — | Unknown | — |
 | Runner-up | Bloodstain | Pavel 'Pipicz' Tvrzn�k | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | [`levels/doom2/Ports/megawads/bstain.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/bstain.zip) | 11.7 MB | Doom II | Boom Compatible Ports (-complevel 2 compatible) | Playable — Confirmed (txt) | — |
-| Runner-up | Smooth Doom | is a take on filling in a lot of the empty frames of animations for Doom, reducing the jerky animations and making ever | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | Smooth Doom | is a take on filling in a lot of the empty frames of animations for Doom, reducing the | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Strange Aeons | Impie | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
-| Runner-up | The Doom 2 Minor Sprite Fixing Project | is, as per its name, dedicated to fixing the sprite errors, misplacements, and misalignments in Doom and Doom 2. Despit | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
-| Runner-up | The Particle Fire Enhancer Mod | is an old one, but still a classic. Despite its name, it enhances far more than just fires, also handling electricity a | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | The Doom 2 Minor Sprite Fixing Project | is, as per its name, dedicated to fixing the sprite errors, misplacements, and | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | The Particle Fire Enhancer Mod | is an old one, but still a classic. Despite its name, it enhances far more than just | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best2.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | Echelon | Sverre Andre Kvernmo | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | [`levels/doom2/Ports/megawads/echelon.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/echelon.zip) | 7.7 MB | Doom II | ZDoom | Not playable — Confirmed (txt) | — |
 | Runner-up | Shadow of the Wool Ball | MSPaintR0cks | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | Toilet of the Gods | series of levels, an all-senses maddening for players fond of slaughterworks. He has a | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | [`levels/doom2/Ports/s-u/totg.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/totg.zip) | 2.0 MB | Doom II *(Proposed: path)* | — | Unknown | — |
+| Runner-up | Twitch channel | for children in need. This year's event included sufferings of Perdition's Gate, Icarus: | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php) | not matched | — | Unknown | — | Unknown | — |
 
-### 2017 — 10 winners, 9 runner-ups
+### 2017 — 10 winners, 10 runner-ups
 
 Source: [Cacowards 2017 index](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/) — read 2026-10-19.
 
@@ -312,6 +325,7 @@ Source: [Cacowards 2017 index](https://web.archive.org/web/2026id_/https://www.d
 | Top Ten p3 | Saturnine Chapel | dobu gabu maru | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best3.php) | [`levels/doom2/Ports/s-u/satchap.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/satchap.zip) | 1.9 MB | Doom II | Boom | Playable — Confirmed (txt) | — |
 | Top Ten p3 | Stardate 20x7 | Ribbiks | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best3.php) | [`levels/doom2/Ports/s-u/sd20x7.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/sd20x7.zip) | 7.9 MB | Doom II | pr-boom+ / zdoom / equivalent | Playable — Confirmed (txt) | — |
 | Top Ten p3 | Void and Rainbow | Serious_MOod | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best3.php) | not matched | — | Unknown | — | Unknown | — |
+| Runner-up | ConC.E.R.Ned | reformation. The Collider's new clothes builds upon this brand as well as can be expected | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best1.php) | [`levels/doom/megawads/concern.zip`](https://www.gamers.org/pub/idgames/levels/doom/megawads/concern.zip) | 3.7 MB | Ultimate Doom *(Proposed: path)* | — | Unknown | — |
 | Runner-up | Return to Hadron Episode 2 | Matt "cannonball" Powell | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best1.php) | [`levels/doom/Ports/g-i/hadrone2.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/g-i/hadrone2.zip) | 1.1 MB | Ultimate Doom | Limit removing | Playable — Confirmed (txt) | — |
 | Runner-up | Rise of the Wool Ball | MSPaintR0cks | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best1.php) | not matched | — | Unknown | — | Unknown | — |
 | Runner-up | TNT: Revilution | Various | [src](https://web.archive.org/web/2026id_/https://www.doomworld.com/24years/best1.php) | [`levels/doom2/megawads/tntr.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/tntr.zip) | 8.6 MB | TNT: Evilution | No. For Demos use TNT.wad | Unknown | — |
@@ -348,7 +362,7 @@ Source: [Cacowards 2018 index](https://web.archive.org/web/20181217160702id_/htt
 | Runner-up | Demonastery | @Nootrac4571 | [src](https://web.archive.org/web/20190329181229id_/https://www.doomworld.com/cacowards/2018/best3/) | [`levels/doom2/Ports/d-f/demonastery.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/demonastery.zip) | 2.5 MB | Doom II *(Proposed: path)* | Doom 2, Boom-compatible | Playable — Proposed (Cacowards spec) | — |
 | Runner-up | Doom 404 | Adam " @Capellan " Windsor | [src](https://web.archive.org/web/20190329181229id_/https://www.doomworld.com/cacowards/2018/best3/) | [`levels/doom2/megawads/doom404.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/doom404.zip) | 1.1 MB | Doom II | None (complevel 2) | Playable — Confirmed (txt) | — |
 
-### 2019 — 10 winners, 8 runner-ups
+### 2019 — 10 winners, 5 runner-ups
 
 Source: [Cacowards 2019 index](https://web.archive.org/web/20191210214935id_/https://www.doomworld.com/cacowards/2019/) — read 2026-10-19.
 
@@ -364,12 +378,9 @@ Source: [Cacowards 2019 index](https://web.archive.org/web/20191210214935id_/htt
 | Top Ten p3 | Lost Civilization | @Jaska | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | not matched | — | Unknown | Doom 2, Boom-compatible, 22 maps | Playable — Proposed (Cacowards spec) | — |
 | Top Ten p3 | Remnant | @Aurelius | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | [`levels/doom2/Ports/p-r/remnant.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/p-r/remnant.zip) | 6.1 MB | Doom II | Limit-removing | Playable — Confirmed (txt) | — |
 | Top Ten p3 | The Wayfarer | @Not Jabba | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | [`levels/heretic/Ports/wayfarer.zip`](https://www.gamers.org/pub/idgames/levels/heretic/Ports/wayfarer.zip) | 18.4 MB | Heretic | UZDoom | Not playable — Confirmed (txt) | — |
-| Runner-up | Infraworld: The Hatehammer | @StormCatcher.77 | [src](https://web.archive.org/web/20191210052136id_/https://www.doomworld.com/cacowards/2019/best1/) | not matched | — | Unknown | Doom 2, Boom-compatible, 1 map | Playable — Proposed (Cacowards spec) | — |
-| Runner-up | Lunar Catastrophe | @Miss Bubbles and @Count651 | [src](https://web.archive.org/web/20191210052136id_/https://www.doomworld.com/cacowards/2019/best1/) | [`levels/doom/Ports/megawads/lunar.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/megawads/lunar.zip) | 1.8 MB | Ultimate Doom *(Proposed: path)* | Ultimate Doom, ZDoom, 36 maps | Not playable — Proposed (Cacowards spec) | — |
-| Runner-up | The Slaughter Spectrum | @Bridgeburner56 | [src](https://web.archive.org/web/20191210052144id_/https://www.doomworld.com/cacowards/2019/best2/) | not matched | — | Unknown | Doom 2, GZDoom, 5 maps | Not playable — Proposed (Cacowards spec) | — |
-| Runner-up | Lost Civilization | @Jaska | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | not matched | — | Unknown | Doom 2, Boom-compatible, 22 maps | Playable — Proposed (Cacowards spec) | — |
-| Runner-up | Remnant | @Aurelius | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | [`levels/doom2/Ports/p-r/remnant.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/p-r/remnant.zip) | 6.1 MB | Doom II | Limit-removing | Playable — Confirmed (txt) | — |
-| Runner-up | The Wayfarer | @Not Jabba | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | [`levels/heretic/Ports/wayfarer.zip`](https://www.gamers.org/pub/idgames/levels/heretic/Ports/wayfarer.zip) | 18.4 MB | Heretic | UZDoom | Not playable — Confirmed (txt) | — |
+| Runner-up | Alienated | @Lorenz0 | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | [`levels/doom2/Ports/a-c/alienated.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/alienated.zip) | 27.3 MB | Doom II *(Proposed: path)* | Doom 2, GZDoom, 10 maps | Not playable — Proposed (Cacowards spec) | — |
+| Runner-up | Doom Zero | @DASI-I | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | not matched | — | Unknown | Doom 2, vanilla-compatible, 32 maps | Playable — Proposed (Cacowards spec) | — |
+| Runner-up | Entropy | @Nirvana | [src](https://web.archive.org/web/20191210052148id_/https://www.doomworld.com/cacowards/2019/best3/) | not matched | — | Unknown | Doom 2, Boom-compatible, 1 map | Playable — Proposed (Cacowards spec) | — |
 | Runner-up | Doom 3: Phobos | Team Future | [src](https://web.archive.org/web/20191210052344id_/https://www.doomworld.com/cacowards/2019/runnersup/) | not matched | — | Unknown | Doom 3 non-BFG Edition + Resurrection of Evil | Not playable — Proposed (Cacowards spec) | — |
 | Runner-up | SIGIL | John @Romero | [src](https://web.archive.org/web/20191210052344id_/https://www.doomworld.com/cacowards/2019/runnersup/) | not matched | — | Unknown | — | Unknown | `sigil` — tagged, cited |
 

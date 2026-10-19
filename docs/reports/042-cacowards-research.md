@@ -4,7 +4,7 @@
 
 ## What changed
 
-- Added `docs/research/cacowards.md`: the full 2004–2025 inventory (380 Top Ten/Twelve and runner-up entries), the 69 named special-award releases that are mapsets, source links with capture dates, `/idgames` paths and sizes, IWAD/port evidence, a DSDA-Doom verdict for each entry, and the current DDL recipe/tag mapping.
+- Added `docs/research/cacowards.md`: the full 2004–2025 inventory (391 Top Ten/Twelve and runner-up entries), the 69 named special-award releases that are mapsets, source links with capture dates, `/idgames` paths and sizes, IWAD/port evidence, a DSDA-Doom verdict for each entry, and the current DDL recipe/tag mapping.
 - Added this report: proposed recipe waves, tag-citation gaps, and open questions.
 - No Rust code, catalog recipe, decision, status or journal file was changed. No new dependency was added.
 
@@ -15,7 +15,7 @@
 
 ## R4 — Proposed recipe waves
 
-Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/idgames` path and a single-player/co-op purpose. Ordered by evidence strength first (text file engine line, then Cacowards page line), then year and archive size, in groups of ~10. All downloads are on `www.gamers.org`, already in `catalog/hosts.toml`; **no new host allowlist is needed for these waves**.
+Candidate pool: **135** playable, not-yet-cataloged entries with a verified `/idgames` path and a single-player/co-op purpose. Ordered by evidence strength first (text file engine line, then Cacowards page line), then year and archive size, in groups of ~10. All downloads are on `www.gamers.org`, already in `catalog/hosts.toml`; **no new host allowlist is needed for these waves**.
 
 ### Wave 1 (10)
 
@@ -100,18 +100,17 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2018 | Top Ten p2 | Preacher | [`levels/doom2/Ports/p-r/preacher.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/p-r/preacher.zip) | 15.7 MB | Doom II | Boom compatible |
 | 2019 | Top Ten p2 | Shotgun Symphony | [`levels/doom/Ports/s-u/sgnsym.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/s-u/sgnsym.zip) | 2.2 MB | Ultimate Doom | Boom Compatible |
 | 2019 | Top Ten p3 | Remnant | [`levels/doom2/Ports/p-r/remnant.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/p-r/remnant.zip) | 6.1 MB | Doom II | Limit-removing |
-| 2019 | Runner-up | Remnant | [`levels/doom2/Ports/p-r/remnant.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/p-r/remnant.zip) | 6.1 MB | Doom II | Limit-removing |
 | 2020 | Top Ten p3 | Syringe | [`levels/doom2/Ports/s-u/syringe.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/syringe.zip) | 2.0 MB | Doom II | Limit-removing |
 | 2020 | Runner-up | Criticality | [`levels/doom2/Ports/a-c/criticality.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/criticality.zip) | 2.8 MB | Doom II | Boom |
 | 2020 | Runner-up | 25 Years on Earth | [`levels/doom2/Ports/megawads/ph_25yoe.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/ph_25yoe.zip) | 3.4 MB | Doom II | limit-removing |
 | 2020 | Top Ten p1 | Rowdy Rudy 2: Powertrip | [`levels/doom2/megawads/rudy2.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/rudy2.zip) | 6.6 MB | Doom II | Vanilla Compatible |
 | 2020 | Runner-up | 180 Minutes Pour Vivre | [`levels/doom2/Ports/megawads/180mpv.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/180mpv.zip) | 10.0 MB | Doom II | Limit-removing port |
+| 2020 | Top Ten p2 | Running Late 2 | [`levels/doom2/Ports/megawads/rl2.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/rl2.zip) | 12.7 MB | Doom II | BOOM compatible. |
 
 ### Wave 7 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2020 | Top Ten p2 | Running Late 2 | [`levels/doom2/Ports/megawads/rl2.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/rl2.zip) | 12.7 MB | Doom II | BOOM compatible. |
 | 2020 | Top Ten p1 | Antaresian Reliquary | [`levels/doom2/Ports/a-c/anta_req.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/anta_req.zip) | 12.8 MB | Doom II | Boom |
 | 2020 | Runner-up | Intergalactic Xenology | [`levels/doom2/Ports/d-f/dzintxen.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dzintxen.zip) | 19.5 MB | Doom II | Boom compatible ports will work |
 | 2020 | Top Ten p1 | Abandon | [`levels/doom2/Ports/megawads/abandon.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/abandon.zip) | 46.2 MB | Doom II | Boom |
@@ -121,12 +120,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2021 | Runner-up | URE2020 | [`levels/doom/s-u/ure2020.zip`](https://www.gamers.org/pub/idgames/levels/doom/s-u/ure2020.zip) | 3.3 MB | Ultimate Doom | None / Made for Vanilla |
 | 2021 | Top Twelve p2 | Unhallowed | [`levels/doom2/Ports/s-u/unhallowed.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/unhallowed.zip) | 3.8 MB | Doom II | PRBoom/DSDA |
 | 2021 | Top Twelve p4 | Haste | [`levels/doom2/Ports/megawads/haste.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/haste.zip) | 5.5 MB | Doom II | Boom |
+| 2021 | Runner-up | Atmospheric Extinction | [`levels/doom2/Ports/v-z/vel_aex.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/vel_aex.zip) | 22.6 MB | Doom II | Boom compatible |
 
 ### Wave 8 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2021 | Runner-up | Atmospheric Extinction | [`levels/doom2/Ports/v-z/vel_aex.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/vel_aex.zip) | 22.6 MB | Doom II | Boom compatible |
 | 2022 | Runner-up | Bellatrix: Tales of Orionis | [`levels/doom2/a-c/bx_e1.zip`](https://www.gamers.org/pub/idgames/levels/doom2/a-c/bx_e1.zip) | 1.8 MB | Doom II | Vanilla format, compatibility level 2 |
 | 2022 | Top Ten p3 | The 10x10 Project | [`levels/doom2/Ports/0-9/10x10.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/0-9/10x10.zip) | 6.4 MB | Doom II | Boom-compatible |
 | 2022 | Top Ten p3 | Overboard | [`levels/doom2/Ports/megawads/overboard.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/overboard.zip) | 7.7 MB | Doom II | Boom |
@@ -136,12 +135,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2022 | Top Ten p1 | Ozonia | [`levels/doom2/Ports/megawads/ozonia.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/ozonia.zip) | 17.2 MB | Doom II | Prboom |
 | 2023 | Runner-up | Solve Et Coagula | [`levels/doom/Ports/s-u/solvetco.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/s-u/solvetco.zip) | 1.4 MB | Ultimate Doom | limit removing port |
 | 2023 | Runner-up | El Viaje de Diciembre | [`levels/doom2/v-z/viaje.zip`](https://www.gamers.org/pub/idgames/levels/doom2/v-z/viaje.zip) | 1.4 MB | Doom II | None! |
+| 2023 | Runner-up | Glaive 3 | [`levels/doom2/Ports/g-i/glaive3.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/g-i/glaive3.zip) | 1.6 MB | Doom II | Limit Removing |
 
 ### Wave 9 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2023 | Runner-up | Glaive 3 | [`levels/doom2/Ports/g-i/glaive3.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/g-i/glaive3.zip) | 1.6 MB | Doom II | Limit Removing |
 | 2023 | Runner-up | The Settlements | [`levels/doom2/Ports/s-u/settlements.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/settlements.zip) | 2.8 MB | Doom II | Boom |
 | 2023 | Runner-up | Jaded | [`levels/doom2/Ports/j-l/jaded.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/j-l/jaded.zip) | 4.2 MB | Doom II | MBF21 |
 | 2023 | Runner-up | Machete | [`levels/doom2/Ports/megawads/machetefinal.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/machetefinal.zip) | 7.1 MB | Doom II | Requires Boom compatible source port |
@@ -151,12 +150,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2023 | Top Twelve p2 | Hardfest 2 | [`levels/doom2/Ports/megawads/hardfest2.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/hardfest2.zip) | 39.4 MB | Doom II | Boom-compatible (-cl 9) |
 | 2023 | Runner-up | 1x1 | [`levels/doom2/Ports/megawads/1x1.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/1x1.zip) | 45.4 MB | Doom II | MBF21 Compatible Port |
 | 2024 | Runner-up | YouDoVoodoo | [`levels/doom2/Ports/s-u/uduvudu.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/uduvudu.zip) | 1.1 MB | Doom II | Limit-removing (-complevel 9) |
+| 2024 | Runner-up | Grand Canyon | [`levels/doom/Ports/g-i/gcanyon.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/g-i/gcanyon.zip) | 2.1 MB | Ultimate Doom | limit-removing port such as crispy-doom |
 
 ### Wave 10 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2024 | Runner-up | Grand Canyon | [`levels/doom/Ports/g-i/gcanyon.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/g-i/gcanyon.zip) | 2.1 MB | Ultimate Doom | limit-removing port such as crispy-doom |
 | 2024 | Top Twelve p2 | House of Dead Skin | [`levels/doom2/Ports/d-f/deadskin.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/deadskin.zip) | 2.1 MB | Doom II | MBF21 |
 | 2024 | Runner-up | Bitter Dream | [`levels/doom2/Ports/a-c/bitter.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/bitter.zip) | 8.1 MB | Doom II | MBF21 |
 | 2024 | Top Twelve p1 | Osterity | [`levels/doom2/m-o/osterity.zip`](https://www.gamers.org/pub/idgames/levels/doom2/m-o/osterity.zip) | 8.2 MB | Doom II | none |
@@ -166,12 +165,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2024 | Runner-up | Oops... All Ghosts! | [`levels/doom2/Ports/m-o/oops.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/m-o/oops.zip) | 17.9 MB | Doom II | Vanilla (cl2) |
 | 2024 | Runner-up | TNT: Overcharged | [`levels/doom2/Ports/megawads/tnto.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/tnto.zip) | 36.0 MB | TNT: Evilution | Anything Boom Compatible (CL9) |
 | 2024 | Runner-up | Formless Mother | [`levels/doom2/Ports/d-f/formless.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/formless.zip) | 36.5 MB | Doom II | MBF21 |
+| 2025 | Runner-up | Forlorn | [`levels/doom2/Ports/d-f/forlorn.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/forlorn.zip) | 407 kB | Doom II | Boom-compatible |
 
 ### Wave 11 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2025 | Runner-up | Forlorn | [`levels/doom2/Ports/d-f/forlorn.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/forlorn.zip) | 407 kB | Doom II | Boom-compatible |
 | 2025 | Runner-up | Witching Hour | [`levels/doom2/Ports/v-z/witchinghour.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/witchinghour.zip) | 3.4 MB | Doom II | Limit Removing |
 | 2025 | Top Twelve p4 | Axolotl: Regenerated | [`levels/doom2/Ports/megawads/axodius.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/axodius.zip) | 13.1 MB | Doom II | DSDA-Doom or equivalent port with MBF21 |
 | 2025 | Top Twelve p1 | In the Doghouse | [`levels/doom2/Ports/megawads/doghouse.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/doghouse.zip) | 22.5 MB | Doom II | Boom (complevel 9) |
@@ -181,12 +180,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2018 | Runner-up | Demonastery | [`levels/doom2/Ports/d-f/demonastery.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/demonastery.zip) | 2.5 MB | Doom II | Doom 2, Boom-compatible |
 | 2018 | Top Ten p2 | Struggle - Antaresian Legacy | [`levels/doom2/Ports/megawads/strg.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/strg.zip) | 20.7 MB | Doom II | Doom 2, limit-removing / DeHackEd |
 | 2020 | Top Ten p2 | Mutabor | [`levels/doom2/m-o/mutabor.zip`](https://www.gamers.org/pub/idgames/levels/doom2/m-o/mutabor.zip) | 1.5 MB | Doom II | Doom 2, vanilla / DeHackEd, 1 map |
+| 2020 | Runner-up | Return to Hadron E3: Slayer's Swansong | [`levels/doom/Ports/g-i/hadrone3.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/g-i/hadrone3.zip) | 2.1 MB | Ultimate Doom | Ultimate Doom, limit-removing, 9 maps |
 
 ### Wave 12 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2020 | Runner-up | Return to Hadron E3: Slayer's Swansong | [`levels/doom/Ports/g-i/hadrone3.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/g-i/hadrone3.zip) | 2.1 MB | Ultimate Doom | Ultimate Doom, limit-removing, 9 maps |
 | 2020 | Top Ten p3 | Three Is a Crowd | [`levels/doom2/megawads/3iac.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/3iac.zip) | 3.6 MB | Doom II | Doom 2, vanilla-compatible, 32 maps |
 | 2021 | Runner-up | Arceon | [`levels/doom2/Ports/a-c/arceon.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/arceon.zip) | 7.2 MB | Doom II | Doom 2, Boom-compatible, 6 maps |
 | 2021 | Top Twelve p2 | Fractured Worlds | [`levels/doom2/Ports/d-f/fw.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/fw.zip) | 14.3 MB | Doom II | Doom 2, Boom-compatible, 9 maps |
@@ -196,12 +195,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2022 | Runner-up | Solar Struggle | [`levels/doom/Ports/megawads/sstruggle.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/megawads/sstruggle.zip) | 10.9 MB | Ultimate Doom | Ultimate Doom, vanilla-compatible, 36 maps |
 | 2022 | Runner-up | 2022: A Doom Odyssey | [`levels/doom/Ports/megawads/2022ado.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/megawads/2022ado.zip) | 14.2 MB | Ultimate Doom | Ultimate Doom, Boom-compatible, 50 maps |
 | 2022 | Runner-up | Dance on the Water | [`levels/doom2/Ports/d-f/dotw.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/d-f/dotw.zip) | 14.3 MB | Doom II | Doom 2, Boom-compatible, 10 maps |
+| 2022 | Top Ten p3 | Knee-Deep in Knee-Deep in ZDoom | [`levels/doom2/megawads/kdikdizd.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/kdikdizd.zip) | 14.4 MB | Doom II | Doom 2, vanilla-compatible, 13 maps |
 
 ### Wave 13 (10)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2022 | Top Ten p3 | Knee-Deep in Knee-Deep in ZDoom | [`levels/doom2/megawads/kdikdizd.zip`](https://www.gamers.org/pub/idgames/levels/doom2/megawads/kdikdizd.zip) | 14.4 MB | Doom II | Doom 2, vanilla-compatible, 13 maps |
 | 2023 | Runner-up | Tetanus | [`levels/doom2/s-u/ttns.zip`](https://www.gamers.org/pub/idgames/levels/doom2/s-u/ttns.zip) | 5.2 MB | Doom II | Doom 2, vanilla-compatible, 10 maps |
 | 2023 | Runner-up | BOOMER: Beyond Vanilla | [`levels/doom2/Ports/a-c/boomer.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/boomer.zip) | 11.1 MB | Doom II | Doom 2, limit-removing, 6 maps |
 | 2023 | Top Twelve p4 | Ultimate Doom in Name Only | [`levels/doom/Ports/megawads/udino.zip`](https://www.gamers.org/pub/idgames/levels/doom/Ports/megawads/udino.zip) | 14.9 MB | Ultimate Doom | Ultimate Doom, limit-removing, 36 maps |
@@ -211,12 +210,12 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | 2024 | Top Twelve p2 | Squenched Avacausage | [`levels/doom2/Ports/megawads/squench.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/squench.zip) | 7.2 MB | Doom II | Doom 2, Boom-compatible, 13 maps |
 | 2024 | Runner-up | Vogel im Kafig | [`levels/doom2/Ports/v-z/vik.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/v-z/vik.zip) | 10.1 MB | Doom II | Doom 2, MBF21, 1 map |
 | 2024 | Top Twelve p2 | Simulacrum | [`levels/doom2/Ports/megawads/simulacrum.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/simulacrum.zip) | 41.0 MB | Doom II | Doom 2, MBF21, 32 maps |
+| 2024 | Top Twelve p4 | Doom 2 in City Only | [`levels/doom2/Ports/megawads/d2ico.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/d2ico.zip) | 51.2 MB | Doom II | Doom 2, MBF21, 36 maps |
 
-### Wave 14 (6)
+### Wave 14 (5)
 
 | Year | Award | Title | /idgames | Size | IWAD | Format (evidence) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2024 | Top Twelve p4 | Doom 2 in City Only | [`levels/doom2/Ports/megawads/d2ico.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/d2ico.zip) | 51.2 MB | Doom II | Doom 2, MBF21, 36 maps |
 | 2025 | Top Twelve p2 | Dead Sea Scrolls | [`levels/doom/d-f/dss.zip`](https://www.gamers.org/pub/idgames/levels/doom/d-f/dss.zip) | 4.9 MB | Ultimate Doom | Ultimate Doom, vanilla-compatible, 14 maps |
 | 2025 | Runner-up | Earthless | [`levels/doom2/Ports/megawads/earthless.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/earthless.zip) | 5.2 MB | Doom II | Doom 2, limit-removing, 32 maps |
 | 2025 | Runner-up | Sunless Empire | [`levels/doom2/Ports/s-u/sunless.zip`](https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/sunless.zip) | 13.7 MB | Doom II | Doom 2, MBF21, 10 maps |
@@ -231,10 +230,10 @@ Candidate pool: **136** playable, not-yet-cataloged entries with a verified `/id
 | --- | --- | --- | --- | --- |
 | 2018 | Top Ten p1 | Avactor | [https://www.doomworld.com/forum/topic/101647-avactor-release/](https://www.doomworld.com/forum/topic/101647-avactor-release/) | Doom 2, Boom-compatible |
 | 2018 | Top Ten p2 | Dimension of the Boomed | [https://www.doomworld.com/forum/topic/92574-dimension-of-the-boomed/](https://www.doomworld.com/forum/topic/92574-dimension-of-the-boomed/) | Doom 2, Boom-compatible |
+| 2019 | Runner-up | Doom Zero | [https://www.doomworld.com/forum/topic/109216-doom-zero-launch-and-celebrating-25-years-of-doom-ii/](https://www.doomworld.com/forum/topic/109216-doom-zero-launch-and-celebrating-25-years-of-doom-ii/) | Doom 2, vanilla-compatible, 32 maps |
+| 2019 | Runner-up | Entropy | — | Doom 2, Boom-compatible, 1 map |
 | 2019 | Top Ten p2 | Finely Crafted Fetish Film | [https://www.doomworld.com/forum/topic/104608-finely-crafted-fetish-film-7-puzzle-maps-for-boom/](https://www.doomworld.com/forum/topic/104608-finely-crafted-fetish-film-7-puzzle-maps-for-boom/) | Doom 2, Boom-compatible, 7 maps |
-| 2019 | Runner-up | Infraworld: The Hatehammer | [https://www.doomworld.com/forum/topic/107367-infraworld-the-hatehammer/](https://www.doomworld.com/forum/topic/107367-infraworld-the-hatehammer/) | Doom 2, Boom-compatible, 1 map |
 | 2019 | Top Ten p3 | Lost Civilization | [https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/](https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/) | Doom 2, Boom-compatible, 22 maps |
-| 2019 | Runner-up | Lost Civilization | [https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/](https://www.doomworld.com/forum/topic/105215-lost-civilization-22-map-fun-and-nonlinear-megawad-now-with-download-link/) | Doom 2, Boom-compatible, 22 maps |
 | 2020 | Runner-up | Gods & Guardians | [https://www.doomworld.com/forum/topic/100195-godsguardians-classic-6-map-episode-v10/?tab=comments#comment-1863761](https://www.doomworld.com/forum/topic/100195-godsguardians-classic-6-map-episode-v10/?tab=comments#comment-1863761) | Doom 2, vanilla-compatible, 7 maps |
 | 2021 | Top Twelve p4 | 1000 Lines Community Project 3 | [https://www.doomworld.com/forum/topic/125479-1000-lines-3-community-project-rc-2-is-released](https://www.doomworld.com/forum/topic/125479-1000-lines-3-community-project-rc-2-is-released) | Doom 2, vanilla-compatible, 32 maps |
 | 2021 | Runner-up | Down the Drain | [https://www.doomworld.com/forum/topic/124197-down-the-drain-32-vanilla-maps-rc2/](https://www.doomworld.com/forum/topic/124197-down-the-drain-32-vanilla-maps-rc2/) | Doom 2, vanilla, 32 maps |
@@ -281,10 +280,10 @@ None. The research used `curl`, `python3` (standard library), `zstd` and `gzip` 
 
 1. **1994 wording in R1.** The Cacowards archive starts in 2004 (its own index: "Since 2004"); no 1994 Cacowards page exists in Wayback. Should the 1994–2003 retrospective lists (*5 Years of Doom*, *10 Years of Doom* top 100) be inventoried as a separate task, or is 2004–2025 the intended scope? **Recommendation:** keep 2004–2025; the retrospective lists are not Cacowards.
 2. **Unmatched old entries.** A handful of 2004–2017 award winners are on `/idgames` but the archive filename does not match the award title, and the numeric `?id=` link could not be resolved for every page. They are marked `not matched`, not `not on /idgames`. A follow-up can resolve them from the archive search frontend or by reading each `.txt`.
-3. **Runner-ups are included.** The `cacowards` tag description says "winner or runner-up", so the inventory includes 151 runner-ups. If the later recipe spec wants winners only, filter the Runner-up rows out; the tables mark them explicitly.
+3. **Runner-ups are included.** The `cacowards` tag description says "winner or runner-up", so the inventory includes 162 runner-ups. If the later recipe spec wants winners only, filter the Runner-up rows out; the tables mark them explicitly.
 4. **2016 has eleven winners.** The 2016 edition lists eleven Top Ten entries (ten plus John Romero's *Tech Gone Bad* special icon). This is what the page says, not a duplicate; decide whether the later catalog treats it as a Top Ten or a special.
 5. **Special awards scope.** Multiplayer winners are Zandronum/Odamex and are not DSDA-Doom single-player targets; they are inventoried but not proposed for recipes. Worst Wad and joke awards are included only when the winner is a single release, and are not proposed for waves.
-6. **Deck validation.** Every `Playable` verdict is a text-file/page compatibility claim, not a gameplay test. All 137 wave candidates still need the standard `Needs Deck Validation` treatment (IWAD detection, complevel, load order, audio).
+6. **Deck validation.** Every `Playable` verdict is a text-file/page compatibility claim, not a gameplay test. All 135 wave candidates still need the standard `Needs Deck Validation` treatment (IWAD detection, complevel, load order, audio).
 
 ## Spec items left open
 
