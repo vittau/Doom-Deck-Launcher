@@ -1,9 +1,10 @@
 # 029 — Deck display: fit the screen, start DSDA widescreen — worker report
 
-**Status:** R1–R5 implemented; A1–A3 verified headlessly, A4 pending the workspace
-checks and a Deck re-run. The launcher no longer needs a launch option for
-scaling, and DSDA-Doom opens fullscreen 16:10 with the widescreen status bar
-scaled to the panel. All work is macOS-buildable and headless.
+**Status:** R1–R5 implemented; A1–A3 verified headlessly and A4's fmt/clippy/tests
+are green. The launcher no longer needs a launch option for scaling, and
+DSDA-Doom opens fullscreen 16:10 with the widescreen status bar scaled to the
+panel. All work is macOS-buildable and headless; the only item left is the Deck
+re-check (S3, F4), which **Needs Deck Validation**.
 
 ## What changed
 
@@ -101,7 +102,17 @@ template could only hold integers.
 
 ## Verification
 
-_(filled in at the end of the run)_
+Run on macOS arm64 after merging `main` (`152f326`, specs 028 and 030); the
+branch is `vittau/deck-display`, the merge is `f1a737a` (no conflicts).
+
+- `cargo fmt --all --check` — clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean.
+- `cargo test --workspace` — **950 passed, 0 failed** across 16 test binaries.
+- `python3 scripts/check-readme-links.py` — PASS (32 local links/anchors).
+
+The four A1 PNGs were opened and inspected: the fitted 1280×800 frame shows all
+four tabs with the Settings ring, its reported-1.0 twin is byte-identical, and
+the 1920×1080 frame is the design at 1.35× with a background letterbox strip.
 
 ## New dependencies
 
