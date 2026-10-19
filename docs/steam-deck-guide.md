@@ -383,6 +383,11 @@ Common fixes:
   (missing IWAD, not installed, a component you must import, …).
 - **An install failed** — the logs are in `~/.local/state/ddl/logs/ddl.log`
   (the exact path is in `ddl doctor`); attach that file.
+- **The DDL window looks too big or too small** — you do not need a Steam launch
+  option for this: DDL fits its 1280×800 design to the window's physical size, so
+  Gaming Mode shows it at 1:1. If you want to override that on purpose, set
+  `SLINT_SCALE_FACTOR` (for example `SLINT_SCALE_FACTOR=1 %command%` as a launch
+  option); a user value always wins and is logged in `ddl.log`.
 
 ## FAQ
 

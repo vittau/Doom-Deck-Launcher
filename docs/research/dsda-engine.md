@@ -732,6 +732,82 @@ Implications for DDL:
 - **Proposed:** Show upstream attribution, license, exact version and corresponding tagged source link in engine details.
 - **Proposed:** Keep engine acquisition upstream-direct for the initial design; record redistribution obligations before introducing mirrors or bundled installers.
 
+## 9. Video, aspect ratio and HUD/status-bar scaling
+
+Desk research, 2026-10-19, for spec 029. **Confirmed** rows were read in the same
+pinned tag `v0.30.1` = `8ed581ad5c868b4dba1c39eb21d29e4ddbed9fad`; no engine build,
+window or Deck test was performed. Every default and limit below comes from the
+tagged `dsda_config` table, whose macro arguments are
+`type, lower_limit, upper_limit, { default }, …`
+([configuration.c:75–82](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L75-L82)).
+
+**Confirmed — video keys, defaults and accepted ranges.** These are the keys that
+decide how the game is rendered; all of them are ordinary, persisted config values
+(already owned by DSDA, so DDL may claim them in its template).
+
+| Key | Type | Default | Range / values | Tagged source |
+| --- | --- | --- | --- | --- |
+| `videomode` | string | `"Software"` | software / OpenGL renderer | [configuration.c:1165–1168](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1165-L1168) |
+| `screen_resolution` | string | `"640x480"` | `WIDTHxHEIGHT`, parsed with `sscanf("%dx%d")`; invalid data falls back to 640×480 | [configuration.c:1169–1172](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1169-L1172); [i_video.c:740–758](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L740-L758) |
+| `custom_resolution` | string | `""` | extra `%4dx%4d` entry added to the resolution list when non-empty | [configuration.c:1173–1176](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1173-L1176); [i_video.c:810–825](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L810-L825) |
+| `use_fullscreen` | bool | `0` | 0 windowed / 1 fullscreen | [configuration.c:1177–1180](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1177-L1180) |
+| `exclusive_fullscreen` | bool | `0` | 0 desktop fullscreen / 1 exclusive mode change | [configuration.c:1181–1184](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1181-L1184) |
+| `render_vsync` | bool | `0` | 0/1 | [configuration.c:1185–1188](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1185-L1188) |
+| `screenblocks` | int | `10` | 10–11 (the full-screen range only) | [configuration.c:1205–1208](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1205-L1208) |
+| `render_screen_multiply` | int | `1` | 1–5 (internal render scale, then scaled to the window) | [configuration.c:1233–1236](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1233-L1236) |
+| `integer_scaling` | bool | `0` | 0/1 | [configuration.c:1237–1240](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1237-L1240) |
+| `render_aspect` | int | `0` | 0–4; see the mapping below | [configuration.c:1241–1244](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1241-L1244); [v_video.c:1357–1376](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1357-L1376) |
+| `render_stretch_hud` | int | `patch_stretch_doom_format` (`1`) | 0 `not_adjusted`, 1 `doom_format`, 2 `fit_to_width` | [configuration.c:1254–1258](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1254-L1258); [stretch.h:41–52](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/stretch.h#L41-L52) |
+| `render_patches_scalex` / `render_patches_scaley` | int | `0` | 0–16; `0` = automatic (`min(SCREENWIDTH/320, SCREENHEIGHT/200)`, clamped up to the user value) | [configuration.c:1259–1266](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1259-L1266); [stretch.c:260–276](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/stretch.c#L260-L276) |
+| `aspect_ratio_correction` | bool | `1` | applies the VGA 5:6 pixel aspect for 200/400-high modes | [configuration.c:1275–1278](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1275-L1278); [v_video.c:1339–1346](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1339-L1346) |
+| `hud_displayed` | bool | `0` | the DSDA advanced HUD (`R_FullView` tracks it as a feature) | [configuration.c:872–875](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L872-L875); [configuration.c:154–155](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L154-L155) |
+| `dsda_exhud` / `dsda_exhud_*` | bool | `0` | the extended HUD (`R_PartialView`); the sub-toggles live under `dsda_config_hudadd_*` | [configuration.c:375–378](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L375-L378); [configuration.c:151–152](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L151-L152) |
+| `sts_solid_bg_color` | bool | `0` | colour of the status bar's leftover side area | [configuration.c:331–334](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L331-L334) |
+
+**Confirmed — `render_aspect` values.** `SetRatio()` first derives the storage and
+display aspect from the window and `aspect_ratio_correction`, then a user
+`render_aspect` overrides it. The hard-coded switch is, in order:
+`0` = keep the derived ratio (Auto), `1` = 16:9, `2` = **16:10**, `3` = 4:3,
+`4` = 5:4. Any other value logs an error and is ignored.
+[v_video.c:1357–1376](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1357-L1376).
+`WIDE_SCREENWIDTH`/`WIDE_SCREENHEIGHT` are then the wider virtual screen the
+renderer draws into ([v_video.c:1420–1430](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1420-L1430)).
+
+**Confirmed — what a wide `STBAR` needs.** A widescreen status bar is an ordinary
+replacement patch named `STBAR`; there is no flag for it. `ST_SetScaledWidth()`
+scales the loaded patch by `render_stretch_hud`, rounds the width to a multiple of
+4, caps it to `SCREENWIDTH`, and centres it:
+- `patch_stretch_not_adjusted` (0): `width * patches_scalex`;
+- `patch_stretch_doom_format` (1, default): `width * WIDE_SCREENWIDTH / 320`;
+- `patch_stretch_fit_to_width` (2): `width * SCREENWIDTH / 320`.
+[st_stuff.c:399–426](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/st_stuff.c#L399-L426).
+The leftover side area is filled from the bar's palette (`sts_solid_bg_color`) or
+the `grnrock`/`brdr_b` texture; with `patch_stretch_fit_to_width` the borders are
+skipped entirely ([v_video.c:1269–1273](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1269-L1273),
+[i_video.c:1115](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1115)).
+At 1280×800 with `screen_resolution "1280x800"` and 16:10, both `doom_format` and
+`fit_to_width` produce `SCREENWIDTH/320 = SCREENHEIGHT/200 = 4`, i.e. a uniform 4×
+scaling of a stock 320-wide bar and full-width display of a wider one; the wide bar
+of spec 017 therefore needs **no extra key**, and `render_stretch_hud = 2` is the
+explicit "fill the panel width" choice.
+
+**Confirmed — where DDL's own template stands.** The `steam-deck-default`
+template v1 owned only controller and mouse keys (see §4); DSDA's own defaults had
+`use_fullscreen = 0` and `render_aspect = 0`, so on a fresh Deck the game opened
+windowed at 4:3, matching the spec-029 F4 finding.
+
+Implications for DDL (spec 029, all **Proposed** until the Deck re-check):
+
+- **Proposed:** template v2 sets `screen_resolution "1280x800"`, `use_fullscreen 1`,
+  `exclusive_fullscreen 0`, `render_aspect 2` (16:10) and `render_stretch_hud 2`
+  (status bar fills the panel). Every value is inside a confirmed range.
+- **Proposed:** do not set `render_screen_multiply`, `render_patches_scale*`,
+  `integer_scaling`, `hud_displayed` or `dsda_exhud`; their automatic behaviour is
+  correct and claiming them would fight the player's own menu choices.
+- **Needs Deck Validation:** the real fullscreen mode gamescope grants, that
+  `exclusive_fullscreen 0` composites correctly, and that the 16:10 bar fills the
+  panel with no side texture.
+
 ## Open questions and validation gates
 
 - **Needs Deck Validation:** Execute the official AppImage `-v`, direct FUSE launch, `--appimage-extract`, and extracted `AppRun` on Linux/Deck; record statuses and stderr.
