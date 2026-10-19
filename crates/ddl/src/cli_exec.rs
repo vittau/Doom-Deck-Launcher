@@ -209,10 +209,7 @@ pub fn run_io(
                     pistol_start,
                 };
                 let item = services.base_item(&id, overrides.profile.as_deref())?;
-                let snapshot = services
-                    .snapshot()
-                    .map_err(|e| CliFailure::message(e.to_string()))?;
-                if let Some(notice) = item.copy_notice(&snapshot.iwads) {
+                if let Some(notice) = services.base_copy_notice(&item) {
                     writeln!(err, "{notice}").map_err(output_error)?;
                 }
                 if dry_run {

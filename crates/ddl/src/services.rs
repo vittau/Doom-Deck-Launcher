@@ -2723,6 +2723,9 @@ impl Services {
             last_played,
         })
     }
+    pub fn base_copy_notice(&self, item: &BaseItem) -> Option<&'static str> {
+        item.copy_notice(self.registry.entries())
+    }
     pub fn base_resolution(
         &mut self,
         id: &str,
