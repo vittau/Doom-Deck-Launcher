@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 35; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "stroggmans-tundra"
+title = "Stroggman's Tundra (Doomer Boards Project 35)"
+authors = ["Doomer Boards Project 35"]
+release = "2021-05-01"
+page = "https://dsdarchive.com/wads/dbp_35"
+description = "DOOM II: MAP01–MAP10 (10 maps). Beware: this military stronghold in the icy tundra is armed to the teeth and ready for bloodshed."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/stroggmans-tundra/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "stroggmans-tundra/01.jpg"
+credit = "Doomer Boards Project 35"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 35", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/2104/stroggmans-tundra"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 35;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp_35"
+urls = ["https://dsdarchive.com/files/wads/doom2/3982/DBP_35.zip"]
+size = 4717351
+sha256 = "5346aaffe5c0f86d443ad3e94eb0c4459fc851555b73383a28cab05f721a3ec5"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-35"
+path = "DBP_35.txt"
+size = 3560
+sha256 = "bac6dbdf56f89d05bed88922c0de7a2174b6faccb12f40bcc521f4380bdfad83"
+keep = true
+
+[[packages.members]]
+id = "dbp-35-2"
+path = "DBP_35.wad"
+size = 14901471
+sha256 = "1c622d814aae93418fda19afc676206fd83ec20ff2b957e37e152b57e5f6b175"
+keep = false
+
+[[components]]
+id = "main"
+label = "Stroggman's Tundra"
+description = "Main episode: MAP01–MAP10."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-35-2"
+role = "maps"

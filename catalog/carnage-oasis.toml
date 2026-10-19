@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 39; gathered 2026-10-19.
+# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
+schema_version = 1
+id = "carnage-oasis"
+title = "Carnage Oasis (Doomer Boards Project 39)"
+authors = ["Doomer Boards Project 39"]
+release = "2021-09-02"
+page = "https://dsdarchive.com/wads/dbp_39"
+description = "DOOM II: MAP01–MAP12 (12 maps). In a world of unknown dangers, a secretive sci-fi military complex lies hidden among the endless sand dunes."
+permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
+tags = ["community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/carnage-oasis/ with source and credit in SOURCES.toml
+# beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "carnage-oasis/01.jpg"
+credit = "Doomer Boards Project 39"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = 2
+complevel_status = "confirmed"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-19"
+engine_version = "0.30.1"
+inspected = ["docs/research/doomer-boards-projects.md §DBP 39", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit Removing (tested in prboom-plus cl2)", "Bundled readme \"Tested With\": prboom-plus cl2, Crispy Doom, and GZDoom", "Release thread: https://doomer.boards.net/thread/2271/carnage-oasis"]
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit Removing (tested in prboom-plus cl2)\". It also names the tested ports: prboom-plus cl2, Crispy Doom, and GZDoom. Confirmed complevel 2 (the readme/tested-with line names cl2; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 39;"
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
+
+[[packages]]
+id = "free"
+page = "https://dsdarchive.com/wads/dbp_39"
+urls = ["https://dsdarchive.com/files/wads/doom2/3551/dbp_39.zip"]
+size = 4896657
+sha256 = "f3b074ce9cad50f7fadbc67ffbd7c6ef798d045947e3238edb72773e0877b9db"
+kind = "zip"
+
+[[packages.members]]
+id = "dbp-39"
+path = "DBP_39.txt"
+size = 3903
+sha256 = "17d614ecc5f3e69ead1fde5160a51b7a3cfe1dc2204f4deeb27848e7f765ed8f"
+keep = true
+
+[[packages.members]]
+id = "dbp-39-2"
+path = "DBP_39.wad"
+size = 14368437
+sha256 = "b69d6ff4e28f7bff2dc7618eaea92594d616454b3451105f016e3278cac77190"
+keep = false
+
+[[components]]
+id = "main"
+label = "Carnage Oasis"
+description = "Main episode: MAP01–MAP12."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "dbp-39-2"
+role = "maps"
