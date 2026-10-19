@@ -615,8 +615,8 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     ui.set_profile_name("default".into());
     click(&mut r, &ui, 917);
     assert!(!ui.get_profile_name_error().is_empty());
-    ui.set_profile_name("My Doom II run".into());
     write_png("032-base-profile-name.png", &render(&window));
+    ui.set_profile_name("My Doom II run".into());
     click(&mut r, &ui, 917);
     assert_eq!(r.base_item().unwrap().profile.name, "My Doom II run");
     click(&mut r, &ui, 10);
