@@ -655,6 +655,92 @@ fn prepare_creates_directories_and_the_canonical_link_and_then_validates() {
 }
 
 #[test]
+fn resolver_prefers_the_classic_steam_copy_over_the_kex_copy() {
+    // Spec 028, R3/A2: with both the Deck's `base/` and `rerelease/` copies
+    // registered, SIGIL and AUGER;ZENITH launch from `base/`.
+    let dir = TempDir::new().unwrap();
+    let data = dir.path();
+    let install = data.join("steam/steamapps/common/Ultimate Doom");
+    let base_doom = install.join("base/DOOM.WAD");
+    let kex_doom = install.join("rerelease/doom.wad");
+    let base_doom2 = install.join("base/doom2/DOOM2.WAD");
+    let kex_doom2 = install.join("rerelease/doom2.wad");
+    for path in [&base_doom, &kex_doom, &base_doom2, &kex_doom2] {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, path.to_string_lossy().as_bytes()).unwrap();
+    }
+
+    let mut registry = Registry::new();
+    // KEX first: ranking, not insertion order, must decide.
+    registry.insert(registry_entry(
+        &kex_doom2,
+        "doom2-1.9-kex-2024-10-01",
+        IwadsGame::Doom2,
+    ));
+    registry.insert(registry_entry(
+        &kex_doom,
+        "doom-1.9ud-kex-2024-10-01",
+        IwadsGame::Doom,
+    ));
+    registry.insert(registry_entry(&base_doom2, "doom2-1.9", IwadsGame::Doom2));
+    registry.insert(registry_entry(&base_doom, "doom-1.9ud", IwadsGame::Doom));
+    let (engine, _) = engine(data);
+    let config = config(data);
+
+    let sigil = embedded("sigil");
+    let mut sigil_manifest = empty_manifest(&sigil);
+    add_member(
+        data,
+        &mut sigil_manifest,
+        &sigil,
+        "free",
+        "maps",
+        b"sigil main",
+    );
+    let resolution = resolve(
+        &sigil,
+        &Profile::new("p1", "Play", "sigil"),
+        &Iwads::new(data, &registry),
+        &sigil_manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve SIGIL");
+    resolution.prepare().expect("prepare SIGIL");
+    assert_eq!(
+        fs::canonicalize(&resolution.plan().iwad).unwrap(),
+        fs::canonicalize(&base_doom).unwrap(),
+        "SIGIL must launch from base/DOOM.WAD"
+    );
+
+    let auger = embedded("auger-zenith");
+    let mut auger_manifest = empty_manifest(&auger);
+    add_member(
+        data,
+        &mut auger_manifest,
+        &auger,
+        "free",
+        "maps",
+        b"auger main",
+    );
+    let resolution = resolve(
+        &auger,
+        &Profile::new("p1", "Play", "auger-zenith"),
+        &Iwads::new(data, &registry),
+        &auger_manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve AUGER;ZENITH");
+    resolution.prepare().expect("prepare AUGER;ZENITH");
+    assert_eq!(
+        fs::canonicalize(&resolution.plan().iwad).unwrap(),
+        fs::canonicalize(&base_doom2).unwrap(),
+        "AUGER;ZENITH must launch from base/doom2/DOOM2.WAD"
+    );
+}
+
+#[test]
 fn summary_snapshot_for_the_three_reference_recipes() {
     // Each case: recipe id, iwad variant + game, the main member path.
     let cases = [

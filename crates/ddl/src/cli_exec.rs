@@ -1301,6 +1301,47 @@ exit 1
     }
 
     #[test]
+    fn iwad_scan_lists_the_real_steam_layout_as_steam() {
+        // Spec 028, A3: the Deck's `Ultimate Doom/` tree, both copies.
+        let fx = fixture();
+        let install = fx
+            .env
+            .home
+            .join(".local/share/Steam/steamapps/common/Ultimate Doom");
+        let mut expected = Vec::new();
+        for (relative, bytes) in [
+            ("base/DOOM.WAD", ultimate_wad()),
+            ("base/doom2/DOOM2.WAD", commercial_wad()),
+            ("base/tnt/TNT.WAD", commercial_wad()),
+            ("base/plutonia/PLUTONIA.WAD", commercial_wad()),
+            ("rerelease/doom.wad", ultimate_wad()),
+            ("rerelease/doom2.wad", commercial_wad()),
+            ("rerelease/tnt.wad", commercial_wad()),
+            ("rerelease/plutonia.wad", commercial_wad()),
+        ] {
+            let path = install.join(relative);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, bytes).unwrap();
+            expected.push(path);
+        }
+
+        let (out, _) = run(&fx, cli::Command::IwadScan { paths: vec![] }).expect("scan");
+        assert_eq!(
+            out.matches("Steam: ").count(),
+            8,
+            "one Steam line per IWAD copy: {out}"
+        );
+        for path in expected {
+            assert!(
+                out.contains(&format!("Steam: {}", path.display())),
+                "missing {}: {out}",
+                path.display()
+            );
+        }
+        assert!(!out.contains("unrecognized:"), "{out}");
+    }
+
+    #[test]
     fn launch_dry_run_without_an_iwad_reports_the_typed_blocker() {
         let fx = fixture();
         install_engine(&fx, false);
@@ -1633,6 +1674,23 @@ exit 1
             let name = format!("MAP{map:02}");
             lump[..name.len()].copy_from_slice(name.as_bytes());
             bytes.extend_from_slice(&lump);
+        }
+        bytes
+    }
+
+    /// A synthetic Ultimate DOOM IWAD: header plus E1M1…E4M9.
+    fn ultimate_wad() -> Vec<u8> {
+        let mut bytes = b"IWAD".to_vec();
+        bytes.extend_from_slice(&36i32.to_le_bytes());
+        bytes.extend_from_slice(&12i32.to_le_bytes());
+        for episode in 1..=4 {
+            for map in 1..=9 {
+                bytes.extend_from_slice(&[0; 8]);
+                let mut lump = [0; 8];
+                let name = format!("E{episode}M{map}");
+                lump[..name.len()].copy_from_slice(name.as_bytes());
+                bytes.extend_from_slice(&lump);
+            }
         }
         bytes
     }

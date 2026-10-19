@@ -1,4 +1,5 @@
-//! Read-only Steam library discovery (spec 007, R3).
+//! Read-only Steam library discovery (spec 007, R3; spec 028 adds the real
+//! `Ultimate Doom/` layout).
 //!
 //! DDL finds the Steam roots a Steam Deck user can have, parses the Valve
 //! KeyValues `libraryfolders.vdf` that lists extra libraries, and probes only a
@@ -15,16 +16,45 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 /// Install directories under `steamapps/common/` that may hold IWADs, from
-/// research §4. Matched case-insensitively because folder casing is not
-/// guaranteed (research marks it *Needs Deck Validation*).
+/// research §4. Matched case-insensitively; the Deck layout (2026-10-19) is
+/// confirmed for `Ultimate Doom/`, the legacy folders are not.
+///
+/// Every entry is scanned flat (one directory, no recursion), except that the
+/// Deck's `base/` subfolders are named explicitly. This keeps the scan bounded
+/// while covering `base/doom2/`, `base/tnt/` and `base/plutonia/`. It also
+/// keeps `base/master/wads/` out of scope: those are the 20 Master Levels
+/// PWADs, which are never base games.
 pub const KNOWN_INSTALL_DIRS: &[&str] = &[
     "DOOM + DOOM II/base",
     "DOOM + DOOM II/rerelease",
     "Ultimate Doom/base",
+    "Ultimate Doom/base/doom2",
+    "Ultimate Doom/base/tnt",
+    "Ultimate Doom/base/plutonia",
+    "Ultimate Doom/rerelease",
     "Doom 2/base",
     "Doom 2/finaldoombase",
     "Final Doom/base",
     "Master Levels of Doom/doom2",
+];
+
+/// KEX files under a `rerelease/` folder that are resources or PWAD
+/// expansions, never base-game IWADs (spec 028, R2). They are filtered by name
+/// before identification, so even a hash-identical `nerve.wad` is not offered
+/// as an IWAD.
+pub const KEX_RESOURCE_WADS: &[&str] = &[
+    "extras.wad",
+    "id1.wad",
+    "id1-mus.wad",
+    "id1-res.wad",
+    "id1-tex.wad",
+    "id1-weap.wad",
+    "id24res.wad",
+    "iddm1.wad",
+    "masterlevels.wad",
+    "nerve.wad",
+    "sigil.wad",
+    "sigil2.wad",
 ];
 
 /// Maximum KeyValues nesting depth; beyond this the document is rejected.
@@ -101,20 +131,42 @@ fn add_library(libraries: &mut Vec<SteamLibrary>, seen: &mut BTreeSet<PathBuf>, 
 
 /// Every candidate IWAD file under a library's known install directories.
 ///
-/// Files are returned unsorted-by-identity; callers identify them. A library
-/// with none of the known install directories yields an empty list.
+/// Directories are scanned flat: the known entries name the nested Deck
+/// folders explicitly, so no recursive walk is needed. Files in a
+/// `rerelease/` folder that are known KEX resources ([`KEX_RESOURCE_WADS`])
+/// are skipped. Files are returned unsorted-by-identity; callers identify
+/// them. A library with none of the known install directories yields an empty
+/// list.
 #[must_use]
 pub fn candidate_iwads(library: &SteamLibrary) -> Vec<PathBuf> {
     let common = library.common();
     let mut found = Vec::new();
     for install in KNOWN_INSTALL_DIRS {
         if let Some(dir) = resolve_dir_case_insensitive(&common, install) {
-            found.extend(wad_files(&dir));
+            let rerelease = install
+                .rsplit('/')
+                .next()
+                .is_some_and(|last| last.eq_ignore_ascii_case("rerelease"));
+            found.extend(
+                wad_files(&dir)
+                    .into_iter()
+                    .filter(|path| !(rerelease && is_kex_resource(path))),
+            );
         }
     }
     found.sort();
     found.dedup();
     found
+}
+
+/// `true` when the file name is one of the KEX resource WADs.
+fn is_kex_resource(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    KEX_RESOURCE_WADS
+        .iter()
+        .any(|resource| name.eq_ignore_ascii_case(resource))
 }
 
 /// Every candidate IWAD file reachable from `home` across all libraries.
@@ -366,11 +418,13 @@ impl Parser<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::fs;
 
     use tempfile::TempDir;
 
     use super::*;
+    use crate::iwads::identify::{Family, Identifier, Outcome};
 
     const NEW_SCHEMA: &str = include_str!("../../tests/fixtures/steam/libraryfolders.vdf");
     const LEGACY_SCHEMA: &str =
@@ -522,5 +576,275 @@ mod tests {
         };
         let found = candidate_iwads(&library);
         assert_eq!(found, vec![base.join("doom.wad")]);
+    }
+
+    /// A synthetic WAD: a valid header plus a lump directory with `lumps`.
+    /// Fixtures carry names and headers only, never real IWAD content.
+    fn wad_bytes(magic: &[u8; 4], lumps: &[String]) -> Vec<u8> {
+        let mut directory = Vec::new();
+        for name in lumps {
+            directory.extend_from_slice(&0_i32.to_le_bytes()); // filepos
+            directory.extend_from_slice(&0_i32.to_le_bytes()); // size
+            let mut padded = [0_u8; 8];
+            let bytes = name.as_bytes();
+            let len = bytes.len().min(8);
+            padded[..len].copy_from_slice(&bytes[..len]);
+            directory.extend_from_slice(&padded);
+        }
+
+        let mut out = Vec::new();
+        out.extend_from_slice(magic);
+        out.extend_from_slice(&(lumps.len() as i32).to_le_bytes());
+        out.extend_from_slice(&12_i32.to_le_bytes());
+        out.extend_from_slice(&directory);
+        out
+    }
+
+    fn ultimate_lumps() -> Vec<String> {
+        let mut lumps = Vec::new();
+        for episode in 1..=4 {
+            for map in 1..=9 {
+                lumps.push(format!("E{episode}M{map}"));
+            }
+        }
+        lumps
+    }
+
+    fn commercial_lumps() -> Vec<String> {
+        (1..=32).map(|map| format!("MAP{map:02}")).collect()
+    }
+
+    fn pwad_lumps() -> Vec<String> {
+        vec!["MAP01".to_owned()]
+    }
+
+    /// The IWADs the Deck layout must yield, keyed by path, plus the files that
+    /// must never be offered.
+    struct DeckLayout {
+        expected: BTreeMap<PathBuf, Family>,
+        master_level: PathBuf,
+        resources: Vec<PathBuf>,
+    }
+
+    /// Writes the confirmed Deck tree under `install` (`.../Ultimate Doom`).
+    ///
+    /// `upper` uppercases every component, exercising case-insensitive
+    /// matching on the second library.
+    fn write_deck_layout(install: &Path, upper: bool) -> DeckLayout {
+        let base = install.join(if upper { "BASE" } else { "base" });
+        let rerelease = install.join(if upper { "RERELEASE" } else { "rerelease" });
+        let name = |file: &str| {
+            if upper {
+                file.to_ascii_uppercase()
+            } else {
+                file.to_owned()
+            }
+        };
+        let mut expected = BTreeMap::new();
+        let mut put = |dir: &Path, file: &str, magic: &[u8; 4], lumps: &[String], family| {
+            fs::create_dir_all(dir).expect("mkdir");
+            let path = dir.join(name(file));
+            fs::write(&path, wad_bytes(magic, lumps)).expect("write wad");
+            if let Some(family) = family {
+                expected.insert(path, family);
+            }
+        };
+
+        // Classic copies, upper case as on the Deck.
+        put(
+            &base,
+            "DOOM.WAD",
+            b"IWAD",
+            &ultimate_lumps(),
+            Some(Family::Ultimate),
+        );
+        put(
+            &base.join(name("doom2")),
+            "DOOM2.WAD",
+            b"IWAD",
+            &commercial_lumps(),
+            Some(Family::Commercial),
+        );
+        put(
+            &base.join(name("tnt")),
+            "TNT.WAD",
+            b"IWAD",
+            &commercial_lumps(),
+            Some(Family::Commercial),
+        );
+        put(
+            &base.join(name("plutonia")),
+            "PLUTONIA.WAD",
+            b"IWAD",
+            &commercial_lumps(),
+            Some(Family::Commercial),
+        );
+
+        // The 20 Master Levels PWADs live three levels down and are never
+        // scanned (nor identified as IWADs when they are).
+        let master_dir = base.join(name("master")).join(name("wads"));
+        fs::create_dir_all(&master_dir).expect("mkdir");
+        let master_level = master_dir.join(name("ATTACK.WAD"));
+        fs::write(&master_level, wad_bytes(b"PWAD", &pwad_lumps())).expect("write pwad");
+
+        // KEX copies and resource WADs, lower case as on the Deck.
+        for file in ["doom.wad", "doom2.wad", "tnt.wad", "plutonia.wad"] {
+            let family = if file == "doom.wad" {
+                Family::Ultimate
+            } else {
+                Family::Commercial
+            };
+            let lumps = if family == Family::Ultimate {
+                ultimate_lumps()
+            } else {
+                commercial_lumps()
+            };
+            put(&rerelease, file, b"IWAD", &lumps, Some(family));
+        }
+
+        let mut resources = Vec::new();
+        for file in KEX_RESOURCE_WADS {
+            fs::create_dir_all(&rerelease).expect("mkdir");
+            let path = rerelease.join(name(file));
+            // Some resource WADs are PWADs; give one IWAD magic so the name
+            // filter, not identification, is what keeps it out.
+            let magic = if *file == "extras.wad" {
+                b"IWAD"
+            } else {
+                b"PWAD"
+            };
+            fs::write(&path, wad_bytes(magic, &pwad_lumps())).expect("write resource");
+            resources.push(path);
+        }
+
+        DeckLayout {
+            expected,
+            master_level,
+            resources,
+        }
+    }
+
+    /// Writes a two-library Steam home: the internal drive and an SD card.
+    fn two_library_home(primary: &Path, sdcard: &Path) {
+        fs::create_dir_all(primary.join("steamapps")).expect("mkdir");
+        let vdf = format!(
+            "\"libraryfolders\"\n{{\n\t\"0\" {{ \"path\" \"{}\" }}\n\t\"1\" {{ \"path\" \"{}\" }}\n}}\n",
+            primary.display(),
+            sdcard.display()
+        );
+        fs::write(primary.join("steamapps/libraryfolders.vdf"), vdf).expect("vdf");
+    }
+
+    #[test]
+    fn deck_layout_finds_the_four_games_in_base_and_rerelease_in_every_library() {
+        let home = TempDir::new().expect("tempdir");
+        let primary = home.path().join(".local/share/Steam");
+        let sdcard = home.path().join("extsd/SteamLibrary");
+        let common = |library: &Path| library.join("steamapps/common");
+
+        let classic = write_deck_layout(&common(&primary).join("Ultimate Doom"), false);
+        let odd = write_deck_layout(&common(&sdcard).join("ULTIMATE DOOM"), true);
+        two_library_home(&primary, &sdcard);
+
+        let libraries = libraries(home.path());
+        assert_eq!(
+            libraries.len(),
+            2,
+            "both libraries discovered: {libraries:?}"
+        );
+
+        let expected_sets = [&classic.expected, &odd.expected];
+        for (library, expected) in libraries.iter().zip(expected_sets) {
+            let candidates = candidate_iwads(library);
+            let expected_paths: Vec<PathBuf> = expected.keys().cloned().collect();
+            assert_eq!(
+                candidates, expected_paths,
+                "exactly the classic and KEX copies, in path order"
+            );
+
+            let families: Vec<Family> = candidates
+                .iter()
+                .map(|path| {
+                    let identification = Identifier::embedded()
+                        .identify(path)
+                        .expect("identify fixture");
+                    match identification.outcome {
+                        Outcome::Ambiguous { family, .. } => family,
+                        other => panic!("{} must classify, got {other:?}", path.display()),
+                    }
+                })
+                .collect();
+            let expected_families: Vec<Family> = expected.values().copied().collect();
+            assert_eq!(
+                families, expected_families,
+                "identities must match the classic/KEX games"
+            );
+        }
+
+        let mut found = discover_paths(home.path());
+        found.sort();
+        let mut expected_all: Vec<PathBuf> = classic
+            .expected
+            .keys()
+            .chain(odd.expected.keys())
+            .cloned()
+            .collect();
+        expected_all.sort();
+        assert_eq!(
+            found, expected_all,
+            "Steam discovery covers both libraries and never scans $HOME"
+        );
+
+        // R2: the identifier rejects the Master Levels PWAD and every KEX
+        // resource. `extras.wad` carries IWAD magic in this fixture, so its
+        // exclusion proves the name filter too.
+        for path in classic
+            .resources
+            .iter()
+            .chain(odd.resources.iter())
+            .chain(std::iter::once(&classic.master_level))
+        {
+            let identification = Identifier::embedded()
+                .identify(path)
+                .expect("identify non-IWAD");
+            assert_eq!(
+                identification.outcome,
+                Outcome::Unknown,
+                "{} must not be offered as an IWAD",
+                path.display()
+            );
+        }
+    }
+
+    #[test]
+    fn rerelease_resources_are_filtered_by_name_before_identification() {
+        let home = TempDir::new().expect("tempdir");
+        let rerelease = home
+            .path()
+            .join("Steam/steamapps/common/Ultimate Doom/rerelease");
+        fs::create_dir_all(&rerelease).expect("mkdir");
+        // IWAD magic plus base-game-looking lumps: only the name filter can
+        // keep these out.
+        for file in KEX_RESOURCE_WADS {
+            fs::write(
+                rerelease.join(file.to_ascii_uppercase()),
+                wad_bytes(b"IWAD", &commercial_lumps()),
+            )
+            .expect("write");
+        }
+        fs::write(
+            rerelease.join("doom2.wad"),
+            wad_bytes(b"IWAD", &commercial_lumps()),
+        )
+        .expect("write");
+
+        let library = SteamLibrary {
+            path: home.path().join("Steam"),
+        };
+        assert_eq!(
+            candidate_iwads(&library),
+            vec![rerelease.join("doom2.wad")],
+            "resource WADs are not candidates even when they look like IWADs"
+        );
     }
 }
