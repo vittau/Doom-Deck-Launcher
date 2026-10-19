@@ -159,6 +159,23 @@ pub fn candidate_iwads(library: &SteamLibrary) -> Vec<PathBuf> {
     found
 }
 
+/// Existing known install folders read by Steam discovery (spec 032).
+#[must_use]
+pub fn source_folders(home: &Path) -> Vec<PathBuf> {
+    let mut found: Vec<_> = libraries(home)
+        .iter()
+        .flat_map(|library| {
+            KNOWN_INSTALL_DIRS
+                .iter()
+                .filter_map(|install| resolve_dir_case_insensitive(&library.common(), install))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    found.sort();
+    found.dedup();
+    found
+}
+
 /// `true` when the file name is one of the KEX resource WADs.
 fn is_kex_resource(path: &Path) -> bool {
     let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
@@ -733,6 +750,55 @@ mod tests {
             sdcard.display()
         );
         fs::write(primary.join("steamapps/libraryfolders.vdf"), vdf).expect("vdf");
+    }
+
+    #[test]
+    fn base_games_from_deck_layout_prefer_classic_and_support_kex_only() {
+        use crate::iwads::{IwadTable, Registry, Source};
+        let home = TempDir::new().unwrap();
+        let primary = home.path().join(".local/share/Steam");
+        write_deck_layout(&primary.join("steamapps/common/Ultimate Doom"), false);
+        let mut registry = Registry::new();
+        for path in discover_paths(home.path()) {
+            let identification = Identifier::embedded().identify(&path).unwrap();
+            registry.record(&path, &identification, Source::Steam);
+            let file = path
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_ascii_lowercase();
+            let variant = match file.as_ref() {
+                "doom.wad" => "doom-1.9ud",
+                "doom2.wad" => "doom2-1.9",
+                "tnt.wad" => "tnt-1.9",
+                "plutonia.wad" => "plutonia-1.9",
+                _ => continue,
+            };
+            registry
+                .choose(&path, variant, &IwadTable::embedded())
+                .unwrap();
+        }
+        let empty = primary.join("steamapps/common/DOOM 2/base");
+        fs::create_dir_all(&empty).unwrap();
+        assert!(source_folders(home.path()).contains(&empty));
+        let games = crate::iwads::base_games::list(&registry);
+        assert_eq!(games.len(), 4);
+        assert_eq!(
+            games.iter().map(|g| g.complevel()).collect::<Vec<_>>(),
+            [3, 2, 4, 4]
+        );
+        assert!(
+            games
+                .iter()
+                .all(|g| g.iwad.path.components().any(|c| c.as_os_str() == "base"))
+        );
+        registry
+            .entries
+            .retain(|e| e.path.ends_with("rerelease/doom2.wad"));
+        let games = crate::iwads::base_games::list(&registry);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].id(), "base:doom2");
+        assert_eq!(games[0].complevel(), 2);
     }
 
     #[test]

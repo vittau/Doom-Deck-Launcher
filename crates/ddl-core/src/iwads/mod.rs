@@ -17,6 +17,7 @@
 //! 5. [`CanonicalLinks::canonical_path`] hands the launch plan a path whose
 //!    name makes DSDA-Doom pick the right mission.
 
+pub mod base_games;
 pub mod canonical;
 pub mod folders;
 pub mod identify;

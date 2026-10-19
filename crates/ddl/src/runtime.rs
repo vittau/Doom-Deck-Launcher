@@ -298,7 +298,7 @@ impl Runtime {
                     match result {
                         Ok(snapshot) => {
                             self.snapshot = Some(*snapshot);
-                            self.local_finished(&command);
+                            self.local_finished(ui, &command);
                             self.problem = None;
                             if let Some(Command::UpdateMapset(id)) = &command
                                 && let Some(item) = self
@@ -979,6 +979,17 @@ impl Runtime {
                     self.start(ui, Command::SetCatalogAutoUpdate(!s.catalog.auto_update));
                 }
             }
+            (Screen::Settings, id) if self.settings_section == 1 && id >= 1000 => {
+                if let Some(folder) = self
+                    .snapshot
+                    .as_ref()
+                    .and_then(|s| s.automatic_folders.get((id - 1000) as usize))
+                {
+                    ui.invoke_show_toast(
+                        format!("{} · {}", folder.source.label(), folder.path.display()).into(),
+                    );
+                }
+            }
             (Screen::Settings, 100..) => {
                 if self.settings_section == 1
                     && let Some(path) = self
@@ -1099,21 +1110,29 @@ impl Runtime {
         }
     }
     fn profile_action(&mut self, ui: &AppWindow) {
-        let Some(item) = self.item().cloned() else {
+        let Some((target, profile, profiles)) = self.base_profile_context().or_else(|| {
+            self.item().map(|item| {
+                (
+                    item.recipe.id.clone(),
+                    item.profile.clone(),
+                    item.profiles.clone(),
+                )
+            })
+        }) else {
             return;
         };
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
             if self.focus == 917 {
                 match ddl_core::profiles::validate_name(
                     &ui.get_profile_name(),
-                    &item.recipe.id,
-                    Some(&item.profile.id),
-                    &item.profiles,
+                    &target,
+                    Some(&profile.id),
+                    &profiles,
                 ) {
                     Ok(name) => {
                         self.sheet = None;
                         self.focus = self.invoking;
-                        self.start(ui, Command::RenameProfile(item.profile.id, name));
+                        self.start(ui, Command::RenameProfile(profile.id, name));
                     }
                     Err(reason) => ui.set_profile_name_error(reason.into()),
                 }
@@ -1124,26 +1143,23 @@ impl Runtime {
             return;
         }
         match self.focus {
-            id if id >= 1000 && (id - 1000) < item.profiles.len() as i32 => {
+            id if id >= 1000 && (id - 1000) < profiles.len() as i32 => {
                 self.start(
                     ui,
-                    Command::SelectProfile(
-                        item.recipe.id,
-                        item.profiles[(id - 1000) as usize].id.clone(),
-                    ),
+                    Command::SelectProfile(target, profiles[(id - 1000) as usize].id.clone()),
                 );
             }
             912 | 913 => {
                 let copy = self.focus == 912;
                 self.sheet = None;
                 self.focus = self.invoking;
-                self.start(ui, Command::NewProfile(item.recipe.id, copy));
+                self.start(ui, Command::NewProfile(target, copy));
             }
             914 => {
                 self.edit_profile_name(ui);
             }
-            915 if item.profiles.len() > 1 => {
-                self.sheet = Some(Sheet::DeleteProfile(item.profile.id, item.profile.name));
+            915 if profiles.len() > 1 => {
+                self.sheet = Some(Sheet::DeleteProfile(profile.id, profile.name));
                 self.focus = 900;
             }
             916 => {
@@ -1154,8 +1170,12 @@ impl Runtime {
         }
     }
     fn edit_profile_name(&mut self, ui: &AppWindow) {
-        if let Some(item) = self.item() {
-            ui.set_profile_name(item.profile.name.clone().into());
+        let profile = self
+            .base_profile_context()
+            .map(|(_, profile, _)| profile)
+            .or_else(|| self.item().map(|item| item.profile.clone()));
+        if let Some(profile) = profile {
+            ui.set_profile_name(profile.name.into());
             ui.set_profile_name_error("".into());
             self.sheet = Some(Sheet::ProfileNames);
             self.focus = 918;
@@ -1185,7 +1205,6 @@ impl Runtime {
         self.start(ui, command);
     }
     fn profile_sheet(&self, ui: &AppWindow) {
-        let Some(item) = self.item() else { return };
         let mut b = Nodes::new(ui);
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
             ui.set_sheet_title(text(ui, T::RenameProfile));
@@ -1195,6 +1214,7 @@ impl Runtime {
             b.button(917, 32., 360., 304., text(ui, T::SaveProfileName), true);
             b.button(916, 368., 360., 304., text(ui, T::Cancel), false);
         } else {
+            let Some(item) = self.item() else { return };
             ui.set_sheet_title(text(ui, T::Profiles));
             let active = item
                 .profiles
@@ -2489,10 +2509,10 @@ impl Runtime {
                     b.panel(12., 12., 312., 360.);
                     let height = match self.settings_section {
                         0 => 700.,
-                        1 => self
-                            .snapshot
-                            .as_ref()
-                            .map_or(316., |s| (316. + s.folders.len() as f32 * 112.).max(316.)),
+                        1 => self.snapshot.as_ref().map_or(316., |s| {
+                            (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
+                                .max(316.)
+                        }),
                         2 => 280.,
                         // 478 like the Engine section so the spec 017 R6 widescreen
                         // status-bar credit under the version block stays inside
@@ -2634,19 +2654,74 @@ impl Runtime {
                                 );
                                 b.button(70, 372., 128., 380., text(ui, T::AddFolder), true);
                                 b.button(71, 776., 128., 412., text(ui, T::Rescan), false);
-                                if s.folders.is_empty() {
-                                    b.label(372., 220., 816., 84., text(ui, T::NoFolders), 22.);
-                                }
-                                for (i, p) in s.folders.iter().enumerate() {
+                                for (i, folder) in s.automatic_folders.iter().enumerate() {
                                     b.row(
-                                        100 + i as i32,
+                                        1000 + i as i32,
                                         372.,
                                         220. + i as f32 * 112.,
                                         816.,
-                                        text(ui, T::Remove),
-                                        p.display().to_string().into(),
+                                        format!(
+                                            "{} · {}",
+                                            folder.source.label(),
+                                            if folder.games.is_empty() {
+                                                "No games identified".into()
+                                            } else {
+                                                folder.games.join(", ")
+                                            }
+                                        )
+                                        .into(),
+                                        folder.path.display().to_string().into(),
                                         true,
                                     );
+                                }
+                                if s.folders.is_empty() {
+                                    b.label(
+                                        372.,
+                                        220. + s.automatic_folders.len() as f32 * 112.,
+                                        816.,
+                                        84.,
+                                        text(ui, T::NoFolders),
+                                        22.,
+                                    );
+                                }
+                                for (i, p) in s.folders.iter().enumerate() {
+                                    let y = 220. + (i + s.automatic_folders.len()) as f32 * 112.;
+                                    let games: Vec<_> = s
+                                        .base_games
+                                        .iter()
+                                        .filter(|b| {
+                                            s.iwads.iter().any(|e| {
+                                                e.game == Some(b.base.game) && e.path.starts_with(p)
+                                            })
+                                        })
+                                        .map(|b| b.base.title())
+                                        .collect();
+                                    b.row(
+                                        0,
+                                        372.,
+                                        y,
+                                        636.,
+                                        format!(
+                                            "User folder · {}",
+                                            if games.is_empty() {
+                                                "No games identified".into()
+                                            } else {
+                                                games.join(", ")
+                                            }
+                                        )
+                                        .into(),
+                                        p.display().to_string().into(),
+                                        false,
+                                    );
+                                    b.button(
+                                        100 + i as i32,
+                                        968.,
+                                        y,
+                                        220.,
+                                        text(ui, T::Remove),
+                                        false,
+                                    );
+                                    b.nodes.last_mut().unwrap().h = 88.;
                                 }
                             }
                             2 => {
@@ -3466,6 +3541,8 @@ mod category_tests {
         let recipe = catalog.recipe("eviternity").unwrap();
         let s = Snapshot {
             items: vec![],
+            base_games: vec![],
+            automatic_folders: vec![],
             custom: vec![],
             custom_profiles: vec![],
             local_issues: Default::default(),

@@ -201,6 +201,24 @@ pub fn run_io(
                     let outcome = services.run_mapset(&id, &overrides)?;
                     writeln!(err, "DSDA-Doom exited: {}", exit_label(outcome)).map_err(output_error)
                 }
+            } else if id.starts_with("base:") {
+                let overrides = LaunchOverrides {
+                    profile,
+                    components,
+                    skill,
+                    pistol_start,
+                };
+                let item = services.base_item(&id, overrides.profile.as_deref())?;
+                if let Some(notice) = services.base_copy_notice(&item) {
+                    writeln!(err, "{notice}").map_err(output_error)?;
+                }
+                if dry_run {
+                    let launch = services.base_resolution(&id, &overrides, accept_changes)?;
+                    print_launch_plan(&launch.plan, out)
+                } else {
+                    let outcome = services.run_base(&id, &overrides, accept_changes)?;
+                    writeln!(err, "DSDA-Doom exited: {}", exit_label(outcome)).map_err(output_error)
+                }
             } else if services.has_custom(&id) {
                 if !components.is_empty() {
                     return Err(CliFailure::message(
@@ -864,6 +882,23 @@ fn print_doctor(report: &DoctorReport, out: &mut dyn Write) -> Result<(), CliFai
         }
     }
 
+    writeln!(out, "base games:").map_err(output_error)?;
+    let mut registry = ddl_core::iwads::Registry::new();
+    for entry in &report.iwads {
+        registry.insert(entry.clone());
+    }
+    for base in ddl_core::iwads::base_games::list(&registry) {
+        writeln!(
+            out,
+            "  {}  {}  complevel {}  [{}] {}",
+            base.id(),
+            base.title(),
+            base.complevel(),
+            base.iwad.source.label(),
+            base.iwad.path.display()
+        )
+        .map_err(output_error)?;
+    }
     writeln!(out, "profiles:").map_err(output_error)?;
     for (mapset, profiles) in &report.profiles {
         for profile in profiles {
@@ -1339,6 +1374,98 @@ exit 1
             );
         }
         assert!(!out.contains("unrecognized:"), "{out}");
+    }
+
+    #[test]
+    fn base_game_doctor_and_launch_share_the_original_game_plan() {
+        let fx = fixture();
+        install_engine(&fx, false);
+        {
+            let mut services = Services::open(fx.env.clone()).unwrap();
+            services
+                .register_fake_iwads(&fx.env.home.join("base-iwads"))
+                .unwrap();
+            let path = fx.env.paths.config.join("iwads.json");
+            let mut registry = ddl_core::iwads::Registry::load(&path).unwrap();
+            let mut doom2 = registry.entries()[0].clone();
+            doom2.path = doom2.path.with_file_name("doom2.wad");
+            std::fs::copy(&registry.entries()[0].path, &doom2.path).unwrap();
+            doom2.game = Some(ddl_core::iwads::Game::Doom2);
+            doom2.variant = Some("doom2-1.9".into());
+            let meta = std::fs::metadata(&doom2.path).unwrap();
+            doom2.mtime = ddl_core::iwads::FileTime::from_metadata(&meta).unwrap();
+            registry.insert(doom2);
+            registry.save(&path).unwrap();
+        }
+        let (doctor, _) = run(&fx, cli::Command::Doctor).unwrap();
+        assert!(doctor.contains("base games:"));
+        assert!(
+            doctor.contains("base:doom2  Doom II  complevel 2"),
+            "{doctor}"
+        );
+        let (out, _) = run(
+            &fx,
+            cli::Command::Launch {
+                id: "base:doom2".into(),
+                dry_run: true,
+                profile: None,
+                components: vec![],
+                skill: Some(5),
+                pistol_start: true,
+                accept_changes: false,
+            },
+        )
+        .unwrap();
+        assert!(out.contains("-iwad"), "{out}");
+        assert!(out.contains("-complevel\n2"), "{out}");
+        assert!(!out.lines().any(|line| line == "-file"), "{out}");
+        assert!(out.contains("-pistolstart"), "{out}");
+        run(
+            &fx,
+            cli::Command::Launch {
+                id: "base:doom2".into(),
+                dry_run: false,
+                profile: None,
+                components: vec![],
+                skill: None,
+                pistol_start: false,
+                accept_changes: false,
+            },
+        )
+        .unwrap();
+        let s = Services::open(fx.env.clone()).unwrap();
+        assert!(
+            s.base_item("base:doom2", None)
+                .unwrap()
+                .last_played
+                .is_some()
+        );
+        assert!(
+            s.base_item("base:doom", None)
+                .unwrap()
+                .last_played
+                .is_none()
+        );
+        assert!(s.custom_list().unwrap().is_empty());
+        let mut profile = s.base_item("base:doom2", None).unwrap().profile;
+        profile.iwad_path = Some(fx.env.home.join("missing-doom2.wad"));
+        ddl_core::profiles::ProfileStore::new(&fx.env.paths.config, &fx.env.paths.data)
+            .save(&profile)
+            .unwrap();
+        let (_, err) = run(
+            &fx,
+            cli::Command::Launch {
+                id: "base:doom2".into(),
+                dry_run: true,
+                profile: None,
+                components: vec![],
+                skill: None,
+                pistol_start: false,
+                accept_changes: false,
+            },
+        )
+        .unwrap();
+        assert!(err.contains("Selected copy unavailable"));
     }
 
     #[test]
