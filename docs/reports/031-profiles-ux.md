@@ -49,7 +49,7 @@ Only off-screen software rendering was used; no visible windows or screen captur
 
 ## Final checks
 
-After merging local `main` (merge commit `fee408e`):
+After merging local `main` (review follow-up merge commit `87ce1e4`):
 
 - `cargo fmt --all --check`: passed.
 - `cargo clippy --workspace --all-targets -- -D warnings`: passed.
@@ -66,7 +66,10 @@ list-to-actions gap, and continued sheet access from Play setup. Fresh detail,
 profile-list and scrolled-list PNGs were inspected at 1280×800; no redundant
 controls or empty action row remain. `cargo test -p ddl profiles -- --nocapture`
 passed all 10 matching tests, and `cargo clippy -p ddl --all-targets -- -D warnings`
-passed. Final workspace checks are being rerun for this follow-up.
+passed. After merging local main, all final workspace checks passed once for
+this follow-up: formatting, clippy with `-D warnings`, and all 538 tests including
+doctests. Also inspected the compact one-profile sheet in
+`target/headless/title_fit_profiles/025-profiles-sigil.png`.
 
 ## Remaining validation / proposals
 
