@@ -44,7 +44,13 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
 #[test]
 fn compiled_svg_masters_match_documented_sources() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    for name in ["emblem", "emblem-small", "horizontal", "stacked", "full-name"] {
+    for name in [
+        "emblem",
+        "emblem-small",
+        "horizontal",
+        "stacked",
+        "full-name",
+    ] {
         let source =
             std::fs::read(root.join(format!("../../docs/design/logo/{name}.svg"))).unwrap();
         assert_eq!(
