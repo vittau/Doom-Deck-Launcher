@@ -627,10 +627,10 @@ impl Installer {
             if cancel.is_cancelled() {
                 return Err(InstallError::Download(crate::downloads::Error::Cancelled));
             }
-            progress(InstallProgress::transfer(crate::downloads::Progress {
-                downloaded: 0,
-                total: Some(package.size),
-            }));
+            progress(InstallProgress::transfer(crate::downloads::Progress::new(
+                0,
+                Some(package.size),
+            )));
             let cached = self.download_package(package, cancel, progress)?;
             progress(InstallProgress::stage(InstallStage::Extract));
             let dest = base.join(&package.id);

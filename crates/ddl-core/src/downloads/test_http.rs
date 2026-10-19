@@ -20,6 +20,18 @@ use std::time::Duration;
 pub struct Request {
     pub method: String,
     pub target: String,
+    /// Request headers, lowercased names.
+    pub headers: Vec<(String, String)>,
+}
+
+impl Request {
+    /// The value of `name` (case-insensitive), if the request carried it.
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_str())
+    }
 }
 
 /// A response the handler wants to send.
@@ -36,6 +48,10 @@ pub struct Response {
     /// only the later pieces wait `delay`. Models a connection that delivers
     /// some bytes and then goes quiet (spec 024 idle tests).
     pub first_now: bool,
+    /// When set, only this many body bytes are written even though
+    /// `Content-Length` describes the whole body: a transfer cut mid-body
+    /// (spec 040 resume tests).
+    pub send_only: Option<usize>,
 }
 
 impl Response {
@@ -53,6 +69,7 @@ impl Response {
             body: Vec::new(),
             trickle: None,
             first_now: false,
+            send_only: None,
         }
     }
 
@@ -88,6 +105,14 @@ impl Response {
     pub fn stall_after(mut self, chunk: usize, delay: Duration) -> Self {
         self.trickle = Some((chunk, delay));
         self.first_now = true;
+        self
+    }
+
+    /// Advertises the full body in `Content-Length` but writes only `bytes`
+    /// of it before closing: a connection cut mid-transfer.
+    #[must_use]
+    pub fn truncated(mut self, bytes: usize) -> Self {
+        self.send_only = Some(bytes);
         self
     }
 }
@@ -168,11 +193,15 @@ where
 
     let mut request_line = String::new();
     reader.read_line(&mut request_line)?;
+    let mut headers = Vec::new();
     let mut line = String::new();
     loop {
         line.clear();
         if reader.read_line(&mut line)? == 0 || line == "\r\n" || line == "\n" {
             break;
+        }
+        if let Some((name, value)) = line.trim_end().split_once(':') {
+            headers.push((name.trim().to_ascii_lowercase(), value.trim().to_owned()));
         }
     }
 
@@ -180,6 +209,7 @@ where
     let request = Request {
         method: parts.next().unwrap_or_default().to_owned(),
         target: parts.next().unwrap_or_default().to_owned(),
+        headers,
     };
 
     let response = handler(&request);
@@ -210,7 +240,10 @@ where
             }
         }
         None => {
-            stream.write_all(&response.body)?;
+            let sent = response
+                .send_only
+                .map_or(response.body.len(), |limit| limit.min(response.body.len()));
+            stream.write_all(&response.body[..sent])?;
             stream.flush()?;
         }
     }

@@ -23,17 +23,22 @@
 //!   computed; a mismatch is reported with both hashes.
 //! - **Cached.** A verified file is stored as `downloads/<sha256>` and reused;
 //!   a cache hit is re-hashed before use.
-//! - **Cancellable.** A [`CancellationToken`] is checked between chunks and a
-//!   cancel removes the temporary file.
+//! - **Resumable.** A pinned transfer that fails on a network error, a timeout
+//!   or a cancel leaves `downloads/<sha256>.part` plus a JSON sidecar, and the
+//!   next attempt sends `Range`/`If-Range` to the same URL (spec 040).
+//! - **Cancellable.** A [`CancellationToken`] is checked between chunks; a
+//!   cancel keeps a pinned partial and removes everything else.
 //!
 //! Mirrors are tried in order; the next URL is used on any failure (network,
-//! HTTP status, host, size or hash), never after a successful match.
+//! HTTP status, host, size or hash), never after a successful match. A
+//! transient failure is retried up to three times on the same URL, resuming
+//! from the partial when there is one (spec 040, R4).
 
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use sha2::{Digest, Sha256 as Sha256Digest};
 use ureq::Agent;
@@ -50,9 +55,17 @@ use super::cancel::CancellationToken;
 use super::error::Error;
 use super::hash::Sha256;
 use super::host::{DROPBOX_REDIRECT_ORIGIN, HostAllowlist, is_dropbox_download_host};
+use super::partial::{self, Sidecar};
 
 /// The maximum number of redirects followed per URL (spec 006, R1).
 pub const MAX_REDIRECTS: u32 = 5;
+
+/// Waits before each automatic retry of a transient failure (spec 040, R4).
+pub const RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_secs(2),
+    Duration::from_secs(5),
+    Duration::from_secs(10),
+];
 
 /// Hosts that are accepted as *redirect targets* even when they are not on the
 /// caller's allowlist. GitHub serves release assets through a signed,
@@ -134,11 +147,27 @@ fn body_deadline(policy: DeadlinePolicy, size: u64) -> Duration {
 /// Progress of one transfer, reported to the caller's callback.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
-    /// Bytes received so far.
+    /// Bytes received so far. On a resumed transfer this starts at the bytes
+    /// already on disk (spec 040, R6).
     pub downloaded: u64,
     /// Total bytes, when the server announced a `Content-Length` or the caller
     /// supplied an expected size.
     pub total: Option<u64>,
+    /// Whether a range request is in flight to resume from `<sha256>.part`
+    /// (spec 040, R6). Cleared as soon as the server answered.
+    pub resuming: bool,
+}
+
+impl Progress {
+    /// Progress of a fresh (not resumed) transfer.
+    #[must_use]
+    pub const fn new(downloaded: u64, total: Option<u64>) -> Self {
+        Self {
+            downloaded,
+            total,
+            resuming: false,
+        }
+    }
 }
 
 /// What to fetch and how to constrain it.
@@ -239,7 +268,15 @@ pub struct Fetcher {
     response_timeout: Duration,
     #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
+    /// Test-only retry sleeper; production sleeps on the calling thread.
+    #[cfg(any(test, feature = "test-support"))]
+    retry_sleeper: Option<RetrySleeper>,
 }
+
+/// Test seam for the waits between retries (spec 040, R4): it receives each
+/// [`RETRY_DELAYS`] value instead of the fetcher sleeping.
+#[cfg(any(test, feature = "test-support"))]
+pub type RetrySleeper = std::sync::Arc<dyn Fn(Duration) + Send + Sync>;
 
 impl Fetcher {
     /// Creates a fetcher writing into `<cache_dir>/downloads` (spec 006, R3).
@@ -269,9 +306,14 @@ impl Fetcher {
     ) -> Self {
         let deadlines = DeadlinePolicy::default();
         let agent = build_agent(connect_timeout, response_timeout, deadlines.idle);
+        let downloads_dir = cache_dir.into().join("downloads");
+        // R5: bound the partial cache whenever the fetcher starts. Best effort:
+        // a cache that cannot be read must not make every install fail.
+        let _ = fs::create_dir_all(&downloads_dir);
+        partial::cleanup(&downloads_dir, SystemTime::now());
         Self {
             agent,
-            downloads_dir: cache_dir.into().join("downloads"),
+            downloads_dir,
             redirect_exceptions: DEFAULT_REDIRECT_EXCEPTIONS
                 .iter()
                 .map(|host| (*host).to_owned())
@@ -283,6 +325,8 @@ impl Fetcher {
             response_timeout,
             #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
+            #[cfg(any(test, feature = "test-support"))]
+            retry_sleeper: None,
         }
     }
 
@@ -350,6 +394,27 @@ impl Fetcher {
         self
     }
 
+    /// Replaces the sleeper used between retries. Test-only: it lets a test
+    /// assert the waits without spending the 2/5/10 s (spec 040, R4).
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_retry_sleeper(mut self, sleeper: RetrySleeper) -> Self {
+        self.retry_sleeper = Some(sleeper);
+        self
+    }
+
+    /// Waits before a retry, or hands the duration to the test sleeper.
+    fn wait_before_retry(&self, delay: Duration) {
+        #[cfg(any(test, feature = "test-support"))]
+        {
+            if let Some(sleeper) = &self.retry_sleeper {
+                sleeper(delay);
+                return;
+            }
+        }
+        std::thread::sleep(delay);
+    }
+
     /// The body deadline for `request`: size-scaled from the exact expected
     /// size when it is known, otherwise from the request's hard size cap.
     fn body_deadline_for(&self, request: &DownloadRequest) -> Duration {
@@ -360,12 +425,15 @@ impl Fetcher {
     /// Downloads `request`, returning the path of the verified cached file.
     ///
     /// `progress` is called at least once and only ever moves forward within a
-    /// single transfer. `cancel` aborts between chunks and removes the
-    /// temporary file.
+    /// single transfer. A resumed transfer starts at the bytes already on disk
+    /// (spec 040, R6). A transient failure is retried on the same URL up to
+    /// [`RETRY_DELAYS`]. `cancel` aborts between chunks and keeps a pinned
+    /// partial.
     ///
     /// # Errors
     ///
-    /// See [`Error`]. On failure nothing is left in the cache directory.
+    /// See [`Error`]. On failure a pinned download may leave a
+    /// `downloads/<sha256>.part` (R1); nothing else is left in the cache.
     pub fn download(
         &self,
         request: &DownloadRequest,
@@ -382,36 +450,58 @@ impl Fetcher {
         if let Some((path, expected)) = &cache_path
             && let Some(hit) = self.cached(path, request, *expected, progress)?
         {
+            // A complete, verified file makes any partial for this pin
+            // redundant (for example after a crash between rename and cleanup).
+            partial::remove(&self.downloads_dir, *expected);
             return Ok(hit);
         }
 
         let mut last: Option<Error> = None;
-        for url in &request.urls {
-            if cancel.is_cancelled() {
-                return Err(Error::Cancelled);
-            }
-            match self.transfer(url, request, cancel, progress) {
-                Ok(transfer) => {
-                    if let Some(expected) = request.expected_sha256
-                        && transfer.sha256 != expected
-                    {
-                        last = Some(Error::HashMismatch {
-                            expected,
-                            actual: transfer.sha256,
-                        });
-                        continue;
-                    }
-                    // A pinned transfer lands on its expected cache key; an
-                    // unpinned document is stored by the hash of what arrived.
-                    let destination = cache_path.as_ref().map_or_else(
-                        || self.downloads_dir.join(transfer.sha256.to_hex()),
-                        |(path, _)| path.clone(),
-                    );
-                    transfer.temp.persist(&destination)?;
-                    return Ok(destination);
+        // R4 retries are an install behaviour: the catalog document fetch
+        // keeps its own throttle and surfaces a failure on the first try.
+        let retry_transient = request.expected_sha256.is_some();
+        'mirrors: for url in &request.urls {
+            let mut retries = 0;
+            loop {
+                if cancel.is_cancelled() {
+                    return Err(Error::Cancelled);
                 }
-                Err(error @ Error::Cancelled) => return Err(error),
-                Err(error) => last = Some(error),
+                match self.transfer(url, request, cancel, progress) {
+                    Ok(transfer) => {
+                        if let Some(expected) = request.expected_sha256
+                            && transfer.sha256 != expected
+                        {
+                            // R3: a resumed or fresh mismatch leaves no partial
+                            // behind; the next mirror starts from zero.
+                            let actual = transfer.sha256;
+                            transfer.discard();
+                            partial::remove(&self.downloads_dir, expected);
+                            last = Some(Error::HashMismatch { expected, actual });
+                            continue 'mirrors;
+                        }
+                        // A pinned transfer lands on its expected cache key; an
+                        // unpinned document is stored by the hash of what arrived.
+                        let destination = cache_path.as_ref().map_or_else(
+                            || self.downloads_dir.join(transfer.sha256.to_hex()),
+                            |(path, _)| path.clone(),
+                        );
+                        transfer.persist(&destination)?;
+                        return Ok(destination);
+                    }
+                    Err(error @ Error::Cancelled) => return Err(error),
+                    Err(error)
+                        if retry_transient
+                            && error.is_transient()
+                            && retries < RETRY_DELAYS.len() =>
+                    {
+                        self.wait_before_retry(RETRY_DELAYS[retries]);
+                        retries += 1;
+                    }
+                    Err(error) => {
+                        last = Some(error);
+                        continue 'mirrors;
+                    }
+                }
             }
         }
 
@@ -468,10 +558,7 @@ impl Fetcher {
             return Ok(None);
         }
         if hash_file(path)? == expected {
-            progress(Progress {
-                downloaded: size,
-                total: Some(size),
-            });
+            progress(Progress::new(size, Some(size)));
             Ok(Some(path.to_path_buf()))
         } else {
             let _ = fs::remove_file(path);
@@ -479,7 +566,8 @@ impl Fetcher {
         }
     }
 
-    /// Fetches one URL (following redirects) into a fresh temporary file.
+    /// Fetches one URL, retrying a range request once from zero when the
+    /// server's range answer is unusable (spec 040, R2).
     fn transfer(
         &self,
         url: &str,
@@ -487,7 +575,78 @@ impl Fetcher {
         cancel: &CancellationToken,
         progress: &mut dyn FnMut(Progress),
     ) -> Result<Transfer, Error> {
-        let mut current = parse_uri(url)?;
+        let hash = request.expected_sha256;
+        let resume = hash.and_then(|hash| self.prepare_resume(hash, url, request));
+        match self.attempt(url, request, cancel, progress, resume) {
+            Ok(transfer) => Ok(transfer),
+            Err(TransferFailure::Error(error)) => Err(error),
+            Err(TransferFailure::Restart) => {
+                // The range answer was unusable: the partial is gone and this
+                // URL gets exactly one attempt from zero (R2).
+                if let Some(hash) = hash {
+                    partial::remove(&self.downloads_dir, hash);
+                }
+                match self.attempt(url, request, cancel, progress, None) {
+                    Ok(transfer) => Ok(transfer),
+                    Err(TransferFailure::Error(error)) => Err(error),
+                    // A second attempt sends no `Range`, so it cannot ask for
+                    // another restart.
+                    Err(TransferFailure::Restart) => Err(Error::HttpStatus {
+                        url: url.to_owned(),
+                        status: 416,
+                    }),
+                }
+            }
+        }
+    }
+
+    /// Validates a `<sha>.part` and hashes the bytes already on disk so a
+    /// resumed transfer continues the digest instead of restarting it (R2).
+    ///
+    /// Returns `None` (and may discard a damaged partial) when there is
+    /// nothing safe to resume; the transfer then starts from zero.
+    fn prepare_resume(
+        &self,
+        hash: Sha256,
+        url: &str,
+        request: &DownloadRequest,
+    ) -> Option<PreparedResume> {
+        let sidecar = partial::load(&self.downloads_dir, hash, url, request.expected_size)?;
+        let (part, _) = partial::paths(&self.downloads_dir, hash);
+        let mut hasher = Sha256Digest::new();
+        if partial::hash_prefix(&part, sidecar.bytes, &mut hasher).is_err() {
+            partial::remove(&self.downloads_dir, hash);
+            return None;
+        }
+        // A crash between the data flush and the sidecar update can leave
+        // bytes beyond the recorded count. They were never hashed, so drop
+        // them before appending (R1: the sidecar is the authority).
+        let truncated = OpenOptions::new()
+            .write(true)
+            .open(&part)
+            .and_then(|file| file.set_len(sidecar.bytes));
+        if truncated.is_err() {
+            partial::remove(&self.downloads_dir, hash);
+            return None;
+        }
+        Some(PreparedResume {
+            bytes: sidecar.bytes,
+            validator: sidecar.validator,
+            hasher,
+        })
+    }
+
+    /// One request chain. `resume` is the validated partial this URL may
+    /// continue, if any.
+    fn attempt(
+        &self,
+        url: &str,
+        request: &DownloadRequest,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(Progress),
+        mut resume: Option<PreparedResume>,
+    ) -> Result<Transfer, TransferFailure> {
+        let mut current = parse_uri(url).map_err(TransferFailure::Error)?;
         // Whether this chain began at an allowlisted `www.dropbox.com` URL.
         // Only such a chain may land on a Dropbox per-request download host
         // (spec 038, R1); the first URL is checked against the allowlist below,
@@ -498,6 +657,14 @@ impl Fetcher {
         // expect (or the request's hard cap when it is unknown). Every redirect
         // hop gets the same budget; only one hop ever streams a body.
         let deadline = self.body_deadline_for(request);
+        // R6: the row shows "Resuming…" while the range request is in flight.
+        if let Some(resume) = &resume {
+            progress(Progress {
+                downloaded: resume.bytes,
+                total: request.expected_size,
+                resuming: true,
+            });
+        }
         let mut redirects: u32 = 0;
         // The host of the URL that issued the current redirect; `None` for the
         // first URL, which no redirect exception may ever admit.
@@ -507,50 +674,133 @@ impl Fetcher {
                 from: redirect_from.as_deref(),
                 dropbox_entry,
             };
-            self.check_target(&current, &request.allowed_hosts, hop)?;
+            self.check_target(&current, &request.allowed_hosts, hop)
+                .map_err(TransferFailure::Error)?;
+            let mut builder = self.agent.get(current.clone());
+            if let Some(resume) = &resume {
+                // Both headers are re-sent on every hop: a redirect target
+                // receives the same range request (spec 040, R2).
+                builder = builder.header("Range", format!("bytes={}-", resume.bytes));
+                if let Some(validator) = &resume.validator {
+                    builder = builder.header("If-Range", validator);
+                }
+            }
             // ureq 3.4.2 exposes `timeout_recv_body` per request through
             // `RequestBuilder::config()`; it is a *total* budget for the body,
             // not restarted per read. See
             // <https://docs.rs/ureq/3.4.2/ureq/config/struct.ConfigBuilder.html#method.timeout_recv_body>.
-            let response = self
-                .agent
-                .get(current.clone())
+            let response = builder
                 .config()
                 .timeout_recv_body(Some(deadline))
                 .build()
                 .call()
-                .map_err(|error| map_ureq(error, current.to_string()))?;
+                .map_err(|error| TransferFailure::Error(map_ureq(error, current.to_string())))?;
             let status = response.status();
 
             if status.is_redirection() {
                 if redirects >= MAX_REDIRECTS {
-                    return Err(Error::TooManyRedirects {
+                    return Err(TransferFailure::Error(Error::TooManyRedirects {
                         limit: MAX_REDIRECTS,
                         url: current.to_string(),
-                    });
+                    }));
                 }
                 let location = response
                     .headers()
                     .get(LOCATION)
                     .and_then(|value| value.to_str().ok())
-                    .ok_or_else(|| Error::HttpStatus {
-                        url: current.to_string(),
-                        status: status.as_u16(),
+                    .ok_or_else(|| {
+                        TransferFailure::Error(Error::HttpStatus {
+                            url: current.to_string(),
+                            status: status.as_u16(),
+                        })
                     })?;
                 redirect_from = host_of(&current);
-                current = resolve_location(&current, location)?;
+                current = resolve_location(&current, location).map_err(TransferFailure::Error)?;
                 redirects += 1;
                 continue;
             }
 
-            if !status.is_success() {
-                return Err(Error::HttpStatus {
-                    url: current.to_string(),
-                    status: status.as_u16(),
-                });
+            let validator = response_validator(&response);
+            if resume.is_some() {
+                let bytes = resume.as_ref().expect("checked above").bytes;
+                let stored_validator = resume.as_ref().and_then(|active| active.validator.clone());
+                match status.as_u16() {
+                    // The server honoured the range and the file is the same:
+                    // append the remainder (R2).
+                    206 => {
+                        let range = response
+                            .headers()
+                            .get("content-range")
+                            .and_then(|value| value.to_str().ok())
+                            .and_then(partial::parse_content_range);
+                        let Some(range) = range else {
+                            return Err(TransferFailure::Restart);
+                        };
+                        let total_disagrees = request.expected_size.is_some_and(|expected| {
+                            range.total.is_some_and(|total| total != expected)
+                        });
+                        if range.start != bytes || total_disagrees {
+                            return Err(TransferFailure::Restart);
+                        }
+                        let total = request.expected_size.or(range.total);
+                        let prepared = resume.take().expect("active resume");
+                        let validator = validator.or(stored_validator);
+                        return self
+                            .stream(
+                                response,
+                                request,
+                                cancel,
+                                progress,
+                                &current,
+                                url,
+                                Some(prepared),
+                                total,
+                                validator,
+                            )
+                            .map_err(TransferFailure::Error);
+                    }
+                    // The range is not satisfiable or the file changed: drop
+                    // the partial and restart this URL once from zero (R2).
+                    416 => return Err(TransferFailure::Restart),
+                    // `200` means the server ignored `Range` or `If-Range`
+                    // failed; the body is the whole file (R2).
+                    200 => {
+                        if let Some(hash) = request.expected_sha256 {
+                            partial::remove(&self.downloads_dir, hash);
+                        }
+                    }
+                    _ if !status.is_success() => {
+                        return Err(TransferFailure::Error(Error::HttpStatus {
+                            url: current.to_string(),
+                            status: status.as_u16(),
+                        }));
+                    }
+                    // Any other 2xx while resuming is not a body we can
+                    // append; restart once rather than guess.
+                    _ => return Err(TransferFailure::Restart),
+                }
             }
 
-            return self.stream(response, request, cancel, progress, &current);
+            if !status.is_success() {
+                return Err(TransferFailure::Error(Error::HttpStatus {
+                    url: current.to_string(),
+                    status: status.as_u16(),
+                }));
+            }
+            if status.as_u16() == 206 {
+                // A partial body without a range request cannot be verified as
+                // the whole file; treat it as an unusable status and move on.
+                return Err(TransferFailure::Error(Error::HttpStatus {
+                    url: current.to_string(),
+                    status: 206,
+                }));
+            }
+            let total = request.expected_size.or(response.body().content_length());
+            return self
+                .stream(
+                    response, request, cancel, progress, &current, url, None, total, validator,
+                )
+                .map_err(TransferFailure::Error);
         }
     }
 
@@ -604,7 +854,12 @@ impl Fetcher {
         Err(Error::HostNotAllowed { host, url })
     }
 
-    /// Streams a successful response into a temporary file, hashing as it goes.
+    /// Streams a successful response into a temporary file or a resumed
+    /// partial, hashing as it goes.
+    ///
+    /// A pinned transfer that fails with a network error, timeout or cancel
+    /// leaves its partial plus sidecar (R1); every other failure discards it.
+    #[allow(clippy::too_many_arguments)]
     fn stream(
         &self,
         mut response: ureq::http::Response<ureq::Body>,
@@ -612,26 +867,122 @@ impl Fetcher {
         cancel: &CancellationToken,
         progress: &mut dyn FnMut(Progress),
         url: &Uri,
+        request_url: &str,
+        resume: Option<PreparedResume>,
+        total: Option<u64>,
+        validator: Option<String>,
     ) -> Result<Transfer, Error> {
-        let total = response.body().content_length().or(request.expected_size);
         let hard_limit = match request.expected_size {
             Some(expected) => expected.min(request.max_size),
             None => request.max_size,
         };
 
-        let mut temp = TempFile::create(&self.downloads_dir)?;
-        let mut hasher = Sha256Digest::new();
-        let mut downloaded: u64 = 0;
+        let (mut staging, mut hasher) = match request.expected_sha256 {
+            Some(hash) => {
+                let target = PartialTarget {
+                    dir: self.downloads_dir.clone(),
+                    paths: partial::paths(&self.downloads_dir, hash),
+                    hash,
+                    // The mirror URL, not the final redirect hop: the next
+                    // attempt starts from the recipe's URL again (R2/R4).
+                    url: request_url.to_string(),
+                    validator,
+                };
+                match resume {
+                    Some(resume) => {
+                        let mut file = OpenOptions::new()
+                            .write(true)
+                            .open(&target.paths.0)
+                            .map_err(|error| io_error("open the partial download", error))?;
+                        file.seek(SeekFrom::Start(resume.bytes))
+                            .map_err(|error| io_error("seek in the partial download", error))?;
+                        (
+                            Staging {
+                                kind: Some(StagingKind::Resumed { file, target }),
+                                written: resume.bytes,
+                            },
+                            resume.hasher,
+                        )
+                    }
+                    None => (
+                        Staging {
+                            kind: Some(StagingKind::FreshPinned {
+                                temp: TempFile::create(&self.downloads_dir)?,
+                                target,
+                            }),
+                            written: 0,
+                        },
+                        Sha256Digest::new(),
+                    ),
+                }
+            }
+            None => (
+                Staging {
+                    kind: Some(StagingKind::Unpinned(TempFile::create(
+                        &self.downloads_dir,
+                    )?)),
+                    written: 0,
+                },
+                Sha256Digest::new(),
+            ),
+        };
+
+        let start = staging.written;
+        progress(Progress::new(start, total));
+
+        let outcome = self.copy_body(
+            &mut staging,
+            &mut response,
+            &mut hasher,
+            cancel,
+            progress,
+            total,
+            hard_limit,
+            url,
+        );
+        if let Err(error) = outcome {
+            if error.keeps_partial() {
+                staging.keep_partial();
+            }
+            return Err(error);
+        }
+
+        if let Some(expected) = request.expected_size
+            && staging.written != expected
+        {
+            let got = staging.written;
+            // A body of the wrong length is not a prefix of anything: discard.
+            return Err(Error::SizeExceeded {
+                limit: expected,
+                got,
+            });
+        }
+
+        Ok(Transfer {
+            staging,
+            sha256: Sha256::finish(hasher),
+        })
+    }
+
+    /// Copies the response body into `staging`, hashing and reporting as it
+    /// goes. Split out so every error funnels through one keep/discard rule.
+    #[allow(clippy::too_many_arguments)]
+    fn copy_body(
+        &self,
+        staging: &mut Staging,
+        response: &mut ureq::http::Response<ureq::Body>,
+        hasher: &mut Sha256Digest,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(Progress),
+        total: Option<u64>,
+        hard_limit: u64,
+        url: &Uri,
+    ) -> Result<(), Error> {
         let mut buffer = vec![0u8; READ_BUFFER];
         // Wall clock for the error messages. The transport enforces both body
         // bounds; these only decide which one fired and how long the body ran.
         let started = Instant::now();
         let mut last_byte = started;
-
-        progress(Progress {
-            downloaded: 0,
-            total,
-        });
 
         let mut reader = response.body_mut().as_reader();
         loop {
@@ -648,6 +999,7 @@ impl Fetcher {
             let read = match reader.read(&mut buffer) {
                 Ok(read) => read,
                 Err(error) => {
+                    let downloaded = staging.written;
                     if cancel.is_cancelled() {
                         return Err(Error::Cancelled);
                     }
@@ -678,7 +1030,7 @@ impl Fetcher {
                 break;
             }
             last_byte = Instant::now();
-            downloaded += read as u64;
+            let downloaded = staging.written + read as u64;
             if downloaded > hard_limit {
                 return Err(Error::SizeExceeded {
                     limit: hard_limit,
@@ -686,25 +1038,10 @@ impl Fetcher {
                 });
             }
             hasher.update(&buffer[..read]);
-            temp.file()
-                .write_all(&buffer[..read])
-                .map_err(|error| io_error("write downloaded data", error))?;
-            progress(Progress { downloaded, total });
+            staging.write(&buffer[..read])?;
+            progress(Progress::new(downloaded, total));
         }
-
-        if let Some(expected) = request.expected_size
-            && downloaded != expected
-        {
-            return Err(Error::SizeExceeded {
-                limit: expected,
-                got: downloaded,
-            });
-        }
-
-        Ok(Transfer {
-            temp,
-            sha256: Sha256::finish(hasher),
-        })
+        Ok(())
     }
 }
 
@@ -831,8 +1168,184 @@ impl std::fmt::Debug for Fetcher {
 
 /// A verified transfer waiting to be moved into the cache.
 struct Transfer {
-    temp: TempFile,
+    staging: Staging,
     sha256: Sha256,
+}
+
+impl Transfer {
+    /// Flushes and atomically moves the bytes to `dest`.
+    fn persist(self, dest: &Path) -> Result<(), Error> {
+        self.staging.persist(dest)
+    }
+
+    /// Removes the bytes (and a resumed partial's sidecar) without storing
+    /// them. Used after a hash mismatch (spec 040, R3).
+    fn discard(self) {}
+}
+
+/// A validated `<sha>.part` whose digest has already been advanced over the
+/// bytes on disk.
+struct PreparedResume {
+    bytes: u64,
+    validator: Option<String>,
+    hasher: Sha256Digest,
+}
+
+/// Why one request chain did not produce a verified transfer.
+enum TransferFailure {
+    /// A failure the caller reports (or retries when transient).
+    Error(Error),
+    /// The `206` answer was unusable (416, a bad `Content-Range`): the partial
+    /// is deleted and the same URL gets one attempt from zero (R2).
+    Restart,
+}
+
+/// Where a pinned transfer's partial lives and how its sidecar is written.
+struct PartialTarget {
+    dir: PathBuf,
+    /// `(data, sidecar)`.
+    paths: (PathBuf, PathBuf),
+    hash: Sha256,
+    /// The request URL that served these bytes.
+    url: String,
+    /// `ETag`/`Last-Modified` from the response, when it sent one.
+    validator: Option<String>,
+}
+
+impl PartialTarget {
+    /// The sidecar document describing `bytes` on disk.
+    fn sidecar(&self, bytes: u64) -> Sidecar {
+        Sidecar {
+            schema_version: partial::SIDECAR_SCHEMA_VERSION,
+            url: self.url.clone(),
+            bytes,
+            validator: self.validator.clone(),
+        }
+    }
+}
+
+/// The file one transfer writes into.
+///
+/// A pinned transfer uses a temporary file at first and only converts it into
+/// `<sha>.part` when it must keep a failure; a resumed transfer appends to the
+/// existing partial. Unpinned transfers are always temporary.
+struct Staging {
+    kind: Option<StagingKind>,
+    /// Bytes on disk, including a resumed prefix.
+    written: u64,
+}
+
+enum StagingKind {
+    Unpinned(TempFile),
+    FreshPinned {
+        temp: TempFile,
+        target: PartialTarget,
+    },
+    Resumed {
+        file: File,
+        target: PartialTarget,
+    },
+}
+
+impl Staging {
+    fn write(&mut self, data: &[u8]) -> Result<(), Error> {
+        let result = match self.kind.as_mut() {
+            Some(StagingKind::Unpinned(temp)) | Some(StagingKind::FreshPinned { temp, .. }) => {
+                temp.file().write_all(data)
+            }
+            Some(StagingKind::Resumed { file, .. }) => file.write_all(data),
+            None => Ok(()),
+        };
+        result.map_err(|error| io_error("write downloaded data", error))?;
+        self.written += data.len() as u64;
+        Ok(())
+    }
+
+    /// Keeps a pinned partial and writes its sidecar after flushing the bytes
+    /// it describes (R1). Best effort: the original transfer error is what the
+    /// user sees.
+    fn keep_partial(&mut self) {
+        if self.written == 0 {
+            return;
+        }
+        match self.kind.take() {
+            Some(StagingKind::FreshPinned { mut temp, target }) => {
+                let Some(file) = temp.file.take() else {
+                    return;
+                };
+                if file.sync_all().is_err() {
+                    let _ = fs::remove_file(&temp.path);
+                    return;
+                }
+                drop(file);
+                if fs::rename(&temp.path, &target.paths.0).is_err() {
+                    return;
+                }
+                // The temporary file is now the partial; nothing to remove.
+                temp.keep = true;
+                let _ =
+                    partial::write_sidecar(&target.dir, target.hash, &target.sidecar(self.written));
+            }
+            Some(StagingKind::Resumed { file, target }) => {
+                if file.sync_all().is_err() {
+                    return;
+                }
+                let _ =
+                    partial::write_sidecar(&target.dir, target.hash, &target.sidecar(self.written));
+            }
+            // Unpinned transfers never keep partials (R1).
+            Some(StagingKind::Unpinned(temp)) => drop(temp),
+            None => {}
+        }
+    }
+
+    /// Moves the verified bytes to `dest`, removing a resumed sidecar.
+    fn persist(mut self, dest: &Path) -> Result<(), Error> {
+        match self.kind.take() {
+            Some(StagingKind::Unpinned(temp)) => temp.persist(dest),
+            Some(StagingKind::FreshPinned { temp, target }) => {
+                temp.persist(dest)?;
+                // A complete file makes any partial for this pin redundant,
+                // including one left by a different mirror.
+                let _ = fs::remove_file(&target.paths.0);
+                let _ = fs::remove_file(&target.paths.1);
+                Ok(())
+            }
+            Some(StagingKind::Resumed { file, target }) => {
+                file.sync_all()
+                    .map_err(|error| io_error("flush downloaded data", error))?;
+                drop(file);
+                fs::rename(&target.paths.0, dest)
+                    .map_err(|error| io_error("store downloaded file", error))?;
+                let _ = fs::remove_file(&target.paths.1);
+                Ok(())
+            }
+            None => Err(Error::Io {
+                context: "store downloaded file".to_owned(),
+                detail: "the staging file was already consumed".to_owned(),
+            }),
+        }
+    }
+}
+
+impl Drop for Staging {
+    fn drop(&mut self) {
+        if let Some(StagingKind::Resumed { file, target }) = self.kind.take() {
+            drop(file);
+            let _ = fs::remove_file(&target.paths.0);
+            let _ = fs::remove_file(&target.paths.1);
+        }
+    }
+}
+
+/// `ETag`, else `Last-Modified`, from a response, verbatim (R1/R2).
+fn response_validator(response: &ureq::http::Response<ureq::Body>) -> Option<String> {
+    response
+        .headers()
+        .get("etag")
+        .or_else(|| response.headers().get("last-modified"))
+        .and_then(|value| value.to_str().ok())
+        .map(ToOwned::to_owned)
 }
 
 /// A temporary file that is removed on drop unless persisted.
@@ -1013,10 +1526,24 @@ fn is_ureq_timeout(error: &std::io::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::sync::Mutex;
     use std::sync::atomic::AtomicUsize;
 
     use super::*;
     use crate::downloads::test_http::{Response, Server, TestDir};
+
+    /// A retry sleeper that records the waits instead of spending them.
+    fn retry_log() -> (RetrySleeper, Arc<Mutex<Vec<Duration>>>) {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&log);
+        let sleeper: RetrySleeper = Arc::new(move |delay| sink.lock().unwrap().push(delay));
+        (sleeper, log)
+    }
+
+    /// A retry sleeper that never sleeps.
+    fn no_sleep() -> RetrySleeper {
+        Arc::new(|_| {})
+    }
 
     /// Local servers are reachable through `127.0.0.1`, which is the host we
     /// allow in tests; the parameter keeps call sites explicit.
@@ -1321,7 +1848,7 @@ mod tests {
     }
 
     #[test]
-    fn progress_is_monotonic_and_cancel_removes_the_temp_file() {
+    fn progress_is_monotonic_and_cancel_keeps_a_pinned_partial() {
         // A body far larger than one read, so there are several chunks.
         let body = vec![42u8; 512 * 1024];
         let body_len = body.len() as u64;
@@ -1329,17 +1856,14 @@ mod tests {
         let server = Server::start(move |_req| Response::ok(served.clone()));
         let dir = TestDir::new("cancel");
         let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
-        let request = DownloadRequest::new(
-            server.url("/file"),
-            Sha256::of(&body),
-            body_len,
-            allow(&[&server]),
-        );
+        let hash = Sha256::of(&body);
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]));
         let cancel = CancellationToken::new();
         let cancel_handle = cancel.clone();
 
         let mut seen = Vec::new();
         let mut progress = |p: Progress| {
+            assert!(!p.resuming, "a fresh transfer is never resuming");
             seen.push(p.downloaded);
             if p.downloaded > 0 {
                 cancel_handle.cancel();
@@ -1355,6 +1879,15 @@ mod tests {
             "cancel should fire mid-stream"
         );
         assert_no_temp_files(dir.path());
+
+        // Spec 040 R1: a pinned cancel keeps `<sha>.part` with a sidecar that
+        // records the bytes actually on disk.
+        let (part, _) = partial::paths(&dir.path().join("downloads"), hash);
+        assert!(part.exists(), "the pinned partial is kept");
+        let sidecar = stored_sidecar(dir.path(), hash).expect("sidecar");
+        assert_eq!(sidecar.url, server.url("/file"));
+        assert_eq!(sidecar.bytes, std::fs::metadata(&part).unwrap().len());
+        assert!(sidecar.bytes > 0 && sidecar.bytes < body_len, "{sidecar:?}");
     }
 
     #[test]
@@ -1654,6 +2187,7 @@ mod tests {
         // this transfer cannot meet: it fails, proving the deadline is real.
         let fixed_short = Fetcher::new(dir.path())
             .allow_http_for_tests()
+            .with_retry_sleeper(no_sleep())
             .with_deadline_policy(Duration::from_millis(50), 1 << 40, Duration::from_secs(60));
         let error = fixed_short
             .download(&request, &cancel, &mut progress)
@@ -1698,6 +2232,7 @@ mod tests {
         let mut progress = |_p: Progress| {};
         let fetcher = Fetcher::new(dir.path())
             .allow_http_for_tests()
+            .with_retry_sleeper(no_sleep())
             .with_deadline_policy(Duration::from_millis(100), 1 << 40, Duration::from_secs(60));
 
         let error = fetcher
@@ -1738,6 +2273,7 @@ mod tests {
         let mut progress = |_p: Progress| {};
         let fetcher = Fetcher::new(dir.path())
             .allow_http_for_tests()
+            .with_retry_sleeper(no_sleep())
             .with_idle_timeout(Duration::from_millis(250));
 
         let error = fetcher
@@ -1881,6 +2417,611 @@ mod tests {
             "{error}"
         );
         assert_no_temp_files(dir.path());
+    }
+
+    /// Writes a partial and its sidecar directly, as a previous attempt would.
+    fn seed_partial(root: &Path, hash: Sha256, url: &str, bytes: &[u8], validator: Option<&str>) {
+        let downloads = root.join("downloads");
+        std::fs::create_dir_all(&downloads).unwrap();
+        let (part, _) = partial::paths(&downloads, hash);
+        std::fs::write(part, bytes).unwrap();
+        partial::write_sidecar(
+            &downloads,
+            hash,
+            &Sidecar {
+                schema_version: partial::SIDECAR_SCHEMA_VERSION,
+                url: url.to_owned(),
+                bytes: bytes.len() as u64,
+                validator: validator.map(ToOwned::to_owned),
+            },
+        )
+        .unwrap();
+    }
+
+    fn stored_sidecar(root: &Path, hash: Sha256) -> Option<Sidecar> {
+        let (_, path) = partial::paths(&root.join("downloads"), hash);
+        let text = std::fs::read_to_string(path).ok()?;
+        serde_json::from_str(&text).ok()
+    }
+
+    fn assert_no_partial(root: &Path, hash: Sha256) {
+        let (part, sidecar) = partial::paths(&root.join("downloads"), hash);
+        assert!(!part.exists(), "partial must be gone: {}", part.display());
+        assert!(
+            !sidecar.exists(),
+            "sidecar must be gone: {}",
+            sidecar.display()
+        );
+    }
+
+    #[test]
+    fn resumes_a_cut_body_on_the_automatic_retry() {
+        // Spec 040 R1/R2/R4/R6: the first response is cut mid-body, the retry
+        // sends `Range` and appends, and progress restarts from the bytes kept.
+        let body = vec![0x5a_u8; 200 * 1024];
+        let body_len = body.len() as u64;
+        let cut = 100 * 1024usize;
+        let requests = Arc::new(AtomicUsize::new(0));
+        let ranges = Arc::new(Mutex::new(Vec::new()));
+        let counter = Arc::clone(&requests);
+        let seen_ranges = Arc::clone(&ranges);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            let attempt = counter.fetch_add(1, Ordering::SeqCst);
+            seen_ranges
+                .lock()
+                .unwrap()
+                .push(req.header("range").map(ToOwned::to_owned));
+            if attempt == 0 {
+                Response::ok(served.clone()).truncated(cut)
+            } else {
+                let start: usize = req
+                    .header("range")
+                    .and_then(|value| value.strip_prefix("bytes="))
+                    .and_then(|value| value.strip_suffix('-'))
+                    .and_then(|value| value.parse().ok())
+                    .expect("the retry must resume");
+                Response::status(206, "Partial Content")
+                    .header(
+                        "Content-Range",
+                        &format!("bytes {start}-{}/{body_len}", body_len - 1),
+                    )
+                    .header("ETag", "\"v1\"")
+                    .with_body(served[start..].to_vec())
+            }
+        });
+        let dir = TestDir::new("resume-cut");
+        let hash = Sha256::of(&body);
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_retry_sleeper(no_sleep());
+        let cancel = CancellationToken::new();
+        let mut seen = Vec::new();
+        let mut progress = |p: Progress| seen.push(p);
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("the retry resumes and completes");
+        assert_eq!(std::fs::read(&path).unwrap(), body);
+        assert_eq!(requests.load(Ordering::SeqCst), 2);
+        assert_eq!(ranges.lock().unwrap()[0], None, "the first try is fresh");
+        assert_eq!(ranges.lock().unwrap()[1].as_deref(), Some("bytes=102400-"));
+        assert!(
+            seen.iter()
+                .any(|p| p.resuming && p.downloaded == cut as u64),
+            "the row must start at the kept bytes and say Resuming: {seen:?}"
+        );
+        assert_eq!(seen.last().unwrap().downloaded, body_len);
+        assert_no_partial(dir.path(), hash);
+        assert_no_temp_files(dir.path());
+    }
+
+    #[test]
+    fn a_server_that_ignores_range_restarts_from_zero() {
+        // R2: `200` means the partial is unusable; the body is the whole file.
+        let body = b"the complete payload".to_vec();
+        let body_len = body.len() as u64;
+        let requests = Arc::new(AtomicUsize::new(0));
+        let ranged = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let seen_range = Arc::clone(&ranged);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            if req.header("range").is_some() && req.header("if-range") == Some("\"chain-v1\"") {
+                seen_range.fetch_add(1, Ordering::SeqCst);
+            }
+            // Ignores Range/If-Range: the client must discard and start over.
+            Response::ok(served.clone())
+        });
+        let dir = TestDir::new("resume-200");
+        let hash = Sha256::of(&body);
+        seed_partial(
+            dir.path(),
+            hash,
+            &server.url("/file"),
+            &body[..7],
+            Some("\"chain-v1\""),
+        );
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut seen = Vec::new();
+        let mut progress = |p: Progress| seen.push(p);
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("full body after a refused range");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            ranged.load(Ordering::SeqCst),
+            1,
+            "Range + If-Range were sent"
+        );
+        assert_eq!(seen[0].downloaded, 7);
+        assert!(seen[0].resuming);
+        assert!(seen.iter().any(|p| !p.resuming && p.downloaded == 0));
+        assert_no_partial(dir.path(), hash);
+    }
+
+    #[test]
+    fn a_changed_validator_is_not_resumed() {
+        // R2: the stored validator is sent as If-Range; when the server's file
+        // changed it answers 200 and the partial is discarded.
+        let body = b"new revision bytes".to_vec();
+        let body_len = body.len() as u64;
+        let saw_if_range = Arc::new(Mutex::new(None));
+        let recorded = Arc::clone(&saw_if_range);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            *recorded.lock().unwrap() = req.header("if-range").map(ToOwned::to_owned);
+            Response::ok(served.clone()).header("ETag", "\"rev-2\"")
+        });
+        let dir = TestDir::new("resume-validator");
+        let hash = Sha256::of(&body);
+        seed_partial(
+            dir.path(),
+            hash,
+            &server.url("/file"),
+            &body[..5],
+            Some("\"rev-1\""),
+        );
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("the changed file downloads in full");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(saw_if_range.lock().unwrap().as_deref(), Some("\"rev-1\""));
+        assert_no_partial(dir.path(), hash);
+    }
+
+    #[test]
+    fn a_bad_content_range_restarts_once_without_range() {
+        // R2: a 206 whose Content-Range starts elsewhere is discarded and the
+        // URL is tried exactly once from zero.
+        let body = b"0123456789abcdef".to_vec();
+        let body_len = body.len() as u64;
+        let requests = Arc::new(AtomicUsize::new(0));
+        let ranges = Arc::new(Mutex::new(Vec::new()));
+        let counter = Arc::clone(&requests);
+        let seen = Arc::clone(&ranges);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            let attempt = counter.fetch_add(1, Ordering::SeqCst);
+            seen.lock()
+                .unwrap()
+                .push(req.header("range").map(ToOwned::to_owned));
+            if attempt == 0 {
+                Response::status(206, "Partial Content")
+                    .header(
+                        "Content-Range",
+                        &format!("bytes 3-{}/{body_len}", body_len - 1),
+                    )
+                    .with_body(served[3..].to_vec())
+            } else {
+                Response::ok(served.clone())
+            }
+        });
+        let dir = TestDir::new("resume-bad-range");
+        let hash = Sha256::of(&body);
+        seed_partial(dir.path(), hash, &server.url("/file"), &body[..5], None);
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("restart from zero");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(requests.load(Ordering::SeqCst), 2);
+        assert_eq!(ranges.lock().unwrap()[0].as_deref(), Some("bytes=5-"));
+        assert_eq!(
+            ranges.lock().unwrap()[1],
+            None,
+            "the restart sends no Range"
+        );
+        assert_no_partial(dir.path(), hash);
+    }
+
+    #[test]
+    fn a_416_restarts_once_without_range() {
+        let body = b"range not satisfiable".to_vec();
+        let body_len = body.len() as u64;
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            let attempt = counter.fetch_add(1, Ordering::SeqCst);
+            if attempt == 0 {
+                assert_eq!(req.header("range"), Some("bytes=6-"));
+                Response::status(416, "Range Not Satisfiable")
+            } else {
+                assert_eq!(req.header("range"), None);
+                Response::ok(served.clone())
+            }
+        });
+        let dir = TestDir::new("resume-416");
+        let hash = Sha256::of(&body);
+        seed_partial(dir.path(), hash, &server.url("/file"), &body[..6], None);
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("restart after 416");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(requests.load(Ordering::SeqCst), 2);
+        assert_no_partial(dir.path(), hash);
+    }
+
+    #[test]
+    fn a_hash_mismatch_after_resume_deletes_the_partial() {
+        // R3: a resumed file is never trusted; both partial and sidecar go.
+        let body = b"genuine bytes for the pin".to_vec();
+        let body_len = body.len() as u64;
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            let start: usize = req
+                .header("range")
+                .and_then(|value| value.strip_prefix("bytes="))
+                .and_then(|value| value.strip_suffix('-'))
+                .and_then(|value| value.parse().ok())
+                .expect("a ranged request");
+            Response::status(206, "Partial Content")
+                .header(
+                    "Content-Range",
+                    &format!("bytes {start}-{}/{body_len}", body_len - 1),
+                )
+                .with_body(served[start..].to_vec())
+        });
+        let dir = TestDir::new("resume-hash");
+        let hash = Sha256::of(&body);
+        // The prefix is wrong, so the concatenation cannot match the pin.
+        seed_partial(dir.path(), hash, &server.url("/file"), &[0u8; 8], None);
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("wrong prefix cannot verify");
+        assert!(matches!(error, Error::HashMismatch { .. }), "{error}");
+        assert_no_partial(dir.path(), hash);
+        assert!(!dir.path().join("downloads").join(hash.to_hex()).exists());
+    }
+
+    #[test]
+    fn unpinned_documents_never_keep_a_partial() {
+        let body = vec![7u8; 128 * 1024];
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::ok(served.clone()).truncated(64 * 1024)
+        });
+        let dir = TestDir::new("unpinned-cut");
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_retry_sleeper(no_sleep());
+        let cancel = CancellationToken::new();
+        let error = fetcher
+            .download_document(
+                server.url("/catalog.json"),
+                1 << 20,
+                allow(&[&server]),
+                &cancel,
+            )
+            .expect_err("a cut body is a network error");
+        assert!(matches!(error, Error::Network { .. }), "{error}");
+        // R4's retries are for installs; the catalog document keeps its own
+        // throttle and must not multiply background requests.
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+        let downloads = dir.path().join("downloads");
+        let leftovers: Vec<String> = std::fs::read_dir(&downloads)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert!(leftovers.is_empty(), "unpinned leftovers: {leftovers:?}");
+    }
+
+    #[test]
+    fn retries_a_transient_status_with_the_documented_waits() {
+        let body = b"eventually".to_vec();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let served = body.clone();
+        let server = Server::start(move |_req| {
+            if counter.fetch_add(1, Ordering::SeqCst) < 3 {
+                Response::status(503, "Service Unavailable")
+            } else {
+                Response::ok(served.clone())
+            }
+        });
+        let dir = TestDir::new("retry-503");
+        let hash = Sha256::of(&body);
+        let request = DownloadRequest::new(
+            server.url("/file"),
+            hash,
+            body.len() as u64,
+            allow(&[&server]),
+        )
+        .with_size(body.len() as u64);
+        let (sleeper, waits) = retry_log();
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_retry_sleeper(sleeper);
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("the fourth attempt succeeds");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(requests.load(Ordering::SeqCst), 4);
+        assert_eq!(*waits.lock().unwrap(), RETRY_DELAYS.to_vec());
+    }
+
+    #[test]
+    fn gives_up_after_three_retries_and_moves_to_the_next_mirror() {
+        let good = b"mirror body".to_vec();
+        let served = good.clone();
+        let good_server = Server::start(move |_req| Response::ok(served.clone()));
+        let bad_requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&bad_requests);
+        let bad_server = Server::start(move |_req| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::status(503, "Service Unavailable")
+        });
+        let dir = TestDir::new("retry-exhausted");
+        let request = DownloadRequest::new(
+            bad_server.url("/file"),
+            Sha256::of(&good),
+            good.len() as u64,
+            allow(&[&bad_server, &good_server]),
+        )
+        .with_urls([bad_server.url("/file"), good_server.url("/file")])
+        .with_size(good.len() as u64);
+        let (sleeper, waits) = retry_log();
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_retry_sleeper(sleeper);
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("the next mirror succeeds");
+        assert_eq!(std::fs::read(path).unwrap(), good);
+        assert_eq!(
+            bad_requests.load(Ordering::SeqCst),
+            4,
+            "one try + 3 retries"
+        );
+        assert_eq!(*waits.lock().unwrap(), RETRY_DELAYS.to_vec());
+    }
+
+    #[test]
+    fn a_user_cancel_is_never_retried() {
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let server = Server::start(move |_req| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Response::ok(b"never sent".to_vec())
+        });
+        let dir = TestDir::new("retry-cancel");
+        let request = DownloadRequest::new(
+            server.url("/file"),
+            Sha256::of(b"never sent"),
+            1024,
+            allow(&[&server]),
+        );
+        let (sleeper, waits) = retry_log();
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_retry_sleeper(sleeper);
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+        let mut progress = |_p: Progress| {};
+
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("cancelled before the first attempt");
+        assert!(matches!(error, Error::Cancelled), "{error}");
+        assert_eq!(requests.load(Ordering::SeqCst), 0);
+        assert!(waits.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_redirect_chain_still_resumes() {
+        // R2: every hop passes the allowlist and carries the range request.
+        let body = b"redirected payload".to_vec();
+        let body_len = body.len() as u64;
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&requests);
+        let final_range = Arc::new(Mutex::new(None));
+        let recorded = Arc::clone(&final_range);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            counter.fetch_add(1, Ordering::SeqCst);
+            if req.target == "/start" {
+                Response::redirect("/final")
+            } else {
+                *recorded.lock().unwrap() = req.header("range").map(ToOwned::to_owned);
+                let start: usize = req
+                    .header("range")
+                    .and_then(|value| value.strip_prefix("bytes="))
+                    .and_then(|value| value.strip_suffix('-'))
+                    .and_then(|value| value.parse().ok())
+                    .expect("the redirected hop keeps Range");
+                Response::status(206, "Partial Content")
+                    .header(
+                        "Content-Range",
+                        &format!("bytes {start}-{}/{body_len}", body_len - 1),
+                    )
+                    .with_body(served[start..].to_vec())
+            }
+        });
+        let dir = TestDir::new("resume-redirect");
+        let hash = Sha256::of(&body);
+        seed_partial(dir.path(), hash, &server.url("/start"), &body[..4], None);
+        let request = DownloadRequest::new(server.url("/start"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("resume through a redirect");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(requests.load(Ordering::SeqCst), 2);
+        assert_eq!(final_range.lock().unwrap().as_deref(), Some("bytes=4-"));
+        assert_no_partial(dir.path(), hash);
+    }
+
+    #[test]
+    fn a_redirected_transfer_records_the_mirror_url_in_its_sidecar() {
+        // R2/R4: the sidecar names the URL the fetcher was asked to fetch (the
+        // mirror), so the next attempt starts from the recipe URL again even
+        // when the bytes came from a redirect target.
+        let body = vec![0x31_u8; 4096];
+        let body_len = body.len() as u64;
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            if req.target == "/start" {
+                Response::redirect("/final")
+            } else {
+                let start: usize = req
+                    .header("range")
+                    .and_then(|value| value.strip_prefix("bytes="))
+                    .and_then(|value| value.strip_suffix('-'))
+                    .and_then(|value| value.parse().ok())
+                    .expect("resumed through the redirect");
+                Response::status(206, "Partial Content")
+                    .header(
+                        "Content-Range",
+                        &format!("bytes {start}-{}/{body_len}", body_len - 1),
+                    )
+                    .with_body(served[start..].to_vec())
+                    .truncated(16)
+            }
+        });
+        let dir = TestDir::new("resume-redirect-cut");
+        let hash = Sha256::of(&body);
+        seed_partial(dir.path(), hash, &server.url("/start"), &body[..4], None);
+        let request = DownloadRequest::new(server.url("/start"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path())
+            .allow_http_for_tests()
+            .with_retry_sleeper(no_sleep());
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let error = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect_err("every attempt is cut short");
+        assert!(matches!(error, Error::Network { .. }), "{error}");
+        let sidecar = stored_sidecar(dir.path(), hash).expect("the partial is kept");
+        assert_eq!(sidecar.url, server.url("/start"));
+        assert!(sidecar.bytes > 4, "{sidecar:?}");
+    }
+
+    #[test]
+    fn a_partial_from_another_url_is_left_alone_and_not_resumed() {
+        // R4: a partial belongs to the URL that served it.
+        let body = b"served by the second mirror".to_vec();
+        let body_len = body.len() as u64;
+        let ranged = Arc::new(AtomicUsize::new(0));
+        let seen = Arc::clone(&ranged);
+        let served = body.clone();
+        let server = Server::start(move |req| {
+            if req.header("range").is_some() {
+                seen.fetch_add(1, Ordering::SeqCst);
+            }
+            Response::ok(served.clone())
+        });
+        let dir = TestDir::new("resume-other-url");
+        let hash = Sha256::of(&body);
+        seed_partial(
+            dir.path(),
+            hash,
+            "https://other.example/file",
+            &body[..5],
+            None,
+        );
+        let request = DownloadRequest::new(server.url("/file"), hash, body_len, allow(&[&server]))
+            .with_size(body_len);
+        let fetcher = Fetcher::new(dir.path()).allow_http_for_tests();
+        let cancel = CancellationToken::new();
+        let mut progress = |_p: Progress| {};
+
+        let path = fetcher
+            .download(&request, &cancel, &mut progress)
+            .expect("fresh download from this mirror");
+        assert_eq!(std::fs::read(path).unwrap(), body);
+        assert_eq!(ranged.load(Ordering::SeqCst), 0, "no Range for another URL");
+        assert_no_partial(dir.path(), hash);
+    }
+
+    #[test]
+    fn starting_a_fetcher_bounds_the_partial_cache() {
+        // R5: cleanup runs when the fetcher starts, not on the first download.
+        let dir = TestDir::new("startup-cleanup");
+        let hash = Sha256::of(b"an old partial");
+        seed_partial(dir.path(), hash, "https://old.example/file", b"stale", None);
+        let downloads = dir.path().join("downloads");
+        let (part, sidecar) = partial::paths(&downloads, hash);
+        let old = SystemTime::now() - partial::PARTIAL_MAX_AGE - Duration::from_secs(60);
+        File::options()
+            .write(true)
+            .open(&part)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+
+        let _fetcher = Fetcher::new(dir.path());
+
+        assert!(!part.exists(), "an expired partial is removed at startup");
+        assert!(!sidecar.exists(), "with its sidecar");
     }
 
     fn assert_no_temp_files(root: &Path) {
