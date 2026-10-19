@@ -641,4 +641,20 @@
     5.5 worker took over the same worktree, merged 029+031 and fixed one Library focus regression.
     557 workspace tests green.
   refs: [docs/reports/032-base-games-and-iwad-sources.md]
+- date: 2026-10-19
+  type: decision
+  summary: >-
+    D-028 extended: archive.org and doomshack.org may serve catalog downloads when a mapset has no
+    /idgames, dsdarchive or Dropbox source (DBP 41, 60, 69). Logo v3: the owner picked B Stained
+    Glass for one more refinement round and confirmed the new solid DDL wordmark on a dark tablet
+    was his call.
+  refs: [docs/decisions.md, docs/specs/036-logo-v3.md, docs/specs/037-doomer-boards-catalog.md]
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Spec 034 merged: DSDA template v3 ships the owner's controller layout, researched in DSDA
+    v0.30.1 source (one button may drive a menu and a play action; automap zoom acts only with
+    the map open; X is input_reverse, disabled in strict recording). Player rebinds survive the
+    migration. Workspace tests green.
+  refs: [docs/reports/034-dsda-controller-layout.md]
 

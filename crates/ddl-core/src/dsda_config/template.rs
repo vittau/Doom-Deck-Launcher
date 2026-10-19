@@ -1,22 +1,59 @@
-//! The `steam-deck-default` baseline template (spec 005, R2).
+//! The `steam-deck-default` baseline template (spec 005, R2; spec 034, R2).
 //!
 //! The template is hand-authored data, so it lives in the repository as TOML
 //! (decision D-006) under `crates/ddl-core/templates/dsda/`. It is embedded in
 //! the binary so provisioning can never fail because a data file went missing.
 //!
-//! Only the keys DDL intends to own may appear in the template: [`Values`]
-//! denies unknown fields, so a typo in the file is a load error rather than a
-//! silent claim on a key DSDA owns. Bindings are intentionally absent in v1
-//! (spec 005, R2).
+//! Only the keys DDL intends to own may appear in the template: [`Values`] and
+//! [`Strings`] deny unknown fields, and every binding action must be in
+//! [`KNOWN_BINDING_ACTIONS`]. A typo in the file is therefore a load error
+//! rather than a silent claim on a key DSDA owns.
+//!
+//! Bindings are written as complete `input_*` entries: the wanted keyboard,
+//! mouse and gamepad codes plus the DSDA-Doom v0.30.1 `upstream` default they
+//! replace. The upstream triple is not written to the active file; the
+//! three-way merge in [`super::merge`] uses it to recognise a binding the
+//! player never touched when a new template version starts owning that key.
 
 use std::fmt;
 
 use serde::Deserialize;
 
-use super::format::{Document, Value};
+use super::format::{Binding, BindingProfile, Document, Value};
 
 /// The template shipped with DDL.
 pub const EMBEDDED: &str = include_str!("../../templates/dsda/steam-deck-default.toml");
+
+/// The input actions a template may bind.
+///
+/// This is the subset of the complete `input_defs` inventory in
+/// `docs/research/dsda-engine.md` §4 that DDL owns. Adding an action here is a
+/// deliberate decision to take that binding away from DSDA's menu.
+/// [prboom2/src/m_misc.c:391-581](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L391-L581)
+pub const KNOWN_BINDING_ACTIONS: &[&str] = &[
+    "input_map",
+    "input_map_zoomin",
+    "input_map_zoomout",
+    "input_autorun",
+    "input_nextweapon",
+    "input_prevweapon",
+    "input_quicksave",
+    "input_quickload",
+    "input_reverse",
+];
+
+/// DSDA's valid keyboard codes: `1`–`511`, or `0` for "none"
+/// [prboom2/src/dsda/input.h:25](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L25).
+const KEY_MAX_EXCLUSIVE: i64 = 512;
+/// DSDA's valid mouse indices: `-1`–`7`
+/// [prboom2/src/dsda/input.h:26](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L26).
+const MOUSE_MAX_EXCLUSIVE: i64 = 8;
+/// DSDA's valid gamepad indices: `-1`–`22`
+/// [prboom2/src/dsda/input.h:27](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L27).
+const JOY_MAX_EXCLUSIVE: i64 = 23;
+/// DSDA has three input profiles
+/// [prboom2/src/dsda/input.h:24](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L24).
+const PROFILE_COUNT: usize = 3;
 
 /// A parsed DSDA-Doom configuration baseline.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +68,43 @@ pub struct Template {
     pub values: Vec<(String, i64)>,
     /// The scalar string keys DDL owns, in template order (spec 029, R4).
     pub strings: Vec<(String, String)>,
+    /// The `input_*` bindings DDL owns, in template order (spec 034, R2).
+    pub bindings: Vec<TemplateBinding>,
+}
+
+/// One `input_*` binding the template owns.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TemplateBinding {
+    /// The DSDA action key, for example `input_map`.
+    pub action: String,
+    /// The complete binding DDL wants, applied to all three input profiles.
+    pub wanted: Binding,
+    /// The DSDA-Doom v0.30.1 default the wanted binding replaces.
+    pub upstream: Binding,
+}
+
+impl TemplateBinding {
+    /// The wanted gamepad button, when every profile shares the same one.
+    #[must_use]
+    pub fn wanted_joy(&self) -> Option<i64> {
+        shared_joy(&self.wanted)
+    }
+
+    /// The upstream gamepad button, when every profile shares the same one.
+    #[must_use]
+    pub fn upstream_joy(&self) -> Option<i64> {
+        shared_joy(&self.upstream)
+    }
+}
+
+/// Returns the gamepad button shared by all profiles, if there is one.
+fn shared_joy(binding: &Binding) -> Option<i64> {
+    let first = binding.profiles.first()?.joy;
+    binding
+        .profiles
+        .iter()
+        .all(|profile| profile.joy == first)
+        .then_some(first)
 }
 
 impl Template {
@@ -45,20 +119,37 @@ impl Template {
     /// Parses a template from TOML.
     ///
     /// # Errors
-    /// Returns [`TemplateError`] on invalid TOML, a missing required field, or
-    /// an unknown field.
+    /// Returns [`TemplateError`] on invalid TOML, a missing required field, an
+    /// unknown field, an unknown binding action, or an out-of-range button code.
     pub fn from_toml(text: &str) -> Result<Self, TemplateError> {
-        let file: TemplateFile = toml::from_str(text).map_err(TemplateError)?;
+        let file: TemplateFile = toml::from_str(text).map_err(TemplateError::Toml)?;
+        let bindings = file
+            .bindings
+            .into_iter()
+            .map(TemplateBindingFile::into_binding)
+            .collect::<Result<Vec<_>, _>>()?;
+        for (index, binding) in bindings.iter().enumerate() {
+            if bindings[..index]
+                .iter()
+                .any(|earlier| earlier.action == binding.action)
+            {
+                return Err(TemplateError::Invalid(format!(
+                    "binding action `{}` appears more than once",
+                    binding.action
+                )));
+            }
+        }
         Ok(Self {
             template_version: file.template_version,
             dsda_version_min: file.dsda_version_min,
             dsda_version_max: file.dsda_version_max,
             values: file.values.into_entries(),
             strings: file.strings.into_entries(),
+            bindings,
         })
     }
 
-    /// The template's values as a config document.
+    /// The template's keys as a config document.
     #[must_use]
     pub fn document(&self) -> Document {
         let mut document = Document::default();
@@ -67,6 +158,9 @@ impl Template {
         }
         for (name, value) in &self.strings {
             document.set(name, Value::Str(value.clone()));
+        }
+        for binding in &self.bindings {
+            document.set(&binding.action, Value::Binding(binding.wanted.clone()));
         }
         document
     }
@@ -93,6 +187,14 @@ impl Template {
             .iter()
             .find(|(key, _)| key == name)
             .map(|(_, value)| value.as_str())
+    }
+
+    /// The template's binding for `action`, if it owns that key.
+    #[must_use]
+    pub fn binding(&self, action: &str) -> Option<&TemplateBinding> {
+        self.bindings
+            .iter()
+            .find(|binding| binding.action == action)
     }
 
     /// The DSDA-Doom versions this baseline was checked against.
@@ -126,17 +228,28 @@ impl fmt::Display for VersionRange {
 
 /// Why a template could not be parsed.
 #[derive(Debug)]
-pub struct TemplateError(toml::de::Error);
+pub enum TemplateError {
+    /// The TOML itself did not parse, or a required/known field was missing.
+    Toml(toml::de::Error),
+    /// The TOML parsed but a binding is not something DSDA could load.
+    Invalid(String),
+}
 
 impl fmt::Display for TemplateError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "invalid DSDA config template: {}", self.0)
+        match self {
+            Self::Toml(err) => write!(f, "invalid DSDA config template: {err}"),
+            Self::Invalid(reason) => write!(f, "invalid DSDA config template: {reason}"),
+        }
     }
 }
 
 impl std::error::Error for TemplateError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
+        match self {
+            Self::Toml(err) => Some(err),
+            Self::Invalid(_) => None,
+        }
     }
 }
 
@@ -150,6 +263,8 @@ struct TemplateFile {
     values: Values,
     #[serde(default)]
     strings: Strings,
+    #[serde(default)]
+    bindings: Vec<TemplateBindingFile>,
 }
 
 /// Exactly the integer keys DDL owns. A new field here is a deliberate decision
@@ -248,6 +363,96 @@ impl Values {
     }
 }
 
+/// One `[[bindings]]` entry as written in the TOML file.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TemplateBindingFile {
+    action: String,
+    keys: Vec<i64>,
+    mouse: i64,
+    joy: i64,
+    upstream: BindingFields,
+}
+
+/// The keyboard, mouse and gamepad codes of one binding.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BindingFields {
+    keys: Vec<i64>,
+    mouse: i64,
+    joy: i64,
+}
+
+impl TemplateBindingFile {
+    fn into_binding(self) -> Result<TemplateBinding, TemplateError> {
+        if !KNOWN_BINDING_ACTIONS.contains(&self.action.as_str()) {
+            return Err(TemplateError::Invalid(format!(
+                "`{}` is not an input action DDL may bind",
+                self.action
+            )));
+        }
+        let wanted = binding_for(&self.action, "wanted", &self.keys, self.mouse, self.joy)?;
+        let upstream = binding_for(
+            &self.action,
+            "upstream",
+            &self.upstream.keys,
+            self.upstream.mouse,
+            self.upstream.joy,
+        )?;
+        Ok(TemplateBinding {
+            action: self.action,
+            wanted,
+            upstream,
+        })
+    }
+}
+
+/// Validates one triple and expands it to DSDA's three input profiles.
+fn binding_for(
+    action: &str,
+    field: &str,
+    keys: &[i64],
+    mouse: i64,
+    joy: i64,
+) -> Result<Binding, TemplateError> {
+    if keys.is_empty() {
+        return Err(TemplateError::Invalid(format!(
+            "`{action}` has no {field} keys; use `[0]` for no keyboard binding"
+        )));
+    }
+    for key in keys {
+        if *key == 0 {
+            if keys.len() > 1 {
+                return Err(TemplateError::Invalid(format!(
+                    "`{action}` {field} keys cannot mix `0` (none) with other codes"
+                )));
+            }
+        } else if !(1..KEY_MAX_EXCLUSIVE).contains(key) {
+            return Err(TemplateError::Invalid(format!(
+                "`{action}` {field} key {key} is outside DSDA's 1..511 keyboard range"
+            )));
+        }
+    }
+    if !(-1..MOUSE_MAX_EXCLUSIVE).contains(&mouse) {
+        return Err(TemplateError::Invalid(format!(
+            "`{action}` {field} mouse {mouse} is outside DSDA's -1..7 range"
+        )));
+    }
+    if !(-1..JOY_MAX_EXCLUSIVE).contains(&joy) {
+        return Err(TemplateError::Invalid(format!(
+            "`{action}` {field} gamepad button {joy} is outside DSDA's -1..22 range"
+        )));
+    }
+    let profile = BindingProfile {
+        keys: keys.to_vec(),
+        mouse,
+        joy,
+    };
+    Ok(Binding {
+        profiles: (0..PROFILE_COUNT).map(|_| profile.clone()).collect(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,11 +460,16 @@ mod tests {
     #[test]
     fn embedded_template_parses_with_the_expected_version() {
         let template = Template::embedded().expect("embedded template must be valid");
-        assert_eq!(template.template_version, "2");
+        assert_eq!(template.template_version, "3");
         assert_eq!(
             template.version_range().to_string(),
             "0.30.1",
             "the range is a single tested version until Deck testing widens it"
+        );
+        assert_eq!(
+            template.bindings.len(),
+            KNOWN_BINDING_ACTIONS.len(),
+            "the embedded template binds every action DDL may own"
         );
     }
 
@@ -313,12 +523,16 @@ mod tests {
         "render_stretch_hud = 2\n",
     );
 
+    fn minimal_template(extra: &str) -> String {
+        format!(
+            "template_version = \"3\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}{extra}",
+        )
+    }
+
     #[test]
     fn unknown_keys_are_rejected_so_typos_cannot_claim_ownership() {
-        let error = Template::from_toml(&format!(
-            "template_version = \"1\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}typo_key = 3\n",
-        ))
-        .expect_err("an unknown value key must fail");
+        let error = Template::from_toml(&minimal_template("typo_key = 3\n"))
+            .expect_err("an unknown value key must fail");
         assert!(error.to_string().contains("invalid DSDA config template"));
     }
 
@@ -326,10 +540,7 @@ mod tests {
     /// still parses.
     #[test]
     fn strings_are_optional() {
-        let template = Template::from_toml(&format!(
-            "template_version = \"1\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}",
-        ))
-        .expect("a template without [strings] parses");
+        let template = Template::from_toml(&minimal_template("")).expect("parses");
         assert!(template.strings.is_empty());
         assert_eq!(template.get_str("screen_resolution"), None);
     }
@@ -392,10 +603,172 @@ mod tests {
         let text = template.config_text();
         assert_eq!(
             text.lines().count(),
-            template.values.len() + template.strings.len(),
+            template.values.len() + template.strings.len() + template.bindings.len(),
             "no comments or stray lines are written into the active file"
         );
         assert!(text.contains("use_game_controller 1\n"));
         assert!(text.contains("screen_resolution \"1280x800\"\n"));
+        assert!(
+            text.contains("input_map 9 -1 4 | 9 -1 4 | 9 -1 4\n"),
+            "bindings are written for all three profiles:\n{text}"
+        );
+    }
+
+    /// A2 (spec 034): every binding is a known action and every code is one
+    /// DSDA's binding parser accepts.
+    #[test]
+    fn every_binding_is_a_known_action_with_valid_codes() {
+        let template = Template::embedded().expect("valid");
+        for binding in &template.bindings {
+            assert!(
+                KNOWN_BINDING_ACTIONS.contains(&binding.action.as_str()),
+                "{} is not a known input action",
+                binding.action
+            );
+            for (label, value) in [("wanted", &binding.wanted), ("upstream", &binding.upstream)] {
+                assert_eq!(
+                    value.profiles.len(),
+                    PROFILE_COUNT,
+                    "{} {label} must fill DSDA's three profiles",
+                    binding.action
+                );
+                for profile in &value.profiles {
+                    assert!(!profile.keys.is_empty());
+                    for key in &profile.keys {
+                        assert!(
+                            *key == 0 || (1..KEY_MAX_EXCLUSIVE).contains(key),
+                            "{} {label} key {key} is outside 0..511",
+                            binding.action
+                        );
+                    }
+                    assert!(
+                        (-1..MOUSE_MAX_EXCLUSIVE).contains(&profile.mouse),
+                        "{} {label} mouse {} is outside -1..7",
+                        binding.action,
+                        profile.mouse
+                    );
+                    assert!(
+                        (-1..JOY_MAX_EXCLUSIVE).contains(&profile.joy),
+                        "{} {label} joy {} is outside -1..22",
+                        binding.action,
+                        profile.joy
+                    );
+                }
+            }
+            assert_eq!(
+                binding.wanted.profiles[0], binding.wanted.profiles[1],
+                "{} applies to every profile",
+                binding.action
+            );
+            assert_eq!(
+                binding.wanted.profiles[1], binding.wanted.profiles[2],
+                "{} applies to every profile",
+                binding.action
+            );
+        }
+    }
+
+    /// R2 (spec 034): the shipped buttons are exactly the owner's table, and
+    /// every binding keeps DSDA's keyboard default.
+    #[test]
+    fn deck_controller_layout_matches_the_owner_table() {
+        let template = Template::embedded().expect("valid");
+        for (action, joy, upstream_joy) in [
+            ("input_map", 4, 21),
+            ("input_map_zoomin", 11, -1),
+            ("input_map_zoomout", 12, -1),
+            ("input_autorun", 1, 7),
+            ("input_nextweapon", 14, 3),
+            ("input_prevweapon", 13, 2),
+            ("input_quicksave", 9, -1),
+            ("input_quickload", 10, -1),
+            ("input_reverse", 2, 8),
+        ] {
+            let binding = template
+                .binding(action)
+                .unwrap_or_else(|| panic!("{action} is missing"));
+            assert_eq!(binding.wanted_joy(), Some(joy), "{action} button");
+            assert_eq!(
+                binding.upstream_joy(),
+                Some(upstream_joy),
+                "{action} records DSDA's default"
+            );
+            assert_eq!(
+                binding.wanted.profiles[0].keys, binding.upstream.profiles[0].keys,
+                "{action} keeps DSDA's keyboard binding"
+            );
+            assert_eq!(
+                binding.wanted.profiles[0].mouse, binding.upstream.profiles[0].mouse,
+                "{action} keeps DSDA's mouse binding"
+            );
+        }
+        assert!(
+            template.binding("input_use").is_none(),
+            "use/open stays on DSDA's default A binding; DDL does not own it"
+        );
+    }
+
+    /// R1 (spec 034): the recorded upstream triples are DSDA v0.30.1's own
+    /// defaults, so the migration can recognise an untouched binding.
+    #[test]
+    fn upstream_defaults_match_the_researched_source() {
+        let template = Template::embedded().expect("valid");
+        for (action, keys, mouse, joy) in [
+            ("input_map", vec![9], -1, 21),
+            ("input_map_zoomin", vec![61], -1, -1),
+            ("input_map_zoomout", vec![45], -1, -1),
+            ("input_autorun", vec![186], -1, 7),
+            ("input_nextweapon", vec![0], -1, 3),
+            ("input_prevweapon", vec![0], -1, 2),
+            ("input_quicksave", vec![192], -1, -1),
+            ("input_quickload", vec![195], -1, -1),
+            ("input_reverse", vec![47], -1, 8),
+        ] {
+            let binding = template.binding(action).expect(action);
+            let profile = &binding.upstream.profiles[0];
+            assert_eq!(profile.keys, keys, "{action} upstream keys");
+            assert_eq!(profile.mouse, mouse, "{action} upstream mouse");
+            assert_eq!(profile.joy, joy, "{action} upstream joy");
+        }
+    }
+
+    #[test]
+    fn an_unknown_binding_action_is_rejected() {
+        let error = Template::from_toml(&minimal_template(
+            "[[bindings]]\naction = \"input_not_real\"\nkeys = [0]\nmouse = -1\njoy = 1\nupstream = { keys = [0], mouse = -1, joy = -1 }\n",
+        ))
+        .expect_err("unknown action");
+        assert!(
+            error.to_string().contains("input_not_real"),
+            "the error names the action: {error}"
+        );
+    }
+
+    #[test]
+    fn out_of_range_button_codes_are_rejected() {
+        let entry = |upstream| {
+            minimal_template(&format!(
+                "[[bindings]]\naction = \"input_map\"\nkeys = [9]\nmouse = -1\njoy = 4\nupstream = {{ {upstream} }}\n",
+            ))
+        };
+        for (field, upstream) in [
+            ("gamepad", "keys = [9], mouse = -1, joy = 23"),
+            ("mouse", "keys = [9], mouse = 8, joy = 21"),
+            ("keyboard", "keys = [512], mouse = -1, joy = 21"),
+        ] {
+            let error = Template::from_toml(&entry(upstream)).expect_err(field);
+            assert!(
+                error.to_string().contains("outside"),
+                "{field} error: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn duplicate_binding_actions_are_rejected() {
+        let entry = "[[bindings]]\naction = \"input_map\"\nkeys = [9]\nmouse = -1\njoy = 4\nupstream = { keys = [9], mouse = -1, joy = 21 }\n";
+        let error = Template::from_toml(&minimal_template(&format!("{entry}{entry}")))
+            .expect_err("duplicate action");
+        assert!(error.to_string().contains("more than once"), "{error}");
     }
 }

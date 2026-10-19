@@ -2,6 +2,8 @@
 
 Desk research, 2026-10-16. Scope: upstream source and packaging; no engine build,
 IWAD execution, Linux runtime test or physical Deck test was performed.
+§4's controller-layout subsection was added 2026-10-19 for spec 034 (the owner's
+Deck controller layout), from the same pinned tag.
 
 **Confirmed** means read directly in the tagged source. **Proposed** means a DDL
 design implication or an inference. **Needs Deck Validation** marks runtime or
@@ -531,9 +533,149 @@ names below are abbreviated to their suffix, with the numeric mapping above.
 | `input_script_8` | `0` | -1 | `-1` | [prboom2/src/m_misc.c:579](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L579) |
 | `input_script_9` | `0` | -1 | `-1` | [prboom2/src/m_misc.c:580](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L580) |
 
+### Controller layout semantics (spec 034)
+
+Facts below were read in the pinned tag; the numbered line links name the exact
+block. Button codes are the enum in [prboom2/src/dsda/game_controller.h:21–47](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.h#L21-L47)
+(the file says "Must match SDL" and publishes the same order as the SDL
+GameController button enum); the display names come from
+[prboom2/src/dsda/game_controller.c:47–72](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.c#L47-L72).
+
+**Confirmed — how a button is stored.** Each action is one `input_*` config line.
+`input_defs[]` gives every action its name and its default keyboard, mouse and
+gamepad codes through `INPUT_SETTING(name, id, key, mouse, joy)`
+[prboom2/src/m_misc.c:391–581](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L391-L581);
+[prboom2/src/m_misc.c:75](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L75). The runtime shape is
+`dsda_input_t { int* key; int num_keys; int mouseb; int joyb; }`
+[prboom2/src/dsda/input.h:212–218](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L212-L218):
+
+- `num_keys` keyboard codes are allowed (DSDA's writer joins them with commas);
+- at most **one** mouse button and **one** gamepad button per action per profile;
+- codes beyond the accepted ranges are silently ignored when a file is read:
+  keyboard `1`–`511` (`0` and the writer's `0` mean "none"), mouse `-1`–`7`,
+  gamepad `-1`–`22`
+  [prboom2/src/dsda/input.h:24–27](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.h#L24-L27);
+  [prboom2/src/dsda/input.c:289–318](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.c#L289-L318).
+
+**Confirmed — file grammar and the three profiles.** A line is
+`action key[,key…] mouse joy | key[,key…] mouse joy | key[,key…] mouse joy`, one
+segment per input profile; `input_profile` selects which profile is live.
+DSDA writes all three segments, printing `0` for "no keyboard key"
+[prboom2/src/m_misc.c:642–670](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L642-L670). The reader
+resets each segment as it parses it and adds the codes it recognises
+[prboom2/src/m_misc.c:766–806](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L766-L806). At startup the
+same default triple is installed in **all three** profiles
+[prboom2/src/m_misc.c:696–701](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L696-L701), so a
+Deck layout should set the pad button of every profile.
+
+**Confirmed — one button can drive several actions.** Pad state is posted as one
+bitmask per event: `PollButton` shifts the button's state into its enum bit
+[prboom2/src/dsda/game_controller.c:118–167](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.c#L118-L167).
+The tracker records per-button press/release
+[prboom2/src/dsda/input.c:44–70](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.c#L44-L70), and each
+action's `dsda_InputActivated` independently tests the one button stored in
+`dsda_input[...].joyb`
+[prboom2/src/dsda/input.c:158–176](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/input.c#L158-L176). There is no
+exclusivity: two actions may name the same button and both fire. That is why the
+spec-034 layout can add automap zoom to D-pad Up/Down without taking those
+buttons away from the menu or fly defaults.
+
+**Confirmed — button codes.** The enum is contiguous from `0`; the integers are
+what a config file stores (menu names are display-only):
+
+| Code | `game_controller.h` enum | Menu name | Steam Deck control (**Proposed**, Needs Deck Validation) |
+| --- | --- | --- | --- |
+| 0 | `DSDA_CONTROLLER_BUTTON_A` | `pad a` | A |
+| 1 | `..._B` | `pad b` | B |
+| 2 | `..._X` | `pad x` | X |
+| 3 | `..._Y` | `pad y` | Y |
+| 4 | `..._BACK` | `pad back` | View (Select) |
+| 5 | `..._GUIDE` | `pad guide` | Steam button (not normally visible to games) |
+| 6 | `..._START` | `pad start` | Menu (Start) |
+| 7 | `..._LEFTSTICK` | `lstick` | L3 |
+| 8 | `..._RIGHTSTICK` | `rstick` | R3 |
+| 9 | `..._LEFTSHOULDER` | `pad l` | L1 |
+| 10 | `..._RIGHTSHOULDER` | `pad r` | R1 |
+| 11–14 | `..._DPAD_UP`, `_DOWN`, `_LEFT`, `_RIGHT` | `dpad u/d/l/r` | D-pad |
+| 15–20 | `..._MISC1`, `..._PADDLE1`–`4`, `..._TOUCHPAD` | `misc 1`, `paddle 1`–`4`, `touchpad` | varies; not used by the layout |
+| 21–22 | `..._TRIGGERLEFT`, `..._TRIGGERRIGHT` | `pad lt`, `pad rt` | L2 / R2 |
+
+The enum order is a **Confirmed** source fact
+[prboom2/src/dsda/game_controller.h:21–47](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/game_controller.h#L21-L47), but the
+mapping from a printed Deck control to an SDL button is Steam Input behaviour and
+is **Proposed** until checked on hardware. Steam's View button, for example,
+sends SDL's back button; DSDA calls that `pad back` = 4.
+
+**Confirmed — automap zoom is automap-only.** `input_map_zoomin` and
+`input_map_zoomout` ship with keyboard `=` and `-` and **no** gamepad button by
+default
+[prboom2/src/m_misc.c:443–444](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L443-L444). They are
+handled only inside `AM_Responder`, which runs while the full automap is open:
+pressing starts a zoom, releasing stops it
+[prboom2/src/am_map.c:1073–1104](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/am_map.c#L1073-L1104);
+[prboom2/src/am_map.c:1156–1187](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/am_map.c#L1156-L1187);
+[prboom2/src/am_map.c:1244–1256](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/am_map.c#L1244-L1256). `G_Responder`
+calls `AM_Responder` first and returns when the automap consumed the event, so a
+button shared with a play action does the play action only when the map is
+closed
+[prboom2/src/g_game.c:1295–1305](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L1295-L1305). The
+automap has no gamepad pan binding on the D-pad: `input_map_left/right/up/down`
+stay keyboard-only
+[prboom2/src/m_misc.c:445–448](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L445-L448). Because
+`AM_Responder` handles only what it recognises, D-pad Left/Right bound to
+previous/next weapon still change weapons while the map is open.
+
+**Confirmed — the 180° turn exists.** The action is `input_reverse`, default
+keyboard `/` and Right Stick click
+[prboom2/src/m_misc.c:401](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L401). It is a one-shot
+turn, not a held action: `G_BuildTiccmd` adds `QUICKREVERSE` (`32768`, a half
+turn in the game's angle units) on the tick the button is first activated
+[prboom2/src/g_game.c:206](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L206);
+[prboom2/src/g_game.c:554–563](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L554-L563). It is
+skipped while the strafe modifier is held, and prints "180 key disabled by
+strict mode" instead of turning while a strict-mode demo records (research §5).
+
+**Confirmed — quick save/load.** `input_quicksave` is F6 and `input_quickload`
+F9, both with no gamepad default
+[prboom2/src/m_misc.c:436–437](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L436-L437). They are
+handled by the menu responder while playing
+[prboom2/src/m_menu.c:5640–5659](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L5640-L5659), which runs
+before the game responder
+[prboom2/src/d_main.c:252–259](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L252-L259).
+
+**Confirmed — menu first, then game.** The event loop offers each event to the
+menu before `G_Responder`
+[prboom2/src/d_main.c:252–259](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L252-L259); the menu
+bindings keep the D-pad (`input_menu_up`–`right`, `input_menu_enter`,
+`input_menu_backspace`, `input_menu_escape`)
+[prboom2/src/m_misc.c:472–479](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L472-L479), so adding a
+play action to the D-pad cannot break menu navigation.
+
+**Confirmed — the upstream defaults the layout replaces.** These are the
+`INPUT_SETTING` values DDL's template records as `upstream`, with the keyboard
+codes resolved from the key definitions
+[prboom2/src/doomdef.h:344–365](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/doomdef.h#L344-L365):
+
+| Action | Keyboard default | Mouse | Gamepad default | Source |
+| --- | --- | --- | --- | --- |
+| `input_map` | `KEYD_TAB` = 9 | -1 | 21 `TRIGGERLEFT` | [m_misc.c:425](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L425) |
+| `input_map_zoomin` | `'='` = 61 | -1 | -1 | [m_misc.c:443](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L443) |
+| `input_map_zoomout` | `'-'` = 45 | -1 | -1 | [m_misc.c:444](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L444) |
+| `input_autorun` | `KEYD_CAPSLOCK` = 186 | -1 | 7 `LEFTSTICK` | [m_misc.c:400](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L400) |
+| `input_nextweapon` | 0 (none) | -1 | 3 `Y` | [m_misc.c:418](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L418) |
+| `input_prevweapon` | 0 (none) | -1 | 2 `X` | [m_misc.c:419](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L419) |
+| `input_quicksave` | `KEYD_F6` = 192 | -1 | -1 | [m_misc.c:436](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L436) |
+| `input_quickload` | `KEYD_F9` = 195 | -1 | -1 | [m_misc.c:437](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L437) |
+| `input_reverse` | `'/'` = 47 | -1 | 8 `RIGHTSTICK` | [m_misc.c:401](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L401) |
+
+`input_use` (default A, `' '`) is not in the table: the owner's layout asks for
+A, which is already DSDA's default, so DDL does not claim the key.
+
 Implications for DDL:
 
 - **Proposed:** Generate numeric binding triples for all three profiles; preserve extra keyboard bindings and each independent profile on migration.
+- **Proposed:** Bind a pad button by writing all three profile segments; a gamepad button may drive several actions, so an automap-only action can share the D-pad with the menu and fly defaults (spec 034).
+- **Proposed:** When a template version starts owning a binding, compare the active file against the recorded `upstream` default to tell an untouched binding from one the player rebound in DSDA's menu (spec 034, R2).
 - **Proposed:** Start sensitivity templates from these audited values, then calibrate on Deck; leave controller selection/hotplug promises behind a validation gate.
 - **Proposed:** Do not invent axis-binding keys or use display names in config files.
 - **Needs Deck Validation:** Native pad identity, rear-button visibility, gyro-as-mouse coexistence, SDL mapping and comfortable sensitivity/deadzone values.
