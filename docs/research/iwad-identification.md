@@ -1,6 +1,6 @@
 # IWAD identification research
 
-**Status:** desk research · **Gathered:** 2026-10-16 (UTC)
+**Status:** desk research · **Gathered:** 2026-10-16 (UTC) · **Updated:** 2026-10-19 (Deck layout, §4)
 **Workstream:** Content Schema / Library (D-010 base games; OVERVIEW §3 step 3 and §6)
 **Scope:** facts needed so DDL can identify user-supplied IWADs by content, never by filename
 alone. No code and no catalog entry is produced here.
@@ -312,23 +312,45 @@ The Windows registry list in the same file adds `steamapps\common\final doom\bas
 DOSBox-era releases; folder spelling/casing is Chocolate Doom's, not guaranteed to match the current
 shipping client (**Needs Deck Validation**).
 
-**Confirmed — DOOM + DOOM II (2024, KEX; Steam app 2280)** ships the WADs in two subfolders of its
-install directory:
+**Confirmed (Deck, 2026-10-19) — DOOM + DOOM II (2024, KEX; Steam app 2280) installs to
+`steamapps/common/Ultimate Doom/`.** The owner's `find` on a Steam Deck LCD (recorded in
+[spec 028](../specs/028-steam-iwad-layout.md)) lists exactly:
 
-- `base/` — the **classic** DOS-era files (Ultimate Doom `doom.wad`, `doom2.wad` 1.9, `tnt.wad`,
-  `plutonia.wad`) plus other original WADs.
-- `rerelease/` — the **KEX** copies (`doom.wad`, `doom2.wad`, `tnt.wad`, `plutonia.wad`,
-  `nerve.wad`, `masterlevels.wad`, `sigil.wad`, `sigil2.wad`, `id1*.wad`, `iddm1.wad`, `extras.wad`,
-  `id24res.wad`, `Common.kpf`). These add widescreen assets and the map fixes hashed in §1; some
-  assets are censored relative to the originals.
+```text
+Ultimate Doom/base/DOOM.WAD
+Ultimate Doom/base/doom2/DOOM2.WAD
+Ultimate Doom/base/tnt/TNT.WAD
+Ultimate Doom/base/plutonia/PLUTONIA.WAD
+Ultimate Doom/base/master/wads/{ATTACK,BLACKTWR,…,VIRGIL}.WAD      (20 Master Levels PWADs)
+Ultimate Doom/rerelease/{doom,doom2,tnt,plutonia,nerve,masterlevels,sigil,sigil2,
+                         extras,id1,id1-mus,id1-res,id1-tex,id1-weap,id24res,iddm1}.wad
+```
 
-  Sources: [WadFusion maintainer discussion](https://github.com/Owlet7/wadfusion/discussions/51)
-  (states the `base/` vs `rerelease/` split explicitly) and the
-  [Steam "wads in rerelease folder" thread](https://steamcommunity.com/app/2280/discussions/0/6741412385247917763/).
-  **Proposed:** DDL should prefer `base/` IWADs for vanilla Doom/Doom II content (uncensored, matches
-  published 1.9 hashes) and treat `rerelease/` copies as the KEX variants below. The literal
-  install-dir name (`DOOM + DOOM II`) and the on-Deck presence of both folders are
-  **Needs Deck Validation**.
+Classic files are upper case and KEX files lower case (**Confirmed** on the Deck). `base/` holds
+the **classic** DOS-era files: Ultimate Doom `DOOM.WAD`, with the Doom II family nested under
+`base/doom2/`, `base/tnt/` and `base/plutonia/`. `rerelease/` holds the **KEX** copies
+(`doom.wad`, `doom2.wad`, `tnt.wad`, `plutonia.wad`, `nerve.wad`, `masterlevels.wad`,
+`sigil.wad`, `sigil2.wad`, `id1*.wad`, `iddm1.wad`, `extras.wad`, `id24res.wad`, `Common.kpf`).
+These add widescreen assets and the map fixes hashed in §1; some assets are censored relative to
+the originals.
+
+Only the four classic games are base IWADs: the 20 Master Levels files and the KEX resource WADs
+(`id1*.wad`, `extras.wad`, `id24res.wad`, `iddm1.wad`, `masterlevels.wad`, `nerve.wad`,
+`sigil*.wad`) are PWADs or resources, never IWADs. The identifier rejects PWADs (spec 028, R2),
+and the Steam scan additionally filters the named KEX resources out of `rerelease/`.
+
+Sources for the internal `base/` vs `rerelease/` split (recorded before the Deck test):
+[WadFusion maintainer discussion](https://github.com/Owlet7/wadfusion/discussions/51) (states the
+split explicitly) and the
+[Steam "wads in rerelease folder" thread](https://steamcommunity.com/app/2280/discussions/0/6741412385247917763/).
+**Proposed (unchanged):** DDL should prefer `base/` IWADs for vanilla Doom/Doom II content
+(uncensored, matches published 1.9 hashes) and treat `rerelease/` copies as the KEX variants
+below.
+
+**Unconfirmed on Steam:** the `DOOM + DOOM II/` install-dir name used earlier by this research
+(and by DDL's first Steam scan) was not present on the Deck; the app installs as
+`Ultimate Doom/`. That name may still be GOG's layout (GOG slug `doom_doom_ii`); DDL keeps
+probing it defensively but must not rely on it.
 
 **Proposed GOG and other locations** (all **Needs Deck Validation**):
 
@@ -341,8 +363,8 @@ install directory:
   [`dsda-engine.md`](dsda-engine.md) §1 search paths). DDL should mirror these as *candidate roots*
   only when the user opts in, never by default.
 
-**Needs Deck Validation** for all of the above: exact folder casing, whether the Steam client still
-creates the legacy separate apps' folders, the SD-card library mount path
+**Needs Deck Validation** for the legacy folders and for GOG/other locations: whether the Steam
+client still creates the legacy separate apps' folders, the SD-card library mount path
 (commonly `/run/media/mmcblk0p1/…`, but the label can differ), where GOG installs on the Deck, and
 Flatpak Steam's path. DDL must read Steam files only, never write them.
 

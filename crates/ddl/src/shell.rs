@@ -102,10 +102,10 @@ impl Shell {
         }
     }
     fn toast(ui: &AppWindow) {
-        ui.set_toast(text(ui, Copy::NotWired));
+        ui.invoke_show_toast(text(ui, Copy::NotWired));
     }
     pub fn hotplug(&self, ui: &AppWindow, connected: bool) {
-        ui.set_toast(text(
+        ui.invoke_show_toast(text(
             ui,
             if connected {
                 Copy::Connected
@@ -115,7 +115,7 @@ impl Shell {
         ));
     }
     pub fn action(&mut self, ui: &AppWindow, action: Action) {
-        ui.set_toast(SharedString::default());
+        ui.invoke_show_toast(SharedString::default());
         match action {
             Action::Up | Action::Down | Action::Left | Action::Right => self.move_focus(action),
             Action::Confirm => self.activate(ui),
@@ -222,14 +222,16 @@ impl Shell {
             // A separate setup entry keeps the missing-IWAD fixture reachable before install.
             (Screen::Detail, 37) => self.enter(Screen::Setup, 50),
             (Screen::Detail, 32) => Self::toast(ui),
-            (Screen::Detail, 36) => ui.set_toast(fixtures::mapset(self.mapset).source.into()),
+            (Screen::Detail, 36) => {
+                ui.invoke_show_toast(fixtures::mapset(self.mapset).source.into())
+            }
             (Screen::Detail, 31) => {
                 let i = self.index();
                 self.favorites[i] = !self.favorites[i];
             }
-            (Screen::Setup, 51) => ui.set_toast(text(ui, Copy::Missing)),
-            (Screen::Setup, 41) => ui.set_toast(text(ui, Copy::Locked)),
-            (Screen::Setup, 46) => ui.set_toast(text(ui, Copy::LockedOrder)),
+            (Screen::Setup, 51) => ui.invoke_show_toast(text(ui, Copy::Missing)),
+            (Screen::Setup, 41) => ui.invoke_show_toast(text(ui, Copy::Locked)),
+            (Screen::Setup, 46) => ui.invoke_show_toast(text(ui, Copy::LockedOrder)),
             (Screen::Setup, 43) => {
                 let i = self.index();
                 if self.mapset == MapsetId::Auger {

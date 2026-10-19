@@ -36,7 +36,21 @@ pub(crate) fn pump_events() {
         event();
     }
 }
+static TIME_OFFSET: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+fn advance_time(ms: u64) {
+    slint::platform::update_timers_and_animations();
+    TIME_OFFSET.fetch_add(ms, std::sync::atomic::Ordering::SeqCst);
+    slint::platform::update_timers_and_animations();
+}
 impl Platform for HeadlessPlatform {
+    fn duration_since_start(&self) -> std::time::Duration {
+        static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+        START.get_or_init(std::time::Instant::now).elapsed()
+            + std::time::Duration::from_millis(
+                TIME_OFFSET.load(std::sync::atomic::Ordering::SeqCst),
+            )
+    }
+
     fn new_event_loop_proxy(&self) -> Option<Box<dyn slint::platform::EventLoopProxy>> {
         Some(Box::new(HeadlessProxy))
     }

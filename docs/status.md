@@ -54,9 +54,9 @@
 
 | Item | Spec | State |
 | --- | --- | --- |
-| Steam scan misses Doom II/TNT/Plutonia: app 2280 installs to `Ultimate Doom/` with `base/doom2/`, `base/tnt/`, `base/plutonia/`, `rerelease/` | 028 | Ready |
+| Steam scan misses Doom II/TNT/Plutonia: app 2280 installs to `Ultimate Doom/` with `base/doom2/`, `base/tnt/`, `base/plutonia/`, `rerelease/` | 028 | **Done**: `Ultimate Doom/base/{,doom2,tnt,plutonia}` and `rerelease/` probed flat (no recursion), KEX resource WADs filtered by name, classic `base/` preferred; research §4 corrected. Deck: F2 |
 | Gaming Mode renders at ~2× (DPI); DSDA opens 4:3 — fit-to-screen scale and Deck video defaults | 029 | Ready |
-| Tab bar disabled where it can't be used, first-run emphasis, button hints, header, Discover margin, L2/R2 hold+wrap, toasts fade | 030 | Ready |
+| Tab bar disabled where it can't be used, first-run emphasis, button hints, header, Discover margin, L2/R2 hold+wrap, toasts fade | 030 | **Done**: tabs greyed and unfocusable off root screens and in dialogs, red pulsing Install on first run, per-screen hint footer, header text removed, 22 px Discover gap, L2/R2 500 ms hold-repeat + wrap, 3 s toasts with 300 ms fade cleared on tab change; README renders refreshed. Deck: S4, S2 |
 | Profiles: summary on detail, free-text names with Steam keyboard, wrap and L1/R1 switching | 031 | Ready (after 030) |
 | Play base games without a mapset (D-027); IWAD folders lists automatic sources | 032 | Ready (after 028, 030) |
 
