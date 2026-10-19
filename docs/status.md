@@ -59,4 +59,5 @@
 | Tab bar disabled where it can't be used, first-run emphasis, button hints, header, Discover margin, L2/R2 hold+wrap, toasts fade | 030 | **Done**: tabs greyed and unfocusable off root screens and in dialogs, red pulsing Install on first run, per-screen hint footer, header text removed, 22 px Discover gap, L2/R2 500 ms hold-repeat + wrap, 3 s toasts with 300 ms fade cleared on tab change; README renders refreshed. Deck: S4, S2 |
 | Profiles: summary on detail, free-text names with Steam keyboard, wrap and L1/R1 switching | 031 | Ready (after 030) |
 | Play base games without a mapset (D-027); IWAD folders lists automatic sources | 032 | Ready (after 028, 030) |
-
+| Drop decorative subtitles from headers and panels (owner: "cara de AI slop") | 033 | Ready (after 031, 032) |
+| Owner's DSDA controller layout (Select map, D-pad zoom/weapons, A use, B autorun, L1/R1 quick save/load, X quick turn) | 034 | Ready (after 029) |
