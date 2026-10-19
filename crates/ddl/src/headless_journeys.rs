@@ -319,3 +319,116 @@ fn title_fit_uninstall() {
         None,
     );
 }
+
+/// Spec 030: production navigation, modal hints, spacing and timed feedback.
+#[test]
+fn navigation_feedback() {
+    use crate::{input::Action, runtime::Screen};
+    use slint::Model;
+    if isolated(module_path!(), "navigation_feedback") {
+        return;
+    }
+    let scene = production::scene();
+    production::first_run(&scene, &|_| {});
+    let ui = &scene.ui;
+    let mut r = scene.state.borrow_mut();
+    r.screen = Screen::FirstRun;
+    let installed_engine = r.snapshot.as_mut().unwrap().engine.take();
+    r.focus = 1;
+    r.sync(ui);
+    assert!(ui.get_install_pulse());
+    assert!(!ui.get_tabs_enabled());
+    for action in [Action::PreviousTab, Action::NextTab, Action::Up] {
+        r.action(ui, action);
+        assert_eq!(r.screen, Screen::FirstRun);
+        assert!(r.focus >= 0);
+    }
+    r.focus = 1;
+    r.sync(ui);
+    scene.capture("030-first-run.png");
+    r.snapshot.as_mut().unwrap().engine = installed_engine;
+    r.sync(ui);
+    assert!(!ui.get_install_pulse(), "installed engine stops the pulse");
+    r.snapshot.as_mut().unwrap().engine = None;
+    r.playing = true;
+    r.sync(ui);
+    assert!(!ui.get_install_pulse(), "gameplay never pulses");
+    r.playing = false;
+    for screen in [
+        Screen::Home,
+        Screen::Discover,
+        Screen::Library,
+        Screen::Settings,
+    ] {
+        r.screen = screen;
+        r.focus = 1;
+        r.sync(ui);
+        assert!(ui.get_tabs_enabled());
+        assert!(!ui.get_install_pulse());
+        r.action(ui, Action::NextTab);
+        assert_ne!(r.screen, screen);
+    }
+    r.screen = Screen::Home;
+    r.focus = 1;
+    r.sync(ui);
+    scene.capture("030-home.png");
+    r.action(ui, Action::Menu);
+    assert!(ui.get_sheet_open());
+    assert!(!ui.get_tabs_enabled());
+    scene.capture("030-dialog.png");
+    r.action(ui, Action::Back);
+    r.screen = Screen::Discover;
+    let sample = r.snapshot.as_ref().unwrap().items[0].clone();
+    for i in 1..9 {
+        let mut item = sample.clone();
+        item.recipe.id = format!("scroll-fixture-{i}");
+        r.snapshot.as_mut().unwrap().items.push(item);
+    }
+    r.focus = 10;
+    r.sync(ui);
+    let last = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.actionable && (10..100).contains(&n.id))
+        .last()
+        .unwrap()
+        .id;
+    r.focus = last;
+    r.sync(ui);
+    assert!(ui.get_scroll_offset() > 0.);
+    scene.capture("030-discover-scrolled.png");
+    r.screen = Screen::Detail;
+    r.focus = 1;
+    r.sync(ui);
+    for action in [Action::PreviousTab, Action::NextTab, Action::Up] {
+        r.action(ui, action);
+        assert_eq!(r.screen, Screen::Detail);
+        assert!(r.focus >= 0);
+    }
+    assert!(!ui.get_tabs_enabled());
+    scene.capture("030-detail.png");
+    ui.invoke_show_toast("Old toast".into());
+    super::advance_time(2000);
+    assert_eq!(ui.get_toast(), "Old toast");
+    ui.invoke_show_toast("New toast".into());
+    super::advance_time(2000);
+    ui.invoke_show_toast("New toast".into());
+    super::advance_time(2000);
+    assert_eq!(ui.get_toast(), "New toast");
+    assert!(ui.get_toast_opacity() > 0.);
+    super::advance_time(1100);
+    assert!(ui.get_toast().is_empty());
+    let _ = ui.get_toast_opacity();
+    super::advance_time(150);
+    assert!(
+        (0.0..1.0).contains(&ui.get_toast_opacity()),
+        "toast fades rather than disappearing abruptly"
+    );
+    super::advance_time(200);
+    assert_eq!(ui.get_toast_opacity(), 0.);
+    r.screen = Screen::Home;
+    r.sync(ui);
+    ui.invoke_show_toast("Stale toast".into());
+    r.action(ui, Action::NextTab);
+    assert!(ui.get_toast().is_empty());
+}

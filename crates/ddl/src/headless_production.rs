@@ -1781,7 +1781,13 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(ui.get_focused(), 200);
     assert!(!ui.get_favorite_hint(), "X has no target on the strip");
     press(window, Key::LeftArrow);
-    assert_eq!(ui.get_focused(), 200, "no edge wrap");
+    assert_eq!(
+        ui.get_focused(),
+        201 + used.len() as i32,
+        "wrap to Favorites"
+    );
+    press(window, Key::RightArrow);
+    assert_eq!(ui.get_focused(), 200, "wrap back to All");
     let tag_cards = |id: &str| {
         let cards = card_ids(ui);
         let items = state.borrow().snapshot.as_ref().unwrap().items.clone();
@@ -1806,7 +1812,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             capture(window, "015-discover-category.png");
         }
     }
-    // Triggers (L2/R2) step the same list without wrapping, from the grid too.
+    // Triggers (L2/R2) step and wrap the same list, from the grid too.
     ui.invoke_action(11);
     assert_eq!(selected_chip(ui), used[used.len() - 2].label);
     ui.invoke_action(12);
@@ -1816,7 +1822,9 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     ui.invoke_action(12);
     assert_eq!(selected_chip(ui), "Favorites");
     ui.invoke_action(12);
-    assert_eq!(selected_chip(ui), "Favorites", "no wrap at the end");
+    assert_eq!(selected_chip(ui), "All", "R2 wraps at the end");
+    ui.invoke_action(11);
+    assert_eq!(selected_chip(ui), "Favorites", "L2 wraps at the beginning");
     assert_eq!(
         chip_labels(ui).last().map(String::as_str),
         Some("Favorites")

@@ -108,13 +108,27 @@ impl Pad {
         })
     }
     fn sample(&mut self, now: Duration) -> Option<Action> {
-        let direction = self.direction();
+        let direction = if self.buttons.contains(&Button::LeftTrigger2) {
+            Some(Action::PreviousCategory)
+        } else if self.buttons.contains(&Button::RightTrigger2) {
+            Some(Action::NextCategory)
+        } else {
+            self.direction()
+        };
         if self.blocked {
             return None;
         }
         if direction != self.held {
             self.held = direction;
-            self.next = now + CONFIG.delay;
+            self.next = now
+                + if matches!(
+                    direction,
+                    Some(Action::PreviousCategory | Action::NextCategory)
+                ) {
+                    Duration::from_millis(500)
+                } else {
+                    CONFIG.delay
+                };
             return direction;
         }
         if direction.is_some() && now >= self.next {
@@ -169,7 +183,10 @@ impl Mapper {
                 .position(|b| *b == button)
                 {
                     pad.dpad[i] = down;
-                } else if down && !pad.blocked {
+                } else if !matches!(button, Button::LeftTrigger2 | Button::RightTrigger2)
+                    && down
+                    && !pad.blocked
+                {
                     return match button {
                         Button::South => Some(Action::Confirm),
                         Button::East => Some(Action::Back),
@@ -177,8 +194,6 @@ impl Mapper {
                         Button::North => Some(Action::Y),
                         Button::LeftTrigger => Some(Action::PreviousTab),
                         Button::RightTrigger => Some(Action::NextTab),
-                        Button::LeftTrigger2 => Some(Action::PreviousCategory),
-                        Button::RightTrigger2 => Some(Action::NextCategory),
                         Button::Start => Some(Action::Menu),
                         _ => None,
                     };
@@ -321,6 +336,28 @@ mod tests {
             mapper.event(8, Signal::Axis(Axis::RightStickY, 1.), CONFIG.delay),
             None
         );
+    }
+    #[test]
+    fn category_hold_delays_repeats_and_release_or_suspend_stops() {
+        for (button, action) in [
+            (Button::LeftTrigger2, Action::PreviousCategory),
+            (Button::RightTrigger2, Action::NextCategory),
+        ] {
+            let mut mapper = Mapper::default();
+            assert_eq!(
+                mapper.event(0, Signal::Button(button, true), Duration::ZERO),
+                Some(action)
+            );
+            assert!(mapper.repeat(Duration::from_millis(499)).is_empty());
+            assert_eq!(mapper.repeat(Duration::from_millis(500)), vec![action]);
+            assert!(mapper.repeat(Duration::from_millis(599)).is_empty());
+            assert_eq!(mapper.repeat(Duration::from_millis(600)), vec![action]);
+            mapper.event(0, Signal::Button(button, false), Duration::from_millis(650));
+            assert!(mapper.repeat(Duration::from_secs(1)).is_empty());
+            mapper.event(0, Signal::Button(button, true), Duration::from_secs(1));
+            mapper.suspend();
+            assert!(mapper.repeat(Duration::from_secs(2)).is_empty());
+        }
     }
     #[test]
     fn missing_gamepad_backend_is_idle() {
