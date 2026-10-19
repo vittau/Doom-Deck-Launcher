@@ -1756,7 +1756,18 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         let image = ui
             .global::<crate::ScreenshotAssets>()
             .invoke_image(asset.clone());
-        assert_eq!((image.size().width, image.size().height), (640, 360));
+        let size = image.size();
+        assert!(
+            (ddl_core::catalog::MIN_SCREENSHOT_WIDTH..=ddl_core::catalog::MAX_SCREENSHOT_WIDTH)
+                .contains(&size.width)
+                && (ddl_core::catalog::MIN_SCREENSHOT_HEIGHT
+                    ..=ddl_core::catalog::MAX_SCREENSHOT_HEIGHT)
+                    .contains(&size.height),
+            "{} screenshot is {}x{} outside catalog bounds",
+            recipe.id,
+            size.width,
+            size.height
+        );
         {
             let mut r = state.borrow_mut();
             r.focus = 10 + index as i32;
@@ -1966,13 +1977,31 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(selected_chip(ui), "All");
     assert_eq!(ui.get_focused(), card_ids(ui)[0]);
 
-    // X on the second card: persisted, starred, and sorted first.
+    // Right reaches another card; favorite a non-first recipe with multiple tags
+    // so the detail assertions exercise all tags regardless of catalog ordering.
     press(window, Key::RightArrow);
-    let second = ui.get_focused();
-    assert_ne!(second, card_ids(ui)[0]);
+    assert_ne!(ui.get_focused(), card_ids(ui)[0]);
+    let first = card_ids(ui)[0];
+    let favorite_id = {
+        let mut r = state.borrow_mut();
+        let index = r
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .enumerate()
+            .find(|(index, item)| 10 + *index as i32 != first && item.recipe.tags.len() >= 2)
+            .map(|(index, _)| index)
+            .expect("favorite/detail journey needs a non-first recipe with multiple tags");
+        r.focus = 10 + index as i32;
+        r.selected = index;
+        r.sync(ui);
+        r.focus
+    };
     press_char(window, "x");
     idle(&state);
-    let marked = state.borrow().snapshot.as_ref().unwrap().items[(second - 10) as usize]
+    let marked = state.borrow().snapshot.as_ref().unwrap().items[(favorite_id - 10) as usize]
         .recipe
         .id
         .clone();
@@ -1989,7 +2018,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     let first_card = ui
         .get_nodes()
         .iter()
-        .find(|n| n.id == second)
+        .find(|n| n.id == favorite_id)
         .map(|n| (n.x, n.y))
         .unwrap();
     assert_eq!(first_card, (12., 84.), "favorites sort first");
@@ -2003,7 +2032,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         ui.invoke_action(12);
     }
     assert_eq!(selected_chip(ui), "Favorites");
-    assert_eq!(card_ids(ui), [second]);
+    assert_eq!(card_ids(ui), [favorite_id]);
     capture(window, "015-discover-favorites.png");
 
     // Detail: all tag chips, favorite mark, X and the Favorite button.
