@@ -55,9 +55,9 @@
 | Item | Spec | State |
 | --- | --- | --- |
 | Steam scan misses Doom II/TNT/Plutonia: app 2280 installs to `Ultimate Doom/` with `base/doom2/`, `base/tnt/`, `base/plutonia/`, `rerelease/` | 028 | **Done**: `Ultimate Doom/base/{,doom2,tnt,plutonia}` and `rerelease/` probed flat (no recursion), KEX resource WADs filtered by name, classic `base/` preferred; research §4 corrected. Deck: F2 |
-| Gaming Mode renders at ~2× (DPI); DSDA opens 4:3 — fit-to-screen scale and Deck video defaults | 029 | Ready |
+| Gaming Mode renders at ~2× (DPI); DSDA opens 4:3 — fit-to-screen scale and Deck video defaults | 029 | **Done**: fullscreen scale = min(w/1280, h/800) from the physical size, re-applied if the backend re-reports the DPI, `SLINT_SCALE_FACTOR` still wins, values logged; DSDA template v2 (1280×800, desktop fullscreen, `render_aspect 2` 16:10, `render_stretch_hud 2`) with three-way migration; research §9. Deck: S3 without launch option, F4 widescreen |
 | Tab bar disabled where it can't be used, first-run emphasis, button hints, header, Discover margin, L2/R2 hold+wrap, toasts fade | 030 | **Done**: tabs greyed and unfocusable off root screens and in dialogs, red pulsing Install on first run, per-screen hint footer, header text removed, 22 px Discover gap, L2/R2 500 ms hold-repeat + wrap, 3 s toasts with 300 ms fade cleared on tab change; README renders refreshed. Deck: S4, S2 |
-| Profiles: summary on detail, free-text names with Steam keyboard, wrap and L1/R1 switching | 031 | Ready (after 030) |
+| Profiles: summary on detail, free-text names with Steam keyboard, wrap and L1/R1 switching | 031 | **Done**: profile summary + Edit on Mapset detail, one profile list (A selects, L1/R1 wrap), free-text names (1–32 chars, case-insensitive unique), Steam keyboard via `steam steam://open/keyboard` with a Steam + X hint, preset-name code removed. Deck: C4 naming/keyboard |
 | Play base games without a mapset (D-027); IWAD folders lists automatic sources | 032 | Ready (after 028, 030) |
 | Drop decorative subtitles and the screenshot caption plates (credits move to detail text and About) | 033 | Ready (after 031, 032) |
 | Owner's DSDA controller layout (Select map, D-pad zoom/weapons, A use, B autorun, L1/R1 quick save/load, X quick turn) | 034 | Ready (after 029) |

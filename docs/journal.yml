@@ -621,4 +621,15 @@
     the catalog in batches, starting with an inventory; spec 036 (logo v3) runs on Opus 5.5 high
     at the owner's request.
   refs: [docs/decisions.md, docs/specs/037-doomer-boards-catalog.md, docs/specs/036-logo-v3.md]
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Specs 031 and 029 merged. 031: profiles visible on Mapset detail with Edit, one clean profile
+    list (A selects, L1/R1 wrap), free-text names with shared validation, and the Steam on-screen
+    keyboard requested on focus (Needs Deck Validation). 029: the launcher fits the physical
+    screen instead of the reported DPI (and re-fits if gamescope re-reports it), and DSDA's
+    template v2 starts at 1280x800, desktop fullscreen, 16:10 with a full-width status bar
+    (keys spot-checked against DSDA v0.30.1 source). 552 workspace tests green. The orchestrator's
+    GUI guard killed the owner's own screenshot once; it now exempts interactive captures.
+  refs: [docs/reports/031-profiles-ux.md, docs/reports/029-deck-display.md]
 
