@@ -26,7 +26,9 @@ This is a **feasibility research** task. No code.
   Steam ROM Manager) find it. Cover: whether a non-Steam app can have a game page there and how
   one is created, the upload path (web upload or API, account requirements), size/format/style
   rules for each asset type, and whether our exports already meet them (list any re-export
-  needed). Uploading is an owner action on the owner's account: write the step-by-step for them;
+  needed). A search for `DDL`, `ddl` or `DoomDeckLauncher` (the shortcut name) must lead to the
+  art: cover how SGDB matches names (aliases, case, short-name collisions) and how the Decky
+  plugin and Steam ROM Manager pick a game for a shortcut name. Uploading is an owner action on the owner's account: write the step-by-step for them;
   do not create accounts or upload anything.
 - **R3** — **Recommendation:** go / no-go / "README only" with reasons, and if go, a proposed
   spec (requirements + acceptance) in the report.
