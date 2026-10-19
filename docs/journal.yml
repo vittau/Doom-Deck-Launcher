@@ -649,4 +649,12 @@
     Glass for one more refinement round and confirmed the new solid DDL wordmark on a dark tablet
     was his call.
   refs: [docs/decisions.md, docs/specs/036-logo-v3.md, docs/specs/037-doomer-boards-catalog.md]
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Spec 034 merged: DSDA template v3 ships the owner's controller layout, researched in DSDA
+    v0.30.1 source (one button may drive a menu and a play action; automap zoom acts only with
+    the map open; X is input_reverse, disabled in strict recording). Player rebinds survive the
+    migration. Workspace tests green.
+  refs: [docs/reports/034-dsda-controller-layout.md]
 
