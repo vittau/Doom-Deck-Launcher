@@ -2,8 +2,8 @@
 
 **Status:** Phase 1 (**R1**, **R3**) and phase 2 (**R2**) implemented. A1 verified; A2 verified
 (`lint --fetch` for the 12 changed recipes plus an offline lint of the whole catalog). A3 verified
-on 2026-10-20 in the shared build slot, on a branch merged with `main` `a0db14b`: fmt clean,
-workspace clippy clean, workspace tests 441 passed; the Linux e2e is the coordinator's.
+on 2026-10-20 in the shared build slot, on a branch merged with `main` `a7ae1ef`: fmt clean,
+workspace clippy clean, workspace tests 581 passed; the Linux e2e is the coordinator's.
 No new dependency.
 
 ## What changed
@@ -142,13 +142,13 @@ mapset was re-downloaded); all 12 → **passed (fetched packages verified)** on 
 
 ### A3 — static checks (full workspace, 2026-10-20)
 
-Run in the shared build slot after merging `main` `a0db14b` (branch tip `17531a2`), in this order
+Run in the shared build slot after merging `main` `a7ae1ef` (branch tip `fdfab4c`), in this order
 with `set -o pipefail`:
 
 - `cargo fmt --all --check` → clean.
-- `cargo clippy --workspace --all-targets -- -D warnings` → clean (42.9 s).
-- `cargo test --workspace` → **441 passed, 0 failed** across 11 test binaries (includes the
-  408-test `ddl-core` suite and the edited-recipe catalog lint).
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean.
+- `cargo test --workspace` → **581 passed, 0 failed** across 12 test binaries (includes the
+  408-test `ddl-core` suite, the 140-test `ddl` suite and the edited-recipe catalog lint).
 
 Targeted checks from earlier are unchanged: `cargo test -p ddl-core catalog` → 56 passed (includes
 the offline `lint_paths` over the real `catalog/`, so the edited recipes and `hosts.toml` lint).
