@@ -370,6 +370,7 @@ impl CrawlState {
                 if self.backoff.clean_runs >= CLEAN_RUNS_TO_RECOVER {
                     self.backoff.consecutive_stops = 0;
                     self.backoff.clean_runs = 0;
+                    self.backoff.last_stop_unix = None;
                 }
             }
         }

@@ -228,7 +228,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          telemetry="$(grep -m 1 '^Telemetry:' "$RUNNER_TEMP/idgames/build.log" || true)"
           body="$(
             printf '%s\n' \
               "The scheduled /idgames index crawl stopped on $(date -u +%FT%TZ)." \
