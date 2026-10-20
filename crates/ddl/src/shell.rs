@@ -926,6 +926,11 @@ impl Shell {
         ui.set_nodes(ModelRc::new(VecModel::from(self.nodes.clone())));
         ui.set_active_tab(self.tab as i32);
         ui.set_root_screen(self.root());
+        ui.set_quit_hint(
+            self.root()
+                && self.sheet.is_none()
+                && !(self.screen == Screen::Settings && self.focus >= 70),
+        );
         ui.set_setup_screen(self.screen == Screen::Setup);
         ui.set_focused(self.focus);
         ui.set_favorite_hint(

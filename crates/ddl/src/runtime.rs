@@ -2839,6 +2839,9 @@ impl Runtime {
         ui.set_focused(self.focus);
         ui.set_active_tab(self.tab_index() as i32);
         ui.set_root_screen(self.root() && !self.playing);
+        ui.set_quit_hint(
+            self.root() && !self.playing && !(self.screen == Screen::Settings && self.focus >= 70),
+        );
         ui.set_input_locked(self.playing);
         ui.set_setup_screen(setup && !self.playing);
         ui.set_install_pulse(

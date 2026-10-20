@@ -144,7 +144,7 @@ accidental scrolling. Proposed stick threshold/repeat require input-spec tuning 
 
 A confirms; B returns one level; X/Y only perform the visible contextual action. L1/R1 switches
 root tabs, preserving each tab's scroll/focus; within detail/setup they do nothing and are omitted
-from hints. Start opens the menu. At a root tab B opens the quit confirmation; B again cancels it. Its left button, Quit, has initial focus, and A confirms exit (D-032, spec 057). The legend labels B as “Quit” at root and “Back” on child screens or dialogs. The right stick scrolls the active content region with proportional speed outside its deadzone, without changing focus.
+from hints. Start opens the menu. At a root tab B opens the quit confirmation (Settings’ right page first returns to its sidebar); B again cancels it. Its left button, Quit, has initial focus, and A confirms exit (D-032, spec 057). The legend labels B as “Quit” at root and “Back” on child screens or dialogs. The right stick scrolls the active content region with proportional speed outside its deadzone, without changing focus.
 
 Persistent hint bar shows available actions in physical order: A, B, X, Y, L1/R1, Start.
 A's verb describes the focused action (“Import”, “Toggle”, “Choose folder”), never a misleading

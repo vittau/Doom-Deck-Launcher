@@ -604,8 +604,19 @@ fn controller_057_tabs_skills_and_root_quit() {
     {
         assert_eq!(scene.state.borrow().screen, screen);
         assert_eq!(ui.get_active_tab(), tab as i32);
+        assert!(ui.get_quit_hint());
+        if screen == Screen::Settings {
+            scene.state.borrow_mut().focus = 70;
+            scene.state.borrow_mut().sync(ui);
+            assert!(!ui.get_quit_hint());
+            super::press(&scene.window, Key::Escape);
+            assert!(!ui.get_sheet_open());
+            assert_eq!(ui.get_focused(), 1);
+            assert!(ui.get_quit_hint());
+        }
         super::press(&scene.window, Key::Escape);
         assert!(ui.get_sheet_open());
+        assert!(!ui.get_quit_hint());
         assert_eq!(ui.get_focused(), 900);
         let buttons: Vec<_> = ui.get_sheet_nodes().iter().collect();
         assert_eq!(buttons.iter().find(|n| n.id == 900).unwrap().label, "Quit");

@@ -259,6 +259,7 @@ export component AppWindow inherits Window {
     in property <bool> local-remove-hint: false;
     in property <bool> local-confirm-hint: false;
     in property <bool> detail-hint: false;
+    in property <bool> quit-hint: false;
     in-out property <string> toast;
     property <string> displayed-toast;
     out property <float> toast-opacity: toast-banner.opacity;
@@ -468,7 +469,7 @@ export component AppWindow inherits Window {
             y: 18px; width: parent.width; height: 28px; alignment: start;
             padding-left: 40px; padding-right: 40px; spacing: 24px;
             Hint { badge: @tr("A"); label: @tr("Select"); }
-            Hint { badge: @tr("B"); label: root.root-screen && !root.sheet-open ? @tr("Quit") : @tr("Back"); }
+            Hint { badge: @tr("B"); label: root.quit-hint ? @tr("Quit") : @tr("Back"); }
             if root.favorite-hint && !root.sheet-open: Hint { badge: @tr("X"); label: root.favorite-label; }
             if root.detail-hint && !root.sheet-open: Hint { badge: @tr("X"); label: @tr("Details"); }
             if root.local-add-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: LocalStrings.add-hint; }
