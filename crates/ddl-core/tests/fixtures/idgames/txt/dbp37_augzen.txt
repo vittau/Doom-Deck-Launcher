@@ -1,0 +1,11 @@
+===========================================================================
+Title                   : AUGER;ZENITH
+Author                  : Doomer Boards Community
+===========================================================================
+
+Advanced engine needed  : MBF21+UMAPINFO
+Primary purpose         : Single player
+===========================================================================
+Map #: 01-11
+Game: Doom 2
+May Not Run With...: Vanilla, Chocolate

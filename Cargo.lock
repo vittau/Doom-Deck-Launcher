@@ -805,6 +805,7 @@ name = "ddl-core"
 version = "0.0.7"
 dependencies = [
  "crc32fast",
+ "flate2",
  "md-5",
  "semver",
  "serde",

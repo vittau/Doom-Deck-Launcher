@@ -1,0 +1,11 @@
+2026/10/18   10370840  levels/doom2/Ports/megawads/tistartan.zip
+2021/07/26   12771737  levels/doom2/Ports/megawads/dbp37_augzen.zip
+2021/07/26       9000  levels/doom2/Ports/megawads/freeform.zip
+2021/07/26       7000  levels/doom2/Ports/megawads/latin1.zip
+2021/07/26       8000  levels/doom2/Ports/megawads/nocase.zip
+1999/01/05     300000  levels/doom2/Ports/a-c/zdoom_only.zip
+1996/02/02     500000  levels/doom/Ports/megawads/sstruggle.zip
+1996/02/02      10000  levels/doom/a-c/old.zip
+1999/01/05     100000  levels/doom2/deathmatch/Ports/0-9/8bitdm.zip
+2026/10/18      10000  incoming/draft.zip
+2026/10/18      10000  newstuff/copy.zip

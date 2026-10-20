@@ -21,6 +21,8 @@ url.workspace = true
 semver.workspace = true
 ureq.workspace = true
 zip.workspace = true
+# Gzip inventory (`ls-laR.gz`, `fullsort.gz`) for the /idgames index builder (spec 050).
+flate2.workspace = true
 # Hashing: SHA-256 everywhere; SHA-1/MD5/CRC-32 for IWAD identification (spec 007).
 sha2.workspace = true
 sha1.workspace = true

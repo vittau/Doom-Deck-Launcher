@@ -1,0 +1,5 @@
+Title: Tistartan
+Author: Someone
+Advanced engine needed: MBF21+UMAPINFO
+Tested With: DSDA-Doom 0.30.0
+Map #: MAP01-MAP32

@@ -1,0 +1,269 @@
+# Build and publish the /idgames browse index (spec 050, R5/R6/R9; D-031).
+#
+# One small, facts-only `index.json` (title, author, date, size, base game, port
+# hint, Cacoward/catalog/map-count signals) built from a mirror's `ls-laR.gz`
+# and the authors' `.txt` sidecars, plus `crawl-state.json` for resuming and for
+# the crawl telemetry/back-off the owner asked for (R9).
+#
+# The crawl is deliberately slow (D-031): one mirror, one request in flight, at
+# least 3 s between requests plus jitter, at most 1,500 sidecar requests per
+# run. The first full pass therefore spans about a week; later runs only fetch
+# new or changed uploads. `www.gamers.org` is never used, and requests are
+# never retried inside a run.
+#
+# Publishing follows the catalog bundle (spec 019): an orphan `idgames-index`
+# branch with ordinary commits, never a force push. A failed build or
+# validation stops before the publish step, so the branch keeps the last good
+# index. A crawl that stops on 403/429/5xx still writes its partial index and
+# its back-off state, publishes both, then fails the job and opens or updates
+# the single `idgames-crawl` issue (R9). The next run waits at least 24 h and
+# halves its budget (floor 100) until three clean runs pass.
+#
+# The first publish is triggered by hand (`workflow_dispatch`) after the owner
+# approves; the daily schedule takes over afterwards.
+name: /idgames index
+
+on:
+  schedule:
+    # Daily at 04:17 UTC, after most mirrors have regenerated ls-laR.gz.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+# Serialize runs instead of cancelling them: each one commits on top of the
+# previous `idgames-index` head, and the branch is never force-pushed.
+concurrency:
+  group: idgames-index
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+  # One mirror, with its own base path (mirror base paths are not uniform; see
+  # docs/research/idgames-browse.md §2.6).
+  IDGAMES_MIRROR: youfailit.net
+  IDGAMES_MIRROR_BASE: https://youfailit.net/pub/idgames
+  IDGAMES_BRANCH: idgames-index
+
+jobs:
+  publish:
+    name: build, validate, publish
+    runs-on: ubuntu-latest
+    # The only writer in this workflow: the index/state branch and the single
+    # crawl issue.
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same pinned-toolchain setup as the `checks` job in ci.yml: rustup only,
+      # then the exact channel and components from rust-toolchain.toml.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: idgames-index-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            idgames-index-${{ runner.os }}-
+
+      # `ddl` links Slint (fontconfig) and gilrs (libudev) on Linux.
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
+
+      - name: Download the archive inventory
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/idgames"
+          version="$(sed -n '/^\[workspace.package\]/,/^\[/p' Cargo.toml | sed -n 's/^version = "\(.*\)"/\1/p' | head -n 1)"
+          test -n "$version"
+          curl --fail --silent --show-error --location \
+            --retry 2 --retry-delay 10 --max-time 180 \
+            --user-agent "DoomDeckLauncher/${version} (+https://github.com/vittau/Doom-Deck-Launcher)" \
+            -o "$RUNNER_TEMP/idgames/ls-laR.gz" \
+            "${IDGAMES_MIRROR_BASE}/ls-laR.gz"
+          ls -l "$RUNNER_TEMP/idgames/ls-laR.gz"
+
+      # Restore yesterday's index and crawl state: unchanged entries are not
+      # re-fetched, a stopped crawl resumes, and the R9 back-off is read from
+      # the committed state.
+      - name: Restore the previous index and crawl state
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$IDGAMES_BRANCH" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "$IDGAMES_BRANCH"
+            git show FETCH_HEAD:index.json > "$RUNNER_TEMP/idgames/previous.json"
+            git show FETCH_HEAD:crawl-state.json > "$RUNNER_TEMP/idgames/crawl-state.json" || true
+            echo "Restored the published index and crawl state"
+          else
+            echo "No published index yet: this is the first pass"
+          fi
+
+      # The build writes the partial index and the state even when the mirror
+      # stops the crawl (R6), then exits non-zero (R9). The step captures that
+      # instead of aborting, so the validated partial index and the back-off
+      # state can still be published; the last step fails the job visibly.
+      - name: Build the index
+        id: crawl
+        run: |
+          set -euo pipefail
+          args=(
+            idgames index build
+            --ls "$RUNNER_TEMP/idgames/ls-laR.gz"
+            --mirror "$IDGAMES_MIRROR"
+            --out "$RUNNER_TEMP/idgames/index.json"
+            --state "$RUNNER_TEMP/idgames/crawl-state.json"
+            --cacowards docs/research/cacowards.md
+            --catalog catalog
+          )
+          if [ -s "$RUNNER_TEMP/idgames/previous.json" ]; then
+            args+=(--previous "$RUNNER_TEMP/idgames/previous.json")
+          fi
+          set +e
+          cargo run --locked -p ddl -- "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/idgames/build.log"
+          status="${PIPESTATUS[0]}"
+          set -e
+          {
+            echo "### /idgames crawl"
+            echo '```'
+            tail -n 8 "$RUNNER_TEMP/idgames/build.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            echo "stopped=true" >> "$GITHUB_OUTPUT"
+            echo "status=$status" >> "$GITHUB_OUTPUT"
+          else
+            echo "stopped=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -s "$RUNNER_TEMP/idgames/index.json" ]; then
+            echo "index=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "index=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A partial index is still a valid, complete inventory listing (R6: keep
+      # everything fetched), so it is validated like any other. A hard failure
+      # (no index at all) skips this and the publish step, keeping the last good
+      # branch head.
+      - name: Validate the index
+        if: steps.crawl.outputs.index == 'true'
+        run: |
+          set -euo pipefail
+          cargo run --locked -p ddl -- idgames index validate "$RUNNER_TEMP/idgames/index.json"
+
+      - name: Record the index size and entry count
+        if: steps.crawl.outputs.index == 'true'
+        run: |
+          set -euo pipefail
+          size="$(wc -c < "$RUNNER_TEMP/idgames/index.json" | tr -d ' ')"
+          {
+            echo "### /idgames index"
+            echo ""
+            echo "- size: ${size} bytes"
+            echo "- mirror: ${IDGAMES_MIRROR}"
+            echo "- generated: $(sed -n 's/.*"generated_at":"\([^"]*\)".*/\1/p' "$RUNNER_TEMP/idgames/index.json")"
+          } >> "$GITHUB_STEP_SUMMARY"
+          ./target/debug/ddl idgames index validate "$RUNNER_TEMP/idgames/index.json" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$size" -le 2097152
+
+      # Orphan `idgames-index` branch with exactly two files, ordinary commits
+      # only, never `--force`.
+      - name: Publish to the idgames-index branch
+        if: steps.crawl.outputs.index == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "ddl-idgames-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$IDGAMES_BRANCH" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "$IDGAMES_BRANCH"
+            git checkout -B "$IDGAMES_BRANCH" FETCH_HEAD
+          else
+            git checkout --orphan "$IDGAMES_BRANCH"
+          fi
+          git rm -rf --quiet . >/dev/null 2>&1 || true
+          cp "$RUNNER_TEMP/idgames/index.json" index.json
+          cp "$RUNNER_TEMP/idgames/crawl-state.json" crawl-state.json
+          git add -f index.json crawl-state.json
+          if git diff --cached --quiet; then
+            echo "index.json is unchanged; nothing to publish"
+            exit 0
+          fi
+          git commit -m "idgames: update from ${GITHUB_SHA}"
+          git push origin "HEAD:${IDGAMES_BRANCH}"
+
+      # R9: one open issue, updated in place, never a retry. The state already
+      # halved tomorrow's budget and opened the 24 h window.
+      - name: Report a stopped crawl
+        if: steps.crawl.outputs.stopped == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          body="$(
+            printf '%s\n' \
+              "The scheduled /idgames index crawl stopped on $(date -u +%FT%TZ)." \
+              "" \
+              "- workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              "- mirror: \`${IDGAMES_MIRROR}\`" \
+              "- stop reason and telemetry:" \
+              "" \
+              '```' \
+              "$(grep -E '^(Wrote|Sidecars|Telemetry|Crawl stopped)' "$RUNNER_TEMP/idgames/build.log" || true)" \
+              '```' \
+              "" \
+              "The partial index and crawl-state.json were published, so the work fetched so far is kept." \
+              "The next run waits at least 24 h and halves the daily budget (floor 100) until three clean runs pass." \
+              "Nothing was retried inside the run."
+          )"
+          gh label create idgames-crawl \
+            --color B60205 \
+            --description "The /idgames index crawl stopped" \
+            --force >/dev/null 2>&1 || true
+          number="$(gh issue list --label idgames-crawl --state open --limit 1 \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create \
+              --title "The /idgames crawl stopped" \
+              --label idgames-crawl \
+              --body "$body"
+          fi
+          exit 1
+
+      # No document at all: a hard build failure. The branch keeps the last good
+      # index; fail the job without opening a crawl issue.
+      - name: Fail after a hard build failure
+        if: steps.crawl.outputs.index != 'true'
+        run: |
+          echo "The /idgames index build produced no document; the published index is unchanged." >&2
+          exit 1
