@@ -118,7 +118,7 @@ jobs:
       - name: Restore the previous index and crawl state
         run: |
           set -euo pipefail
-          if git ls-remote --exit-code --heads origin "$IDGAMES_BRANCH" >/dev/null 2>&1; then
+          if git ls-remote --exit-code origin "refs/heads/$IDGAMES_BRANCH" >/dev/null 2>&1; then
             git fetch --depth=1 origin "$IDGAMES_BRANCH"
             git show FETCH_HEAD:index.json > "$RUNNER_TEMP/idgames/previous.json"
             git show FETCH_HEAD:crawl-state.json > "$RUNNER_TEMP/idgames/crawl-state.json" || true
@@ -203,7 +203,7 @@ jobs:
           set -euo pipefail
           git config user.name "ddl-idgames-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin "$IDGAMES_BRANCH" >/dev/null 2>&1; then
+          if git ls-remote --exit-code origin "refs/heads/$IDGAMES_BRANCH" >/dev/null 2>&1; then
             git fetch --depth=1 origin "$IDGAMES_BRANCH"
             git checkout -B "$IDGAMES_BRANCH" FETCH_HEAD
           else

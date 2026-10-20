@@ -231,7 +231,7 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if ! git ls-remote --exit-code --heads origin catalog >/dev/null 2>&1; then
+          if ! git ls-remote --exit-code origin refs/heads/catalog >/dev/null 2>&1; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -310,7 +310,7 @@ jobs:
           set -euo pipefail
           git config user.name "ddl-catalog-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin catalog >/dev/null 2>&1; then
+          if git ls-remote --exit-code origin refs/heads/catalog >/dev/null 2>&1; then
             git fetch --depth=1 origin catalog
             git checkout -B catalog FETCH_HEAD
           else
