@@ -2966,11 +2966,14 @@ impl Runtime {
         ui.set_focused(self.focus);
         ui.set_active_tab(self.tab_index() as i32);
         ui.set_root_screen(self.root() && !self.playing);
+        // The footer says Quit exactly where B opens the Quit dialog: a root
+        // with no level left, and the recovery screen (spec 055).
         ui.set_quit_hint(
-            self.root()
-                && self.history.is_empty()
-                && !self.playing
-                && !(self.screen == Screen::Settings && self.focus >= 70),
+            !self.playing
+                && ((self.root()
+                    && self.history.is_empty()
+                    && !(self.screen == Screen::Settings && self.focus >= 70))
+                    || (self.screen == Screen::Recovery && self.sheet.is_none())),
         );
         ui.set_input_locked(self.playing);
         ui.set_setup_screen(setup && !self.playing);

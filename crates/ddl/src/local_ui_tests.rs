@@ -891,8 +891,27 @@ fn controller_057_right_stick_scrolls_planes_without_focus_changes() {
     ui.invoke_scroll(0., scroll.1);
     assert!(ui.get_sheet_scroll_offset() > 0.);
     assert_eq!(ui.get_focused(), 900);
-    // Horizontal overflow is bounded by the same plane (e.g. a narrow window).
+    // Spec 055 recovery lists every unreadable file on the shared plane; the
+    // content grows with the list, so no fixture extent is forced here.
     r.sheet = None;
+    r.unreadable = (0..12)
+        .map(|n| crate::services::UnreadableFile {
+            path: format!("/config/profiles/unreadable-{n}.json").into(),
+            reason: "expected value at line 1 column 1; ".repeat(4),
+        })
+        .collect();
+    r.screen = Screen::Recovery;
+    r.focus = 800;
+    r.sync(&ui);
+    let recovery_focus = ui.get_focused();
+    assert!(ui.get_quit_hint(), "B opens Quit on the recovery screen");
+    assert!(ui.get_content_height() > ui.window().size().height as f32 - 294.);
+    ui.set_scroll_offset(0.);
+    ui.invoke_scroll(0., scroll.1);
+    assert!(ui.get_scroll_offset() > 0., "long Recovery list scrolls");
+    assert_eq!(ui.get_focused(), recovery_focus);
+    r.unreadable.clear();
+    // Horizontal overflow is bounded by the same plane (e.g. a narrow window).
     r.screen = Screen::Library;
     r.focus = 1;
     r.sync(&ui);
