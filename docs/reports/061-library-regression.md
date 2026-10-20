@@ -6,7 +6,8 @@ Restore a clean Library landing with the coordinator's explicit clarification:
 focus-follow aligns the section heading and whole focused item together when
 they fit, otherwise the item's top. Manual right-stick scrolling remains free.
 The shared main plane, Play setup summary and sheets use this policy. No new
-dependencies, button styles, focus ranking or platform behavior changes.
+dependencies were added; this task retains main/spec 060's button styles and
+focus ranking, and leaves platform behavior unchanged.
 
 The owner-like headless fixture contains seven installed catalog mapsets, four
 base games and two custom setups at 1280×800. Its Library landing shows three
@@ -115,18 +116,23 @@ reverts a newly assigned offset of 234 to 214. The failure log is
 `target/headless/061-before/library_owner_scene_renders/061-library-rest.png`.
 The archive endpoint/parent matrix logs are `/tmp/ddl061-history/*.log`.
 
-Merged main (`2a38b7c`) in `e412231`; only the coordinator's status entry came
-through that merge. `scripts/readme-screenshots.py` regenerated all four README
-images byte-for-byte unchanged. The targeted Library/focus/neutral-stick tests (3),
+Merged main (`2a38b7c`) in `e412231`, then main/spec 060 (`77bfa31`) in
+`e7f7610` when it landed during verification. The second merge cleanly imports
+spec 060's focus changes and refreshed README images. Per the coordinator's
+follow-up, final verification is pinned to this integration; the coordinator
+will verify spec 059 together with 061 separately.
+
+Before that final merge, README regeneration and `--check` passed with all four
+images byte-for-byte unchanged. The Library/focus/neutral-stick regressions (3),
 focus-follow unit tests (2), and existing spec 057 controller tests (3) pass.
-Final checks on macOS arm64, after the coordinator-added base-game focus fix:
+Final checks on macOS arm64, including the base-game focus fix and spec 060 merge:
 
 | Check | Result |
 | --- | --- |
 | `cargo fmt --all --check` | Passed |
 | `cargo clippy --workspace --all-targets -- -D warnings` | Passed |
-| `cargo test --workspace` | Passed: 770 tests across all groups, including 163 binary tests and 565 core unit tests |
-| `python3 scripts/readme-screenshots.py --check` | Passed; all four committed images are byte-for-byte unchanged |
+| `cargo test --workspace` | Passed: 775 tests across all workspace groups after the spec 060 merge |
+| `python3 scripts/readme-screenshots.py --check` | Passed; all four spec 060 images match without further changes |
 
 Implementation commits: `7ca2c5f` (focus-follow policy and owner-like scene),
 `d1a7609` (final-row bounds and neutral ticks), `4531bb1` (base-game focus
