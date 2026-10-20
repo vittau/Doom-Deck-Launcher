@@ -448,5 +448,6 @@ mod tests {
         fs::write(store.root().join("p1.json"), legacy).unwrap();
         let profile = store.load("p1").expect("legacy profile loads");
         assert!(profile.extras.is_empty());
+        assert_eq!(profile.skill, 3, "existing skill stays unchanged");
     }
 }

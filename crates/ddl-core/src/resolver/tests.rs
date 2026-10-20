@@ -800,7 +800,7 @@ fn summary_snapshot_for_the_three_reference_recipes() {
         .expect("resolve");
         let text = normalize(&resolution.summary().to_string(), data);
         let expected = format!(
-            "Will launch\n  base game: {} (present)\n  IWAD: <data>/iwads/{variant}/{filename} ({variant})\n  content (load order):\n    1. {label}\n       <data>/library/{id}/{release}/free/maps.wad\n  complevel: {complevel}\n  skill: 3\n  pistol start: no\n  engine: 0.30.1",
+            "Will launch\n  base game: {} (present)\n  IWAD: <data>/iwads/{variant}/{filename} ({variant})\n  content (load order):\n    1. {label}\n       <data>/library/{id}/{release}/free/maps.wad\n  complevel: {complevel}\n  skill: 4\n  pistol start: no\n  engine: 0.30.1",
             crate::resolver::game_label(recipe.base_game.game),
             release = recipe.release,
         );

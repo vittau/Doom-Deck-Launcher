@@ -3643,7 +3643,7 @@ mod tests {
         command(&mut s, Command::NewProfile("sigil".into(), false)).unwrap();
         let third = s.profile(&recipe).unwrap();
         assert_eq!(third.name, "Profile 3");
-        assert_eq!(third.skill, 3);
+        assert_eq!(third.skill, 4);
         assert!(!third.pistol_start);
         assert_eq!(third.components, ["wide-status-bar"]);
         command(

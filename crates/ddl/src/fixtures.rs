@@ -79,7 +79,7 @@ pub struct ProfileView {
 impl Default for ProfileView {
     fn default() -> Self {
         Self {
-            skill: 3,
+            skill: 4,
             pistol: false,
             advanced: false,
             compat: false,

@@ -1734,7 +1734,7 @@ exit 1
         let restored = Services::open(fx.env.clone()).unwrap().snapshot().unwrap();
         assert_eq!(restored.items[0].profile.id, selected.id);
         assert!(restored.items[0].profile.last_played.is_some());
-        assert_eq!(restored.items[0].profile.skill, 3);
+        assert_eq!(restored.items[0].profile.skill, 4);
         assert!(!restored.items[0].profile.pistol_start);
         let (out, _) = run(&fx, cli::Command::Doctor).unwrap();
         assert!(
