@@ -1,5 +1,4 @@
 # Confirmed bytes and release metadata: docs/research/reference-sigil.md §1–§5; gathered 2026-10-16.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "sigil"
 title = "SIGIL"
@@ -26,8 +25,7 @@ variants = ["doom-1.9ud"]
 
 [compatibility]
 family = "limit-removing"
-complevel = 3
-complevel_status = "proposed"
+complevel = "vanilla"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -42,7 +40,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source", "Cacowards 2019 runner-up: https://www.doomworld.com/cacowards/2019/"]
-notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_V1_23.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
+notes = "Confirmed archive/member identities and source inspection. Complevel vanilla; no gameplay test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_V1_23.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
 
 [[packages]]

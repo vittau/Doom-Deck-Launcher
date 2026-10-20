@@ -5,7 +5,8 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::catalog::{EvidenceStatus, Game};
+use crate::catalog::Game;
+use crate::engines::dsda::Complevel;
 
 /// The installed engine a resolution launches.
 ///
@@ -140,10 +141,9 @@ pub struct Summary {
     pub iwad_path: PathBuf,
     /// The numbered `-file` load order with component labels.
     pub content: Vec<SummaryContent>,
-    /// The numeric compatibility level.
-    pub complevel: u8,
-    /// Whether the complevel is verified or still proposed (R6).
-    pub complevel_status: EvidenceStatus,
+    /// The compatibility level: DSDA's word when the recipe uses one, with the
+    /// number it resolves to (D-030).
+    pub complevel: Complevel,
     /// The starting skill, 1–5.
     pub skill: u8,
     /// Whether pistol start is on.
@@ -178,12 +178,7 @@ impl fmt::Display for Summary {
                 writeln!(f, "       {}", entry.path.display())?;
             }
         }
-        writeln!(
-            f,
-            "  complevel: {} ({})",
-            self.complevel,
-            complevel_label(self.complevel_status)
-        )?;
+        writeln!(f, "  complevel: {}", self.complevel)?;
         writeln!(f, "  skill: {}", self.skill)?;
         writeln!(
             f,
@@ -194,19 +189,10 @@ impl fmt::Display for Summary {
     }
 }
 
-/// The user-facing wording for a recipe's complevel evidence (R6).
-#[must_use]
-pub fn complevel_label(status: EvidenceStatus) -> &'static str {
-    match status {
-        EvidenceStatus::Confirmed => "verified",
-        EvidenceStatus::Proposed => "proposed",
-        EvidenceStatus::NeedsDeckValidation => "needs Deck validation",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engines::dsda::ComplevelWord;
 
     #[test]
     fn a_missing_iwad_names_the_game_and_accepted_variants() {
@@ -220,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn summary_renders_the_numbered_load_order_and_status() {
+    fn summary_renders_the_numbered_load_order_and_the_complevel_word() {
         let summary = Summary {
             base_game: Game::Doom2,
             iwad_present: true,
@@ -238,8 +224,7 @@ mod tests {
                     path: PathBuf::from("/data/library/x/1.0/free/addon.wad"),
                 },
             ],
-            complevel: 2,
-            complevel_status: EvidenceStatus::Proposed,
+            complevel: Complevel::from_word(ComplevelWord::Vanilla, 2).unwrap(),
             skill: 3,
             pistol_start: false,
             engine_version: "0.30.1".to_owned(),
@@ -248,7 +233,8 @@ mod tests {
         assert!(text.contains("base game: doom2 (present)"), "{text}");
         assert!(text.contains("1. Main"), "{text}");
         assert!(text.contains("2. Add-on"), "{text}");
-        assert!(text.contains("complevel: 2 (proposed)"), "{text}");
+        assert!(text.contains("complevel: vanilla (2)"), "{text}");
+        assert!(!text.contains("proposed"), "{text}");
         assert!(text.contains("engine: 0.30.1"), "{text}");
     }
 }

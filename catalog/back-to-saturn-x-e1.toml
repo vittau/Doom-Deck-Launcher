@@ -1,5 +1,4 @@
 # Confirmed bytes and release metadata: docs/research/reference-back-to-saturn-x-e1.md §1–§7; gathered 2026-10-16.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "back-to-saturn-x-e1"
 title = "Back to Saturn X E1: Get Out Of My Stations"
@@ -26,8 +25,7 @@ variants = []
 
 [compatibility]
 family = "vanilla"
-complevel = 2
-complevel_status = "proposed"
+complevel = "vanilla"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -42,7 +40,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-back-to-saturn-x-e1.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text", "Cacowards 2013 winner: https://www.doomworld.com/cacowards/2013/"]
-notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Proposed complevel 2 from the authors' 'Doom2.exe or compatible' vanilla target; no gameplay test performed. Tags: cacowards = 2013 winner per https://www.doomworld.com/cacowards/2013/ (the 20th Annual Cacowards; secondary evidence only: DoomWiki Cacowards 2013 via web search; doomworld.com and doomwiki.org return 403 to automated fetches, so the page was not read directly; the award was for the episode's earlier public release, this recipe ships 1.1.6); classics = release 1.1.6 dated 2020-08-13, over five years before this review; community-projects = release text credits \"Esselfortium and a lot of wonderful people\" (docs/research/reference-back-to-saturn-x-e1.md, Confirmed quoted). Not tagged megawad or episode: 27 maps is under 30 and over 9. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud."
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Complevel vanilla from the authors' 'Doom2.exe or compatible' vanilla target; no gameplay test performed. Tags: cacowards = 2013 winner per https://www.doomworld.com/cacowards/2013/ (the 20th Annual Cacowards; secondary evidence only: DoomWiki Cacowards 2013 via web search; doomworld.com and doomwiki.org return 403 to automated fetches, so the page was not read directly; the award was for the episode's earlier public release, this recipe ships 1.1.6); classics = release 1.1.6 dated 2020-08-13, over five years before this review; community-projects = release text credits \"Esselfortium and a lot of wonderful people\" (docs/research/reference-back-to-saturn-x-e1.md, Confirmed quoted). Not tagged megawad or episode: 27 maps is under 30 and over 9. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud."
 limitations = ["Needs Deck Validation: IWAD/complevel, two-WAD load order, gameplay and audio.", "The canonical Doomworld page is Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror.", "The separate btsx_e1.deh is for vanilla/Chocolate Doom and is intentionally not loaded: DSDA-Doom reads the embedded DEHACKED lump of btsx_e1a.wad."]
 
 [[packages]]

@@ -9,9 +9,9 @@ use tempfile::TempDir;
 
 use super::*;
 use crate::catalog::{
-    BaseGame, Compatibility, Complevel, Component, ComponentMember, EngineEvidence, EvidenceStatus,
-    Game, Image, Member, Package, PackageKind, PortFamily, Recipe, Role, RuntimeDefaults,
-    Verification, VerificationStatus,
+    BaseGame, Compatibility, Complevel, Component, ComponentMember, EngineEvidence, Game, Image,
+    Member, Package, PackageKind, PortFamily, Recipe, Role, RuntimeDefaults, Verification,
+    VerificationStatus,
 };
 use crate::downloads::test_http::{Response, Server};
 use crate::downloads::{Fetcher, HostAllowlist, Sha256};
@@ -56,7 +56,6 @@ fn base_recipe(id: &str) -> Recipe {
         compatibility: Compatibility {
             family: PortFamily::Vanilla,
             complevel: Complevel::Number(2),
-            complevel_status: EvidenceStatus::Proposed,
             engine: EngineEvidence {
                 range: "=0.30.1".to_owned(),
                 status: VerificationStatus::Inspected,

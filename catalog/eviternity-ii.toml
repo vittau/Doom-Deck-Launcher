@@ -1,7 +1,5 @@
 # Confirmed bytes and release metadata: docs/research/reference-eviternity-ii.md §1–§8; gathered 2026-10-16.
-# Complevel value is confirmed by the WAD's own COMPLVL lump (mbf21); the recipe keeps the DDL
-# convention that a complevel stays Proposed until it is exercised on the Deck.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
+# Complevel value comes from the WAD's own COMPLVL lump (mbf21).
 schema_version = 1
 id = "eviternity-ii"
 title = "Eviternity II (Final version)"
@@ -43,8 +41,7 @@ variants = []
 
 [compatibility]
 family = "mbf21"
-complevel = 21
-complevel_status = "proposed"
+complevel = "mbf21"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -59,7 +56,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-eviternity-ii.md §1–§8", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release text", "Cacowards 2024 winner: https://www.doomworld.com/cacowards/2024/"]
-notes = "Confirmed archive/member identities, the COMPLVL lump (mbf21), the embedded MBF21 DEHACKED lump and the UMAPINFO lump. Proposed complevel 21 (MBF21); the value is the authors' own declaration, but the recipe stays Proposed until Deck-tested per CONTRIBUTING. No gameplay test performed. Tags: cacowards = 2024 winner per https://www.doomworld.com/cacowards/2024/ (secondary evidence only: DoomWiki Cacowards 2024 via web search; doomworld.com and doomwiki.org return 403 to automated fetches, so the page was not read directly; the search also surfaced the Doomworld Top Twelve page https://www.doomworld.com/cacowards/2024/best4/); community-projects = team credit of 14 authors in this recipe; megawad = 37 maps, MAP01–MAP37 (docs/research/reference-eviternity-ii.md). Not tagged classics: released 2024-09-30, under five years before this review."
+notes = "Confirmed archive/member identities, the COMPLVL lump (mbf21), the embedded MBF21 DEHACKED lump and the UMAPINFO lump. Complevel mbf21 is the authors' own declaration. No gameplay test performed. Tags: cacowards = 2024 winner per https://www.doomworld.com/cacowards/2024/ (secondary evidence only: DoomWiki Cacowards 2024 via web search; doomworld.com and doomwiki.org return 403 to automated fetches, so the page was not read directly; the search also surfaced the Doomworld Top Twelve page https://www.doomworld.com/cacowards/2024/best4/); community-projects = team credit of 14 authors in this recipe; megawad = 37 maps, MAP01–MAP37 (docs/research/reference-eviternity-ii.md). Not tagged classics: released 2024-09-30, under five years before this review."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and UMAPINFO episodes.", "The canonical Doomworld page is Cloudflare-blocked from the research host, so facts come from the bundled release text and the /idgames archive mirror.", "The 293,081,691-byte WAD exceeds the former 256 MiB catalog cap; the cap was raised to 512 MiB (lint.rs MAX_BYTES and install.rs MAX_MEMBER_BYTES) so this member can be verified and installed."]
 
 [[packages]]

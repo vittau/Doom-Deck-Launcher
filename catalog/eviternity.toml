@@ -1,5 +1,4 @@
 # Confirmed bytes and release metadata: docs/research/reference-eviternity.md §1–§7; gathered 2026-10-16.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "eviternity"
 title = "Eviternity (Final version)"
@@ -39,8 +38,7 @@ variants = []
 
 [compatibility]
 family = "mbf"
-complevel = 11
-complevel_status = "proposed"
+complevel = "mbf"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -55,7 +53,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-eviternity.md §1–§7", "Archive, member and WAD lump inspection; DSDA-Doom v0.30.1 source; authors' release thread", "Cacowards 2019 winner: https://www.doomworld.com/cacowards/2019/ (best1/)"]
-notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Proposed complevel 11 (MBF) from the authors' port/format guidance; no gameplay test performed. Tags: cacowards = 2019 winner per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = final version released 2019-02-10, over five years before this review; community-projects = team credit of 12 authors in this recipe; megawad = 32 maps (six 5-map chapters plus MAP31/MAP32, docs/research/reference-eviternity.md). Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud."
+notes = "Confirmed archive/member identities, the embedded DEHACKED lump and the absence of a COMPLVL lump. Complevel mbf from the authors' port/format guidance; no gameplay test performed. Tags: cacowards = 2019 winner per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = final version released 2019-02-10, over five years before this review; community-projects = team credit of 12 authors in this recipe; megawad = 32 maps (six 5-map chapters plus MAP31/MAP32, docs/research/reference-eviternity.md). Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and map selection.", "The DSDArchive copy is not byte-identical (same WAD, different Eviternity.txt), so it is not a mirror here."]
 
 [[packages]]

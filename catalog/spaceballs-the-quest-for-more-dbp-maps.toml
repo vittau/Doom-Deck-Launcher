@@ -1,5 +1,4 @@
 # Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 24; gathered 2026-10-19.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "spaceballs-the-quest-for-more-dbp-maps"
 title = "Spaceballs: The Quest For More DBP Maps (Doomer Boards Project 24)"
@@ -16,8 +15,7 @@ variants = []
 
 [compatibility]
 family = "limit-removing"
-complevel = 2
-complevel_status = "proposed"
+complevel = "vanilla"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -31,7 +29,7 @@ tester = "DDL desk research"
 date = "2026-10-19"
 engine_version = "0.30.1"
 inspected = ["docs/research/doomer-boards-projects.md §DBP 24", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Release thread: https://doomer.boards.net/thread/1749/dbp24-spaceballs-sequel-quest-more"]
-notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Proposed complevel 2 (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 24."
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. Complevel vanilla (the mapset is a limit-removing Doom II episode; no cl2 line in the readme; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 24."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
 
 [[packages]]

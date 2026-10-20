@@ -8,5 +8,5 @@ mod resolve;
 #[cfg(test)]
 mod tests;
 
-pub use blocker::{Blocker, Engine, Summary, SummaryContent, complevel_label, game_label};
+pub use blocker::{Blocker, Engine, Summary, SummaryContent, game_label};
 pub use resolve::{Iwads, Resolution, resolve};

@@ -1400,7 +1400,7 @@ exit 1
         let (doctor, _) = run(&fx, cli::Command::Doctor).unwrap();
         assert!(doctor.contains("base games:"));
         assert!(
-            doctor.contains("base:doom2  Doom II  complevel 2"),
+            doctor.contains("base:doom2  Doom II  complevel vanilla (2)"),
             "{doctor}"
         );
         let (out, _) = run(
@@ -1417,7 +1417,7 @@ exit 1
         )
         .unwrap();
         assert!(out.contains("-iwad"), "{out}");
-        assert!(out.contains("-complevel\n2"), "{out}");
+        assert!(out.contains("-complevel\nvanilla"), "{out}");
         assert!(!out.lines().any(|line| line == "-file"), "{out}");
         assert!(out.contains("-pistolstart"), "{out}");
         run(

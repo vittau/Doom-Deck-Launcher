@@ -7,7 +7,7 @@ use std::path::Path;
 
 use super::{Game, Registry, RegistryEntry};
 use crate::dsda_config::DsdaConfigManager;
-use crate::engines::dsda::LaunchPlan;
+use crate::engines::dsda::{Complevel, ComplevelWord, LaunchPlan};
 use crate::local::{self, Compatibility, CustomIwad, CustomSetup};
 use crate::profiles::Profile;
 
@@ -53,14 +53,17 @@ impl BaseGame {
             Game::Nerve => unreachable!("Nerve is not an IWAD"),
         }
     }
+    /// The level a base game launches with: DSDA's `vanilla` word and the
+    /// number it resolves to for this IWAD family (D-027, D-030).
     #[must_use]
-    pub fn complevel(&self) -> u8 {
-        match self.game {
+    pub fn complevel(&self) -> Complevel {
+        let vanilla = match self.game {
             Game::Doom => 3,
             Game::Doom2 => 2,
             Game::Tnt | Game::Plutonia => 4,
             Game::Nerve => unreachable!(),
-        }
+        };
+        Complevel::from_word(ComplevelWord::Vanilla, vanilla).expect("reviewed vanilla level")
     }
 }
 /// Identified games in table order; the registry owns classic-copy preference.
@@ -123,7 +126,7 @@ pub fn build_plan(
         CustomIwad::Identified {
             variant: selected.variant.clone().expect("identified entry"),
         },
-        Compatibility::parse(&base.complevel().to_string())?,
+        Compatibility::Level(base.complevel()),
         0,
     );
     for extra in &profile.extras {
@@ -183,7 +186,7 @@ mod tests {
             .iter()
             .map(|s| s.to_string_lossy().into_owned())
             .collect();
-        assert!(argv.windows(2).any(|w| w == ["-complevel", "2"]));
+        assert!(argv.windows(2).any(|w| w == ["-complevel", "vanilla"]));
         assert!(argv.contains(&"-iwad".into()));
         assert!(!argv.contains(&"-file".into()));
         assert_eq!(

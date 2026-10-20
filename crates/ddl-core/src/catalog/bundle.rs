@@ -592,8 +592,7 @@ member = "main"
 role = "maps"
 [compatibility]
 family = "vanilla"
-complevel = 3
-complevel_status = "proposed"
+complevel = "vanilla"
 [compatibility.engine]
 range = ">=0.30"
 status = "inspected"
@@ -651,7 +650,8 @@ limitations = []
 
     #[test]
     fn accept_drops_a_lint_failure_and_keeps_the_rest() {
-        let broken = recipe("broken", "www.gamers.org").replace("complevel = 3", "complevel = 18");
+        let broken =
+            recipe("broken", "www.gamers.org").replace("complevel = \"vanilla\"", "complevel = 18");
         let bundle = bundle_with(
             200,
             "0.0.1",

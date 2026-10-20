@@ -10,7 +10,7 @@ use std::path::Path;
 
 use crate::downloads::Sha256;
 
-use super::lint::{MAX_RECIPE_BYTES, validate};
+use super::lint::{MAX_RECIPE_BYTES, parse_failure, validate};
 use super::lint::{validate_tags, validate_vocabulary};
 use super::{Hosts, Recipe, TagVocabulary};
 
@@ -188,7 +188,14 @@ fn load_recipe(
     if text.len() as u64 > MAX_RECIPE_BYTES {
         return Err(format!("recipe exceeds {MAX_RECIPE_BYTES} bytes"));
     }
-    let recipe: Recipe = toml::from_str(text).map_err(|error| error.message().to_owned())?;
+    let recipe: Recipe = toml::from_str(text).map_err(|error| {
+        let (message, hint) = parse_failure(error.message());
+        if message == error.message() {
+            message
+        } else {
+            format!("{message} (hint: {hint})")
+        }
+    })?;
     let mut violations = validate(&recipe, Path::new(file), hosts);
     violations.extend(validate_tags(&recipe, tags));
     if !violations.is_empty() {
