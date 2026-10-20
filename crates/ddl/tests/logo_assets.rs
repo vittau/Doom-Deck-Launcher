@@ -14,7 +14,7 @@ fn steam_artwork_and_social_preview_have_contract_dimensions() {
         ("social-preview.png", 1280, 640, false),
         ("readme-logo-dark.png", 1520, 400, true),
         ("readme-logo-light.png", 1520, 400, true),
-        ("contact-sheet.png", 1200, 1200, false),
+        ("contact-sheet.png", 1200, 2020, false),
     ] {
         let mut decoder = png::Decoder::new(std::io::BufReader::new(
             std::fs::File::open(root.join(file)).unwrap(),
