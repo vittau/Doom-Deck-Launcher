@@ -19,6 +19,20 @@ learned here flow back into `research/` and `decisions.md`.
 
 Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run yet
 
+## Release 0.0.9 — focus clarity, Library fix, Flatpak-ready
+
+Install over your current setup as before. The 0.0.8 checks (U1–U9) still apply, except U6,
+which V1 replaces.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| V1 | Play setup: D-pad down from Advanced lands on **Skill** (left); Right reaches Pistol start; up from Recipe load order lands on Skill | Gaming | ⏳ | spec 060 R1 |
+| V2 | The Play button is ember red when not focused and no longer looks selected; every focused item shows the same amber ring | Gaming | ⏳ | spec 060 R2 |
+| V3 | A recipe's required component ("cannot be unchecked") looks greyed out with a lock, so it is clear why the D-pad skips it; unavailable buttons look disabled | Gaming | ⏳ | spec 060 R3 |
+| V4 | Library opens with "Mapsets and custom setups" at the top and no frame strips under the header; moving focus never leaves a sliver of a card under the header | Gaming | ⏳ | 061 |
+| V5 | Library: the D-pad reaches every Base games card and focus stays there (it used to jump back to the first mapset) | Gaming | ⏳ | 061 |
+| V6 | Settings → Diagnostics / About shows "Flatpak sandbox: no" for the tarball build | Gaming | ⏳ | spec 059; the Flatpak itself comes later |
+
 ## Release 0.0.8 — upgrade fix and controller touch-ups
 
 **Install it over your current setup — do not delete `~/.config/ddl` first**: U1 checks the

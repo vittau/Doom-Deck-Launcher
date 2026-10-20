@@ -748,3 +748,16 @@
   refs: [docs/reports/050-idgames-index.md, docs/reports/055-legacy-state-upgrade.md,
          docs/reports/056-dsda-template-v4.md, docs/reports/057-controller-navigation.md,
          docs/reports/058-flatpak-research.md, docs/deck-testing.md]
+- date: 2026-10-20
+  type: release
+  summary: >-
+    First /idgames index published after a crawl fix (sanitized sidecar text, 64 KiB prefixes,
+    distinct exit codes; 10,885 entries, no mirror errors). Owner chose Flathub directly (D-034);
+    spec 059 made the app sandbox-ready, packaging files stay owner-written. Owner feedback on
+    0.0.8 became spec 060 (leftmost row landing, amber only for focus, ember-red primary, locked
+    rows greyed) and 061 (Library frames under the header; base-game focus reset). Claude workers
+    hit their limit mid-task and the owner paused Sonnet; Codex and opencode finished on the same
+    worktrees. Pre-release v0.0.9-focus (checks V1-V6).
+  refs: [docs/reports/050-idgames-index.md, docs/reports/059-flatpak-sandbox-ready.md,
+         docs/reports/060-focus-clarity.md, docs/reports/061-library-regression.md,
+         docs/decisions.md, docs/deck-testing.md]
