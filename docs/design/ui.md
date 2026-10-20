@@ -58,7 +58,7 @@ reduced opacity. Unavailable controls give explicit reasons and preserve readabl
 | Focused | Own fill, at most subtly brightened (`raised-focus` / `primary-focus`); bone text | Same 4 px amber outer ring and dark separation on every target; never amber fill |
 | Primary | Blood red `primary`; bone text | Light edge; focused primary uses the same amber ring |
 | Selected | Own surface; bone text | Check and green edge for chips/checkboxes; explicit On text for toggles; active tab has bone underline |
-| Disabled / locked | Sunken `deep` fill; dimmed `locked-ink` label and explanation | Lock glyph for required components and recipe files; no focus, hover or activation affordance |
+| Disabled / locked | Sunken `deep` fill; dimmed `locked-ink` label and explanation | Lock glyph only for recipe-locked components/files; unavailable actions share the dimmed fill/text without a lock; no focus, hover or activation affordance |
 
 Primary text remains ≥4.5:1 through focus and the first-run Install pulse
 (`primary-focus` ↔ `primary-pulse`, spec 030). Locked text remains ≥3:1;

@@ -921,27 +921,33 @@ fn render_060_primary_selection_and_focus_are_distinct() {
     }
     let (window, ui) = setup();
     ui.show().unwrap();
-    let nodes: Vec<_> = [(1, 2, true), (2, 8, true), (3, 16, false), (4, 14, true)]
-        .into_iter()
-        .enumerate()
-        .map(|(i, (id, kind, primary))| ViewNode {
-            id,
-            kind,
-            primary,
-            actionable: kind != 16,
-            x: 36. + i as f32 * 280.,
-            y: 36.,
-            w: 240.,
-            h: 72.,
-            ..Default::default()
-        })
-        .collect();
+    let nodes: Vec<_> = [
+        (1, 2, true),
+        (2, 8, true),
+        (3, 16, false),
+        (4, 14, true),
+        (5, 2, true),
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(i, (id, kind, primary))| ViewNode {
+        id,
+        kind,
+        primary,
+        actionable: kind != 16 && id != 5,
+        x: 36. + i as f32 * 230.,
+        y: 36.,
+        w: 210.,
+        h: 72.,
+        ..Default::default()
+    })
+    .collect();
     ui.set_nodes(slint::ModelRc::new(slint::VecModel::from(nodes.clone())));
     let pixel = |frame: &slint::SharedPixelBuffer<slint::Rgb8Pixel>, x: usize, y: usize| {
         let p = frame.as_slice()[y * 1280 + x];
         [p.r, p.g, p.b]
     };
-    for focus in [0, 1, 2, 4] {
+    for focus in [0, 1, 2, 3, 4, 5] {
         ui.set_focused(focus);
         let frame = render(&window);
         for n in &nodes {
@@ -952,7 +958,7 @@ fn render_060_primary_selection_and_focus_are_distinct() {
             let ring = pixel(&frame, x - 6, y + 36);
             assert_eq!(
                 ring == [255, 208, 120],
-                n.id == focus,
+                n.id == focus && n.actionable,
                 "only the focused node receives the shared amber ring"
             );
             if n.id == 1 {
