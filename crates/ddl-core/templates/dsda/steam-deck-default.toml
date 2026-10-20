@@ -17,11 +17,15 @@
 # source and the first Deck test (spec 029, `docs/research/dsda-engine.md` §9).
 # The controller layout added in template v3 is the owner's own layout (spec 034);
 # its upstream defaults and button codes are transcribed in the same section.
+# Template v4 adds the owner's frame-pacing and look-sensitivity preset from the
+# first 0.0.7 Deck test (spec 056): VSync on, uncapped interpolation kept, and
+# both mouse look sensitivities at 5. Its evidence is in
+# `docs/research/dsda-engine.md` §10.
 
 # Increments whenever the baseline changes; DDL uses it to detect a migration and
 # to name `<config dir>/dsda/base/<template_version>.cfg` (R3, R5). Kept as a
 # string so a future `1.1` needs no schema change.
-template_version = "3"
+template_version = "4"
 
 # DSDA-Doom versions this template was written and checked against. Pinned to the
 # one researched tagged release; see `docs/research/dsda-engine.md` (v0.30.1,
@@ -47,9 +51,17 @@ left_analog_sensitivity_y = 100
 right_analog_sensitivity_x = 1536
 right_analog_sensitivity_y = 768
 analog_look_acceleration = 0
-# Mouse response (OVERVIEW §8.1); upstream defaults.
+# Mouse response (OVERVIEW §8.1). Acceleration stays at DSDA's upstream 0, and
+# Free Look Sensitivity (`mouse_sensitivity_mlook`) stays at its upstream 10.
+# The owner's preset (spec 056, R2) is the two *look* sensitivities at 5:
+# DSDA's own "Horizontal Sensitivity" and "Vertical Sensitivity" are
+# `mouse_sensitivity_horiz` (upstream 10) and `mouse_sensitivity_vert` (upstream
+# 1), not the analog-stick values below [m_menu.c:3564-3566]. The vertical key is
+# new in v4, so `[upstream_values]` records its upstream default for the
+# three-way migration.
 dsda_mouse_acceleration = 0
-mouse_sensitivity_horiz = 10
+mouse_sensitivity_horiz = 5
+mouse_sensitivity_vert = 5
 mouse_sensitivity_mlook = 10
 # Analog roles and look direction (OVERVIEW §8.1); upstream defaults.
 swap_analogs = 0
@@ -69,10 +81,34 @@ render_aspect = 2
 # = 2) so the wide STBAR fills the panel edge to edge [stretch.h:41-52].
 render_stretch_hud = 2
 
+# --- VSync and uncapped frame rate (spec 056, R1) ----------------------------
+# The first 0.0.7 Deck test found the game drawing flat out with no VSync. DDL
+# turns VSync on and keeps DSDA's uncapped (interpolated) frame rate on, so the
+# renderer still interpolates every display frame but the buffer swap blocks at
+# the panel refresh instead of rendering as many frames as the APU can.
+# `render_vsync` upstream is 0 [configuration.c:1185-1188]; `uncapped_framerate`
+# upstream is already 1 [configuration.c:1189-1192].
+# DDL deliberately does NOT own `dsda_fps_limit`: its upstream default is 0
+# (no limit), and setting a numeric cap here would defeat "uncapped FPS"
+# [configuration.c:1193-1196]. Research §10 records how the three keys combine.
+render_vsync = 1
+uncapped_framerate = 1
+
 # String keys: the native render resolution. DSDA parses `WIDTHxHEIGHT` and uses
 # it in fullscreen [i_video.c:736-758]; the Deck panel is 1280×800.
 [strings]
 screen_resolution = "1280x800"
+
+# DSDA-Doom v0.30.1 upstream defaults for the value keys that are new in this
+# template version. The three-way merge (spec 005, R5) uses them exactly like a
+# binding's `upstream` triple: if the previous baseline has no value for the key
+# and the active file still holds this default, the player never touched it, so
+# the template value wins. A player-edited value is kept and reported as a
+# conflict instead. Only keys that already appear under [values] may be listed.
+[upstream_values]
+uncapped_framerate = 1
+mouse_sensitivity_vert = 1
+render_vsync = 0
 
 # --- Steam Deck controller layout (spec 034, R2) -----------------------------
 #

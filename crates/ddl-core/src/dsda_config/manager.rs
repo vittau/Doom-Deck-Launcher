@@ -427,6 +427,7 @@ mod tests {
                 .iter()
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
+            upstream_values: Vec::new(),
             strings: Vec::new(),
             bindings: Vec::new(),
         }
@@ -612,15 +613,30 @@ mod tests {
         let clock = TestClock::new();
 
         // The v1 baseline the current install would have: the same control and
-        // mouse keys, without the spec-029 video keys or spec-034 bindings.
+        // mouse keys, without the spec-029 video keys, the spec-034 bindings or
+        // the spec-056 v4 keys.
         let mut v1 = Template::embedded().expect("valid template");
         v1.template_version = "1".to_owned();
         v1.values.retain(|(key, _)| {
             !matches!(
                 key.as_str(),
-                "use_fullscreen" | "exclusive_fullscreen" | "render_aspect" | "render_stretch_hud"
+                "use_fullscreen"
+                    | "exclusive_fullscreen"
+                    | "render_aspect"
+                    | "render_stretch_hud"
+                    | "render_vsync"
+                    | "uncapped_framerate"
+                    | "mouse_sensitivity_vert"
             )
         });
+        if let Some((_, value)) = v1
+            .values
+            .iter_mut()
+            .find(|(key, _)| key == "mouse_sensitivity_horiz")
+        {
+            *value = 10;
+        }
+        v1.upstream_values.clear();
         v1.strings.clear();
         v1.bindings.clear();
 
@@ -638,7 +654,7 @@ mod tests {
 
         assert!(migration.migrated);
         assert_eq!(migration.from_version, "1");
-        assert_eq!(migration.to_version, "3");
+        assert_eq!(migration.to_version, "4");
 
         let merged = read(&second.active_path());
         assert!(
@@ -659,6 +675,22 @@ mod tests {
         assert!(merged.contains("render_aspect 2\n"), "{merged}");
         assert!(merged.contains("render_stretch_hud 2\n"), "{merged}");
         assert!(
+            merged.contains("render_vsync 1\n"),
+            "spec-056 VSync is added:\n{merged}"
+        );
+        assert!(
+            merged.contains("uncapped_framerate 1\n"),
+            "uncapped interpolation stays on:\n{merged}"
+        );
+        assert!(
+            merged.contains("mouse_sensitivity_horiz 5\n"),
+            "spec-056 look sensitivity is added:\n{merged}"
+        );
+        assert!(
+            merged.contains("mouse_sensitivity_vert 5\n"),
+            "spec-056 vertical look sensitivity is added:\n{merged}"
+        );
+        assert!(
             merged.contains("input_reverse 47 -1 2 | 47 -1 2 | 47 -1 2\n"),
             "the spec-034 bindings are added:\n{merged}"
         );
@@ -675,9 +707,24 @@ mod tests {
 
         let current = Template::embedded().expect("valid template");
 
-        // v2: the same scalars and strings, no bindings.
+        // v2: the same v1/v2 scalars and strings, no bindings, and without the
+        // spec-056 keys that arrived in v4.
         let mut v2 = current.clone();
         v2.template_version = "2".to_owned();
+        v2.values.retain(|(key, _)| {
+            !matches!(
+                key.as_str(),
+                "render_vsync" | "uncapped_framerate" | "mouse_sensitivity_vert"
+            )
+        });
+        if let Some((_, value)) = v2
+            .values
+            .iter_mut()
+            .find(|(key, _)| key == "mouse_sensitivity_horiz")
+        {
+            *value = 10;
+        }
+        v2.upstream_values.clear();
         v2.bindings.clear();
 
         let first = manager(&config, v2.clone(), &clock);
@@ -715,7 +762,7 @@ mod tests {
 
         assert!(migration.migrated);
         assert_eq!(migration.from_version, "2");
-        assert_eq!(migration.to_version, "3");
+        assert_eq!(migration.to_version, "4");
 
         let merged = second.active_path();
         let document = crate::dsda_config::format::Document::parse(&read(&merged));
@@ -769,6 +816,147 @@ mod tests {
             read(&merged).contains("input_quickload 195 -1 10 | 195 -1 10 | 195 -1 10\n"),
             "{}",
             read(&merged)
+        );
+    }
+
+    /// R3 (spec 056): migrating the shipped v3 baseline to v4 turns VSync on,
+    /// keeps uncapped interpolation, and presets both mouse look sensitivities
+    /// to 5 when the player never touched those keys. DSDA's own save writes the
+    /// upstream defaults (0 / 1 / 1), which the upstream record recognises.
+    #[test]
+    fn a_version_bump_to_v4_applies_vsync_and_look_sensitivity() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        let current = Template::embedded().expect("valid template");
+        let mut v3 = current.clone();
+        v3.template_version = "3".to_owned();
+        v3.values.retain(|(key, _)| {
+            !matches!(
+                key.as_str(),
+                "render_vsync" | "uncapped_framerate" | "mouse_sensitivity_vert"
+            )
+        });
+        if let Some((_, value)) = v3
+            .values
+            .iter_mut()
+            .find(|(key, _)| key == "mouse_sensitivity_horiz")
+        {
+            *value = 10;
+        }
+        v3.upstream_values.clear();
+
+        let first = manager(&config, v3.clone(), &clock);
+        first.provision().expect("first use");
+
+        // DSDA's save writes the whole configuration, including the keys v3 did
+        // not own, at their upstream defaults.
+        let mut edited = Document::parse(&v3.config_text());
+        edited.set("render_vsync", Value::Int(0));
+        edited.set("uncapped_framerate", Value::Int(1));
+        edited.set("mouse_sensitivity_vert", Value::Int(1));
+        fs::write(first.active_path(), edited.to_text()).expect("simulate a DSDA save");
+
+        let second = DsdaConfigManager::with_template(&config, current)
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert!(migration.migrated);
+        assert_eq!(migration.from_version, "3");
+        assert_eq!(migration.to_version, "4");
+        assert!(
+            migration.conflicts.is_empty(),
+            "nothing was player-edited: {:?}",
+            migration.conflicts
+        );
+
+        let merged = read(&second.active_path());
+        assert!(merged.contains("render_vsync 1\n"), "{merged}");
+        assert!(merged.contains("uncapped_framerate 1\n"), "{merged}");
+        assert!(merged.contains("mouse_sensitivity_horiz 5\n"), "{merged}");
+        assert!(merged.contains("mouse_sensitivity_vert 5\n"), "{merged}");
+        assert!(
+            !merged.contains("dsda_fps_limit"),
+            "the migration must not cap the frame rate:\n{merged}"
+        );
+        assert_eq!(
+            read(&second.base_path("4")),
+            merged,
+            "the v4 baseline is exactly what was written"
+        );
+
+        // The migration is recorded like the 029/034 ones.
+        let state = second.state().expect("state");
+        assert_eq!(state.template_version, "4");
+        assert_eq!(state.last_migration, Some(1000));
+        assert_eq!(
+            migration.backup.expect("a backup").file_name().unwrap(),
+            "1000-4.cfg"
+        );
+    }
+
+    /// R3/A2 (spec 056): a v3 install whose player changed both mouse look
+    /// sensitivities and had already turned VSync on keeps every choice.
+    #[test]
+    fn a_version_bump_to_v4_keeps_player_edited_sensitivity_and_vsync() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        let current = Template::embedded().expect("valid template");
+        let mut v3 = current.clone();
+        v3.template_version = "3".to_owned();
+        v3.values.retain(|(key, _)| {
+            !matches!(
+                key.as_str(),
+                "render_vsync" | "uncapped_framerate" | "mouse_sensitivity_vert"
+            )
+        });
+        if let Some((_, value)) = v3
+            .values
+            .iter_mut()
+            .find(|(key, _)| key == "mouse_sensitivity_horiz")
+        {
+            *value = 10;
+        }
+        v3.upstream_values.clear();
+
+        let first = manager(&config, v3.clone(), &clock);
+        first.provision().expect("first use");
+
+        // The player set horizontal 8, vertical 3 (both different from DSDA's
+        // defaults) and turned VSync on in DSDA's own menu.
+        let mut edited = Document::parse(&v3.config_text());
+        edited.set("mouse_sensitivity_horiz", Value::Int(8));
+        edited.set("mouse_sensitivity_vert", Value::Int(3));
+        edited.set("render_vsync", Value::Int(1));
+        fs::write(first.active_path(), edited.to_text()).expect("simulate a DSDA save");
+
+        let second = DsdaConfigManager::with_template(&config, current)
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert_eq!(migration.to_version, "4");
+        let merged = read(&second.active_path());
+        assert!(
+            merged.contains("mouse_sensitivity_horiz 8\n"),
+            "the player's horizontal sensitivity is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("mouse_sensitivity_vert 3\n"),
+            "the player's vertical sensitivity is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("render_vsync 1\n"),
+            "VSync the player already enabled stays on:\n{merged}"
+        );
+        let keys: Vec<&str> = migration
+            .conflicts
+            .iter()
+            .map(|conflict| conflict.key.as_str())
+            .collect();
+        assert_eq!(
+            keys,
+            vec!["mouse_sensitivity_horiz", "mouse_sensitivity_vert"]
         );
     }
 

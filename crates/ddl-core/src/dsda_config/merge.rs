@@ -12,18 +12,19 @@
 //! Rules, in order:
 //!
 //! 1. `A == B` -> take `T` (the user never changed it).
-//! 2. `B` is absent and `A` is the binding's `upstream` default -> take `T`
-//!    (the template starts owning a binding the player never touched; spec 034).
+//! 2. `B` is absent and `A` is the template's recorded upstream default -> take
+//!    `T` (the template starts owning a key the player never touched; spec 034
+//!    for bindings, spec 056 for scalar values).
 //! 3. `T == B` -> keep `A` (the user changed it, DDL did not).
 //! 4. `A == T` -> keep `A` (nothing to do).
 //! 5. `A` is absent -> take `T` (a partial active file must not lose the key).
 //! 6. otherwise -> **conflict**: keep `A` and report it.
 //!
-//! Rule 2 exists because DSDA rewrites every binding when it saves, so the first
-//! template version that binds an action sees the engine's default in `A` while
-//! `B` (written by the previous, binding-less template) has nothing. Comparing
-//! against the researched v0.30.1 default tells "untouched" from "rebound in
-//! DSDA's menu"; a rebound binding falls through to rule 6 and is kept.
+//! Rule 2 exists because DSDA rewrites every binding and value when it saves, so
+//! the first template version that owns a key sees the engine's default in `A`
+//! while `B` (written by the previous template) has nothing. Comparing against
+//! the researched v0.30.1 default tells "untouched" from "changed in DSDA's
+//! menu"; a changed value falls through to rule 6 and is kept.
 //!
 //! Keys the user changed that the template does not own are always kept, and a
 //! key removed from the template reverts to user ownership (it is left alone).
@@ -57,7 +58,13 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
     let wanted_entries = template
         .values
         .iter()
-        .map(|(key, value)| (key.clone(), Value::Int(*value), None))
+        .map(|(key, value)| {
+            (
+                key.clone(),
+                Value::Int(*value),
+                template.upstream_value(key).map(Value::Int),
+            )
+        })
         .chain(
             template
                 .strings
@@ -131,6 +138,7 @@ mod tests {
                 .iter()
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
+            upstream_values: Vec::new(),
             strings: Vec::new(),
             bindings: Vec::new(),
         }
@@ -208,6 +216,43 @@ mod tests {
             Some("9 -1 6 | 9 -1 6 | 9 -1 6")
         );
         assert_eq!(result.conflicts.len(), 1);
+    }
+
+    /// R3 (spec 056): a value key the template starts owning in v4 holds DSDA's
+    /// upstream default in the active file; that is an untouched key, so it
+    /// takes the template value.
+    #[test]
+    fn an_untouched_new_value_takes_the_template_value() {
+        let base = document("sensitivity 10\n");
+        let active = document("sensitivity 10\nrender_vsync 0\n");
+        let mut template = template("4", &[("render_vsync", 1)]);
+        template
+            .upstream_values
+            .push(("render_vsync".to_owned(), 0));
+        let result = merge(&base, &active, &template);
+        assert_eq!(result.document.get("render_vsync"), Some(&Value::Int(1)));
+        assert!(result.conflicts.is_empty());
+        assert_eq!(result.updated, vec!["render_vsync"]);
+    }
+
+    /// R3 (spec 056): a value the player changed away from DSDA's default is
+    /// kept even though v4 starts owning the key.
+    #[test]
+    fn a_new_value_the_player_changed_is_kept_and_reported() {
+        let base = document("sensitivity 10\n");
+        let active = document("sensitivity 10\nmouse_sensitivity_vert 3\n");
+        let mut template = template("4", &[("mouse_sensitivity_vert", 5)]);
+        template
+            .upstream_values
+            .push(("mouse_sensitivity_vert".to_owned(), 1));
+        let result = merge(&base, &active, &template);
+        assert_eq!(
+            result.document.get("mouse_sensitivity_vert"),
+            Some(&Value::Int(3)),
+            "the value the player chose is kept"
+        );
+        assert_eq!(result.conflicts.len(), 1);
+        assert_eq!(result.conflicts[0].key, "mouse_sensitivity_vert");
     }
 
     #[test]
