@@ -703,3 +703,15 @@
     crawl, relevance ranking); specs 049-053 written.
   refs: [docs/reports/045-ui-touch-ups.md, docs/reports/047-transparent-readme-logo.md,
          docs/reports/041-idgames-browse-research.md, docs/reports/043-steam-shortcuts-research.md]
+- date: 2026-10-20
+  type: merge
+  summary: >-
+    An overnight Orca restart failed the running Dispatches; each worker's saved session was
+    resumed (claude --resume, codex resume, opencode -s) and its Task re-dispatched into it with no
+    lost work. Merged: 042 Cacowards research, 049 band fade, 054 Steam artwork v2 (Opus worker;
+    vector cathedral scenes, no plate behind the lettering, uploaded to SteamGridDB with the logo
+    and icon), 038 phase 2 (Dropbox first for 12 DBPs) and 048 vector panel frames (test fixtures
+    no longer contact the public catalog). 582 workspace tests green.
+  refs: [docs/reports/042-cacowards-research.md, docs/reports/049-band-fade.md,
+         docs/reports/054-steam-art-v2.md, docs/reports/038-dropbox-redirects.md,
+         docs/reports/048-vector-panel-frames.md]
