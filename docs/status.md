@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-19
+**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-20
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -68,7 +68,7 @@
 | Resumable downloads: keep pinned partials, `Range`/`If-Range` resume, 3 retries, bounded partial cache | 040 | **Done**: `<sha>.part` + JSON sidecar, 206 appends, 200/416/bad `Content-Range` restart once, retries after 2/5/10 s, cache bounded to 7 days / 2 GiB, "Resuming…" row |
 | Research: Cacowards inventory with /idgames availability and DSDA verdicts | 042 | **Done**: 2004–2025 (no editions before 2004), 391 Top Ten/runner-up entries + 69 special-award mapsets; 180 playable, 60 not, 151 unknown; 14 proposed recipe waves (135 /idgames candidates, all on `www.gamers.org`); gap: `going-down` lacks the `cacowards` tag |
 | Research: optional Steam shortcuts for installed mapsets (feasibility) + SteamGridDB | 043 | **Done**: README-only (no shortcut writing: Steam must be closed, unsupported format); SteamGridDB has no aliases, so the page and the shortcut name are `DoomDeckLauncher`; owner requests the page and uploads the existing art |
-| Weekly catalog link health (`ddl catalog check-links`, headers only, issue on failure) | 044 | Ready (after 040) |
+| Weekly catalog link health (`ddl catalog check-links`, headers only, issue on failure) | 044 | **Done**: header-only probes under the download allowlist/redirect rules, 4 in flight / 1 per host, retries (raw.githubusercontent.com answers ~50 % 503), weekly `catalog-health.yml` opens/closes one issue; `ddl catalog e2e-sample` cuts the e2e installs to 19 of 16 recipes; real run 222/222 URLs ok |
 | UI touch-ups: seamless wall background, no "Verification pending" / process labels in the player UI | 045 | **Done**: wall crop inside the atlas border (regenerated from the PNG atlas), Home readiness row and every hard-coded process label removed (audit in the report), headless tests fixed for the 89-recipe catalog (main was red after 037) |
 | Complevels as DSDA aliases (`vanilla`/`boom`/`mbf`/`mbf21`), no complevel verification status (D-030) | 046 | **Done**: 89 recipes rewritten to aliases, `complevel_status` removed (lint rejects it and numbers an alias names), argv passes the word, UI shows "Vanilla (2)"; old clients (v0.0.6) drop every new recipe and keep their embedded catalog, verified against the real v0.0.6 code. Follow-up: aliases in the custom-setup complevel override |
 | Transparent README logo (light and dark variants via `<picture>`) | 047 | **Done**: `readme-logo-{dark,light}` transparent, name contrast 15.97:1 / 19.37:1, `<picture>` in README |
@@ -81,3 +81,12 @@
 | /idgames unverified install and launch | 052 | Ready (after 051) |
 | /idgames browse UI and recipe-draft hand-off | 053 | Ready (after 052) |
 | Apply logo v3 (D-029) in production: masters, header, loading, About, window icon, Steam art, social preview | 039 | **Done**: masters authored from `logo-v3/author.py` (v2 kept in `logo-v2/production-d023/`), every PNG regenerated with resvg 0.47.0 (`export.py --check`), small tier for the header and window icon, README logo and screenshots refreshed; social preview regenerated — **owner uploads it to GitHub by hand**. Deck: logo check |
+
+## Deck test 2026-10-20 fixes (`v0.0.7-deck`)
+
+| Item | Spec | State |
+| --- | --- | --- |
+| Upgrade over 0.0.6 lost the saved setup (`app.json` recipe copies vs spec 046); recovery screen; Settings never empty | 055 | In progress (Codex) — release blocker |
+| DSDA template v4: VSync on with uncapped FPS, look sensitivity 5/5; gyro settings in the Deck guide (D-033) | 056 | In progress (opencode) |
+| Right-stick scroll, Play setup D-pad order, skill 4 "(UV)" default, tabs Home/Library/Discover, B at root → Quit (D-032) | 057 | In progress (Codex) |
+| Research: Flatpak on Flathub/Discover and running the engine from the sandbox | 058 | In progress (opencode) |
