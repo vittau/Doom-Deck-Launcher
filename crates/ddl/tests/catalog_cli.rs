@@ -31,7 +31,7 @@ fn catalog_lint_failure_has_file_line_hint_and_nonzero_exit() {
         .unwrap();
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("sigil.toml:42:"), "{stderr}");
+    assert!(stderr.contains("sigil.toml:40:"), "{stderr}");
     assert!(stderr.contains("malformed package SHA-256"));
     assert!(stderr.contains("hint:"));
 }

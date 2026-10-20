@@ -48,7 +48,6 @@ fn reference_recipes_round_trip_and_lint_offline() {
             vec![]
         );
         assert_eq!(r.verification.status, VerificationStatus::Inspected);
-        assert_eq!(r.compatibility.complevel_status, EvidenceStatus::Proposed);
     }
     assert!(
         lint_paths(
@@ -339,7 +338,7 @@ fn schema_rejects_unknown_fields_at_every_level_and_wrong_enums() {
         ("status = \"inspected\"", "status = \"untested\""),
         ("kind = \"zip\"", "kind = \"exe\""),
         ("role = \"maps\"", "role = \"script\""),
-        ("complevel = 3", "complevel = \"auto\""),
+        ("complevel = \"vanilla\"", "complevel = \"auto\""),
     ] {
         assert!(toml::from_str::<Recipe>(&source.replacen(old, new, 1)).is_err());
     }
@@ -350,9 +349,12 @@ fn reviewed_complevels_runtime_defaults_and_dates() {
     let mut r = recipe("sigil");
     for n in 0..=21 {
         r.compatibility.complevel = Complevel::Number(n);
+        // 3 is what `vanilla` means on Doom, 9/11/21 are named by an alias: the
+        // lint asks for the alias there (D-030), so only the others stay numbers.
         assert_eq!(
             validate(&r, Path::new("sigil.toml"), &hosts()).is_empty(),
-            n <= 17 || n == 21
+            (n <= 17 || n == 21) && ![3, 9, 11, 21].contains(&n),
+            "{n}"
         );
     }
     for alias in [
@@ -367,6 +369,130 @@ fn reviewed_complevels_runtime_defaults_and_dates() {
         r.verification.date = "2024-02-29".into();
         assert!(validate(&r, Path::new("sigil.toml"), &hosts()).is_empty());
     }
+}
+
+/// Lints a mutated copy of a catalog recipe and returns the complevel violations.
+fn complevel_violations(id: &str, change: impl FnOnce(&mut Recipe)) -> Vec<lint::Violation> {
+    let mut r = recipe(id);
+    change(&mut r);
+    validate(&r, Path::new(&format!("{id}.toml")), &hosts())
+        .into_iter()
+        .filter(|v| v.key == "compatibility.complevel")
+        .collect()
+}
+
+#[test]
+fn a_number_an_alias_names_is_rejected_with_the_alias_as_the_hint() {
+    // D-030: 2 on Doom II, 3 on Doom, 4 on TNT/Plutonia are `vanilla`.
+    for (id, game, number) in [
+        ("auger-zenith", Game::Doom2, 2),
+        ("sigil", Game::Doom, 3),
+        ("auger-zenith", Game::Tnt, 4),
+        ("auger-zenith", Game::Plutonia, 4),
+    ] {
+        let found = complevel_violations(id, |r| {
+            r.base_game.game = game;
+            r.compatibility.complevel = Complevel::Number(number);
+        });
+        assert_eq!(found.len(), 1, "{game:?} {number}: {found:?}");
+        assert!(found[0].message.contains("`vanilla`"), "{found:?}");
+        assert!(
+            found[0].hint.contains("complevel = \"vanilla\""),
+            "{found:?}"
+        );
+    }
+    for (number, alias) in [(9, "boom"), (11, "mbf"), (21, "mbf21")] {
+        let found = complevel_violations("auger-zenith", |r| {
+            r.compatibility.complevel = Complevel::Number(number);
+        });
+        assert_eq!(found.len(), 1, "{number}: {found:?}");
+        assert!(
+            found[0].hint.contains(&format!("complevel = \"{alias}\"")),
+            "{found:?}"
+        );
+    }
+}
+
+#[test]
+fn an_alias_or_a_number_no_alias_names_is_accepted() {
+    for alias in [
+        ComplevelAlias::Vanilla,
+        ComplevelAlias::Boom,
+        ComplevelAlias::Mbf,
+        ComplevelAlias::Mbf21,
+    ] {
+        let found = complevel_violations("auger-zenith", |r| {
+            r.compatibility.complevel = Complevel::Alias(alias);
+        });
+        assert_eq!(found, vec![], "{alias:?}");
+    }
+    // 2 is not `vanilla` on Ultimate Doom, and 4 is not on Doom II.
+    for (game, number) in [(Game::Doom, 2), (Game::Doom2, 4), (Game::Doom, 7)] {
+        let found = complevel_violations("sigil", |r| {
+            r.base_game.game = game;
+            r.compatibility.complevel = Complevel::Number(number);
+        });
+        assert_eq!(found, vec![], "{game:?} {number}");
+    }
+}
+
+#[test]
+fn every_catalog_recipe_uses_an_alias_whenever_one_names_its_level() {
+    let mut checked = 0;
+    for entry in fs::read_dir(CATALOG).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        if name == "hosts.toml"
+            || name == "tags.toml"
+            || path.extension().is_none_or(|x| x != "toml")
+        {
+            continue;
+        }
+        let r: Recipe = toml::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        if let Complevel::Number(n) = r.compatibility.complevel {
+            assert_eq!(ComplevelAlias::naming(n, r.base_game.game), None, "{name}");
+        }
+        checked += 1;
+    }
+    assert!(checked >= 80, "{checked} recipes");
+}
+
+#[test]
+fn the_removed_complevel_status_key_fails_lint_with_a_clear_message() {
+    let source = fs::read_to_string(format!("{CATALOG}/sigil.toml")).unwrap();
+    let with_status = source.replacen(
+        "complevel = \"vanilla\"",
+        "complevel = \"vanilla\"\ncomplevel_status = \"proposed\"",
+        1,
+    );
+    assert_ne!(with_status, source);
+
+    let dir = Temp::new();
+    let path = dir.0.join("sigil.toml");
+    fs::write(&path, &with_status).unwrap();
+    let diagnostics = lint_paths(
+        std::slice::from_ref(&path),
+        &Path::new(CATALOG).join("hosts.toml"),
+        None,
+    );
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+    assert!(
+        diagnostics[0].message.contains("`complevel_status`")
+            && diagnostics[0].message.contains("no longer part"),
+        "{diagnostics:?}"
+    );
+    assert!(diagnostics[0].hint.contains("delete"), "{diagnostics:?}");
+    assert_eq!(diagnostics[0].line, 29, "{diagnostics:?}");
+
+    // The embedded loader skips such a recipe with the same reason.
+    let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
+    let loaded = Catalog::from_sources(&hosts_text, "", &[("sigil.toml", with_status.as_str())]);
+    assert!(loaded.recipes.is_empty());
+    assert!(
+        loaded.skipped[0].reason.contains("complevel_status"),
+        "{:?}",
+        loaded.skipped
+    );
 }
 
 #[test]
@@ -405,7 +531,7 @@ fn https_hosts_paths_and_hashes_are_strict() {
 #[test]
 fn failing_fixtures_have_precise_lines_messages_and_hints() {
     for (folder, message, line) in [
-        ("invalid-hash", "malformed package SHA-256", 42),
+        ("invalid-hash", "malformed package SHA-256", 40),
         ("unknown-key", "unknown field", 1),
     ] {
         let errors = lint_paths(

@@ -1,5 +1,4 @@
 # Confirmed bytes and release metadata: docs/research/doomer-boards-projects.md §DBP 42; gathered 2026-10-19.
-# Confirmed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "slime-on-earth"
 title = "Slime on Earth (Doomer Boards Project 42)"
@@ -24,7 +23,6 @@ variants = []
 [compatibility]
 family = "mbf21"
 complevel = "mbf21"
-complevel_status = "confirmed"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -38,7 +36,7 @@ tester = "DDL desk research"
 date = "2026-10-19"
 engine_version = "0.30.1"
 inspected = ["docs/research/doomer-boards-projects.md §DBP 42", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled readme \"Advanced engine needed\": Limit-removing/MBF21", "Bundled readme \"Tested With\": DSDA-Doom and GZDoom.", "Release thread: https://doomer.boards.net/thread/2343/slime-on-earth"]
-notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit-removing/MBF21\". It also names the tested ports: DSDA-Doom and GZDoom.. Confirmed complevel \"mbf21\" (the readme states MBF21; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 42; episode = 7 maps."
+notes = "Confirmed package and member identities (exact size and SHA-256) by downloading the archive and reading its member list; nothing from the archive was executed. The bundled readme states \"Advanced engine needed: Limit-removing/MBF21\". It also names the tested ports: DSDA-Doom and GZDoom.. Complevel mbf21 (the readme states MBF21; DSDA-Doom v0.30.1 offers 0–17, 21, boom, mbf, mbf21). No gameplay test was performed. Tags: community-projects = Doomer Boards Project 42; episode = 7 maps."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio."]
 
 [[packages]]

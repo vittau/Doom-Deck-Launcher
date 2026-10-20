@@ -759,9 +759,9 @@ impl Runtime {
                                 824.,
                                 36.,
                                 format!(
-                                    "{} · Vanilla · Complevel {}",
+                                    "{} · Complevel: {}",
                                     entry.source.label(),
-                                    base.complevel()
+                                    base.complevel().label()
                                 )
                                 .into(),
                                 22.,
@@ -809,9 +809,9 @@ impl Runtime {
                                 270.,
                                 52.,
                                 format!(
-                                    "{} · Complevel {}",
+                                    "{} · Complevel: {}",
                                     entry.source.label(),
-                                    base.complevel()
+                                    base.complevel().label()
                                 )
                                 .into(),
                                 20.,

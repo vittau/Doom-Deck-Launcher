@@ -98,6 +98,20 @@ pub enum Game {
     Plutonia,
 }
 
+impl Game {
+    /// The number DSDA-Doom's `vanilla` word resolves to when this game's IWAD
+    /// is loaded: 4 for TNT/Plutonia, 2 for Doom II, otherwise 3
+    /// (`docs/research/dsda-engine.md` §1, D-017).
+    #[must_use]
+    pub const fn vanilla_complevel(self) -> u8 {
+        match self {
+            Self::Doom => 3,
+            Self::Doom2 => 2,
+            Self::Tnt | Self::Plutonia => 4,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Package {
@@ -179,7 +193,6 @@ pub enum Role {
 pub struct Compatibility {
     pub family: PortFamily,
     pub complevel: Complevel,
-    pub complevel_status: EvidenceStatus,
     pub engine: EngineEvidence,
     #[serde(default)]
     pub runtime: RuntimeDefaults,
@@ -211,12 +224,31 @@ pub enum ComplevelAlias {
     Mbf21,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum EvidenceStatus {
-    Confirmed,
-    Proposed,
-    NeedsDeckValidation,
+impl ComplevelAlias {
+    /// The alias as it is written in a recipe.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Vanilla => "vanilla",
+            Self::Boom => "boom",
+            Self::Mbf => "mbf",
+            Self::Mbf21 => "mbf21",
+        }
+    }
+
+    /// The alias that names `number` when played on `game`'s IWAD, if any
+    /// (D-030): 9 → `boom`, 11 → `mbf`, 21 → `mbf21`, and the game's own
+    /// `vanilla` level (2 on Doom II, 3 on Doom, 4 on TNT/Plutonia).
+    #[must_use]
+    pub const fn naming(number: u8, game: Game) -> Option<Self> {
+        match number {
+            9 => Some(Self::Boom),
+            11 => Some(Self::Mbf),
+            21 => Some(Self::Mbf21),
+            n if n == game.vanilla_complevel() => Some(Self::Vanilla),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

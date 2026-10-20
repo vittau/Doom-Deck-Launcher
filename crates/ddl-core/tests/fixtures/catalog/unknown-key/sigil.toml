@@ -1,6 +1,5 @@
 unknown = true
 # Confirmed bytes and release metadata: docs/research/reference-sigil.md §1–§5; gathered 2026-10-16.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "sigil"
 title = "SIGIL"
@@ -16,8 +15,7 @@ variants = ["doom-1.9ud"]
 
 [compatibility]
 family = "limit-removing"
-complevel = 3
-complevel_status = "proposed"
+complevel = "vanilla"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -32,7 +30,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
-notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed."
+notes = "Confirmed archive/member identities and source inspection. Complevel vanilla; no gameplay test performed."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
 
 [[packages]]

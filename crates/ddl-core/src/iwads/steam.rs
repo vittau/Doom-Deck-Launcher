@@ -784,7 +784,10 @@ mod tests {
         let games = crate::iwads::base_games::list(&registry);
         assert_eq!(games.len(), 4);
         assert_eq!(
-            games.iter().map(|g| g.complevel()).collect::<Vec<_>>(),
+            games
+                .iter()
+                .map(|g| g.complevel().value())
+                .collect::<Vec<_>>(),
             [3, 2, 4, 4]
         );
         assert!(
@@ -798,7 +801,7 @@ mod tests {
         let games = crate::iwads::base_games::list(&registry);
         assert_eq!(games.len(), 1);
         assert_eq!(games[0].id(), "base:doom2");
-        assert_eq!(games[0].complevel(), 2);
+        assert_eq!(games[0].complevel().value(), 2);
     }
 
     #[test]

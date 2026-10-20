@@ -26,8 +26,9 @@ Optional images need explicit permission, a safe relative `path`, and a nonempty
 5. Record honest evidence: `indexed`, `inspected`, `verified`, `partial` or
    `incompatible`. Include tester, date, engine version, notes and limitations.
    `inspected` means archive/source/lump inspection, **not** a gameplay test.
-   Mark the engine range `inspected` too. Complevel proposals stay `proposed`
-   until tested; do not promote a recipe just because fetch lint succeeds.
+   Mark the engine range `inspected` too; do not promote a recipe just because
+   fetch lint succeeds. The complevel has no status of its own: pick it by
+   [common sense](#choosing-the-complevel).
 6. Run these from the repository root (Rust comes from `rust-toolchain.toml`):
 
    ```sh
@@ -68,10 +69,29 @@ are shown in the complete example. Optional fields and constraints:
 | `packages.members` | `keep` defaults false; unique `id` and `path` within a package. All members have exact positive `size` and `sha256`. |
 | `components` | Optional `exclusive_group`, `replaces = "main"`, `user_supplied = true`, `obtain`, `known_sha256`. IDs are unique within the recipe. |
 | `components.members` | For downloaded content, `package` and `member` refer to declared IDs. Roles: `maps`, `music`, `graphics`, `sounds` (WAD) or `dehacked` (DEH/BEX). Kept members cannot be loaded. Each user-supplied component has exactly one imported member with a role, no package/member reference, nonempty `obtain` instructions, and optional known hashes. No guessed filename or download URL. |
-| `compatibility` | `family`: `vanilla`, `limit-removing`, `boom`, `mbf`, `mbf21`; mandatory `complevel`: 0–17, 21, `"vanilla"`, `"boom"`, `"mbf"`, `"mbf21"`; 18–20 forbidden. `complevel_status`: `confirmed`, `proposed`, `needs-deck-validation`. |
+| `compatibility` | `family`: `vanilla`, `limit-removing`, `boom`, `mbf`, `mbf21`; mandatory `complevel`: `"vanilla"`, `"boom"`, `"mbf"`, `"mbf21"` or a number 0–17 or 21 that no alias names for the recipe's `base_game` (see [Choosing the complevel](#choosing-the-complevel)); 18–20 forbidden. There is no `complevel_status`: lint rejects the key. |
 | `compatibility.engine` | Semantic version requirement `range`, evidence `status`. Include the exact evidence version; a range is only as strong as its evidence status. |
 | `compatibility.runtime` | Optional typed `warp = [episode, map]` (or `[map]`, or `[]`; up to two integers 0–99) and `pistol_start = true/false` (player profile suggestion only). No arbitrary flags or shell strings. |
 | `verification` | Real `YYYY-MM-DD` date, semantic engine version. `inspected` lists what was inspected; nonempty when status is inspected. `limitations` can be empty only when there are no known limitations. |
+
+### Choosing the complevel
+
+Write the DSDA-Doom alias whenever one names the level (D-030). DSDA-Doom v0.30.1 accepts
+`vanilla`, `boom` (9), `mbf` (11) and `mbf21` (21) case-insensitively, and `vanilla` resolves
+by IWAD to 2 on Doom II, 3 on Doom/Ultimate Doom and 4 on TNT/Plutonia
+([research](docs/research/dsda-engine.md)). DDL passes the alias word to `-complevel` and the
+player sees it with its number, for example "Vanilla (2)". A number stays only for a level no
+alias names on that recipe's `base_game`, such as 2 on Ultimate Doom; `catalog lint` rejects any
+other number and suggests the alias.
+
+Pick the level in this order, and stop at the first source that states one:
+
+1. What the author states: the release text file, a `COMPLVL` lump or `UMAPINFO`.
+2. Otherwise the port family's community convention: vanilla or limit-removing →
+   `vanilla`, Boom → `boom`, MBF → `mbf`, MBF21 → `mbf21`.
+
+Say which source you used in the recipe's `verification.notes`. The level carries no
+verification status; gameplay evidence stays in `[verification]`.
 
 ### Tags
 
@@ -156,7 +176,7 @@ bevels. Art with alpha is also capped at 1280×800 and recompressed losslessly.
 
 This is the actual [SIGIL recipe](catalog/sigil.toml), backed by
 [reference research](docs/research/reference-sigil.md). Its hashes are **Confirmed**;
-its complevel is **Proposed** and gameplay **Needs Deck Validation**. Start with
+gameplay **Needs Deck Validation**. Start with
 this structure, replace the researched data, then delete components your release
 does not provide. The compat and soundtrack components replace main at the same
 position; they do not add a second map WAD. The menu selects the episode, so no
@@ -164,7 +184,6 @@ variant-dependent `warp` is prescribed here.
 
 ```toml
 # Confirmed bytes and release metadata: docs/research/reference-sigil.md §1–§5; gathered 2026-10-16.
-# Proposed complevel; Needs Deck Validation. No runtime test is claimed.
 schema_version = 1
 id = "sigil"
 title = "SIGIL"
@@ -180,8 +199,7 @@ variants = ["doom-1.9ud"]
 
 [compatibility]
 family = "limit-removing"
-complevel = 3
-complevel_status = "proposed"
+complevel = "vanilla"
 
 [compatibility.engine]
 range = "=0.30.1"
@@ -196,7 +214,7 @@ tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
-notes = "Confirmed archive/member identities and source inspection. Proposed complevel 3; no gameplay test performed."
+notes = "Confirmed archive/member identities and source inspection. Complevel vanilla by the limit-removing convention; no gameplay test performed."
 limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
 
 [[packages]]
