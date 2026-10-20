@@ -1,7 +1,7 @@
 # 050 — `/idgames` index build and publish
 
-**Status:** implemented; the reviewers' checks pass. A3 (first publish) is left to the coordinator
-after the owner's approval; nothing was published from this branch.
+**Status:** implemented; full-workspace checks pass on the merged branch. A3 (first publish) is left
+to the coordinator after the owner's approval; nothing was published from this branch.
 
 **Spec:** `docs/specs/050-idgames-index.md` (R1–R9, including R9 "crawl telemetry and back-off"
 added on `main` while this task ran). **Decision:** D-031.
@@ -87,11 +87,11 @@ one). Unit tests live beside each module. No test uses a socket.
   catalog-bundle publishing model. **The first publish was not triggered** (ownership: the
   coordinator after the owner's approval), so the size/entry count is still to be recorded from the
   run summary.
-- **A4** — targeted checks green: `cargo fmt --all --check`; `cargo clippy -p ddl-core
-  --all-targets -- -D warnings`; `cargo clippy -p ddl --all-targets -- -D warnings`;
-  `cargo test -p ddl-core idgames` (74 unit tests + 8 integration); `cargo test -p ddl --bin ddl
-  idgames` (3 tests). Full-workspace checks are run with the build slot and reported to the
-  coordinator.
+- **A4** — full-workspace checks green on the merged branch (`main` at the 0.0.7 release was
+  merged before this run): `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --
+  -D warnings`, `cargo test --workspace` (exit 0; 13 suites, including 74 `idgames` unit tests, 8
+  `idgames_index` integration tests and 3 CLI tests). Targeted runs during development were also
+  green for `ddl-core` and `ddl`.
 - **A5** — virtual-clock build tests: min spacing ≥ 3,000 ms (mean < 4,000 ms with jitter); budget
   holds; 403/429/503 stops record statuses and keep the partial index; the next run makes no
   request inside 24 h and then uses half the budget; three clean runs restore it; a budget stop
