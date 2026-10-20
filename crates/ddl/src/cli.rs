@@ -78,6 +78,14 @@ pub enum HelpTopic {
     Profile,
     /// `ddl profile extras --help`.
     ProfileExtras,
+    /// `ddl idgames [--help]`.
+    Idgames,
+    /// `ddl idgames index [--help]`.
+    IdgamesIndex,
+    /// `ddl idgames index build --help`.
+    IdgamesIndexBuild,
+    /// `ddl idgames index validate --help`.
+    IdgamesIndexValidate,
 }
 
 /// Which of a setup's two ordered groups a CLI command addresses (spec 026, R3).
@@ -211,6 +219,37 @@ pub enum ProfileExtrasCommand {
     },
 }
 
+/// `ddl idgames index …`: build and validate the browse index (spec 050, R4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IdgamesCommand {
+    /// `ddl idgames index build --ls <file> --mirror <host> --out <file> …`.
+    IndexBuild {
+        /// The downloaded inventory (`ls-laR.gz` or `fullsort.gz`).
+        ls: PathBuf,
+        /// The one mirror host to read sidecars from.
+        mirror: String,
+        /// Where to write `index.json`.
+        out: PathBuf,
+        /// Yesterday's index, for an incremental build (`--previous`).
+        previous: Option<PathBuf>,
+        /// The resumable crawl state (`--state`, default: beside `--out`).
+        state: Option<PathBuf>,
+        /// Spec 042's Cacowards research document (`--cacowards`).
+        cacowards: Option<PathBuf>,
+        /// The recipe directory used for `in_catalog` (`--catalog`).
+        catalog: Option<PathBuf>,
+        /// Sidecar requests this run may make (`--budget`, default 1500).
+        budget: u32,
+        /// The oldest DDL allowed to read the index (`--min-ddl-version`).
+        min_ddl_version: Option<String>,
+    },
+    /// `ddl idgames index validate <file>`.
+    IndexValidate {
+        /// The published index to check.
+        file: PathBuf,
+    },
+}
+
 /// What the user asked `ddl` to do.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
@@ -297,6 +336,8 @@ pub enum Command {
     Custom(CustomCommand),
     /// `ddl profile extras …`: extra files on a catalog profile (spec 026, R7).
     ProfileExtras(ProfileExtrasCommand),
+    /// `ddl idgames index …`: build or validate the browse index (spec 050).
+    Idgames(IdgamesCommand),
     /// `ddl doctor`: one paste-friendly diagnostic report.
     Doctor,
     /// Print [`version_line`] and exit successfully.
@@ -382,6 +423,8 @@ Usage: {BIN} [OPTIONS]
        {BIN} profile extras <recipe> [--profile <name|id>] move <files|patches> <from> <to>
        {BIN} profile extras <recipe> [--profile <name|id>] remove <files|patches> <index>
        {BIN} profile extras <recipe> [--profile <name|id>] clear
+       {BIN} idgames index build --ls <file> --mirror <host> --out <file> [--previous <index>] [--state <file>] [--cacowards <md>] [--catalog <dir>] [--budget <n>] [--min-ddl-version <v>]
+       {BIN} idgames index validate <file>
        {BIN} doctor
 
 Commands:
@@ -392,6 +435,7 @@ Commands:
   launch        Resolve a mapset or custom setup; without --dry-run, run it
   custom        Create and edit player-made setups from local files
   profile       Edit a mapset profile's extra files
+  idgames       Build or validate the /idgames browse index (maintainers)
   doctor        Print a paste-friendly diagnostic report
 
 Options:
@@ -540,6 +584,74 @@ Print a paste-friendly report: DDL's paths, engine state, IWAD registry,
 installed mapsets, DSDA config state and log location.
 
 Usage: {BIN} doctor
+"
+        ),
+        HelpTopic::Idgames => format!(
+            "\
+{BIN} idgames: the /idgames browse index (maintainers)
+
+Usage: {BIN} idgames index build --ls <file> --mirror <host> --out <file> [options]
+       {BIN} idgames index validate <file>
+
+The index is a facts-only list of the DOOM level archives on the /idgames
+mirrors (title, author, date, size, base game, port hint), built from the
+mirror's ls-laR.gz and the authors' .txt sidecars and published on the
+`idgames-index` branch by CI. It is not the catalog: nothing in it is
+verified, and the app shows it as unverified.
+
+Commands:
+  build     Build index.json from an inventory and a polite sidecar crawl
+  validate  Check a published index.json against the schema and bounds
+"
+        ),
+        HelpTopic::IdgamesIndex => format!(
+            "\
+{BIN} idgames index: build or validate the browse index
+
+Usage: {BIN} idgames index build --ls <file> --mirror <host> --out <file> [options]
+       {BIN} idgames index validate <file>
+
+Commands:
+  build     Build index.json from an inventory and a polite sidecar crawl
+  validate  Check a published index.json against the schema and bounds
+"
+        ),
+        HelpTopic::IdgamesIndexBuild => format!(
+            "\
+{BIN} idgames index build --ls <file> --mirror <host> --out <file> [options]
+
+Build the facts-only /idgames index. `--ls` is the downloaded inventory
+(ls-laR.gz, or fullsort.gz as an alternative). The crawl reads one mirror, one
+request at a time, with at least 3 s between requests plus jitter and at most
+1,500 sidecar requests per run (D-031). On 403, 429 or 5xx it stops, keeps
+everything fetched and resumes on the next run. Progress and the counts go to
+stderr; the index is written atomically.
+
+Usage: {BIN} idgames index build --ls <file> --mirror <host> --out <file> [options]
+
+Options:
+      --previous <index>       Yesterday's index.json; unchanged entries are
+                               reused instead of re-fetched
+      --state <file>           Crawl state to read and update (default:
+                               crawl-state.json beside --out)
+      --cacowards <file>       Spec 042's research document, for Cacoward
+                               years and the crawl order (default:
+                               docs/research/cacowards.md when present)
+      --catalog <dir>          Recipe directory, for `in_catalog` (default:
+                               catalog when present)
+      --budget <n>             Sidecar requests this run (1-1500, default 1500)
+      --min-ddl-version <v>    Oldest DDL allowed to read the index
+"
+        ),
+        HelpTopic::IdgamesIndexValidate => format!(
+            "\
+{BIN} idgames index validate <file>
+
+Check a published index.json: size bound, schema, source, deterministic
+ordering, entry fields and ranking signals. Prints a one-line summary and
+exits non-zero when the document is not usable.
+
+Usage: {BIN} idgames index validate <file>
 "
         ),
         HelpTopic::Catalog => format!(
@@ -754,6 +866,7 @@ where
         Some("launch") => parse_launch(&args[1..]),
         Some("custom") => parse_custom(&args[1..]),
         Some("profile") => parse_profile(&args[1..]),
+        Some("idgames") => parse_idgames(&args[1..]),
         Some("doctor") => parse_doctor(&args[1..]),
         _ => parse_global(&args),
     }
@@ -1453,6 +1566,113 @@ fn one_id(args: &[OsString], usage: &str) -> Result<String, ParseError> {
     }
 }
 
+/// `ddl idgames index …` (spec 050, R4).
+fn parse_idgames(args: &[OsString]) -> Result<Command, ParseError> {
+    match args.first().and_then(|arg| arg.to_str()) {
+        Some("index") => parse_idgames_index(&args[1..]),
+        _ if wants_help(args) => Ok(Command::Help(HelpTopic::Idgames)),
+        _ => Err(ParseError::message(
+            "expected `idgames index build --ls <file> --mirror <host> --out <file>` or `idgames index validate <file>`",
+        )),
+    }
+}
+
+fn parse_idgames_index(args: &[OsString]) -> Result<Command, ParseError> {
+    match args.first().and_then(|arg| arg.to_str()) {
+        Some("build") => parse_idgames_index_build(&args[1..]),
+        Some("validate") => {
+            if wants_help(&args[1..]) {
+                return Ok(Command::Help(HelpTopic::IdgamesIndexValidate));
+            }
+            let mut file = None;
+            for arg in &args[1..] {
+                if arg == "--" {
+                    continue;
+                }
+                if arg.to_string_lossy().starts_with('-') || file.is_some() {
+                    return Err(ParseError::unknown(&arg.to_string_lossy()));
+                }
+                file = Some(PathBuf::from(arg));
+            }
+            let file = file.ok_or_else(|| {
+                ParseError::message("expected `idgames index validate <file>`")
+            })?;
+            Ok(Command::Idgames(IdgamesCommand::IndexValidate { file }))
+        }
+        _ if wants_help(args) => Ok(Command::Help(HelpTopic::IdgamesIndex)),
+        _ => Err(ParseError::message(
+            "expected `idgames index build` or `idgames index validate`",
+        )),
+    }
+}
+
+fn parse_idgames_index_build(args: &[OsString]) -> Result<Command, ParseError> {
+    let mut ls = None;
+    let mut mirror = None;
+    let mut out = None;
+    let mut previous = None;
+    let mut state = None;
+    let mut cacowards = None;
+    let mut catalog = None;
+    let mut budget = None;
+    let mut min_ddl_version = None;
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if is_one_of(arg, &["-h", "--help"]) {
+            return Ok(Command::Help(HelpTopic::IdgamesIndexBuild));
+        } else if arg == "--ls" {
+            ls = Some(PathBuf::from(option_value(args, index, "--ls")?));
+            index += 1;
+        } else if arg == "--mirror" {
+            mirror = Some(option_value(args, index, "--mirror")?.to_owned());
+            index += 1;
+        } else if arg == "--out" {
+            out = Some(PathBuf::from(option_value(args, index, "--out")?));
+            index += 1;
+        } else if arg == "--previous" {
+            previous = Some(PathBuf::from(option_value(args, index, "--previous")?));
+            index += 1;
+        } else if arg == "--state" {
+            state = Some(PathBuf::from(option_value(args, index, "--state")?));
+            index += 1;
+        } else if arg == "--cacowards" {
+            cacowards = Some(PathBuf::from(option_value(args, index, "--cacowards")?));
+            index += 1;
+        } else if arg == "--catalog" {
+            catalog = Some(PathBuf::from(option_value(args, index, "--catalog")?));
+            index += 1;
+        } else if arg == "--budget" {
+            let raw = option_value(args, index, "--budget")?;
+            budget = Some(raw.parse::<u32>().map_err(|_| {
+                ParseError::message("`--budget` must be a whole number of requests (1-1500)")
+            })?);
+            index += 1;
+        } else if arg == "--min-ddl-version" {
+            min_ddl_version = Some(option_value(args, index, "--min-ddl-version")?.to_owned());
+            index += 1;
+        } else {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        }
+        index += 1;
+    }
+    let ls = ls.ok_or_else(|| ParseError::message("`--ls <file>` is required"))?;
+    let mirror =
+        mirror.ok_or_else(|| ParseError::message("`--mirror <host>` is required"))?;
+    let out = out.ok_or_else(|| ParseError::message("`--out <file>` is required"))?;
+    Ok(Command::Idgames(IdgamesCommand::IndexBuild {
+        ls,
+        mirror,
+        out,
+        previous,
+        state,
+        cacowards,
+        catalog,
+        budget: budget.unwrap_or(ddl_core::idgames::fetch::DEFAULT_DAILY_BUDGET),
+        min_ddl_version,
+    }))
+}
+
 fn parse_doctor(args: &[OsString]) -> Result<Command, ParseError> {
     if wants_help(args) {
         return Ok(Command::Help(HelpTopic::Doctor));
@@ -1859,6 +2079,101 @@ mod tests {
     }
 
     #[test]
+    fn idgames_index_subcommands_parse_into_typed_commands() {
+        assert_eq!(
+            parse_str(&[
+                "idgames", "index", "build", "--ls", "ls-laR.gz", "--mirror", "youfailit.net",
+                "--out", "index.json"
+            ]),
+            Ok(Command::Idgames(IdgamesCommand::IndexBuild {
+                ls: PathBuf::from("ls-laR.gz"),
+                mirror: "youfailit.net".into(),
+                out: PathBuf::from("index.json"),
+                previous: None,
+                state: None,
+                cacowards: None,
+                catalog: None,
+                budget: ddl_core::idgames::fetch::DEFAULT_DAILY_BUDGET,
+                min_ddl_version: None,
+            }))
+        );
+        assert_eq!(
+            parse_str(&[
+                "idgames",
+                "index",
+                "build",
+                "--ls",
+                "fullsort.gz",
+                "--mirror",
+                "ftp.fu-berlin.de",
+                "--out",
+                "out/index.json",
+                "--previous",
+                "old/index.json",
+                "--state",
+                "state.json",
+                "--cacowards",
+                "docs/research/cacowards.md",
+                "--catalog",
+                "catalog",
+                "--budget",
+                "50",
+                "--min-ddl-version",
+                "0.0.6",
+            ]),
+            Ok(Command::Idgames(IdgamesCommand::IndexBuild {
+                ls: PathBuf::from("fullsort.gz"),
+                mirror: "ftp.fu-berlin.de".into(),
+                out: PathBuf::from("out/index.json"),
+                previous: Some(PathBuf::from("old/index.json")),
+                state: Some(PathBuf::from("state.json")),
+                cacowards: Some(PathBuf::from("docs/research/cacowards.md")),
+                catalog: Some(PathBuf::from("catalog")),
+                budget: 50,
+                min_ddl_version: Some("0.0.6".into()),
+            }))
+        );
+        assert_eq!(
+            parse_str(&["idgames", "index", "validate", "index.json"]),
+            Ok(Command::Idgames(IdgamesCommand::IndexValidate {
+                file: PathBuf::from("index.json")
+            }))
+        );
+        for args in [
+            vec!["idgames"],
+            vec!["idgames", "index"],
+            vec!["idgames", "index", "build"],
+            vec!["idgames", "index", "build", "--ls", "x"],
+            vec!["idgames", "index", "build", "--ls", "x", "--mirror", "y"],
+            vec!["idgames", "index", "validat", "index.json"],
+            vec!["idgames", "index", "validate"],
+            vec!["idgames", "index", "validate", "a", "b"],
+            vec![
+                "idgames", "index", "build", "--ls", "x", "--mirror", "y", "--out", "z",
+                "--budget", "many",
+            ],
+            vec![
+                "idgames", "index", "build", "--ls", "x", "--mirror", "y", "--out", "z",
+                "--unknown",
+            ],
+        ] {
+            assert!(parse_str(&args).is_err(), "{args:?}");
+        }
+        assert_eq!(
+            parse_str(&["idgames", "--help"]),
+            Ok(Command::Help(HelpTopic::Idgames))
+        );
+        assert_eq!(
+            parse_str(&["idgames", "index", "build", "--help"]),
+            Ok(Command::Help(HelpTopic::IdgamesIndexBuild))
+        );
+        assert_eq!(
+            parse_str(&["idgames", "index", "validate", "--help"]),
+            Ok(Command::Help(HelpTopic::IdgamesIndexValidate))
+        );
+    }
+
+    #[test]
     fn version_line_starts_with_the_binary_name_and_version() {
         assert_eq!(version_line(), format!("ddl {VERSION}"));
     }
@@ -1877,6 +2192,8 @@ mod tests {
         assert!(help.contains("mapset install"));
         assert!(help.contains("launch <id>"));
         assert!(help.contains("doctor"));
+        assert!(help.contains("idgames index build"));
+        assert!(help.contains("idgames index validate"));
     }
 
     #[test]
@@ -1910,6 +2227,10 @@ mod tests {
             HelpTopic::CustomDelete,
             HelpTopic::Profile,
             HelpTopic::ProfileExtras,
+            HelpTopic::Idgames,
+            HelpTopic::IdgamesIndex,
+            HelpTopic::IdgamesIndexBuild,
+            HelpTopic::IdgamesIndexValidate,
         ] {
             let text = help_for(topic);
             assert!(text.starts_with("ddl"), "{topic:?}: {text}");

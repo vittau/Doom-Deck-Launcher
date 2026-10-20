@@ -1,0 +1,4 @@
+Title: Solar Struggle
+Author: ViolentBeetle et al.
+Episode and Level #: E1M1-E4M9
+Advanced engine needed: Vanilla

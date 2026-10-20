@@ -1,0 +1,35 @@
+./levels/doom2/Ports/megawads:
+total 24
+-rw-rw-r--  1 idgmaint idgames  12771737 Jul 26  2021 dbp37_augzen.zip
+-rw-rw-r--  1 idgmaint idgames      6212 Jul 26  2021 dbp37_augzen.txt
+-rw-rw-r--  1 idgmaint idgames  10370840 Oct 18 11:48 tistartan.zip
+-rw-rw-r--  1 idgmaint idgames      5442 Oct 18 11:48 tistartan.txt
+-rw-rw-r--  1 idgmaint idgames      9000 Jul 26  2021 freeform.zip
+-rw-rw-r--  1 idgmaint idgames      7000 Jul 26  2021 latin1.zip
+-rw-rw-r--  1 idgmaint idgames      8000 Jul 26  2021 nocase.zip
+./levels/doom2/Ports/a-c:
+-rw-rw-r--  1 idgmaint idgames    300000 Jan  5  1999 zdoom_only.zip
+./levels/doom2/deathmatch/Ports/0-9:
+-rw-rw-r--  1 idgmaint idgames    100000 Jan  5  1999 8bitdm.zip
+./levels/doom/Ports/megawads:
+-rw-rw-r--  1 idgmaint idgames    500000 Feb  2  1996 sstruggle.zip
+./levels/doom/a-c:
+-rw-rw-r--  1 idgmaint idgames     10000 Feb  2  1996 old.zip
+./levels/heretic:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 heresy.zip
+./levels/hexen:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 hexeny.zip
+./levels/strife:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 strife.zip
+./levels/hacx:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 hacx.zip
+./levels/doom64:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 doom64.zip
+./incoming:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 draft.zip
+./incoming/holding:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 held.zip
+./newstuff:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 copy.zip
+./themes/xmas:
+-rw-rw-r--  1 idgmaint idgames     10000 Oct 18 11:48 dbp19xmas2.zip

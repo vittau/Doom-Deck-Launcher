@@ -1,0 +1,5 @@
+Title: ZDoom Only
+Author: A Mapper
+Advanced engine needed: GZDoom 4.7.1
+May Not Run With...: Non-GZDoom Ports
+Map #: MAP01

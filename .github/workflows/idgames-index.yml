@@ -1,0 +1,175 @@
+# Publish the /idgames browse index (spec 050, R5/R6; decision D-031).
+#
+# One job, once a day (and on demand):
+#   1. download the archive inventory from a mirror (one request, never the
+#      master);
+#   2. restore the previous index and crawl state from the orphan
+#      `idgames-index` branch, so an unchanged entry is not fetched again;
+#   3. build with `ddl idgames index build` — one request in flight, at least
+#      3 s apart, at most 1,500 sidecar requests per run;
+#   4. validate the result;
+#   5. commit `index.json` and `crawl-state.json` to `idgames-index` as one
+#      ordinary commit.
+#
+# The first full pass takes about a week at 1,500 sidecars a day; later runs
+# only fetch new or changed uploads. A 403, 429 or 5xx stops the crawl early but
+# still publishes what it has (R6), and the next run resumes. Any hard failure
+# leaves the branch — and therefore the last good index — untouched.
+#
+# `contents: write` is granted to this job only; the workflow default stays
+# `contents: read`. Nothing is ever force-pushed.
+name: /idgames index
+
+on:
+  schedule:
+    # Daily at 04:17 UTC, after most mirrors have regenerated ls-laR.gz.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+# Serialize runs instead of cancelling them: each one commits on top of the
+# previous branch head, and racing two runs would produce a rejected
+# non-fast-forward push.
+concurrency:
+  group: idgames-index
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # One mirror, and its documented base path (`/pub/idgames` for youfailit).
+  MIRROR_HOST: youfailit.net
+  MIRROR_BASE: https://youfailit.net/pub/idgames
+
+jobs:
+  publish:
+    name: Build and publish the index
+    runs-on: ubuntu-latest
+    # The only writer in this workflow.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same pinned-toolchain setup as the `checks` job in ci.yml: rustup only,
+      # then the exact channel and components from rust-toolchain.toml.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
+          rustup default "$channel"
+          cargo --version
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: idgames-index-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            idgames-index-${{ runner.os }}-
+
+      # `ddl` links Slint (fontconfig) and gilrs (libudev) on Linux.
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
+
+      - name: Download the archive inventory
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/idgames"
+          curl --fail --silent --show-error --location --max-time 180 \
+            --retry 2 --retry-delay 10 \
+            --user-agent "DoomDeckLauncher/ci (+https://github.com/vittau/Doom-Deck-Launcher)" \
+            -o "$RUNNER_TEMP/idgames/ls-laR.gz" \
+            "$MIRROR_BASE/ls-laR.gz"
+          test -s "$RUNNER_TEMP/idgames/ls-laR.gz"
+
+      # The previous index supplies the metadata already fetched; the state
+      # supplies today's failures and the HTTP validators.
+      - name: Restore the previous index and crawl state
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin idgames-index >/dev/null 2>&1; then
+            git fetch --depth=1 origin idgames-index
+            git show FETCH_HEAD:index.json > "$RUNNER_TEMP/idgames/previous.json"
+            git show FETCH_HEAD:crawl-state.json > "$RUNNER_TEMP/idgames/crawl-state.json" || true
+            echo "Restored the published index and crawl state"
+          else
+            echo "No published index yet: this is the first pass"
+          fi
+
+      - name: Build the index
+        run: |
+          set -euo pipefail
+          args=(
+            idgames index build
+            --ls "$RUNNER_TEMP/idgames/ls-laR.gz"
+            --mirror "$MIRROR_HOST"
+            --out "$RUNNER_TEMP/idgames/index.json"
+            --state "$RUNNER_TEMP/idgames/crawl-state.json"
+            --cacowards docs/research/cacowards.md
+            --catalog catalog
+          )
+          if [ -s "$RUNNER_TEMP/idgames/previous.json" ]; then
+            args+=(--previous "$RUNNER_TEMP/idgames/previous.json")
+          fi
+          cargo run --locked -p ddl -- "${args[@]}"
+
+      - name: Validate the index
+        run: |
+          set -euo pipefail
+          cargo run --locked -p ddl -- idgames index validate "$RUNNER_TEMP/idgames/index.json"
+
+      - name: Record the index size and entry count
+        run: |
+          set -euo pipefail
+          size="$(wc -c < "$RUNNER_TEMP/idgames/index.json" | tr -d ' ')"
+          echo "index.json: $size bytes" >> "$GITHUB_STEP_SUMMARY"
+          "$GITHUB_WORKSPACE/target/debug/ddl" idgames index validate "$RUNNER_TEMP/idgames/index.json" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Orphan `idgames-index` branch, ordinary commits only. The app reads
+      # index.json from raw.githubusercontent.com/vittau/Doom-Deck-Launcher/
+      # idgames-index/index.json. All of the above must have succeeded; a
+      # failure keeps the previous branch head, which is the last good index.
+      - name: Commit the index to the idgames-index branch
+        run: |
+          set -euo pipefail
+          git config user.name "ddl-idgames-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin idgames-index >/dev/null 2>&1; then
+            git fetch --depth=1 origin idgames-index
+            git checkout -B idgames-index FETCH_HEAD
+          else
+            git checkout --orphan idgames-index
+          fi
+          git rm -rf --quiet . >/dev/null 2>&1 || true
+          cp "$RUNNER_TEMP/idgames/index.json" index.json
+          cp "$RUNNER_TEMP/idgames/crawl-state.json" crawl-state.json
+          git add -f index.json crawl-state.json
+          if git diff --cached --quiet; then
+            echo "index.json is unchanged; nothing to publish"
+            exit 0
+          fi
+          git commit -m "idgames: update from ${GITHUB_SHA}"
+          # Ordinary push; never `--force`.
+          git push origin HEAD:idgames-index

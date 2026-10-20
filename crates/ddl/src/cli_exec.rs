@@ -302,11 +302,195 @@ pub fn run_io(
         cli::Command::CatalogStatus => {
             let services = open(env)?;
             print_catalog_status(&services.catalog_status(), out)
-        }
-        cli::Command::CatalogUpdate => {
+        }        cli::Command::CatalogUpdate => {
             let mut services = open(env)?;
             let outcome = services.catalog_update()?;
             print_catalog_outcome(&outcome, out)
+        }
+        cli::Command::Idgames(command) => run_idgames(command, out, err),
+    }
+}
+
+/// Turns an index-build error into the CLI's user-facing failure type.
+fn idgames_failure(error: impl std::fmt::Display) -> CliFailure {
+    CliFailure::message(error.to_string())
+}
+
+/// `ddl idgames index …` (spec 050, R4): build or validate the browse index.
+fn run_idgames(
+    command: cli::IdgamesCommand,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    use ddl_core::idgames;
+
+    match command {
+        cli::IdgamesCommand::IndexValidate { file } => {
+            let bytes = idgames::read_bounded(&file, idgames::MAX_INDEX_BYTES)
+                .map_err(idgames_failure)?;
+            let index = idgames::Index::parse(&bytes).map_err(idgames_failure)?;
+            writeln!(
+                out,
+                "{} is valid: {} entries in {} directories, generated {}, source {}, needs DDL {}",
+                file.display(),
+                index.entry_count(),
+                index.directories(),
+                index.generated_at,
+                index.source.mirror,
+                index.min_ddl_version
+            )
+            .map_err(output_error)
+        }
+        cli::IdgamesCommand::IndexBuild {
+            ls,
+            mirror,
+            out: destination,
+            previous,
+            state,
+            cacowards,
+            catalog,
+            budget,
+            min_ddl_version,
+        } => {
+            let now_unix = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_secs());
+            let mirror = idgames::mirror_for(&mirror).ok_or_else(|| {
+                let hosts: Vec<&str> = idgames::fetch::MIRRORS
+                    .iter()
+                    .map(|mirror| mirror.host)
+                    .collect();
+                CliFailure::message(format!(
+                    "`{mirror}` is not a mirror DDL may crawl (the master is never crawled); \
+                     use one of: {}",
+                    hosts.join(", ")
+                ))
+            })?;
+            let inventory_bytes = idgames::read_bounded(&ls, idgames::MAX_INVENTORY_GZIP_BYTES)
+                .map_err(idgames_failure)?;
+            let inventory_text =
+                idgames::decode_inventory_gzip(&inventory_bytes).map_err(idgames_failure)?;
+            let index_sha256 = ddl_core::downloads::Sha256::of(&inventory_bytes).to_hex();
+
+            let previous_index = previous
+                .as_deref()
+                .map(|path| -> Result<idgames::Index, CliFailure> {
+                    let bytes = idgames::read_bounded(path, idgames::MAX_INDEX_BYTES)
+                        .map_err(idgames_failure)?;
+                    idgames::Index::parse(&bytes).map_err(idgames_failure)
+                })
+                .transpose()?;
+
+            let state_path = state.unwrap_or_else(|| {
+                destination
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join("crawl-state.json")
+            });
+            let state_bytes = match idgames::read_bounded(&state_path, idgames::state::MAX_STATE_BYTES)
+            {
+                Ok(bytes) => Some(bytes),
+                Err(error) => {
+                    writeln!(err, "starting a fresh crawl state ({error})").map_err(output_error)?;
+                    None
+                }
+            };
+            let mut crawl_state = idgames::CrawlState::load_or_new(state_bytes.as_deref(), now_unix);
+
+            let cacowards_path = cacowards.unwrap_or_else(|| {
+                std::path::PathBuf::from("docs/research/cacowards.md")
+            });
+            let cacoward_years = match idgames::read_bounded(
+                &cacowards_path,
+                idgames::cacowards::MAX_CACOWARDS_BYTES,
+            ) {
+                Ok(bytes) => idgames::parse_cacowards(&String::from_utf8_lossy(&bytes)),
+                Err(_) => {
+                    writeln!(
+                        err,
+                        "no Cacoward data at {}; crawling without it",
+                        cacowards_path.display()
+                    )
+                    .map_err(output_error)?;
+                    std::collections::BTreeMap::new()
+                }
+            };
+            let catalog_dir =
+                catalog.unwrap_or_else(|| std::path::PathBuf::from("catalog"));
+            let catalog = idgames::catalog_paths(&catalog_dir);
+
+            let mut settings = idgames::BuildSettings::new(
+                *mirror,
+                mirror.url("ls-laR.gz"),
+                index_sha256,
+                now_unix,
+            );
+            settings.budget = budget;
+            settings.min_ddl_version =
+                min_ddl_version.unwrap_or_else(|| idgames::DEFAULT_MIN_DDL_VERSION.to_owned());
+            settings.cacowards = cacoward_years;
+            settings.catalog = catalog;
+
+            let mut source = idgames::HttpTxtSource::new();
+            let mut pacer = idgames::fetch::SlowPacer::default();
+            let outcome = idgames::build_index(
+                &inventory_text,
+                &settings,
+                previous_index.as_ref(),
+                &mut crawl_state,
+                &mut source,
+                &mut pacer,
+            )
+            .map_err(idgames_failure)?;
+
+            let json = outcome.index.to_json().map_err(idgames_failure)?;
+            idgames::write_atomic(&destination, &json).map_err(|error| {
+                CliFailure::message(format!(
+                    "could not write {}: {error}",
+                    destination.display()
+                ))
+            })?;
+            let state_json = crawl_state
+                .to_json()
+                .map_err(|error| CliFailure::message(format!("crawl state: {error}")))?;
+            idgames::write_atomic(&state_path, &state_json).map_err(|error| {
+                CliFailure::message(format!(
+                    "could not write {}: {error}",
+                    state_path.display()
+                ))
+            })?;
+
+            let report = &outcome.report;
+            writeln!(
+                out,
+                "Wrote {} ({} entries in {} directories, {} bytes)",
+                destination.display(),
+                report.entries,
+                report.directories,
+                json.len()
+            )
+            .map_err(output_error)?;
+            writeln!(
+                out,
+                "Sidecars: {} requests, {} fetched, {} reused, {} not modified, {} missing, {} unusable; {} inventory entries excluded",
+                report.requests,
+                report.fetched,
+                report.reused,
+                report.not_modified,
+                report.missing_txt,
+                report.bad_txt,
+                report.excluded
+            )
+            .map_err(output_error)?;
+            match report.stopped {
+                Some(reason) => writeln!(
+                    out,
+                    "Crawl stopped early: {reason}. Everything fetched was kept; the next run resumes."
+                ),
+                None => writeln!(out, "Crawl complete."),
+            }
+            .map_err(output_error)?;
+            writeln!(out, "Crawl state: {}", state_path.display()).map_err(output_error)
         }
     }
 }
@@ -1787,6 +1971,152 @@ exit 1
         // A second manual check finds nothing newer.
         let (again, _) = run(&fx, cli::Command::CatalogUpdate).expect("update");
         assert!(again.contains("up to date"), "{again}");
+    }
+
+    #[test]
+    fn idgames_index_build_then_validate_round_trips_without_network() {
+        use ddl_core::idgames::fetch::NoPacer;
+        use ddl_core::idgames::{
+            BuildSettings, CrawlState, Index, TxtResponse, TxtSource, build_index, mirror_for,
+        };
+        use std::path::Path;
+
+        // A tiny source that answers from the spec-050 fixtures.
+        struct OfflineSource {
+            text_dir: std::path::PathBuf,
+        }
+        impl TxtSource for OfflineSource {
+            fn get(
+                &mut self,
+                url: &str,
+                _etag: Option<&str>,
+                _last_modified: Option<&str>,
+            ) -> TxtResponse {
+                let name = url.rsplit('/').next().unwrap_or_default();
+                match std::fs::read(self.text_dir.join(name)) {
+                    Ok(bytes) => TxtResponse::Fetched {
+                        bytes,
+                        etag: None,
+                        last_modified: None,
+                    },
+                    Err(_) => TxtResponse::Missing,
+                }
+            }
+        }
+
+        let fixtures =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../ddl-core/tests/fixtures/idgames");
+        let inventory_text = std::fs::read_to_string(fixtures.join("ls-laR.txt")).unwrap();
+        let settings = BuildSettings::new(
+            *mirror_for("youfailit.net").unwrap(),
+            "https://youfailit.net/pub/idgames/ls-laR.gz",
+            "502a7ccd3195452fb4955f077a078d0167bf80b721535be8c59e1daa269c2603",
+            1_792_386_428,
+        );
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut source = OfflineSource {
+            text_dir: fixtures.join("txt"),
+        };
+        let built = build_index(
+            &inventory_text,
+            &settings,
+            None,
+            &mut state,
+            &mut source,
+            &mut NoPacer,
+        )
+        .unwrap();
+        let mut previous = built.index.clone();
+        // Mark the two uploads without a sidecar as already read, so the CLI
+        // build below has nothing left to fetch (this test must not use a
+        // socket; A1 covers the missing-sidecar path).
+        for entry in previous.entries.values_mut().flatten() {
+            entry.txt = true;
+        }
+
+        let temp = tempfile::tempdir().unwrap();
+        let previous_path = temp.path().join("previous.json");
+        let state_path = temp.path().join("crawl-state.json");
+        let out_path = temp.path().join("index.json");
+        std::fs::write(&previous_path, previous.to_json().unwrap()).unwrap();
+        std::fs::write(&state_path, state.to_json().unwrap()).unwrap();
+
+        let home = temp.path().join("home");
+        std::fs::create_dir_all(&home).unwrap();
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .unwrap();
+        let env = Environment {
+            paths,
+            home,
+            test: None,
+        };
+
+        let command = cli::Command::Idgames(cli::IdgamesCommand::IndexBuild {
+            ls: fixtures.join("ls-laR.gz"),
+            mirror: "youfailit.net".into(),
+            out: out_path.clone(),
+            previous: Some(previous_path),
+            state: Some(state_path.clone()),
+            cacowards: Some(temp.path().join("absent.md")),
+            catalog: Some(temp.path().join("absent-catalog")),
+            budget: 1_500,
+            min_ddl_version: None,
+        });
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        run_io(command, env.clone(), &mut out, &mut err).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        assert!(text.contains("Wrote "), "{text}");
+        assert!(text.contains("0 requests"), "no network in tests: {text}");
+        assert!(state_path.exists());
+
+        let published = Index::parse(&std::fs::read(&out_path).unwrap()).unwrap();
+        assert_eq!(published.entry_count(), 8);
+        assert_eq!(published.source.mirror, "youfailit.net");
+        assert!(ddl_core::idgames::is_rfc3339_utc(&published.generated_at));
+
+        let validate = cli::Command::Idgames(cli::IdgamesCommand::IndexValidate {
+            file: out_path.clone(),
+        });
+        let mut out = Vec::new();
+        run_io(validate, env, &mut out, &mut Vec::new()).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        assert!(text.contains("is valid: 8 entries"), "{text}");
+
+        // A document that is not the schema is refused with a message.
+        let broken = temp.path().join("broken.json");
+        std::fs::write(&broken, b"{\"schema\":2}").unwrap();
+        let error = run_io(
+            cli::Command::Idgames(cli::IdgamesCommand::IndexValidate { file: broken }),
+            fixture().env,
+            &mut Vec::new(),
+            &mut Vec::new(),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("index is"), "{error}");
+    }
+
+    #[test]
+    fn idgames_index_build_refuses_the_master_mirror() {
+        let fx = fixture();
+        let error = run(
+            &fx,
+            cli::Command::Idgames(cli::IdgamesCommand::IndexBuild {
+                ls: fx.env.home.join("never.gz"),
+                mirror: "www.gamers.org".into(),
+                out: fx.env.home.join("never.json"),
+                previous: None,
+                state: None,
+                cacowards: None,
+                catalog: None,
+                budget: 1,
+                min_ddl_version: None,
+            }),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("never crawled"), "{error}");
     }
 
     /// A synthetic commercial WAD: an IWAD header plus MAP01..MAP32, which the
