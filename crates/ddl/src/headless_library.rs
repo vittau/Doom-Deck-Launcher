@@ -120,18 +120,14 @@ fn library_owner_scene_renders() {
     use slint::{Model, ModelRc, VecModel};
     let (window, ui) = setup();
     ui.show().unwrap();
+    let capture = || {
+        advance_time(20);
+        render(&window)
+    };
     let temp = tempfile::tempdir().unwrap();
     let mut r = owner_runtime(temp.path(), &ui);
     let offset = ui.get_scroll_offset();
-    // The gamepad timer invokes scroll even with a neutral stick, before Slint
-    // has evaluated content-y. It must not erase a newly assigned focus offset.
-    ui.invoke_scroll(0., 0.);
-    assert_eq!(
-        ui.get_scroll_offset(),
-        offset,
-        "neutral tick preserves focus-follow"
-    );
-    let rest = render(&window);
+    let rest = capture();
     write_png("061-library-rest.png", &rest);
     let nodes: Vec<_> = ui.get_nodes().iter().collect();
     let heading = nodes
@@ -153,7 +149,7 @@ fn library_owner_scene_renders() {
         [12., 420., 828.]
     );
     ui.set_nodes(ModelRc::new(VecModel::from(Vec::<crate::ViewNode>::new())));
-    let background = render(&window);
+    let background = capture();
     // Compare against the same wall and header with the content removed. This
     // detects actual rendered rails, including SVG frame pixels, rather than
     // relying on a particular bronze RGB value.
@@ -175,6 +171,10 @@ fn library_owner_scene_renders() {
         assert!(changed > 100_000, "rendered card fills column at {x}");
     }
     ui.set_nodes(ModelRc::new(VecModel::from(nodes)));
+    r.focus = 6000; // New custom setup, at the absolute top of the Library.
+    r.sync(&ui);
+    assert_eq!(ui.get_scroll_offset(), 0.);
+    write_png("061-library-top.png", &capture());
     for (name, focus) in [("row-two", 13), ("row-three", 16)] {
         r.focus = focus;
         r.sync(&ui);
@@ -184,20 +184,33 @@ fn library_owner_scene_renders() {
             node.y - 8.,
             "later rows align whole cards"
         );
-        write_png(&format!("061-library-{name}.png"), &render(&window));
+        write_png(&format!("061-library-{name}.png"), &capture());
+        advance_time(20);
+        let offset = ui.get_scroll_offset();
+        assert_eq!(
+            offset,
+            node.y - 8.,
+            "Flickable preserves the whole-row landing after rendering"
+        );
+        ui.invoke_scroll(0., 0.);
+        assert_eq!(
+            ui.get_scroll_offset(),
+            offset,
+            "neutral poll preserves the whole-row landing"
+        );
     }
     let focus = r.focus;
     let before = ui.get_scroll_offset();
-    ui.invoke_scroll(0., -80.);
-    assert_eq!(ui.get_scroll_offset(), before - 80.);
+    ui.invoke_scroll(0., -160.);
+    assert_eq!(ui.get_scroll_offset(), before - 160.);
     r.sync(&ui);
     assert_eq!(r.focus, focus);
     assert_eq!(
         ui.get_scroll_offset(),
-        before - 80.,
+        before - 160.,
         "service refresh preserves manual scroll"
     );
-    let scrolled = render(&window);
+    let scrolled = capture();
     write_png("061-library-stick.png", &scrolled);
     // All frame pieces stay inside the plane, including on manual partial rows.
     for y in (0..210).chain(732..800) {
@@ -210,10 +223,69 @@ fn library_owner_scene_renders() {
             );
         }
     }
+    r.focus = 6101;
+    r.sync(&ui);
+    write_png("061-library-custom-setup.png", &capture());
     for (screen, name) in [(Screen::Home, "home"), (Screen::Discover, "discover")] {
         r.screen = screen;
         r.focus = 1;
         r.sync(&ui);
-        write_png(&format!("061-{name}-rest.png"), &render(&window));
+        assert_eq!(
+            ui.get_active_tab(),
+            if screen == Screen::Home { 0 } else { 2 }
+        );
+        write_png(&format!("061-{name}-rest.png"), &capture());
     }
+}
+
+#[test]
+fn neutral_stick_tick_preserves_each_plane_offset() {
+    if isolated(
+        module_path!(),
+        "neutral_stick_tick_preserves_each_plane_offset",
+    ) {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let _runtime = owner_runtime(temp.path(), &ui);
+    let _ = render(&window);
+    advance_time(20);
+    let offset = ui.get_scroll_offset() + 20.;
+    ui.set_scroll_offset(offset);
+    // A real event-loop tick evaluates the prior change handler. The next
+    // neutral poll must not read the previous content-y before the new handler.
+    ui.invoke_scroll(0., 0.);
+    assert_eq!(
+        ui.get_scroll_offset(),
+        offset,
+        "main offset survives a neutral tick"
+    );
+    ui.invoke_scroll(0., 12.);
+    assert_eq!(
+        ui.get_scroll_offset(),
+        offset + 12.,
+        "manual tick starts at the new focus offset"
+    );
+    ui.set_setup_content_height(2000.);
+    ui.set_sheet_height(1400.);
+    ui.set_setup_screen(true);
+    ui.set_setup_right_focused(true);
+    ui.set_setup_scroll_offset(240.);
+    ui.invoke_scroll(0., 0.);
+    assert_eq!(
+        ui.get_setup_scroll_offset(),
+        240.,
+        "summary offset survives a neutral tick"
+    );
+    ui.set_sheet_open(true);
+    let _ = render(&window);
+    ui.set_sheet_scroll_offset(280.);
+    ui.invoke_scroll(0., 0.);
+    assert_eq!(
+        ui.get_sheet_scroll_offset(),
+        280.,
+        "sheet offset survives a neutral tick"
+    );
 }

@@ -3124,7 +3124,7 @@ fn follow_offset(plane: &[&ViewNode], focus: &ViewNode, viewport: f32, inset: f3
     if bottom <= viewport {
         return 0.;
     }
-    let top = (focus.y - if focus.kind == 1 { 8. } else { 0. }).max(0.);
+    let top = (focus.y - if focus.kind == 1 { 8. } else { 12. }).max(0.);
     let inside_card = |n: &ViewNode| {
         plane.iter().any(|c| {
             c.kind == 1
@@ -3225,7 +3225,7 @@ mod scroll_tests {
         };
         assert_eq!(
             follow_offset(&[&button], &button, 720., 16.),
-            780.,
+            768.,
             "sheets and summary use whole rows too"
         );
     }
