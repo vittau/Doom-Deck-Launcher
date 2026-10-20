@@ -31,6 +31,7 @@ use super::smoke::{SmokeError, smoke_test};
 use super::state::{InstalledEngine, InstalledState, Mode, Origin, STATE_FILE, StateError};
 use crate::downloads::{Fetcher, HostAllowlist, Sha256};
 use crate::dsda_config::{DSDA_DIR, GuardError, RunGuard, recorded_pid};
+use crate::platform::sandbox::Sandbox;
 
 /// The upstream licence of the DSDA-Doom payload (research §4.1, R9).
 pub const ENGINE_LICENSE: &str = "GPL-2.0-or-later";
@@ -76,6 +77,8 @@ pub struct EngineManager {
     clock: Box<dyn Clock>,
     api: Box<dyn ReleaseApi>,
     download_base: String,
+    /// Spec 059 R2: inside a Flatpak the AppImage is always extracted.
+    sandbox: Sandbox,
     #[cfg(any(test, feature = "test-support"))]
     allow_http_for_tests: bool,
     /// Test-only override for the engine fetch's response-header timeout. The
@@ -102,6 +105,7 @@ impl EngineManager {
             clock,
             api,
             download_base: RELEASE_DOWNLOAD_BASE.to_owned(),
+            sandbox: Sandbox::none(),
             #[cfg(any(test, feature = "test-support"))]
             allow_http_for_tests: false,
             #[cfg(any(test, feature = "test-support"))]
@@ -124,6 +128,21 @@ impl EngineManager {
             Box::new(super::discovery::GithubApi::from_env()),
             Box::new(SystemClock),
         )
+    }
+
+    /// Tells the manager which sandbox DDL runs in (spec 059, R2). Under
+    /// Flatpak every install extracts the AppImage and runs its `AppRun`, never
+    /// trying FUSE; version pinning, verification and rollback are unchanged.
+    #[must_use]
+    pub fn with_sandbox(mut self, sandbox: Sandbox) -> Self {
+        self.sandbox = sandbox;
+        self
+    }
+
+    /// The sandbox the manager was told about.
+    #[must_use]
+    pub fn sandbox(&self) -> &Sandbox {
+        &self.sandbox
     }
 
     /// Allows plain-HTTP downloads. Test-only: production is HTTPS-only.
@@ -326,6 +345,12 @@ impl EngineManager {
         if state.get(&request.version).is_some() {
             return Err(Error::AlreadyInstalled(request.version.clone()));
         }
+        // Spec 059 R2: FUSE cannot work inside Flatpak, so skip the mount
+        // attempt and take the D-013 extraction path straight away.
+        let request = InstallRequest {
+            force_extract: request.force_extract || self.sandbox.must_extract_engine(),
+            ..request
+        };
         let host =
             host_of(source_url).ok_or_else(|| Error::InvalidSourceUrl(source_url.to_owned()))?;
         let allowed = HostAllowlist::new([host]);
@@ -953,6 +978,105 @@ exit 1
         assert!(engine.path.ends_with("squashfs-root/AppRun"));
         assert!(engine.path.is_file());
         assert_no_staging(temp.path());
+    }
+
+    /// Like [`HAPPY_APPIMAGE`], but records every argument it is started with
+    /// in `calls.log` beside itself, so a test can tell a FUSE-mounted probe
+    /// (`-v` on the AppImage) from a plain extraction.
+    const RECORDING_APPIMAGE: &str = r#"#!/bin/sh
+echo "$1" >> "$(dirname "$0")/calls.log"
+case "$1" in
+  -v) echo "dsda-doom v0.30.1"; exit 0 ;;
+  --appimage-extract)
+    mkdir -p squashfs-root
+    cat > squashfs-root/AppRun <<'RUN'
+#!/bin/sh
+echo "dsda-doom v0.30.1"
+RUN
+    chmod +x squashfs-root/AppRun
+    exit 0 ;;
+esac
+exit 1
+"#;
+
+    fn recording_request(source_url: String, length: u64, hash: Sha256) -> InstallRequest {
+        InstallRequest {
+            version: "0.30.1".to_owned(),
+            tag: None,
+            source_url,
+            expected_size: length,
+            expected_sha256: hash,
+            reviewed: true,
+            force_extract: false,
+        }
+    }
+
+    /// Spec 059 A1: sandboxed, the plan is extract-then-`AppRun`; the AppImage
+    /// is never started for a `-v` probe (that is the FUSE attempt).
+    #[test]
+    fn a_sandboxed_install_extracts_first_and_never_probes_the_appimage() {
+        let temp = TestDir::new("install-sandboxed");
+        let (server, hash, length) = serve(RECORDING_APPIMAGE);
+        let manager = manager(temp.path()).with_sandbox(Sandbox::flatpak(None));
+        let engine = manager
+            .perform_install(
+                recording_request(server.url("/f"), length, hash),
+                &server.url("/f"),
+            )
+            .expect("sandboxed install");
+
+        assert_eq!(engine.mode, Mode::Extracted);
+        assert!(engine.path.ends_with("squashfs-root/AppRun"));
+        assert!(engine.path.is_file());
+        let calls = fs::read_to_string(dirs(temp.path()).engines.join("0.30.1/calls.log"))
+            .expect("the AppImage recorded its calls");
+        assert_eq!(calls.trim(), "--appimage-extract", "no FUSE probe");
+        // Pinning and verification are the same as outside the sandbox.
+        assert_eq!(engine.sha256, hash.to_hex());
+        assert_eq!(manager.installed().unwrap().active.as_deref(), Some("0.30.1"));
+        assert_no_staging(temp.path());
+    }
+
+    /// Spec 059 A1, other side: unsandboxed keeps today's path byte for byte.
+    #[test]
+    fn an_unsandboxed_install_still_probes_the_appimage_first() {
+        let temp = TestDir::new("install-unsandboxed");
+        let (server, hash, length) = serve(RECORDING_APPIMAGE);
+        let manager = manager(temp.path()).with_sandbox(Sandbox::none());
+        let engine = manager
+            .perform_install(
+                recording_request(server.url("/f"), length, hash),
+                &server.url("/f"),
+            )
+            .expect("plain install");
+
+        assert_eq!(engine.mode, Mode::Appimage);
+        assert!(engine.path.ends_with("dsda-doom.AppImage"));
+        let calls = fs::read_to_string(dirs(temp.path()).engines.join("0.30.1/calls.log")).unwrap();
+        assert_eq!(calls.trim(), "-v");
+    }
+
+    /// Rollback keeps working with sandbox-installed (extracted) versions.
+    #[test]
+    fn rollback_works_between_two_sandboxed_installs() {
+        let temp = TestDir::new("install-sandboxed-rollback");
+        let (server, hash, length) = serve(RECORDING_APPIMAGE);
+        let manager = manager(temp.path()).with_sandbox(Sandbox::flatpak(None));
+        manager
+            .perform_install(
+                recording_request(server.url("/f"), length, hash),
+                &server.url("/f"),
+            )
+            .expect("install");
+        // A second recorded version, installed by hand beside the first, so the
+        // rollback target exists without a second download.
+        let mut state = manager.installed().unwrap();
+        let mut second = state.get("0.30.1").unwrap().clone();
+        second.version = "0.30.0".to_owned();
+        state.insert(second);
+        state.save(&manager.state_path()).unwrap();
+        manager.select_engine("0.30.0").unwrap();
+        assert_eq!(manager.rollback().unwrap(), "0.30.1");
     }
 
     #[test]
