@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "fixture-sigil",
+  "name": "Original",
+  "recipe_id": "sigil",
+  "components": [
+    "wide-status-bar"
+  ],
+  "skill": 3,
+  "pistol_start": false
+}

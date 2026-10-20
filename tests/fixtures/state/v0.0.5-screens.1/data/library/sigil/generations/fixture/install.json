@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "recipe_id": "sigil",
+  "release": "1.23",
+  "recipe_sha256": "b97855e83300865e97af58abcaa8f65fb41485d5caeafd525fe85663cc867dde",
+  "installed_at": 1700000000,
+  "packages": [
+    {
+      "id": "free",
+      "sha256": "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105",
+      "size": 3270225
+    },
+    {
+      "id": "widehud",
+      "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+      "size": 23652
+    }
+  ],
+  "members": [
+    {
+      "package": "free",
+      "member": "maps",
+      "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_V1_23.wad",
+      "size": 4640555,
+      "sha256": "29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d",
+      "keep": false
+    },
+    {
+      "package": "free",
+      "member": "compat",
+      "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_COMPAT_V1_23.wad",
+      "size": 4634503,
+      "sha256": "a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5",
+      "keep": false
+    },
+    {
+      "package": "free",
+      "member": "credits",
+      "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_V1_23.txt",
+      "size": 5001,
+      "sha256": "d1445fb883296f69dde7dbd300032bb0c8804f6a6a4b944f8fbb5231bcb79b9e",
+      "keep": true
+    },
+    {
+      "package": "free",
+      "member": "readme",
+      "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_README_V1_23.txt",
+      "size": 10580,
+      "sha256": "9d3877d88eb49a0475300f465b1c2771c847ac0e83550d31c74de24018fbef6c",
+      "keep": true
+    },
+    {
+      "package": "widehud",
+      "member": "statusbar",
+      "path": "/ddl-fixture/data/library/sigil/generations/fixture/widehud/doom_uwide.wad",
+      "size": 23652,
+      "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+      "keep": false
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "recipe_id": "auger-zenith",
+  "release": "2021-07-26",
+  "recipe_sha256": "20fdf8d5b193b1aeebd09da3dd6dac2da730aa27343d96cdacbbdef44ff43aed",
+  "installed_at": 1700000000,
+  "packages": [
+    {
+      "id": "free",
+      "sha256": "7dfb36408a9cd33a6ef429ada3aa68b4745be6abba03b0a3236dacb03872aeb9",
+      "size": 12771737
+    }
+  ],
+  "members": [
+    {
+      "package": "free",
+      "member": "maps",
+      "path": "/ddl-fixture/data/library/auger-zenith/generations/fixture/free/DBP37_AUGZEN.wad",
+      "size": 48797931,
+      "sha256": "d356de75acdb9c969175bdc3910839fb805415b7244fd7e65d05a9110f53c95a",
+      "keep": false
+    },
+    {
+      "package": "free",
+      "member": "credits",
+      "path": "/ddl-fixture/data/library/auger-zenith/generations/fixture/free/DBP37_AUGZEN.txt",
+      "size": 6212,
+      "sha256": "674c33641557b18aa17d10628ba3d567970025b2d916dad3a87d1e9eb5dc3e90",
+      "keep": true
+    },
+    {
+      "package": "free",
+      "member": "alternate",
+      "path": "/ddl-fixture/data/library/auger-zenith/generations/fixture/free/DBP37_Addons.zip!/DBP37_AlternateBlaster.wad",
+      "size": 20145,
+      "sha256": "8c2fe3a4c65838e333dd9233b806a0e469e4ad9ccab704113de10b05220274e3",
+      "keep": false
+    },
+    {
+      "package": "free",
+      "member": "deckard",
+      "path": "/ddl-fixture/data/library/auger-zenith/generations/fixture/free/DBP37_Addons.zip!/DBP37_DeckardBlaster.wad",
+      "size": 81484,
+      "sha256": "5e9db49fd849708b61df6fd9826eb99435b16bfde1779f6f7f5f14e3bb9437e5",
+      "keep": false
+    },
+    {
+      "package": "free",
+      "member": "addon-readme",
+      "path": "/ddl-fixture/data/library/auger-zenith/generations/fixture/free/DBP37_Addons.zip!/readme.txt",
+      "size": 388,
+      "sha256": "f16f2c555e654240e73dca5cdce5f96254a1a9624f271da2ebd8048b006e28bc",
+      "keep": true
+    }
+  ]
+}

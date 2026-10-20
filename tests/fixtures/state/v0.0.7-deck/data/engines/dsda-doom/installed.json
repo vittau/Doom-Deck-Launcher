@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "installed": [
+    {
+      "version": "0.30.1",
+      "path": "/ddl-fixture/dsda",
+      "mode": "manual",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "tag": "v0.30.1",
+      "reviewed": true,
+      "origin": "manual",
+      "installed_at": 1700000000
+    }
+  ],
+  "active": "0.30.1"
+}

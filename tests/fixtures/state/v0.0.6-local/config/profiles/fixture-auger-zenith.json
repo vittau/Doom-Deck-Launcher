@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "fixture-auger-zenith",
+  "name": "Original",
+  "recipe_id": "auger-zenith",
+  "skill": 3,
+  "pistol_start": false
+}
