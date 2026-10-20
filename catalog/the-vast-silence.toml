@@ -44,7 +44,8 @@ limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and 
 [[packages]]
 id = "free"
 page = "https://doomer.boards.net/thread/3489/silence"
-urls = ["https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp64_the-vast-silence-rc3.zip"]
+# Dropbox mirror (spec 038, R2): the ?dl=1 file downloaded 2026-10-19 hashes to the pin below.
+urls = ["https://www.dropbox.com/scl/fi/jm79o396abx88u1xfl9ws/DBP_64_RC3.zip?rlkey=y9m4oolf4qhrxjagaea66wppc&dl=1", "https://ia600903.us.archive.org/33/items/dbp-wad-archive/dbp64_the-vast-silence-rc3.zip"]
 size = 8306018
 sha256 = "acf751ae449aaa727f49b923da8e9128c74fbf0f3f429b6d33a372467941a263"
 kind = "zip"
