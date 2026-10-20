@@ -103,7 +103,7 @@ export global WiringStrings {
     out property <string> compat-confirm: @tr("Use the Episode 3 variant instead?");
     out property <string> keep: @tr("Keep current settings");
     out property <string> use-variant: @tr("Use this variant");
-    out property <string> skill: @tr("Skill {}", root.value);
+    out property <string> skill: root.value.to-float() == 4 ? @tr("Skill 4 (UV)") : root.value.to-float() == 5 ? @tr("Skill 5 (Nightmare)") : @tr("Skill {}", root.value);
     out property <string> pistol-on: @tr("Pistol start: On");
     out property <string> pistol-off: @tr("Pistol start: Off");
     out property <string> pistol-help: @tr("Reset inventory at each map");
@@ -135,7 +135,7 @@ export global WiringStrings {
     out property <string> open: @tr("Open");
     out property <string> menu: @tr("Menu");
     out property <string> keep-playing: @tr("Keep playing");
-    out property <string> quit: @tr("Quit DDL");
+    out property <string> quit: @tr("Quit");
     out property <string> quit-confirm: @tr("Quit DoomDeckLauncher?");
     out property <string> engine: @tr("Engine");
     out property <string> folders: @tr("IWAD folders");

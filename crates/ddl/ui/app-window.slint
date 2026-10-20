@@ -10,6 +10,23 @@ import { Tokens } from "tokens.slint";
 import { VectorFrame } from "assets/ember/frame.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
+// One bounded plane for pointer and controller scrolling. Offsets are logical pixels.
+component ScrollPlane inherits Flickable {
+    in-out property <float> offset: 0;
+    in property <float> extent-height;
+    in property <float> extent-width;
+    content-height: max(self.height, extent-height * 1px);
+    content-width: max(self.width, extent-width * 1px);
+    content-y: -offset * 1px;
+    changed content-y => { offset = -self.content-y / 1px; }
+    changed offset => { self.content-y = -self.offset * 1px; }
+    public function scroll(dx: float, dy: float) {
+        self.content-x = clamp(self.content-x - dx * 1px, min(0px, self.width - self.content-width), 0px);
+        let next-y = clamp(self.content-y - dy * 1px, min(0px, self.height - self.content-height), 0px);
+        self.offset = -next-y / 1px;
+        self.content-y = next-y;
+    }
+}
 export struct ViewNode {
     id: int, x: float, y: float, w: float, h: float,
     kind: int, label: string, detail: string, tone: int, size: float, art: int,
@@ -255,7 +272,30 @@ export component AppWindow inherits Window {
     in property <bool> install-pulse: false;
     in property <bool> discover-screen: false;
     out property <bool> tabs-enabled: root-screen && !sheet-open && !input-locked;
-    in property <float> scroll-offset: 0;
+    in-out property <float> scroll-offset: 0;
+    in property <float> content-height: 518;
+    in property <float> content-width: 1240;
+    in property <float> setup-content-height: 518;
+    in property <float> setup-content-width: 540;
+    in property <bool> setup-right-focused;
+    in-out property <float> setup-scroll-offset: 0;
+    in-out property <float> sheet-scroll-offset: 0;
+    in property <string> sheet-error-text;
+    out property <float> scroll-x-offset: -main-plane.content-x / 1px;
+    out property <float> error-scroll-offset: error-plane.offset;
+    callback reset-scroll-x();
+    reset-scroll-x => { main-plane.content-x = 0px; setup-plane.content-x = 0px; }
+    callback scroll(float, float);
+    scroll(dx, dy) => {
+        if !root.input-locked {
+            if root.sheet-open {
+                if root.sheet-error-text != "" { error-plane.scroll(dx, dy); }
+                else { sheet-plane.scroll(dx, dy); }
+            } else if root.setup-screen && root.setup-right-focused { setup-plane.scroll(dx, dy); }
+            else { main-plane.scroll(dx, dy); }
+        }
+    }
+    changed sheet-open => { sheet-scroll-offset = 0; error-plane.offset = 0; }
     in property <[ViewNode]> sheet-nodes;
     in property <bool> sheet-open: false;
     in property <string> sheet-title;
@@ -310,7 +350,7 @@ export component AppWindow inherits Window {
     Rectangle {
         x: 0px; y: 0px; width: parent.width; height: 104px; background: Tokens.deep;
         Image { x: 40px; y: 24px; width: 154px; height: 56px; source: @image-url("assets/logo/horizontal.svg"); image-fit: contain; }
-        for label[index] in [@tr("Home"), @tr("Discover"), @tr("Library"), @tr("Settings")]: Rectangle {
+        for label[index] in [@tr("Home"), @tr("Library"), @tr("Discover"), @tr("Settings")]: Rectangle {
             x: (214 + index * 180) * 1px; y: 24px; width: 148px; height: 52px;
             background: root.tabs-enabled && root.active-tab == index ? Tokens.raised : transparent; border-radius: 8px;
             if root.focused == -index - 1 && root.tabs-enabled: Rectangle { x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px; border-width: 4px; border-color: Tokens.focus; border-radius: 16px; background: transparent; }
@@ -334,16 +374,23 @@ export component AppWindow inherits Window {
     Rectangle {
         x: 20px; y: root.discover-screen ? 230px : 210px; width: parent.width - 40px; height: parent.height - (root.discover-screen ? 298px : 278px);
         clip: true;
-        Flickable {
+        main-plane := ScrollPlane {
         width: parent.width; height: parent.height;
-        content-width: 1240px; content-height: 518px + root.scroll-offset * 1px;
-        content-y: -root.scroll-offset * 1px;
+        extent-width: root.content-width; extent-height: root.content-height;
+        offset <=> root.scroll-offset;
         for item in root.nodes: Node { x: (item.x + 8) * 1px; y: (item.y + 8) * 1px; visible: !root.setup-screen || item.x < 700; item: item; install-primary: root.install-pulse && item.id == 1; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }
     }
-    if root.setup-screen: Rectangle {
-        x: 28px; y: 218px; width: parent.width - 56px; height: parent.height - 294px;
-        for item in root.nodes: Node { visible: item.x >= 700; item: item; install-primary: root.install-pulse && item.id == 1; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
+    Rectangle {
+        visible: root.setup-screen;
+        x: 728px; y: 218px; width: parent.width - 756px; height: parent.height - 294px;
+        clip: true;
+        setup-plane := ScrollPlane {
+            width: parent.width; height: parent.height;
+            extent-height: root.setup-content-height; extent-width: root.setup-content-width;
+            offset <=> root.setup-scroll-offset;
+            for item in root.nodes: Node { x: (item.x - 700) * 1px; visible: item.x >= 700; item: item; install-primary: root.install-pulse && item.id == 1; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
+        }
     }
     toast-banner := Rectangle {
         visible: root.displayed-toast != "";
@@ -357,9 +404,14 @@ export component AppWindow inherits Window {
         visible: root.sheet-open;
         x: 0px; y: 0px; width: parent.width; height: parent.height; background: #120C0DE0;
         Rectangle {
-            x: (parent.width - 720px) / 2; y: (parent.height - root.sheet-height * 1px) / 2; width: 720px; height: root.sheet-height * 1px;
+            x: (parent.width - 720px) / 2; y: (parent.height - self.height) / 2; width: 720px; height: min(root.sheet-height * 1px, parent.height - 80px);
             background: Tokens.raised; border-width: 1px; border-color: Tokens.line; border-radius: 12px;
             Frame { width: parent.width; height: parent.height; }
+            Rectangle { width: parent.width; height: parent.height; clip: true;
+            sheet-plane := ScrollPlane {
+            width: parent.width; height: parent.height;
+            extent-height: root.sheet-height; extent-width: 720;
+            offset <=> root.sheet-scroll-offset;
             FittedText { x: 32px; y: 32px; width: parent.width - 64px; height: root.sheet-height > 400 ? 64px : root.sheet-height > 300 ? 164px : 96px;
                 label: root.sheet-title; base-size: Tokens.section; smaller-size: Tokens.body;
                 title-slot: root.sheet-height > 400;
@@ -392,7 +444,21 @@ export component AppWindow inherits Window {
                 x: 32px; y: 282px; width: 656px; height: 36px;
                 text: @tr("Keyboard unavailable? Press Steam + X."); color: #ead8b7; font-size: 20px;
             }
+            Rectangle {
+                visible: root.sheet-error-text != "";
+                x: 32px; y: 96px; width: 656px; height: 180px; clip: true;
+            error-plane := ScrollPlane {
+                width: parent.width; height: parent.height;
+                extent-height: error-text.preferred-height / 1px; extent-width: 656;
+                error-text := Text {
+                    width: parent.width; text: root.sheet-error-text; font-size: 22px;
+                    color: Tokens.text; wrap: word-wrap;
+                }
+            }
+            }
             for item in root.sheet-nodes: Node { visible: item.id != 918; item: item; focused: root.focused == item.id; activate(id) => { root.clicked(id); } }
+            }
+            }
         }
     }
     Rectangle {
@@ -402,7 +468,7 @@ export component AppWindow inherits Window {
             y: 18px; width: parent.width; height: 28px; alignment: start;
             padding-left: 40px; padding-right: 40px; spacing: 24px;
             Hint { badge: @tr("A"); label: @tr("Select"); }
-            Hint { badge: @tr("B"); label: @tr("Back"); }
+            Hint { badge: @tr("B"); label: root.root-screen && !root.sheet-open ? @tr("Quit") : @tr("Back"); }
             if root.favorite-hint && !root.sheet-open: Hint { badge: @tr("X"); label: root.favorite-label; }
             if root.detail-hint && !root.sheet-open: Hint { badge: @tr("X"); label: @tr("Details"); }
             if root.local-add-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: LocalStrings.add-hint; }

@@ -1,5 +1,6 @@
 export global LocalStrings {
     in property <string> value;
+    out property <string> skill-value: root.value.to-float() == 4 ? @tr("4 (UV)") : root.value.to-float() == 5 ? @tr("5 (Nightmare)") : root.value;
     out property <string> shortcut: @tr("Shortcut");
     out property <string> pick-up: @tr("Pick up");
     out property <string> drop: @tr("Drop");
