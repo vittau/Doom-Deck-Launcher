@@ -2730,7 +2730,7 @@ impl Runtime {
                         1 => self.snapshot.as_ref().map_or(316., |s| {
                             (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
                                 .max(316.)
-                                + if hidden > 0 { hidden as f32 * 48. + 20. } else { 0. }
+                                + if hidden > 0 { hidden as f32 * 64. + 20. } else { 0. }
                         }),
                         2 => 280.,
                         3 if self.snapshot.is_none() => {
@@ -2965,9 +2965,9 @@ impl Runtime {
                                 for (i, path) in s.hidden_paths.iter().enumerate() {
                                     b.label(
                                         372.,
-                                        notes_y + i as f32 * 48.,
+                                        notes_y + i as f32 * 64.,
                                         816.,
-                                        40.,
+                                        56.,
                                         value(ui, T::NotVisible, path.display()),
                                         20.,
                                     );

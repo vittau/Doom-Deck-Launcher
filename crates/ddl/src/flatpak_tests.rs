@@ -38,7 +38,7 @@ pub(crate) fn sandbox_env(root: &Path) -> Environment {
 
 /// A Steam root whose `libraryfolders.vdf` names a library inside the home and
 /// an SD card the sandbox cannot see.
-fn steam_with_hidden_sd_card(home: &Path, root: &Path) -> (PathBuf, PathBuf) {
+pub(crate) fn steam_with_hidden_sd_card(home: &Path, root: &Path) -> (PathBuf, PathBuf) {
     let visible = home.join("SteamLibrary");
     let sd_card = root.join("run/media/deck/sd-card/SteamLibrary");
     fs::create_dir_all(visible.join("steamapps/common")).unwrap();

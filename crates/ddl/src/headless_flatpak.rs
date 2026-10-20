@@ -5,7 +5,7 @@ use crate::{
     runtime::{Runtime, Screen},
     services::{
         Command, Environment, TestEnvironment,
-        flatpak_tests::{flatpak, install_fixture, sandbox_env},
+        flatpak_tests::{flatpak, install_fixture, sandbox_env, steam_with_hidden_sd_card},
     },
 };
 use ddl_core::{
@@ -65,12 +65,19 @@ struct Scene {
 }
 
 fn scene(sandbox: Sandbox, tarball_install: bool) -> Scene {
+    scene_with(sandbox, tarball_install, false)
+}
+
+fn scene_with(sandbox: Sandbox, tarball_install: bool, hidden_sd_card: bool) -> Scene {
     let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     let (window, ui) = setup();
     let temp = tempfile::tempdir().unwrap();
     let env = environment(temp.path());
     if tarball_install {
         install_fixture("v0.0.7-deck", &env.home);
+    }
+    if hidden_sd_card {
+        steam_with_hidden_sd_card(&env.home, temp.path());
     }
     let state = crate::runtime::attach_with_sandbox(&ui, env.clone(), sandbox);
     settle(&state);
@@ -242,4 +249,34 @@ fn diagnostics_outside_the_sandbox_say_no_and_hide_the_store_note() {
     assert!(!shown.contains("Discover (Flathub)"), "{shown}");
     write_png("059-diagnostics-plain.png", &render(&window));
     let _ = fs::metadata(&env.home);
+}
+
+#[test]
+fn settings_name_a_library_the_flatpak_cannot_see() {
+    if isolated(module_path!(), "settings_name_a_library_the_flatpak_cannot_see") {
+        return;
+    }
+    let Scene {
+        window,
+        ui,
+        state,
+        env,
+        _temp,
+    } = scene_with(flatpak(), false, true);
+
+    state.borrow_mut().screen = Screen::Settings;
+    state.borrow_mut().focus = 2;
+    state.borrow_mut().sync(&ui);
+    ui.invoke_clicked(2);
+    let shown = labels(&ui);
+    let sd_card = _temp.path().join("run/media/deck/sd-card/SteamLibrary");
+    assert!(
+        shown.contains(&format!(
+            "{} is not visible to the Flatpak — see the guide",
+            sd_card.display()
+        )),
+        "{shown}"
+    );
+    write_png("059-folders-not-visible.png", &render(&window));
+    let _ = env;
 }
