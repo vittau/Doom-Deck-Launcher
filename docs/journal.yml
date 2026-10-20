@@ -726,3 +726,13 @@
     adds a lean e2e install sample. Spec 050 (/idgames index) started.
   refs: [docs/reports/040-resumable-downloads.md, docs/reports/046-complevel-aliases.md,
          docs/specs/044-catalog-link-health.md]
+- date: 2026-10-20
+  type: merge
+  summary: >-
+    Spec 044 merged (Sonnet worker): header-only catalog link checks, a weekly catalog-health
+    workflow and a lean 19-install e2e sample. The owner's Deck test of v0.0.7 found that an
+    upgrade over 0.0.6 cannot read the saved setup (app.json keeps recipe copies; spec 046 removed
+    complevel_status); specs 055-058 written and dispatched, decisions D-032 and D-033 recorded.
+  refs: [docs/reports/044-catalog-link-health.md, docs/specs/055-legacy-state-upgrade.md,
+         docs/specs/056-dsda-template-v4-and-gyro-guide.md,
+         docs/specs/057-controller-navigation-touch-ups.md, docs/specs/058-flatpak-research.md]
