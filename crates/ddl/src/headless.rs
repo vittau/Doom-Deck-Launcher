@@ -392,7 +392,10 @@ fn shell_navigation_and_focus_render_headlessly() {
 
     press(&window, Key::Escape);
     assert_eq!(state.borrow().screen, Screen::Home);
-    assert!(!ui.get_sheet_open());
+    assert!(ui.get_sheet_open());
+    press(&window, Key::Escape);
+    press(&window, Key::Tab);
+    assert_eq!(state.borrow().screen, Screen::Library);
     press(&window, Key::Tab);
     assert_eq!(state.borrow().screen, Screen::Discover);
     assert_eq!(focus(), 10);
@@ -470,9 +473,9 @@ fn shell_navigation_and_focus_render_headlessly() {
     press(&window, Key::UpArrow);
     assert_eq!(focus(), 11);
     press(&window, Key::UpArrow);
-    assert_eq!(focus(), -2);
+    assert_eq!(focus(), -3);
     let header = render(&window);
-    let pixel = header.as_slice()[18 * WIDTH as usize + 468];
+    let pixel = header.as_slice()[18 * WIDTH as usize + 648];
     assert_eq!(
         (pixel.r, pixel.g, pixel.b),
         (0xff, 0xd0, 0x78),
@@ -480,7 +483,7 @@ fn shell_navigation_and_focus_render_headlessly() {
     );
     press(&window, Key::DownArrow);
     assert_eq!(focus(), 11);
-    press(&window, Key::F3);
+    press(&window, Key::F2);
     assert_eq!(state.borrow().screen, Screen::Library);
     capture("library.png");
     press(&window, Key::F4);
@@ -500,7 +503,7 @@ fn shell_navigation_and_focus_render_headlessly() {
     assert_eq!(focus(), 100, "sheet traps root tab switching");
     press(&window, Key::Escape);
     assert_eq!(focus(), 61);
-    press(&window, Key::F2);
+    press(&window, Key::F3);
     press(&window, Key::DownArrow);
     press(&window, Key::RightArrow);
     press(&window, Key::Return);
@@ -510,11 +513,11 @@ fn shell_navigation_and_focus_render_headlessly() {
         !state.borrow().profiles[1].pistol,
         "mapset options stay independent"
     );
-    for expected in [4, 5, 1, 2, 3] {
+    for expected in [5, 1, 2, 3, 4] {
         ui.invoke_clicked(44);
         assert_eq!(state.borrow().profiles[1].skill, expected);
     }
-    assert_eq!(state.borrow().profiles[0].skill, 3);
+    assert_eq!(state.borrow().profiles[0].skill, 4);
     // Use the same public click callback as pointer activation, never private rendering shortcuts.
     ui.invoke_clicked(43);
     assert_eq!(
@@ -571,11 +574,11 @@ fn shell_navigation_and_focus_render_headlessly() {
     assert_eq!(quits.get(), 0, "B and cancelled sheets never quit");
     press(&window, Key::Menu);
     press(&window, Key::Return);
-    assert_eq!(quits.get(), 0, "Keep playing is the safe default");
+    assert_eq!(quits.get(), 1, "Quit is the initial default");
     press(&window, Key::Menu);
     press(&window, Key::RightArrow);
     press(&window, Key::Return);
-    assert_eq!(quits.get(), 1, "only explicit confirmation quits");
+    assert_eq!(quits.get(), 1, "the right button cancels");
     let _ = ui.window(); // ComponentHandle methods are available without showing a window.
 }
 

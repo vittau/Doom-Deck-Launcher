@@ -664,7 +664,7 @@ pub(super) fn play_setup_options(scene: &Scene, capture: Captures) {
         state.borrow().snapshot.as_ref().unwrap().items[1]
             .profile
             .skill,
-        4
+        5
     );
     assert!(
         state.borrow().snapshot.as_ref().unwrap().items[1]
@@ -813,7 +813,9 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
     assert_eq!(state.borrow().screen, Screen::Detail);
     press(window, Key::Escape);
     assert_eq!(state.borrow().screen, Screen::Discover);
-    press(window, Key::Tab);
+    state
+        .borrow_mut()
+        .action(ui, crate::input::Action::PreviousTab);
     assert_eq!(state.borrow().screen, Screen::Library);
     assert!(ui.get_nodes().iter().any(|n| n.id == 11));
     assert!(!ui.get_nodes().iter().any(|n| n.id == 12));
@@ -1177,7 +1179,7 @@ pub(super) fn install_error(scene: &Scene, capture: Captures) {
     );
     // Restart uses stored manifest/recipe and profile, with no discovery download.
     let restarted = Services::open(env.clone()).unwrap().snapshot().unwrap();
-    assert_eq!(restarted.items[1].profile.skill, 4);
+    assert_eq!(restarted.items[1].profile.skill, 5);
     assert!(restarted.items[1].manifest.is_some());
     assert!(restarted.items[1].profile.last_played.is_some());
 }
@@ -1366,7 +1368,7 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     assert!(
         ui.get_nodes()
             .iter()
-            .any(|n| n.label.contains("Skill 3 · Pistol start"))
+            .any(|n| n.label.contains("Skill 4 · Pistol start"))
     );
     capture("031-detail-profile.png");
     press(window, Key::Return);
@@ -2108,9 +2110,9 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(selected_chip(ui), "Favorites");
     assert!(card_ids(ui).is_empty());
     assert!(card_ids(ui).iter().all(|id| *id != ui.get_focused()));
-    press(window, Key::F3);
-    assert_eq!(state.borrow().screen, Screen::Library);
     press(window, Key::F2);
+    assert_eq!(state.borrow().screen, Screen::Library);
+    press(window, Key::F3);
     assert_eq!(state.borrow().screen, Screen::Discover);
     assert_eq!(
         selected_chip(ui),

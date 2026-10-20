@@ -546,3 +546,103 @@ fn resuming_download_row() {
     );
     scene.capture("040-resuming-download.png");
 }
+
+#[test]
+fn controller_057_tabs_skills_and_root_quit() {
+    if isolated(module_path!(), "controller_057_tabs_skills_and_root_quit") {
+        return;
+    }
+    use crate::runtime::Screen;
+    use slint::platform::Key;
+    use slint::{ComponentHandle, Model};
+    let scene = production::scene();
+    replay(&scene, 4);
+    let ui = &scene.ui;
+    assert!(ui.get_nodes().iter().any(|n| n.label == "Skill 4 (UV)"));
+    scene.state.borrow_mut().focus = 40;
+    scene.state.borrow_mut().sync(ui);
+    scene.capture("057-skill-picker-uv.png");
+    ui.invoke_clicked(40);
+    // Save completion updates the production skill control.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while scene.state.borrow().busy {
+        super::pump_events();
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "Skill 5 (Nightmare)")
+    );
+    scene.capture("057-skill-picker-nightmare.png");
+    for label in ["Skill 4 (UV)", "Skill 5 (Nightmare)"] {
+        ui.set_fit_label(label.into());
+        ui.set_fit_width(272.);
+        ui.set_fit_height(36.);
+        ui.set_fit_size(22.);
+        ui.set_fit_smaller(22.);
+        ui.set_fit_display(false);
+        ui.set_fit_strong(true);
+        ui.set_fit_multiline(false);
+        assert!(ui.get_fit_base_width() <= 272.);
+        assert!(ui.get_fit_base_height() <= 36.);
+    }
+    let quits = std::rc::Rc::new(std::cell::Cell::new(0));
+    let q = quits.clone();
+    ui.on_quit_requested(move || q.set(q.get() + 1));
+    scene.state.borrow_mut().screen = Screen::Home;
+    scene.state.borrow_mut().sync(ui);
+    for (tab, screen) in [
+        Screen::Home,
+        Screen::Library,
+        Screen::Discover,
+        Screen::Settings,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert_eq!(scene.state.borrow().screen, screen);
+        assert_eq!(ui.get_active_tab(), tab as i32);
+        super::press(&scene.window, Key::Escape);
+        assert!(ui.get_sheet_open());
+        assert_eq!(ui.get_focused(), 900);
+        let buttons: Vec<_> = ui.get_sheet_nodes().iter().collect();
+        assert_eq!(buttons.iter().find(|n| n.id == 900).unwrap().label, "Quit");
+        assert_eq!(
+            buttons.iter().find(|n| n.id == 901).unwrap().label,
+            "Keep playing"
+        );
+        if tab == 0 {
+            scene.capture("057-quit-default.png");
+        }
+        super::press(&scene.window, Key::Escape);
+        assert!(!ui.get_sheet_open());
+        assert_eq!(quits.get(), 0);
+        scene.capture(&format!("057-tab-{tab}.png"));
+        super::press(&scene.window, Key::Tab);
+    }
+    assert_eq!(scene.state.borrow().screen, Screen::Home);
+    super::press(&scene.window, Key::Escape);
+    super::press(&scene.window, Key::Return);
+    assert_eq!(quits.get(), 1);
+    // Reverse shoulders and direct tab activation share the same index mapping.
+    scene
+        .state
+        .borrow_mut()
+        .action(ui, crate::input::Action::PreviousTab);
+    assert_eq!(scene.state.borrow().screen, Screen::Settings);
+    for (index, expected) in [
+        Screen::Home,
+        Screen::Library,
+        Screen::Discover,
+        Screen::Settings,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        ui.invoke_action(20 + index as i32);
+        assert_eq!(scene.state.borrow().screen, expected);
+    }
+    let _ = ui.window();
+}
