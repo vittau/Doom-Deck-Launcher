@@ -1,7 +1,8 @@
 # 040 — Resumable downloads — worker report
 
-**Status:** R1–R6 implemented with tests; targeted `fmt`/`clippy`/tests are green. The full
-workspace check and the Linux e2e still need the build slot. No new dependencies.
+**Status:** R1–R6 implemented with tests. Full-workspace `fmt`, clippy (`-D warnings`) and
+`cargo test --workspace` are green (606 passed). The Linux e2e and the Deck network-cut check
+remain with the coordinator. No new dependencies.
 
 ## What changed
 
@@ -123,22 +124,24 @@ another_url`, `damage_discards_the_partial`, `hash_prefix_reads_exactly_the_reco
 
 ### A4 — checks
 
-Targeted and package-level, green:
-- `cargo fmt --all --check`
-- `cargo clippy -p ddl-core --all-targets -- -D warnings`
-- `cargo clippy -p ddl --all-targets -- -D warnings`
-- `cargo test -p ddl-core` → **430 passed, 0 failed** (85 of them `downloads::*`).
-- `cargo test -p ddl --bin ddl -- --skip headless` after merging `main` → **114 passed, 0 failed**.
-- The two spec-040 headless journeys and the runtime unit test pass after the merge
-  (`headless::journeys::resuming_download_row`, `headless::journeys::install_progress_and_play_setup`,
-  `runtime::visual_copy_tests::a_resumed_download_row_starts_at_the_bytes_on_disk`).
-- An earlier full `cargo test -p ddl --bin ddl` (before merging `main`) ran 140 tests: 139 passed
-  and one unrelated pre-existing failure,
-  `headless::journeys::categories_favorites_and_screenshots`, which asserts every bundled
-  screenshot is 640×360 while `a-doomer-boards-christmas-carol/01.jpg` (and several other assets
-  from specs 037/043) are 1024×522/1024×640/1280×720. That asset and the test are untouched by
-  this branch and the failure reproduces on `main`; it needs an owner outside spec 040.
-- Full `cargo test --workspace`, full-workspace clippy and the Linux e2e wait for the build slot.
+After merging `main` (specs 038 phase 2, 042, 048, 049 and 054; `main` at `9fc4356` was an ancestor
+of the merge commit), the full set is green:
+
+- `cargo fmt --all --check` → clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean.
+- `cargo test --workspace` → **606 passed, 0 failed** across all binaries, including
+  `cargo test -p ddl-core` (430, 85 of them `downloads::*`) and the `ddl` unit/integration
+  suites (142 in the binary plus the CLI, logo, UI-string and vector-frame suites). The spec-040
+  headless journey `headless::journeys::resuming_download_row` and
+  `runtime::visual_copy_tests::a_resumed_download_row_starts_at_the_bytes_on_disk` are part of
+  that run.
+
+An earlier pre-merge run of `cargo test -p ddl --bin ddl` had failed
+`headless::journeys::categories_favorites_and_screenshots` on non-640×360 bundled screenshots
+from specs 037/043. That assertion passes on the merged tree; the failure was fixed by the
+parallel UI/asset work, not by this branch.
+
+The Linux e2e is the coordinator's; it has not been run here.
 
 **Needs Deck Validation:** pull the network mid-download of a large mapset, reconnect, press
 Retry and confirm progress continues from the kept bytes and the final SHA-256 verifies.
@@ -157,9 +160,9 @@ None added. `serde`/`serde_json` were already dependencies (sidecar JSON, D-006)
    attempts. The validator still comes from the final response.
 3. **Restart-once is per URL attempt.** A retry after a transient failure may restart once again
    if the new range answer is also unusable; this is bounded by the three-retry budget.
-4. **A pre-existing main failure** (`categories_favorites_and_screenshots`, non-640×360 bundled
-   screenshots) will make the full workspace tests red until someone fixes the assets or the
-   assertion. It is outside this task's ownership.
+4. **The earlier `categories_favorites_and_screenshots` failure** (non-640×360 bundled
+   screenshots) no longer reproduces after merging the parallel UI/asset work; it was outside
+   spec 040's ownership and needed no change here.
 
 ## Proposed coordinator-owned edits
 
