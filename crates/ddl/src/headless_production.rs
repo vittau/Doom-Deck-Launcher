@@ -127,9 +127,10 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
         assert!(opaque > 300, "the crest must contain visible carved detail");
     }
     if name == "010-discover.png" {
-        // Spec 030 moves the viewport down 20px and scrolls this first row
-        // up 16px to reserve its full focus ring above the footer.
-        for y in 298..322 {
+        // Spec 061 aligns the first card's whole frame at the viewport's
+        // 8 px inset (230 + 8), leaving its focus ring above the carved rail.
+        // Compare the 24 px rail before either card's screenshot starts.
+        for y in 238..262 {
             for x in 32..432 {
                 assert_eq!(
                     buffer.as_slice()[y * WIDTH as usize + x],

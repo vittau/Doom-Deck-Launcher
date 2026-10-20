@@ -11,20 +11,28 @@ import { VectorFrame } from "assets/ember/frame.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
 // One bounded plane for pointer and controller scrolling. Offsets are logical pixels.
+// `offset` is the single source of truth for the vertical position: `scroll()` never
+// reads `content-y`, which lags `offset` until the change handler runs (a stale read
+// on the 60 Hz stick poll used to overwrite the focus-follow offset, spec 061).
 component ScrollPlane inherits Flickable {
     in-out property <float> offset: 0;
     in property <float> extent-height;
     in property <float> extent-width;
-    content-height: max(self.height, extent-height * 1px);
+    // Focus-follow can align the final item at the top. Reserve its trailing
+    // viewport space so Flickable does not clamp that landing back to a partial
+    // previous row. Manual scrolling remains bounded by the current extent.
+    content-height: max(max(self.height, extent-height * 1px), self.height + offset * 1px);
     content-width: max(self.width, extent-width * 1px);
     content-y: -offset * 1px;
     changed content-y => { offset = -self.content-y / 1px; }
     changed offset => { self.content-y = -self.offset * 1px; }
     public function scroll(dx: float, dy: float) {
         self.content-x = clamp(self.content-x - dx * 1px, min(0px, self.width - self.content-width), 0px);
-        let next-y = clamp(self.content-y - dy * 1px, min(0px, self.height - self.content-height), 0px);
-        self.offset = -next-y / 1px;
-        self.content-y = next-y;
+        // A neutral tick also preserves a focus-aligned final row when its top
+        // lies past the normal manual-scroll limit (the remainder still fits).
+        if dy != 0 {
+            self.offset = clamp(self.offset + dy, 0, max(0, (self.content-height - self.height) / 1px));
+        }
     }
 }
 export struct ViewNode {

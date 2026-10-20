@@ -605,3 +605,5 @@ mod recovery;
 
 #[path = "headless_flatpak.rs"]
 mod flatpak;
+#[path = "headless_library.rs"]
+mod library;

@@ -3071,11 +3071,11 @@ impl Runtime {
         let viewport =
             (ui.window().size().height as f32 - if discover { 298. } else { 294. }).max(64.);
         let focus_inset = if discover { 24. } else { 12. };
-        let offset = self
-            .nodes
+        let plane: Vec<&ViewNode> = self.nodes.iter().filter(|n| !setup || n.x < 700.).collect();
+        let offset = plane
             .iter()
-            .find(|n| n.id == self.focus && (!setup || n.x < 700.))
-            .map_or(0., |n| (n.y + n.h + focus_inset - viewport).max(0.));
+            .find(|n| n.id == self.focus)
+            .map_or(0., |n| follow_offset(&plane, n, viewport, focus_inset));
         let anchor = (self.screen, self.local.view, self.focus);
         let focus_changed = self.scroll_anchor != Some(anchor);
         if focus_changed {
@@ -3221,11 +3221,11 @@ impl Runtime {
         ui.set_setup_content_height(height);
         ui.set_setup_right_focused(self.nodes.iter().any(|n| n.id == self.focus && n.x >= 700.));
         if focus_changed {
-            let offset = self
-                .nodes
+            let summary: Vec<&ViewNode> = self.nodes.iter().filter(|n| n.x >= 700.).collect();
+            let offset = summary
                 .iter()
-                .find(|n| n.id == self.focus && n.x >= 700.)
-                .map_or(0., |n| (n.y + n.h + 12. - viewport).max(0.));
+                .find(|n| n.id == self.focus)
+                .map_or(0., |n| follow_offset(&summary, n, viewport, 12.));
             ui.set_setup_scroll_offset(offset);
         }
         if self.sheet.is_some() {
@@ -3236,10 +3236,133 @@ impl Runtime {
             ui.set_focused(self.focus);
             if let Some(n) = nodes.iter().find(|n| n.id == self.focus) {
                 ui.set_a_hint(n.label.clone());
+                if focus_changed {
+                    let plane: Vec<_> = nodes.iter().collect();
+                    let viewport = ui
+                        .get_sheet_height()
+                        .min(ui.window().size().height as f32 - 80.);
+                    ui.set_sheet_scroll_offset(follow_offset(&plane, n, viewport, 16.));
+                }
             }
         }
     }
 }
+/// Keep whole items at the top after focus navigation. Nodes have an 8 px
+/// inset in the main plane; card frames extend 8 px and focus rings 16 px.
+/// Prefer the preceding section heading when it fits with the focused item.
+/// Manual right-stick scrolling does not call this function.
+fn follow_offset(plane: &[&ViewNode], focus: &ViewNode, viewport: f32, inset: f32) -> f32 {
+    let bottom = focus.y + focus.h + inset;
+    if bottom <= viewport {
+        return 0.;
+    }
+    let top = (focus.y - if focus.kind == 1 { 8. } else { 12. }).max(0.);
+    let inside_card = |n: &ViewNode| {
+        plane.iter().any(|c| {
+            c.kind == 1
+                && c.actionable
+                && n.x >= c.x
+                && n.y >= c.y
+                && n.x + n.w <= c.x + c.w
+                && n.y + n.h <= c.y + c.h
+        })
+    };
+    plane
+        .iter()
+        .filter(|n| {
+            !n.actionable
+                && matches!(n.kind, 0 | 20)
+                && n.size >= 26.
+                && n.y < focus.y
+                && n.x < focus.x + focus.w
+                && n.x + n.w > focus.x
+                && !inside_card(n)
+        })
+        .map(|n| (n.y + 4.).max(0.))
+        .filter(|&offset| bottom - offset <= viewport)
+        // Do not expose a previous card's bottom rail above the heading.
+        .filter(|&offset| {
+            !plane.iter().any(|n| {
+                n.kind == 1
+                    && n.y < offset
+                    && offset < n.y + n.h + 16.
+                    && (n.actionable || n.y + n.h + 16. - offset < 64.)
+            })
+        })
+        .max_by(f32::total_cmp)
+        .unwrap_or(top)
+}
+#[cfg(test)]
+mod scroll_tests {
+    use super::*;
+
+    fn card(y: f32, h: f32) -> ViewNode {
+        ViewNode {
+            x: 12.,
+            y,
+            w: 384.,
+            h,
+            kind: 1,
+            actionable: true,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn focus_follow_keeps_a_section_heading_and_whole_card_together() {
+        let previous = card(152., 84.);
+        let heading = ViewNode {
+            x: 12.,
+            y: 252.,
+            w: 1200.,
+            h: 42.,
+            kind: 20,
+            size: 28.,
+            ..Default::default()
+        };
+        let focus = card(298., 410.);
+        let plane = [&previous, &heading, &focus];
+        assert_eq!(follow_offset(&plane, &focus, 506., 12.), 256.);
+        assert_eq!(
+            follow_offset(&plane, &focus, 450., 12.),
+            290.,
+            "heading cannot fit"
+        );
+        assert_eq!(
+            follow_offset(&plane, &previous, 506., 12.),
+            0.,
+            "already visible"
+        );
+    }
+
+    #[test]
+    fn focus_follow_aligns_later_and_oversized_items_without_partial_previous_rows() {
+        let previous = card(298., 410.);
+        let focus = card(736., 410.);
+        let plane = [&previous, &focus];
+        assert_eq!(follow_offset(&plane, &focus, 506., 12.), 728.);
+        assert_eq!(
+            follow_offset(&plane, &focus, 300., 12.),
+            728.,
+            "oversized item starts at its top"
+        );
+        let button = ViewNode {
+            x: 32.,
+            y: 780.,
+            w: 304.,
+            h: 56.,
+            kind: 2,
+            actionable: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            follow_offset(&[&button], &button, 720., 16.),
+            768.,
+            "sheets and summary use whole rows too"
+        );
+    }
+}
+
 fn profile_count(ui: &AppWindow, count: usize) -> SharedString {
     if count == 1 {
         text(ui, T::SingleProfile)
