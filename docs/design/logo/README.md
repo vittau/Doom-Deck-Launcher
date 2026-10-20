@@ -31,10 +31,12 @@ name in bone on a transparent ground, so use them on near-black or give them a d
 or use the matching transparent `readme-logo-dark.svg` / `readme-logo-light.svg` variant.
 The README uses a `<picture>` with a dark-theme `<source>` and the light variant as its
 fallback `<img>`; both retain the same emblem and layout without a background tablet.
-Busy art needs a dark plaque.
+Busy art needs a dark plaque, or a scene composed to shade the lettering as the Steam
+capsules are (see Steam artwork).
 
 SVG rules (spec 013 R2, extended by D-029): paths, `linearGradient`/`radialGradient` and
-`stop` only, in `userSpaceOnUse`; no raster, filters, strokes, masks, live fonts or external
+`stop` only, in `userSpaceOnUse`, plus `fill-opacity` (the contact sheet also nests `svg`
+viewports to clip the Steam scenes); no raster, filters, strokes, masks, live fonts or external
 references. `export.py --check` enforces the allowlist and the D-023 outer silhouette.
 
 ![Contact sheet of the production set](contact-sheet.png)
@@ -46,8 +48,38 @@ references. `export.py --check` enforces the allowlist and the D-023 outer silho
 masters and the Steam compositions, and compiles `emblem`, `emblem-small`, `horizontal`,
 `stacked` and `full-name` into `crates/ddl/ui/assets/logo/`. `emblem`, `emblem-small`
 and `horizontal` are byte-identical to `../logo-v3/stained-glass/`; `export.py --check`
-asserts it. The old woodcut scenery in `hero.svg` and behind the capsules is unchanged,
-so `steam/hero.png` is byte-identical to the previous release.
+asserts it. The Steam scenery comes from `scene.py` (next section), which `author.py`
+calls; nothing in the three Steam SVGs is edited by hand.
+
+## Steam artwork
+
+Spec 054, approved by the owner on 2026-10-20 (design round 1). The capsules and the hero
+are original, detailed Ember Cathedral interiors (D-021), drawn procedurally by
+[`scene.py`](scene.py): clustered piers with foliate capitals, moulded pointed arches with
+bronze dogtooth, lancet windows in lead quarries under quatrefoil oculi, a sixteen-petal
+rose window, carved spandrel roundels, stone courses with weathered blocks, bronze
+braziers, light shafts, vault gloom and a vignette. Soft light and shade are stacked
+translucent shapes (`fill-opacity`), so the files keep to the allowlist below. Fixed seeds
+and two-decimal coordinates make every rebuild byte-identical.
+
+- **Capsules:** the emblem, the DDL wordmark and `DoomDeckLauncher` sit directly on the
+  scene, with no plate, tablet or box. The emblem sits in a carved octagonal recess; the
+  lettering falls in the shaded lower half of the great arch (library) or on a shaded wall
+  bay beside the lit apse (wide). `export.py --check` asserts that the lettering contours
+  equal `stacked.svg`, that no opaque flat-colour rectangle covers more than 5% of the
+  frame, and that the name keeps at least 4.5:1 against the bare scene (14:1 and 8.5:1
+  today).
+- **Hero:** no mark and no text. The lit apse (rose, lancet triplet, braziers) sits in the
+  centred 860×380 safe area that Steam keeps uncropped; the side bays fall into shadow, so a
+  centred crop at any aspect keeps the focus. Steam lets the publisher place the logo at
+  the bottom left, top centre, middle or bottom centre
+  ([Steamworks: Library Assets](https://partner.steamgames.com/doc/store/assets/libraryassets)).
+  Use **bottom left**: `logo.png` then sits over the dark floor and side bay; centred, it
+  would cover the bright apse.
+- **Limits:** all files are far below SteamGridDB's static upload limits of 15 MB for grids
+  and logos and 24 MB for heroes, which `export.py --check` enforces
+  ([research, section 5.4](../../research/steam-shortcuts.md#54-size-format-and-style-rules)).
+  `logo.png` is unchanged and transparent.
 
 ## Exports
 
@@ -63,7 +95,7 @@ so `steam/hero.png` is byte-identical to the previous release.
 | `readme-logo-dark.png` (README, dark theme) | `readme-logo-dark.svg` | 1520×400 |
 | `readme-logo-light.png` (README, light theme / fallback) | `readme-logo-light.svg` | 1520×400 |
 | `social-preview.png` | `social-preview.svg` | 1280×640 |
-| `contact-sheet.png` | `contact-sheet.svg` | 1200×1200 |
+| `contact-sheet.png` (masters and Steam art) | `contact-sheet.svg` | 1200×2020 |
 | `social-preview-variants/{threshold,atlas}.png` | matching SVGs | 1280×640 |
 
 Release packaging still installs `steam/*.png` into `ddl/art/`.
@@ -78,7 +110,7 @@ source ~/.cargo/env
 cargo install resvg --version 0.47.0 --locked --root /tmp/ddl-logo-tools
 python3 -m venv /tmp/ddl-logo-export-venv
 /tmp/ddl-logo-export-venv/bin/pip install Pillow==12.3.0 fonttools==4.60.1
-/tmp/ddl-logo-export-venv/bin/python docs/design/logo/author.py          # only after editing geometry
+/tmp/ddl-logo-export-venv/bin/python -B docs/design/logo/author.py       # only after editing geometry or scene.py
 /tmp/ddl-logo-export-venv/bin/python docs/design/logo/export.py --resvg /tmp/ddl-logo-tools/bin/resvg
 /tmp/ddl-logo-export-venv/bin/python docs/design/logo/export.py --resvg /tmp/ddl-logo-tools/bin/resvg --check
 ```
@@ -86,7 +118,9 @@ python3 -m venv /tmp/ddl-logo-export-venv
 `--check` renders to scratch and verifies byte equality of every PNG, dimensions,
 transparency, the SVG allowlist and silhouette, that the three v3 masters equal their
 `logo-v3` sources, that the compiled copies equal the masters, unchanged logo contours in
-the social compositions, tagline contrast, the social 1 MB ceiling and the brand colours.
+the social and Steam compositions, tagline and capsule name contrast, the absence of a
+flat plate in the Steam scenes, the social 1 MB ceiling, the SteamGridDB size limits,
+`logo.png` transparency and the brand colours.
 No network is used after installing the tools. Geometry changes belong in
 `../logo-v3/author.py`; this folder's `author.py` then rebuilds everything (including the
 social SVGs through `author-social.py`).

@@ -2,8 +2,8 @@
 
 One authoring source: the geometry, palette and outlined lettering come from
 ../logo-v3/author.py (imported, never copied). This file only composes the
-production masters and the Steam compositions from it, then compiles the
-masters into the app. Design time only: fonttools==4.60.1. Exporting the
+production masters and the Steam compositions from it (their scenery comes
+from scene.py), then compiles the masters into the app. Design time only: fonttools==4.60.1. Exporting the
 committed SVGs needs only resvg (see export.py).
 """
 import importlib.util
@@ -15,8 +15,11 @@ ROOT = HERE.parents[2]
 _spec = importlib.util.spec_from_file_location('logo_v3_author', HERE.parent / 'logo-v3/author.py')
 v3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(v3)
-path, group, svg, lettering = v3.path, v3.group, v3.svg, v3.lettering
-DARK, BONE, BRONZE, EMBER = v3.DARK, v3.BONE, v3.BRONZE, v3.EMBER
+_spec = importlib.util.spec_from_file_location('steam_scene', HERE / 'scene.py')
+steam = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(steam)
+num, path, group, svg, lettering = v3.num, v3.path, v3.group, v3.svg, v3.lettering
+DARK, BONE = v3.DARK, v3.BONE
 
 
 def save(name, w, h, body, defs=''):
@@ -39,38 +42,6 @@ save('horizontal.svg', 330, 128, lock[1], lock[0])
 save('stacked.svg', 480, 400, group(mark, 112, 0) + group(wordmark, 240 - WM_C, 269) + group(name, (480 - nw) / 2, 354), full[0])
 save('full-name.svg', 700, 160, group(mark, 0, 0, .625) + group(name, 184, 54, 1.45), full[0])
 
-# Original geometric woodcut scenery: repeated carved buttresses, stars, chasm,
-# stairs and tiny arch windows. Eviternity is mood art, never a map screenshot.
-def scene(ivory=False):
-    s=path('M0 0H1200V900H0Z',DARK)
-    s+=path('M0 0H1200V650L600 810 0 650Z','#27181F' if ivory else '#30181C')
-    s+=path('M600 70 910 370 600 680 290 370Z','#6B4541' if ivory else '#61312B')
-    s+=path('M600 104 875 370 600 646 325 370Z','#B7A58A' if ivory else '#89563B')
-    s+=path('M600 135 845 370 600 615 355 370Z','#30292E' if ivory else '#30181C')
-    for i in range(68):
-        x=(i*173+37)%1200; y=(i*79+23)%540
-        s+=path(f'M{x} {y-2} {x+2} {y} {x} {y+2} {x-2} {y}Z','#B88960')
-    for side in (False,True):
-        buildings=''
-        for i in range(8):
-            x=i*66-40; top=420-i*35; col='#554342' if ivory else '#412629'
-            buildings+=path(f'M{x} 900V{top}L{x+32} {top-75} {x+64} {top}V900Z',col)
-            buildings+=path(f'M{x+8} 900V{top+8}L{x+32} {top-43} {x+32} 900Z','#8C7965' if ivory else '#714733')
-            for y in range(top+42,850,88):
-                buildings+=path(f'M{x+20} {y+36}V{y}L{x+32} {y-17} {x+44} {y}V{y+36}Z',DARK)
-                buildings+=path(f'M{x+29} {y+29}V{y}L{x+32} {y-5} {x+35} {y}V{y+29}Z', '#CDBA91' if ivory else EMBER)
-        s+=f'<g transform="translate({1200 if side else 0} 0) scale({-1 if side else 1} 1)">{buildings}</g>'
-    s+=path('M487 900V445L600 290 713 445V900Z','#947A60' if ivory else '#80533B')
-    s+=path('M508 900V454L600 328 692 454V900Z',DARK)
-    s+=path('M536 900V467L600 376 664 467V900Z','#3C252B')
-    s+=path('M600 430 616 570 638 603 600 664 562 603 584 570Z','#FFD078' if ivory else EMBER)
-    for i in range(9):
-        y=690+i*26; half=70+i*26
-        s+=path(f'M{600-half} {y}H{600+half}V{y+9}H{600-half}Z','#B7A58A' if ivory else '#80533B')
-    s+=path('M0 875 240 834 414 900H0Z M1200 875 960 834 786 900H1200Z',DARK)
-    return s
-
-
 # README variants retain the lock-up and padding, with no background tablet.
 def readme_logo(ink=BONE):
     readme_name, _ = lettering('DoomDeckLauncher', 38, ink)
@@ -78,6 +49,16 @@ def readme_logo(ink=BONE):
     return group(content, 30, 20)
 for theme, ink in [('dark', BONE), ('light', DARK)]:
     save(f'readme-logo-{theme}.svg', 760, 200, readme_logo(ink), full[0])
+
+# Steam compositions (spec 054): the lettering sits directly on the Ember Cathedral
+# scenes from scene.py, which shade the areas it uses; the hero has no mark or text.
+lib, wide, hero = steam.library_capsule(), steam.wide_capsule(), steam.hero()
+steam_art = {'library-capsule': lib[1] + group(mark, 172, 100) + group(wordmark, 300 - WM_C * 2, 398, 2) + group(name, (600 - nw) / 2, 620),
+             'wide-capsule': wide[1] + group(mark, 80, 90, .9) + group(wordmark, 336, 130, 1.3) + group(name, 336, 268, .8),
+             'hero': hero[1]}
+save('library-capsule.svg', 600, 900, steam_art['library-capsule'], full[0] + lib[0])
+save('wide-capsule.svg', 920, 430, steam_art['wide-capsule'], full[0] + wide[0])
+save('hero.svg', 3840, 1240, steam_art['hero'], hero[0])
 
 # Contact sheet of the production set, itself vector (labels are outlined Barlow).
 def sheet():
@@ -105,18 +86,23 @@ def sheet():
             b += group(stacked, 880, y0 + 60, .5)
         b += v3.label(f'README {"dark" if row == 0 else "light"} theme 380×100', 40, y0 + 462, 18, ink)
         b += group(readme_logo(BONE if row == 0 else DARK), 40, y0 + 490, .5)
+    # Steam art, each in a nested viewport that clips its scene to the frame.
+    def framed(composition, w, h, x, y, scale):
+        return group(f'<svg width="{num(w * scale)}" height="{num(h * scale)}" viewBox="0 0 {w} {h}">{composition}</svg>', x, y)
+    b += path('M0 1200H1200V2020H0Z', '#1A1213')
+    b += v3.label('Library capsule 600×900, 1/3', 40, 1224, 18, v3.MUTED)
+    b += framed(steam_art['library-capsule'], 600, 900, 40, 1260, 1 / 3)
+    b += v3.label('Wide capsule 920×430, 1/2', 300, 1224, 18, v3.MUTED)
+    b += framed(steam_art['wide-capsule'], 920, 430, 300, 1260, .5)
+    b += v3.label('Hero 3840×1240, 7/24 (no mark or text; Steam draws logo.png over it)', 40, 1584, 18, v3.MUTED)
+    b += framed(steam_art['hero'], 3840, 1240, 40, 1620, 7 / 24)
     return b
-save('contact-sheet.svg', 1200, 1200, sheet(), full[0] + lock[0])
+save('contact-sheet.svg', 1200, 2020, sheet(), full[0] + lock[0] + lib[0] + wide[0] + hero[0])
 
 # Exact same masters compiled into Slint, with byte equality verified by export.
 for stem in ['emblem', 'emblem-small', 'horizontal', 'stacked', 'full-name']:
     (ROOT / f'crates/ddl/ui/assets/logo/{stem}.svg').write_bytes((HERE / f'{stem}.svg').read_bytes())
 
-# Dedicated Steam compositions retain an open central hero safe area.
-art = scene()
-save('library-capsule.svg', 600, 900, group(art, -300, 0) + path('M90 370H510V680H90Z', DARK) + group(mark, 172, 100) + group(wordmark, 300 - WM_C * 2, 398, 2) + group(name, (600 - nw) / 2, 620), full[0])
-save('wide-capsule.svg', 920, 430, group(art, 0, -240, .767) + path('M40 50H650V370H40Z', DARK) + group(mark, 64, 90, .9) + group(wordmark, 320, 130, 1.3) + group(name, 320, 268, .8), full[0])
-save('hero.svg', 3840, 1240, group(art, 0, -800, 3.2))
 save('steam-logo.svg', 1280, 720, group(mark, 465, 30, 1.37) + group(wordmark, 640 - WM_C * 2.5, 404, 2.5) + group(name, (1280 - nw * 2) / 2, 618, 2), full[0])
 # Social scenes have their own original raster layers and outlined copy.
 # Rebuild after the production masters above, never restore the old scenery.

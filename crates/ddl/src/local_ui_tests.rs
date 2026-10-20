@@ -24,6 +24,7 @@ fn environment(home: &Path) -> Environment {
         home: home.into(),
         test: None,
     }
+    .without_catalog_auto_updates()
 }
 fn fixtures(home: &Path) -> Vec<PathBuf> {
     let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../ddl-core/tests/fixtures/local");

@@ -1,0 +1,18 @@
+// The script-authored SVG pieces share the same 28px mitered bronze profile.
+// Slint 1.18.1 rasterizes a nine-slice SVG too small in its software renderer;
+// distinct intrinsic canvases retain the carving and the exact bevel at joins.
+export component VectorFrame inherits Rectangle {
+    background: transparent;
+    Image { x: 0px; y: 0px; width: 28px; height: 28px; source: @image-url("frame-top-left.svg"); }
+    Image { x: parent.width - 28px; y: 0px; width: 28px; height: 28px; source: @image-url("frame-top-right.svg"); }
+    Image { x: 0px; y: parent.height - 28px; width: 28px; height: 28px; source: @image-url("frame-bottom-left.svg"); }
+    Image { x: parent.width - 28px; y: parent.height - 28px; width: 28px; height: 28px; source: @image-url("frame-bottom-right.svg"); }
+    Image { x: 28px; y: 0px; width: parent.width - 56px; height: 28px; source: @image-url("frame-top.svg"); image-fit: fill; }
+    Image { x: 28px; y: parent.height - 28px; width: parent.width - 56px; height: 28px; source: @image-url("frame-bottom.svg"); image-fit: fill; }
+    Image { x: 0px; y: 28px; width: 28px; height: parent.height - 56px; source: @image-url("frame-left.svg"); image-fit: fill; }
+    Image { x: parent.width - 28px; y: 28px; width: 28px; height: parent.height - 56px; source: @image-url("frame-right.svg"); image-fit: fill; }
+    Image { x: (parent.width - 96px) / 2; y: 0px; width: 96px; height: 28px; source: @image-url("ornament-top.svg"); }
+    Image { x: (parent.width - 96px) / 2; y: parent.height - 28px; width: 96px; height: 28px; source: @image-url("ornament-bottom.svg"); }
+    Image { x: 0px; y: (parent.height - 48px) / 2; width: 28px; height: 48px; source: @image-url("ornament-left.svg"); }
+    Image { x: parent.width - 28px; y: (parent.height - 48px) / 2; width: 28px; height: 48px; source: @image-url("ornament-right.svg"); }
+}
