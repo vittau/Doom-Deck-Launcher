@@ -106,22 +106,39 @@ fn import_offer_can_be_postponed_then_declined_for_good() {
         _temp,
     } = scene(flatpak(), true);
 
-    // The offer opens over the first screen, controller-first and legible.
+    // The offer opens over the first screen: a short display-face title, the
+    // explanation in body copy, and Import focused on the left.
     assert!(ui.get_sheet_open());
-    assert!(ui.get_sheet_title().contains("Import your existing setup?"));
-    assert_eq!(ui.get_focused(), 900, "the safe choice has focus");
+    assert_eq!(ui.get_sheet_title().as_str(), "Import your existing setup?");
+    assert!(
+        ui.get_sheet_body()
+            .contains("DDL found a setup from the download (tarball) version."),
+        "the explanation is body copy: {}",
+        ui.get_sheet_body()
+    );
+    assert_eq!(ui.get_focused(), 900, "Import has focus");
+    assert_eq!(ui.get_a_hint().as_str(), "Import");
+    assert!(
+        ui.get_sheet_back_later(),
+        "B says Later while the offer is open"
+    );
     write_png("059-import-offer.png", &render(&window));
 
     // B closes it without answering: nothing is remembered.
     press(&window, Key::Escape);
     assert!(!ui.get_sheet_open());
+    assert!(!ui.get_sheet_back_later());
     assert_eq!(legacy_import::recorded_decision(&env.paths), None);
 
-    // The next start asks again; "No, don't ask again" is remembered and
-    // touches nothing of the player's.
+    // The next start asks again; right to "No, don't ask again" and confirm.
     state.borrow_mut().start(&ui, Command::Startup);
     settle(&state);
     assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_focused(), 900, "Import is focused again");
+    press(&window, Key::RightArrow);
+    assert_eq!(ui.get_focused(), 901);
+    assert_eq!(ui.get_a_hint().as_str(), "No, don't ask again");
+    write_png("059-import-offer-no-focused.png", &render(&window));
     press(&window, Key::Return);
     assert!(!ui.get_sheet_open());
     assert_eq!(
@@ -165,9 +182,9 @@ fn import_offer_accepted_brings_the_old_setup_across() {
     } = scene(flatpak(), true);
     assert!(ui.get_sheet_open());
 
-    // Right to "Import", A confirms.
-    press(&window, Key::RightArrow);
-    assert_eq!(ui.get_focused(), 901);
+    // Import is already the left, focused choice: A confirms.
+    assert_eq!(ui.get_focused(), 900);
+    assert_eq!(ui.get_a_hint().as_str(), "Import");
     write_png("059-import-offer-import-focused.png", &render(&window));
     press(&window, Key::Return);
     settle(&state);

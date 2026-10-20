@@ -621,8 +621,10 @@ impl Runtime {
                 }
                 Action::Confirm => {
                     let sheet = self.sheet.take().unwrap();
+                    // Quit and the import offer put their confirming action on
+                    // the left, focused first.
                     let confirm = self.focus
-                        == if matches!(sheet, Sheet::Quit) {
+                        == if matches!(sheet, Sheet::Quit | Sheet::ImportOffer) {
                             900
                         } else {
                             901
@@ -3151,6 +3153,12 @@ impl Runtime {
         );
         ui.set_profile_name_open(matches!(self.sheet, Some(Sheet::ProfileNames)));
         ui.set_sheet_open(self.sheet.is_some());
+        ui.set_sheet_body(if matches!(self.sheet, Some(Sheet::ImportOffer)) {
+            text(ui, T::ImportOfferBody)
+        } else {
+            "".into()
+        });
+        ui.set_sheet_back_later(matches!(self.sheet, Some(Sheet::ImportOffer)));
         ui.set_sheet_height(
             if matches!(self.sheet, Some(Sheet::Profiles | Sheet::ProfileNames)) {
                 if matches!(self.sheet, Some(Sheet::Profiles)) {
@@ -3181,7 +3189,7 @@ impl Runtime {
                 Sheet::Remove(_) => (T::RemoveConfirm, T::Cancel, T::Remove),
                 Sheet::Component(_) => (T::CompatConfirm, T::Keep, T::UseVariant),
                 Sheet::DeleteProfile(..) => (T::DeleteProfileConfirm, T::Cancel, T::DeleteProfile),
-                Sheet::ImportOffer => (T::ImportOffer, T::ImportNo, T::ImportYes),
+                Sheet::ImportOffer => (T::ImportOffer, T::ImportYes, T::ImportNo),
                 Sheet::Profiles | Sheet::ProfileNames | Sheet::Uninstall(_) => unreachable!(),
             };
             ui.set_sheet_title(if let Sheet::DeleteProfile(_, name) = sheet {
