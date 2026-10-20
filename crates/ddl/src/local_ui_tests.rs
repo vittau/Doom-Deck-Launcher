@@ -921,7 +921,7 @@ fn render_060_primary_selection_and_focus_are_distinct() {
     }
     let (window, ui) = setup();
     ui.show().unwrap();
-    let nodes: Vec<_> = [(1, 2, true), (2, 8, true), (3, 16, false)]
+    let nodes: Vec<_> = [(1, 2, true), (2, 8, true), (3, 16, false), (4, 14, true)]
         .into_iter()
         .enumerate()
         .map(|(i, (id, kind, primary))| ViewNode {
@@ -929,9 +929,9 @@ fn render_060_primary_selection_and_focus_are_distinct() {
             kind,
             primary,
             actionable: kind != 16,
-            x: 36. + i as f32 * 340.,
+            x: 36. + i as f32 * 280.,
             y: 36.,
-            w: 300.,
+            w: 240.,
             h: 72.,
             ..Default::default()
         })
@@ -941,7 +941,7 @@ fn render_060_primary_selection_and_focus_are_distinct() {
         let p = frame.as_slice()[y * 1280 + x];
         [p.r, p.g, p.b]
     };
-    for focus in [0, 1, 2] {
+    for focus in [0, 1, 2, 4] {
         ui.set_focused(focus);
         let frame = render(&window);
         for n in &nodes {
@@ -957,7 +957,7 @@ fn render_060_primary_selection_and_focus_are_distinct() {
             );
             if n.id == 1 {
                 assert!(fill[0] > fill[1] * 2, "primary is red in both focus states");
-            } else if n.id == 2 {
+            } else if n.id == 2 || n.id == 4 {
                 assert!(fill[0] < 80, "selected chip retains its own dark fill");
             } else {
                 assert_eq!(fill, [18, 12, 13], "locked control is sunken");

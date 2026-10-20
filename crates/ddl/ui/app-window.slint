@@ -98,7 +98,7 @@ component Node inherits Rectangle {
     property <bool> pulse-high: false;
     Timer { interval: 1400ms; running: root.pulse && root.focused; triggered => { root.pulse-high = !root.pulse-high; } }
     // Spec 060: primary actions use their own red fill, never the amber focus colour.
-    property <bool> chip: item.kind == 8;
+    property <bool> chip: item.kind == 8 || item.kind == 14;
     property <bool> primary-fill: item.primary && !chip;
     property <color> primary-ink: pulse && focused && pulse-high ? Tokens.primary-pulse : focused ? Tokens.primary-focus : Tokens.primary;
     animate primary-ink { duration: 1400ms; easing: ease-in-out; }
@@ -141,7 +141,7 @@ component Node inherits Rectangle {
     }
     if item.kind == 14: Rectangle {
         x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
-        background: transparent; border-width: 1px; border-color: root.item.primary ? Tokens.text : Tokens.line; border-radius: Tokens.row-radius;
+        background: transparent; border-width: root.item.primary ? 2px : 1px; border-color: root.item.primary ? Tokens.success : Tokens.line; border-radius: Tokens.row-radius;
         Text { x: 6px; width: parent.width - 12px; text: root.item.label; color: Tokens.text; font-size: root.item.size * 1px; font-weight: root.item.primary ? 600 : 400; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
     }
     if item.kind == 13: Rectangle {

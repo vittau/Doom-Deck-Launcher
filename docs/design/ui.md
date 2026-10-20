@@ -158,7 +158,7 @@ Start → menu: Downloads, Settings, Quit DDL
 ```
 
 D-pad and left stick move to the nearest eligible control in the requested direction; explicit
-neighbor links resolve ties. No edge wrap. Vertical lists move by row. Enter a row at its leftmost spanned item when the source
+neighbor links resolve ties. No edge wrap. Vertical lists move by row. Enter a row at its leftmost eligible item when the source
 overlaps several targets; preserve a column only when exactly one target overlaps
 (spec 060). This applies to grids, chips and dialog buttons as well; right from the left column enters the closest right-column row. Up from content enters
 the active top tab; down returns to the last content target. Right stick is unused, avoiding
