@@ -33,19 +33,40 @@ relative-luminance ratios below use the brightest normal surface (`raised`).
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| canvas / deep / on-accent | `#120C0D` | Chrome, separation, primary-button text |
+| canvas / deep / on-accent | `#120C0D` | Chrome, separation, disabled-control fill |
 | surface | `#211719` | Opaque information panels |
 | raised | `#352527` | Rows, controls, sheets |
 | text | `#F8EAD5` | Bone foreground, 12.26:1 on raised |
 | muted | `#D0BCA7` | Secondary / hidden-folder text, 7.91:1 on raised |
-| focus / warning | `#FFD078` | Amber ring and primary action, 10.06:1 on raised |
+| focus / warning | `#FFD078` | Focus ring; warning text only, 10.06:1 on raised |
 | success | `#88D9B0` | Positive checks with explicit text |
 | danger | `#FFA69C` | Error with explicit text |
 | line / steel-edge | `#80533B` | Decorative bronze separators |
+| primary / primary-focus / primary-pulse | `#9A3226` / `#A93D2E` / `#B03F30` | Blood-red primary action, bone text |
+| raised-focus | `#3F2D2F` | Subtle focused-control brightening |
+| locked-ink | `#9A928C` | Disabled/locked labels and explanations |
 | ember / copper | `#B8583F` | Decorative oxblood trim |
 
 Body ≥4.5:1, large text ≥3:1. Hidden folders use muted text on opaque raised rows, never
 reduced opacity. Unavailable controls give explicit reasons and preserve readable text.
+
+### Control states (spec 060)
+
+| State | Fill and text | Distinguishing mark |
+| --- | --- | --- |
+| Default | Raised or own surface; bone text | Bronze edge where applicable |
+| Focused | Own fill, at most subtly brightened (`raised-focus` / `primary-focus`); bone text | Same 4 px amber outer ring and dark separation on every target; never amber fill |
+| Primary | Blood red `primary`; bone text | Light edge; focused primary uses the same amber ring |
+| Selected | Own surface; bone text | Check and green edge for chips/checkboxes; explicit On text for toggles; active tab has bone underline |
+| Disabled / locked | Sunken `deep` fill; dimmed `locked-ink` label and explanation | Lock glyph for required components and recipe files; no focus, hover or activation affordance |
+
+Primary text remains ≥4.5:1 through focus and the first-run Install pulse
+(`primary-focus` ↔ `primary-pulse`, spec 030). Locked text remains ≥3:1;
+the required-recipe explanation stays visible. Selection and focus can coexist:
+a selected chip keeps its check/green edge inside the amber focus ring. Amber
+fill never denotes primary, selected or focused state; warning text retains its
+semantic amber color. Required components and locked recipe files are skipped by
+D-pad navigation because they cannot be changed.
 
 ### Visual identity: Ember Cathedral
 
@@ -102,7 +123,7 @@ Spacing: 4, 8, 12, 16, 24, 32, 48 px. Outer inset 40; cards 24; column gap 24.
 Opaque flat panels with carved perimeters; bevelled bronze controls and circular / pill footer
 badges. One active target: 4 px amber outer ring with 4 px dark separation around its complete
 bounds. Active-tab underline and selection never replace the ring. Focus does not change layout.
-Original simple icons always pair with text. No continuous animation, pulsing, blur or parallax;
+Original simple icons always pair with text. Only the first-run Install emphasis pulses (spec 030); no other continuous animation, blur or parallax;
 pre-rendered PNG materials and nine-slice frames keep idle work low in the software renderer.
 
 ### Layout and translation
@@ -137,8 +158,9 @@ Start → menu: Downloads, Settings, Quit DDL
 ```
 
 D-pad and left stick move to the nearest eligible control in the requested direction; explicit
-neighbor links resolve ties. No edge wrap. Vertical lists move by row, grids retain the nearest
-column; right from the left column enters the closest right-column row. Up from content enters
+neighbor links resolve ties. No edge wrap. Vertical lists move by row. Enter a row at its leftmost spanned item when the source
+overlaps several targets; preserve a column only when exactly one target overlaps
+(spec 060). This applies to grids, chips and dialog buttons as well; right from the left column enters the closest right-column row. Up from content enters
 the active top tab; down returns to the last content target. Right stick is unused, avoiding
 accidental scrolling. Proposed stick threshold/repeat require input-spec tuning on Deck.
 

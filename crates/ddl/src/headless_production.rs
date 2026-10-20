@@ -638,6 +638,20 @@ pub(super) fn install_and_setup(scene: &Scene, capture: Captures) {
         .expect("Play setup shows the complevel");
     assert_eq!(complevel, "Complevel: Vanilla (3)");
     capture("010-play-setup-ready.png");
+    // Spec 060 A2/A3: Play unfocused (primary, not amber), focused (ring), and a
+    // focused Skill; the locked required component stays visibly disabled.
+    let focus = state.borrow().focus;
+    for (name, id) in [
+        ("060-play-ready-unfocused.png", 42),
+        ("060-play-ready-focused.png", 50),
+        ("060-play-ready-skill-focused.png", 40),
+    ] {
+        state.borrow_mut().focus = id;
+        state.borrow_mut().sync(ui);
+        capture(name);
+    }
+    state.borrow_mut().focus = focus;
+    state.borrow_mut().sync(ui);
 }
 
 /// Specs 010/017/025: advanced-component exclusivity, the compatibility dialog,

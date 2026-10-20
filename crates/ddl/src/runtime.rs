@@ -2191,6 +2191,10 @@ impl Runtime {
                                 c.optional,
                             );
                             b.nodes.last_mut().unwrap().fitted_label = true;
+                            if !c.optional {
+                                // Spec 060 R3: focus skips it, so it reads as disabled.
+                                b.nodes.last_mut().unwrap().kind = 16;
+                            }
                             y += b.nodes.last().unwrap().h + 16.;
                         }
                         b.row(

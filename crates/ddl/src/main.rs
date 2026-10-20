@@ -7,9 +7,9 @@ mod cli_exec;
 #[cfg(test)]
 mod copy;
 mod display;
-mod focus;
 #[cfg(test)]
 mod fixtures;
+mod focus;
 #[cfg(test)]
 mod headless;
 mod input;

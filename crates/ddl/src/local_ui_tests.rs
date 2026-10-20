@@ -706,8 +706,18 @@ fn walk_rows(r: &mut Runtime, ui: &AppWindow, rows: &[&[i32]]) {
                     .filter(|n| n.x < source.x + source.w && n.x + n.w > source.x)
                     .min_by(|a, b| a.x.total_cmp(&b.x));
                 if let Some(landing) = landing {
+                    let overlapping = rows[row]
+                        .iter()
+                        .filter_map(|id| r.nodes.iter().find(|n| n.id == *id))
+                        .filter(|n| n.x < source.x + source.w && n.x + n.w > source.x)
+                        .count();
+                    let expected = if overlapping > 1 {
+                        rows[row][0]
+                    } else {
+                        landing.id
+                    };
                     assert_eq!(
-                        r.focus, landing.id,
+                        r.focus, expected,
                         "{direction:?} from {} into {:?}",
                         source.id, rows[row]
                     );
@@ -860,6 +870,147 @@ fn controller_060_rows_are_entered_at_their_leftmost_item() {
     assert_eq!(r.focus, 43);
     r.action(&ui, Action::Up);
     assert_eq!(r.focus, 40);
+    let locked = r.nodes.iter().find(|n| n.id == 100).unwrap();
+    assert_eq!(locked.kind, 16);
+    assert!(!locked.actionable);
+    r.focus = 60;
+    r.action(&ui, Action::Down);
+    assert_ne!(r.focus, 100, "required component is skipped");
+
+    r.selected = r
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .position(|i| i.recipe.id == "auger-zenith")
+        .unwrap();
+    r.focus = 42;
+    r.sync(&ui);
+    let chips: Vec<_> = r
+        .nodes
+        .iter()
+        .filter(|n| n.kind == 8)
+        .map(|n| n.id)
+        .collect();
+    assert!(chips.len() >= 3);
+    r.action(&ui, Action::Up);
+    assert_eq!(
+        r.focus, chips[0],
+        "Advanced enters add-ons at the leftmost chip"
+    );
+    r.action(&ui, Action::Right);
+    assert_eq!(r.focus, chips[1]);
+    r.screen = Screen::Detail;
+    r.title_fit_sheet(&ui, true);
+    r.focus = 902;
+    r.action(&ui, Action::Down);
+    assert_eq!(
+        r.focus, 900,
+        "full-width checkbox enters dialog buttons at Cancel"
+    );
+    r.action(&ui, Action::Right);
+    assert_eq!(r.focus, 901);
+}
+
+/// Exercise the shared production Node renderer independently of screen data.
+#[test]
+fn render_060_primary_selection_and_focus_are_distinct() {
+    if isolated("render_060_primary_selection_and_focus_are_distinct") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let nodes: Vec<_> = [(1, 2, true), (2, 8, true), (3, 16, false)]
+        .into_iter()
+        .enumerate()
+        .map(|(i, (id, kind, primary))| ViewNode {
+            id,
+            kind,
+            primary,
+            actionable: kind != 16,
+            x: 36. + i as f32 * 340.,
+            y: 36.,
+            w: 300.,
+            h: 72.,
+            ..Default::default()
+        })
+        .collect();
+    ui.set_nodes(slint::ModelRc::new(slint::VecModel::from(nodes.clone())));
+    let pixel = |frame: &slint::SharedPixelBuffer<slint::Rgb8Pixel>, x: usize, y: usize| {
+        let p = frame.as_slice()[y * 1280 + x];
+        [p.r, p.g, p.b]
+    };
+    for focus in [0, 1, 2] {
+        ui.set_focused(focus);
+        let frame = render(&window);
+        for n in &nodes {
+            let x = n.x as usize + 28;
+            let y = n.y as usize + 218;
+            let fill = pixel(&frame, x + 100, y + 4);
+            assert_ne!(fill, [255, 208, 120], "amber is never a control fill");
+            let ring = pixel(&frame, x - 6, y + 36);
+            assert_eq!(
+                ring == [255, 208, 120],
+                n.id == focus,
+                "only the focused node receives the shared amber ring"
+            );
+            if n.id == 1 {
+                assert!(fill[0] > fill[1] * 2, "primary is red in both focus states");
+            } else if n.id == 2 {
+                assert!(fill[0] < 80, "selected chip retains its own dark fill");
+            } else {
+                assert_eq!(fill, [18, 12, 13], "locked control is sunken");
+            }
+        }
+    }
+}
+
+/// Spec 060 A2/A3: one focus language. Renders the states the owner compared
+/// (Play unfocused/focused, Skill focused, first-run Install, a dialog, add-on
+/// chips with a selected chip, a locked required component).
+#[test]
+fn render_060_focus_language() {
+    if isolated("render_060_focus_language") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (mut s, _) = custom(&env);
+    s.register_fake_iwads(&temp.path().join("identified"))
+        .unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    let shot = |r: &mut Runtime, name: &str, screen: Screen, focus: i32| {
+        r.screen = screen;
+        r.focus = focus;
+        r.sync(&ui);
+        write_png(name, &render(&window));
+    };
+    let pick = |r: &mut Runtime, id: &str| {
+        r.selected = r
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .position(|i| i.recipe.id == id)
+            .unwrap();
+    };
+    pick(&mut r, "sigil");
+    shot(&mut r, "060-setup-play-unfocused.png", Screen::Setup, 42);
+    shot(&mut r, "060-setup-play-focused.png", Screen::Setup, 50);
+    shot(&mut r, "060-setup-skill-focused.png", Screen::Setup, 40);
+    pick(&mut r, "auger-zenith");
+    shot(&mut r, "060-setup-addon-chips.png", Screen::Setup, 42);
+    r.snapshot.as_mut().unwrap().engine = None;
+    shot(&mut r, "060-first-run-install.png", Screen::FirstRun, 1);
+    pick(&mut r, "sigil");
+    r.screen = Screen::Detail;
+    r.focus = 1;
+    r.title_fit_sheet(&ui, true);
+    write_png("060-dialog.png", &render(&window));
 }
 
 #[test]

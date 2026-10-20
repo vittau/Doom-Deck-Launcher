@@ -3,7 +3,7 @@
 //!
 //! Rows are entered at their leftmost item. When the source spans more than
 //! one item of the nearest row (a full-width card above Skill | Pistol start),
-//! focus lands on the leftmost spanned item. Only a source that lines up with
+//! focus lands on the row's leftmost item. Only a source that lines up with
 //! exactly one item keeps its column. A source that overlaps nothing falls back
 //! to the nearest centre.
 
@@ -39,10 +39,19 @@ pub fn vertical_target(nodes: &[ViewNode], current: &ViewNode, direction: Action
         .filter(|(n, ..)| overlaps_horizontally(current, n))
         .min_by(|a, b| a.1.total_cmp(&b.1));
     if let Some(&(anchor, ..)) = nearest_overlapping {
-        // Leftmost item of the nearest row that the source spans.
-        return candidates
+        let row: Vec<_> = candidates
             .iter()
-            .filter(|(n, ..)| same_row(anchor, n) && overlaps_horizontally(current, n))
+            .filter(|(n, ..)| same_row(anchor, n))
+            .collect();
+        let overlaps: Vec<_> = row
+            .iter()
+            .filter(|(n, ..)| overlaps_horizontally(current, n))
+            .collect();
+        if overlaps.len() == 1 {
+            return Some(overlaps[0].0.id);
+        }
+        return row
+            .iter()
             .min_by(|a, b| a.0.x.total_cmp(&b.0.x))
             .map(|(n, ..)| n.id);
     }
@@ -50,4 +59,57 @@ pub fn vertical_target(nodes: &[ViewNode], current: &ViewNode, direction: Action
         .iter()
         .min_by(|a, b| (a.1 * 100. + a.2).total_cmp(&(b.1 * 100. + b.2)))
         .map(|(n, ..)| n.id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(id: i32, x: f32, y: f32, w: f32) -> ViewNode {
+        ViewNode {
+            id,
+            x,
+            y,
+            w,
+            h: 52.,
+            actionable: true,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn wider_sources_enter_the_whole_row_at_the_left_edge() {
+        let row = [
+            node(1, 0., 80., 100.),
+            node(2, 120., 80., 100.),
+            node(3, 240., 80., 100.),
+        ];
+        for y in [0., 160.] {
+            let direction = if y == 0. { Action::Down } else { Action::Up };
+            assert_eq!(
+                vertical_target(&row, &node(0, 120., y, 220.), direction),
+                Some(1)
+            );
+            for target in &row {
+                assert_eq!(
+                    vertical_target(&row, &node(0, target.x, y, target.w), direction),
+                    Some(target.id)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn disabled_left_item_is_skipped_on_row_entry() {
+        let mut row = [
+            node(1, 0., 80., 100.),
+            node(2, 120., 80., 100.),
+            node(3, 240., 80., 100.),
+        ];
+        row[0].actionable = false;
+        assert_eq!(
+            vertical_target(&row, &node(0, 0., 0., 340.), Action::Down),
+            Some(2)
+        );
+    }
 }
