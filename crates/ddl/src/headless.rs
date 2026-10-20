@@ -584,3 +584,6 @@ mod production;
 
 #[path = "headless_journeys.rs"]
 mod journeys;
+
+#[path = "headless_recovery.rs"]
+mod recovery;

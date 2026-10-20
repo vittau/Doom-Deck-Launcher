@@ -1,4 +1,11 @@
 export global WiringStrings {
+    out property <string> recovery: @tr("Could not read saved setup");
+    out property <string> recovery-help: @tr("Your saved setup could not be read. Retry, or preserve the unreadable files and start fresh.");
+    out property <string> still-unreadable: @tr("Retry failed — saved setup is still unreadable. The files below need attention.");
+    out property <string> start-fresh: @tr("Start fresh");
+    out property <string> start-fresh-confirm: @tr("Start fresh? Only unreadable files will be renamed and kept as backups. Installed content stays on disk.");
+    out property <string> state-needed: @tr("Saved setup is unavailable. Use Diagnostics to review the unreadable files, then return to recovery.");
+
     out property <string> screenshots-credit: @tr("Screenshots: {}", root.value);
     out property <string> recipe-update: @tr("Update available");
     out property <string> recipe-removed: @tr("No longer in the catalog");
