@@ -68,15 +68,21 @@ was used on the owner's machine.
   off-screen and checks all joints at both scales and two sizes.
 - **A2:** owner ("Melhor") and coordinator approved the revised dark gothic
   design before production wiring. Final four-screen comparisons on the fixed
-  wall are pending the coordinator's main-ready/build-slot signal.
-- **A3:** final fmt/clippy/workspace/screenshot checks pending.
+  wall exist and were inspected. The owner approved all four final renders and
+  the 4× corner on 2026-10-20; the coordinator relayed that approval.
+- **A3:** `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --
+  -D warnings` and `cargo test --workspace` pass after merging `c4b6380`. The
+  workspace suite reports **582 passed**, including 140 DDL unit/headless tests,
+  408 ddl-core unit tests, integration tests and three doctests.
+  `python3 scripts/readme-screenshots.py --check` also passes: all four committed
+  PNGs match freshly rendered and recompressed output byte-identically.
 
 Design artifacts (uncommitted, under `target/vector-frames/`):
 `design-1x.png`, `design-fit.png`, `design-1x-corner-4x.png`,
 `design-fit-corner-4x.png`, `home-design.png`, `home-design-before-after.png`.
 The last two are explicitly design mockups: the existing headless Home image
 with candidate perimeters rendered over it by the software renderer. The
-production screen comparisons will be separate final artifacts.
+production screen comparisons are separate final artifacts below.
 
 Targeted production journeys: Home and AUGER setup/components pass, including
 native-size opaque SVG crest pixels. A pixel comparison against the old Home
@@ -88,7 +94,7 @@ Frame asset bytes: **23,645 B** (five PNGs) → **25,163 B** (twelve SVGs),
 with no off-canvas copies of the other corners. Before/after optimization renders
 are pixel-identical at both 1× and 1.35×; the approved artwork is unchanged.
 
-## Dependencies and remaining work
+## Dependencies and follow-up
 
 No new Cargo or runtime dependencies. Authoring uses Python's standard library.
 Existing Pillow 12.3.0 was used only to assemble review PNGs; existing resvg
@@ -99,9 +105,11 @@ the design gate on 2026-10-19; production wiring followed that approval.
 
 Merged green `main` (`68c4e5e`, including 045) in `72107ea`; the sole conflict
 was resolved by retaining 045's `--wall-only` path and the vector-frame removal.
-Pending: final production comparisons and the coordinator's "slot go" signal,
-then README images, full checks in that slot and final visual review. No protected source-of-truth
-files were edited.
+After final owner approval, merged main `305d644` (049 band fade) cleanly in
+`0bc6562`. With the build slot granted, merged main `c4b6380` (038 catalog
+TOML and documentation, plus the intervening main changes) cleanly in `38e4ca4`
+before regenerating the README images. No protected source-of-truth files were
+manually edited.
 
 Proposal outside this task's ownership: update the obsolete `CONTRIBUTING.md`
 UI-art exception that says the frame and ornaments remain PNG. They are now
@@ -136,3 +144,49 @@ Intentional HTTP transport tests use synthetic loopback servers, never public
 upstream endpoints. Targeted Services suite: **36 passed**, including default
 schema migration and the unchanged cancellation/no-write contract. The seven
 local UI tests also pass with the offline fixture.
+
+
+## Final production review on the seamless wall
+
+Before images are the committed, headless-generated README baseline from green
+main `68c4e5e`. After images are fresh Slint software-renderer PNGs from the
+three production journeys, under `target/vector-frames/final-main/`; every
+journey passed. All four screens were visually inspected. Home's pixels outside
+the two 28 px frame perimeters are byte-identical to the main baseline.
+
+| Screen | Before/after artifact (before left, after right) |
+| --- | --- |
+| Home | `target/vector-frames/review/home-before-after.png` |
+| Discover | `target/vector-frames/review/discover-before-after.png` |
+| Mapset detail | `target/vector-frames/review/mapset-detail-before-after.png` |
+| Play setup | `target/vector-frames/review/play-setup-before-after.png` |
+| Corner, nearest-neighbour 4× | `target/vector-frames/review/corner-before-after-4x.png` |
+
+Native 1280×800 after images: `target/vector-frames/after/`.
+The complete targeted output is `target/vector-frames/targeted-final.log`.
+These review PNGs and logs are intentionally uncommitted.
+
+
+## Final README refresh and validation
+
+After merging `c4b6380`, `python3 scripts/readme-screenshots.py` passed all
+three production journeys and regenerated the four losslessly compressed,
+1280×800 README PNGs. All four refreshed images were inspected headlessly;
+they combine the approved vector frames with main's 049 band fade and current
+catalog. The earlier approved before/after artifacts remain under `target/`.
+
+| README image | Bytes |
+| --- | ---: |
+| `docs/screenshots/home.png` | 288,661 |
+| `docs/screenshots/discover.png` | 534,613 |
+| `docs/screenshots/mapset-detail.png` | 478,384 |
+| `docs/screenshots/play-setup.png` | 277,157 |
+
+The final shell commands use `set -o pipefail` and propagate each command's
+exit status. Logs are kept under `target/vector-frames/`: `final-readme.log`,
+`final-fmt.log`, `final-clippy.log`, `final-workspace.log` and
+`final-readme-check.log`. No visible window or screen capture was used.
+
+All spec 048 acceptance criteria are complete; no implementation items remain
+open. Actual Deck/femtovg presentation remains the hardware validation noted
+above, with renderer compatibility established from pinned upstream source.
