@@ -27,6 +27,7 @@ use std::{
 pub enum Screen {
     Loading,
     FirstRun,
+    Recovery,
     Home,
     Discover,
     Library,
@@ -59,6 +60,7 @@ enum Sheet {
     Quit,
     Cancel,
     Reset,
+    StartFresh,
     Remove(PathBuf),
     Component(String),
     Profiles,
@@ -92,6 +94,9 @@ pub struct Runtime {
     pub directory: Option<Directory>,
     import_component: Option<String>,
     review_return: (Screen, i32),
+    unreadable: Vec<services::UnreadableFile>,
+    recovery_attempts: usize,
+    recovery_reset: bool,
     settings_section: usize,
     advanced: bool,
     /// Spec 022 R2: the uninstall checkbox is unchecked every time the sheet opens.
@@ -132,6 +137,9 @@ impl Runtime {
             directory: None,
             import_component: None,
             review_return: (Screen::FirstRun, 2),
+            unreadable: vec![],
+            recovery_attempts: 0,
+            recovery_reset: false,
             settings_section: 0,
             advanced: false,
             uninstall_delete_profiles: false,
@@ -142,6 +150,29 @@ impl Runtime {
             updates_checked: false,
             last_exit: None,
         }
+    }
+    fn unreadable_text(&self) -> String {
+        self.unreadable
+            .iter()
+            .map(|f| {
+                format!(
+                    "{}\n{}",
+                    f.path.display(),
+                    f.reason.replace(['\n', '\r'], " ")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+    fn diagnostics_text(&self) -> String {
+        format!(
+            "DoomDeckLauncher {}\n\nLog: {}\n\nConfig: {}\n\nData: {}\n\n{}",
+            crate::cli::VERSION,
+            self.env.paths.state.join("logs/ddl.log").display(),
+            self.env.paths.config.display(),
+            self.env.paths.data.display(),
+            self.unreadable_text()
+        )
     }
     fn item(&self) -> Option<&Item> {
         self.snapshot.as_ref()?.items.get(self.selected)
@@ -166,6 +197,12 @@ impl Runtime {
             }
             if self.focus >= 0 {
                 self.remembered[self.tab_index()] = self.focus;
+            }
+            if !self.unreadable.is_empty() && tab != 3 {
+                self.screen = Screen::Recovery;
+                self.focus = 800;
+                self.sync(ui);
+                return;
             }
             self.screen = [
                 Screen::Home,
@@ -219,6 +256,7 @@ impl Runtime {
         {
             self.enter(Screen::Progress, 1);
         }
+        let fresh = std::mem::take(&mut self.recovery_reset);
         let env = self.env.clone();
         let cancel = self.cancel.clone();
         let weak = ui.as_weak();
@@ -230,10 +268,17 @@ impl Runtime {
                     let _ = weak.upgrade_in_event_loop(|ui| ui.invoke_services_ready());
                 }
             };
-            let result = Services::open(env).and_then(|mut services| {
-                services.execute(command, &cancel, &mut emit)?;
-                services.snapshot().map(Box::new)
-            });
+            let prepared = if fresh {
+                services::start_fresh(&env).map(|_| ())
+            } else {
+                Ok(())
+            };
+            let result = prepared
+                .and_then(|_| Services::open(env))
+                .and_then(|mut services| {
+                    services.execute(command, &cancel, &mut emit)?;
+                    services.snapshot().map(Box::new)
+                });
             emit(Event::Finished(result));
         });
     }
@@ -300,6 +345,8 @@ impl Runtime {
                     match result {
                         Ok(snapshot) => {
                             self.snapshot = Some(*snapshot);
+                            self.unreadable.clear();
+                            self.recovery_attempts = 0;
                             self.local_finished(ui, &command);
                             self.problem = None;
                             if let Some(Command::UpdateMapset(id)) = &command
@@ -379,6 +426,14 @@ impl Runtime {
                                 }
                                 _ => {}
                             }
+                        }
+                        Err(Problem::Unreadable(files)) => {
+                            self.unreadable = files;
+                            self.recovery_attempts += 1;
+                            self.snapshot = None;
+                            self.problem = None;
+                            self.screen = Screen::Recovery;
+                            self.focus = 800;
                         }
                         Err(Problem::LocalFile(path, changed)) => {
                             self.local_show_issue((path, changed))
@@ -526,6 +581,10 @@ impl Runtime {
                             Sheet::Quit => ui.invoke_quit_requested(),
                             Sheet::Cancel => self.cancel.cancel(),
                             Sheet::Reset => self.start(ui, Command::Reset),
+                            Sheet::StartFresh => {
+                                self.recovery_reset = true;
+                                self.start(ui, Command::Startup);
+                            }
                             Sheet::Remove(path) => self.start(ui, Command::RemoveFolder(path)),
                             Sheet::Component(id) => self.toggle(ui, &id),
                             Sheet::DeleteProfile(id, _) => {
@@ -547,7 +606,9 @@ impl Runtime {
             Action::Confirm => self.activate(ui),
             Action::Back => {
                 self.problem = None;
-                if self.screen == Screen::Progress {
+                if self.screen == Screen::Recovery {
+                    self.show_sheet(Sheet::Quit);
+                } else if self.screen == Screen::Progress {
                     (self.screen, self.focus) = self.return_to;
                 } else if self.screen == Screen::Browser {
                     self.import_component = None;
@@ -659,14 +720,20 @@ impl Runtime {
             self.tab(ui, (-self.focus - 1) as usize);
             return;
         }
+        if self.screen == Screen::Recovery && self.focus == 802 && !self.busy {
+            self.show_sheet(Sheet::StartFresh);
+            return;
+        }
         if self.focus == 800 {
-            if let Some(command) = self.retry.clone() {
+            if self.screen == Screen::Recovery {
+                self.start(ui, Command::Startup);
+            } else if let Some(command) = self.retry.clone() {
                 self.start(ui, command);
             }
             return;
         }
         if self.focus == 801 {
-            self.enter(Screen::Settings, 1);
+            self.enter(Screen::Settings, 4);
             self.settings_section = 3;
             return;
         }
@@ -1444,6 +1511,7 @@ impl Runtime {
                 Screen::Discover => T::Discover,
                 Screen::Library => T::Library,
                 Screen::Settings => T::Settings,
+                Screen::Recovery => T::Recovery,
                 Screen::Detail => T::Details,
                 Screen::Setup => T::Setup,
                 Screen::Progress => T::InstallTitle,
@@ -1517,6 +1585,48 @@ impl Runtime {
                 Screen::Loading => {
                     b.panel(12., 12., 1200., 240.);
                     b.logo(412., 24., 400., 210., true);
+                }
+                Screen::Recovery => {
+                    let files = self.unreadable_text();
+                    let rows = files
+                        .lines()
+                        .map(|line| line.chars().count().div_ceil(84).max(1))
+                        .sum::<usize>();
+                    let height = 100. + rows.max(2) as f32 * 32.;
+                    b.panel(12., 12., 1200., height + 140.);
+                    b.label(
+                        36.,
+                        32.,
+                        1152.,
+                        64.,
+                        text(
+                            ui,
+                            if self.recovery_attempts > 1 {
+                                T::StillUnreadable
+                            } else {
+                                T::RecoveryHelp
+                            },
+                        ),
+                        24.,
+                    );
+                    b.label(36., 112., 1152., height - 100., files.into(), 22.);
+                    b.button(800, 36., height + 32., 348., text(ui, T::Retry), true);
+                    b.button(
+                        802,
+                        408.,
+                        height + 32.,
+                        384.,
+                        text(ui, T::StartFresh),
+                        false,
+                    );
+                    b.button(
+                        801,
+                        816.,
+                        height + 32.,
+                        372.,
+                        text(ui, T::Diagnostics),
+                        false,
+                    );
                 }
                 Screen::FirstRun => {
                     b.panel(12., 12., 584., 478.);
@@ -2538,6 +2648,14 @@ impl Runtime {
                                 .max(316.)
                         }),
                         2 => 280.,
+                        3 if self.snapshot.is_none() => {
+                            72. + self
+                                .diagnostics_text()
+                                .lines()
+                                .map(|line| line.chars().count().div_ceil(58).max(1))
+                                .sum::<usize>() as f32
+                                * 30.
+                        }
                         // Tall enough for the spec 017 R6 widescreen status-bar credit and
                         // the spec 033 screenshot credits under the version block.
                         _ => (384. + credit_height + 12.).max(478.),
@@ -2555,6 +2673,15 @@ impl Runtime {
                             text(ui, *label),
                             i == self.settings_section,
                         );
+                    }
+                    if self.snapshot.is_none() {
+                        if self.settings_section == 3 {
+                            let diagnostics = self.diagnostics_text();
+                            b.label(372., 36., 816., height - 48., diagnostics.into(), 22.);
+                        } else {
+                            b.label(372., 36., 816., 120., text(ui, T::StateNeeded), 22.);
+                            b.button(801, 372., 180., 816., text(ui, T::Diagnostics), true);
+                        }
                     }
                     if let Some(s) = &self.snapshot {
                         match self.settings_section {
@@ -2897,6 +3024,8 @@ impl Runtime {
                 } else {
                     460.
                 }
+            } else if matches!(self.sheet, Some(Sheet::StartFresh)) {
+                380.
             } else if matches!(self.sheet, Some(Sheet::DeleteProfile(..))) {
                 340.
             } else if matches!(self.sheet, Some(Sheet::Uninstall(_))) {
@@ -2914,6 +3043,7 @@ impl Runtime {
                 Sheet::Quit => (T::QuitConfirm, T::Quit, T::KeepPlaying),
                 Sheet::Cancel => (T::CancelConfirm, T::KeepDownloading, T::CancelInstall),
                 Sheet::Reset => (T::ResetConfirm, T::Cancel, T::Reset),
+                Sheet::StartFresh => (T::StartFreshConfirm, T::Cancel, T::StartFresh),
                 Sheet::Remove(_) => (T::RemoveConfirm, T::Cancel, T::Remove),
                 Sheet::Component(_) => (T::CompatConfirm, T::Keep, T::UseVariant),
                 Sheet::DeleteProfile(..) => (T::DeleteProfileConfirm, T::Cancel, T::DeleteProfile),
@@ -2925,7 +3055,9 @@ impl Runtime {
                 text(ui, title)
             });
             let mut b = Nodes::new(ui);
-            let button_y = if matches!(sheet, Sheet::DeleteProfile(..)) {
+            let button_y = if matches!(sheet, Sheet::StartFresh) {
+                268.
+            } else if matches!(sheet, Sheet::DeleteProfile(..)) {
                 228.
             } else {
                 180.
@@ -3053,7 +3185,7 @@ fn problem_copy(p: &Problem) -> T {
     match p {
         Problem::Local(_) | Problem::LocalFile(..) => T::ErrorLaunch,
         Problem::Storage => T::ErrorStorage,
-        Problem::State => T::ErrorState,
+        Problem::State | Problem::Unreadable(_) => T::ErrorState,
         Problem::Network => T::ErrorNetwork,
         Problem::Stalled => T::ErrorStalled,
         Problem::Update => T::UpdateError,

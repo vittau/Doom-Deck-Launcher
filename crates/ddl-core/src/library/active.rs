@@ -13,8 +13,13 @@ use std::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActiveInstall {
     pub schema_version: u32,
+    #[serde(deserialize_with = "crate::catalog::persisted::recipe")]
     pub recipe: Recipe,
     pub manifest: InstallManifest,
+    #[serde(
+        default,
+        deserialize_with = "crate::catalog::persisted::optional_recipe"
+    )]
     pub previous_recipe: Option<Recipe>,
     #[serde(default)]
     pub pending_profiles: Vec<String>,

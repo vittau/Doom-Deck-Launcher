@@ -1,4 +1,8 @@
 //! Thin application services. Constructed and used exclusively on a worker thread.
+#[path = "state_recovery.rs"]
+mod state_recovery;
+pub use state_recovery::{UnreadableFile, start_fresh};
+
 use ddl_core::{
     catalog::{Catalog, Game, Recipe, TagVocabulary},
     downloads::{CancellationToken, HostAllowlist, InstallProgress},
@@ -31,6 +35,7 @@ use std::{
 pub enum Problem {
     Storage,
     State,
+    Unreadable(Vec<UnreadableFile>),
     Network,
     /// Spec 024: the transfer went quiet past the idle timeout.
     Stalled,
@@ -59,6 +64,15 @@ impl fmt::Display for Problem {
             Self::Local(message) => f.write_str(message),
             Self::LocalFile(path, _) => write!(f, "{}", path.display()),
             Self::Storage => f.write_str("could not write or read DDL's user storage"),
+            Self::Unreadable(files) => write!(
+                f,
+                "could not read {}",
+                files
+                    .iter()
+                    .map(|f| format!("{}: {}", f.path.display(), f.reason))
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            ),
             Self::State => f.write_str("could not read DDL's saved state"),
             Self::Network => f.write_str("a network request failed"),
             Self::Stalled => f.write_str(
@@ -177,6 +191,7 @@ fn absolute_path(path: &Path) -> Result<PathBuf, CliFailure> {
 struct AppState {
     schema_version: u32,
     folders: Vec<PathBuf>,
+    #[serde(deserialize_with = "ddl_core::catalog::persisted::recipes")]
     recipes: BTreeMap<String, Recipe>,
     /// Recipe ids the player marked (spec 015, R5); added by schema 2.
     #[serde(default)]
@@ -228,12 +243,14 @@ impl AppState {
     /// Reads `app.json` bytes of any supported schema; newer or unknown
     /// schemas are rejected rather than guessed at.
     fn parse(bytes: &[u8]) -> Result<Self, Problem> {
-        let mut state: Self =
-            serde_json::from_slice(bytes).map_err(|e| logged(Problem::State, e))?;
+        Self::decode(bytes).map_err(|e| logged(Problem::State, e))
+    }
+    fn decode(bytes: &[u8]) -> Result<Self, String> {
+        let mut state: Self = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
         match state.schema_version {
             1 => state.schema_version = STATE_SCHEMA,
             STATE_SCHEMA => {}
-            _ => return Err(Problem::State),
+            version => return Err(format!("unsupported schema version {version}")),
         }
         Ok(state)
     }
@@ -707,6 +724,10 @@ impl Services {
         for dir in [&paths.config, &paths.data, &paths.cache, &paths.state] {
             fs::create_dir_all(dir).map_err(|e| logged(Problem::Storage, e))?;
         }
+        let unreadable = state_recovery::unreadable_files(&env);
+        if !unreadable.is_empty() {
+            return Err(Problem::Unreadable(unreadable));
+        }
         let state_path = paths.config.join("app.json");
         let state: AppState = match fs::read(&state_path) {
             Ok(bytes) if bytes.len() <= 4 * 1024 * 1024 => AppState::parse(&bytes)?,
@@ -897,7 +918,18 @@ impl Services {
         Ok(())
     }
     fn installed_ids(&self) -> BTreeSet<String> {
-        self.state.recipes.keys().cloned().collect()
+        let mut ids: BTreeSet<_> = self.state.recipes.keys().cloned().collect();
+        if let Ok(entries) = fs::read_dir(self.env.paths.data.join("library")) {
+            for entry in entries.flatten() {
+                if entry.file_type().is_ok_and(|t| t.is_dir())
+                    && entry.path().join("active.json").is_file()
+                    && let Some(id) = entry.file_name().to_str()
+                {
+                    ids.insert(id.to_owned());
+                }
+            }
+        }
+        ids
     }
     fn reconcile_install(&self, id: &str) -> Result<(), Problem> {
         let Some(mut active) = self.active(id)? else {
@@ -1837,6 +1869,7 @@ impl Services {
                     .map_err(|e| logged(Problem::Engine, e))?;
             }
             Command::Reset => {
+                state_recovery::preserve_config_before_reset(&self.config)?;
                 self.config
                     .reset(true)
                     .map_err(|e| logged(Problem::Config, e))?;
@@ -3854,7 +3887,7 @@ mod tests {
             br#"{"schema_version":3,"folders":[],"recipes":{}}"#,
         )
         .unwrap();
-        assert!(matches!(Services::open(env), Err(Problem::State)));
+        assert!(matches!(Services::open(env), Err(Problem::Unreadable(_))));
     }
     fn favorite(s: &mut Services, id: &str) -> Result<(), Problem> {
         s.execute(
@@ -3998,6 +4031,20 @@ mod tests {
         assert!(!view.config_usable);
         assert!(view.config_notice);
         assert_eq!(view.items.len(), s.catalog.recipes.len());
+        s.execute(Command::Reset, &CancellationToken::new(), &mut |_| {})
+            .unwrap();
+        let backups = fs::read_dir(s.env.paths.config.join("dsda"))
+            .unwrap()
+            .flatten()
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("state.json.unreadable-")
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(fs::read(backups[0].path()).unwrap(), b"broken");
+        assert!(s.config.state().is_ok());
     }
 }
 
@@ -4381,5 +4428,130 @@ mod catalog_tests {
         ddl_core::catalog::store_cache(&env.paths.data, &bundle, 7).unwrap();
         let s = Services::open(env).unwrap();
         assert!(!s.catalog_info().updated, "an equal serial is not newer");
+    }
+}
+
+#[cfg(test)]
+mod release_state_tests {
+    use super::*;
+    #[test]
+    fn release_state_trees_remain_readable() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/state");
+        for tag in ["v0.0.5-screens.1", "v0.0.6-local", "v0.0.7-deck"] {
+            assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
+        }
+        let mut tags = fs::read_dir(&root)
+            .unwrap()
+            .flatten()
+            .filter(|e| {
+                e.file_type().unwrap().is_dir() && e.file_name().to_string_lossy().starts_with('v')
+            })
+            .map(|e| e.path())
+            .collect::<Vec<_>>();
+        tags.sort();
+        assert!(
+            tags.len() >= 3,
+            "release fixtures must never be silently removed"
+        );
+        for tree in tags {
+            let tag = tree.file_name().unwrap().to_str().unwrap();
+            let env = Environment {
+                paths: Paths {
+                    config: tree.join("config"),
+                    data: tree.join("data"),
+                    cache: tree.join("cache"),
+                    state: tree.join("state"),
+                },
+                home: "/ddl-fixture".into(),
+                test: None,
+            };
+            // This is the production open and snapshot path, not a fixture-only parser.
+            let services = Services::open(env.clone()).unwrap_or_else(|e| panic!("{tag}: {e}"));
+            let snapshot = services.snapshot().unwrap_or_else(|e| panic!("{tag}: {e}"));
+            assert_eq!(snapshot.engine.unwrap().version, "0.30.1", "{tag}");
+            assert_eq!(
+                services.state.folders,
+                [
+                    PathBuf::from("/ddl-fixture/iwads-one"),
+                    PathBuf::from("/ddl-fixture/iwads-two")
+                ]
+            );
+            assert_eq!(services.registry.entries().len(), 2, "{tag}");
+            assert!(services.state.search_standard_folders);
+            assert!(!services.state.catalog_auto_update);
+            assert!(services.state.favorites.contains("auger-zenith"));
+            assert_eq!(services.state.kept_recipes.len(), 2);
+            let installed = snapshot
+                .items
+                .iter()
+                .filter(|i| i.manifest.is_some())
+                .collect::<Vec<_>>();
+            assert_eq!(installed.len(), 2, "{tag}");
+            let auger = installed
+                .iter()
+                .find(|i| i.recipe.id == "auger-zenith")
+                .unwrap();
+            assert_eq!(auger.profiles.len(), 2);
+            assert_eq!(auger.profile.id, "fixture-alternate");
+            assert_eq!(auger.profile.skill, 2);
+            assert_eq!(
+                auger
+                    .profiles
+                    .iter()
+                    .find(|p| p.id == "fixture-auger-zenith")
+                    .unwrap()
+                    .skill,
+                3,
+                "old default skill is preserved"
+            );
+            assert_eq!(auger.profile.components, ["alternate-blaster"]);
+            assert!(auger.favorite);
+            assert_eq!(
+                auger.recipe.compatibility.complevel,
+                ddl_core::catalog::Complevel::Alias(ddl_core::catalog::ComplevelAlias::Vanilla)
+            );
+            for item in installed {
+                let active = services.active(&item.recipe.id).unwrap().unwrap();
+                assert_eq!(active.recipe, item.recipe);
+                assert!(active.previous_recipe.is_some());
+                let manifest = item.manifest.as_ref().unwrap();
+                assert!(!manifest.members.is_empty());
+                let generation = InstallManifest::load(
+                    &tree
+                        .join("data/library")
+                        .join(&item.recipe.id)
+                        .join("generations/fixture/install.json"),
+                )
+                .unwrap();
+                assert_eq!(
+                    &generation, manifest,
+                    "{tag}: generation metadata preserved"
+                );
+            }
+            assert_eq!(
+                snapshot.custom.len(),
+                usize::from(tag != "v0.0.5-screens.1")
+            );
+            if let Some(setup) = snapshot.custom.first() {
+                assert_eq!(setup.name, "My custom setup");
+            }
+            // Saving loaded state emits only the current shape and is atomic.
+            let temp = tempfile::tempdir().unwrap();
+            let path = temp.path().join("app.json");
+            save_json(&path, &services.state).unwrap();
+            let saved = fs::read(&path).unwrap();
+            assert!(!String::from_utf8_lossy(&saved).contains("complevel_status"));
+            assert_eq!(
+                AppState::parse(&saved).unwrap().last_profiles,
+                services.state.last_profiles
+            );
+            let active = services.active("auger-zenith").unwrap().unwrap();
+            active.save(&temp.path().join("active.json")).unwrap();
+            assert!(
+                !fs::read_to_string(temp.path().join("active.json"))
+                    .unwrap()
+                    .contains("complevel_status")
+            );
+        }
     }
 }
