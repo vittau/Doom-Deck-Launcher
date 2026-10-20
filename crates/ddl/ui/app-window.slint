@@ -325,6 +325,7 @@ export component AppWindow inherits Window {
         x: parent.width - 440px; y: 120px; width: 400px; height: 88px;
         clip: true;
         Image { width: parent.width; height: parent.height; source: root.band-screenshot != "" ? ScreenshotAssets.image(root.band-screenshot) : root.band-art == 1 ? @image-url("assets/ember/sigil-ii-band.jpg") : root.band-art == 2 ? @image-url("assets/ember/auger-band.jpg") : root.band-art == 3 ? @image-url("assets/ember/eviternity-band.jpg") : root.band-art == 0 ? @image-url("assets/ember/sigil-band.jpg") : @image-url("assets/ember/fallback-band.jpg"); image-fit: cover; horizontal-alignment: center; vertical-alignment: center; }
+        Rectangle { x: 0px; y: 0px; width: 120px; height: parent.height; background: @linear-gradient(90deg, Tokens.deep 0%, Tokens.deep.with-alpha(0) 100%); }
     }
     FittedText { x: 40px; y: root.status != "" ? 124px : 144px; width: root.art-band ? 784px : parent.width - 80px; height: 48px;
         label: root.heading; base-size: Tokens.page; smaller-size: Tokens.section; multiline: false;
