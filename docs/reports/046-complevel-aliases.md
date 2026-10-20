@@ -78,7 +78,15 @@
 
 ## Final checks
 
-_Filled in below after the full run._
+Run on the merged tree (`main` at `aa315e4` merged), with `set -o pipefail`:
+
+- `cargo fmt --all --check`: clean.
+- `cargo clippy --workspace --all-targets -- -D warnings`: clean.
+- `cargo test --workspace`: green (ddl 142, ddl-core 437, integration and doc tests all pass). The
+  first run failed once in `crates/ddl/tests/catalog_cli.rs`, which expected the `invalid-hash`
+  fixture's error on line 42; removing the fixture's two status lines moved it to 40, so I updated
+  the test and reran the whole workspace.
+- The coordinator still runs the Linux e2e (A5).
 
 ## New dependencies
 
