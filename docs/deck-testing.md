@@ -19,6 +19,28 @@ learned here flow back into `research/` and `decisions.md`.
 
 Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run yet
 
+## Release 0.0.7 — re-checks after the 0.0.6 run
+
+Fixes since 0.0.6 that need the Deck. **Before you start, remove `SLINT_SCALE_FACTOR=1 %command%`
+from the shortcut's launch options**: DDL now fits the 1280×800 panel itself (spec 029). Rename
+the shortcut to **DoomDeckLauncher** ([guide](steam-deck-guide.md#install-from-a-github-release)).
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| R1 | Without the launch option, DDL opens fullscreen at 1:1: all four tabs fit and text is readable (S3) | Gaming | ⏳ | spec 029 |
+| R2 | `./ddl --windowed` opens a 1280×800 window with the menu (S2) | Desktop | ⏳ | |
+| R3 | IWADs: the Steam DOOM + DOOM II package finds DOOM, DOOM II, TNT and Plutonia (`Ultimate Doom/base/` and its `doom2/`, `tnt/`, `plutonia/` subfolders) (F2) | Gaming | ⏳ | spec 028 |
+| R4 | **Play** starts DSDA fullscreen in widescreen, not 4:3 (F4) | Gaming | ⏳ | spec 029 video keys |
+| R5 | Base games (DOOM, DOOM II) appear and launch with complevel `vanilla` | Gaming | ⏳ | spec 032, D-030 |
+| R6 | Profiles: create a second profile for a mapset, switch, launch; saves stay separate | Gaming | ⏳ | specs 018, 031 |
+| R7 | Controller in DSDA with the new layout (E5 follow-up) | Gaming | ⏳ | spec 034 |
+| R8 | Logo v3 (Stained Glass) in header, loading screen, About and Steam icon look right | Gaming | ⏳ | D-029 |
+| R9 | Panel frames: corners meet their rails, no gaps or steps; wall background has no seam; title fades into the art band | Gaming | ⏳ | specs 045, 048, 049 |
+| R10 | Mapset detail / Play setup show complevel as "Vanilla (2)", "MBF (11)"…, with no "not yet verified" text | Gaming | ⏳ | spec 046 |
+| R11 | Install a Dropbox-first DBP (e.g. Haunting Hollow): fast download; cancel mid-way, install again → it resumes ("Resuming…") instead of restarting | Gaming | ⏳ | specs 038, 040 |
+| R12 | Steam artwork from `art/` or SteamGridDB (capsule, wide, hero, logo, icon) looks right in Gaming Mode | Gaming | ⏳ | spec 054 |
+| R13 | Catalog update toast disappears after the manual check (S2 of the catalog table) | Gaming | ⏳ | spec 030 |
+
 ## Release 0.0.x — skeleton (spec 001)
 
 | # | Check | Mode | Result | Notes |

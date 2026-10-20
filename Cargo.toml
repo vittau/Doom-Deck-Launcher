@@ -7,7 +7,7 @@ resolver = "3"
 members = ["crates/ddl-core", "crates/ddl"]
 
 [workspace.package]
-version = "0.0.6"
+version = "0.0.7"
 edition = "2024"
 # Minimum supported Rust version. Kept in lockstep with the exact toolchain in
 # `rust-toolchain.toml` so the two can never disagree.
