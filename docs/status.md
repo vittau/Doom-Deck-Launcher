@@ -92,3 +92,4 @@
 | Research: Flatpak on Flathub/Discover and running the engine from the sandbox | 058 | **Done** (`research/flatpak.md`): extract-and-run the AppImage in the sandbox (no FUSE), runtime 26.08; Flathub's AI policy forbids AI-assisted manifests and agent-run submissions — channel choice waits for the owner |
 | Flatpak on Flathub (D-034): app sandbox-ready — extract-first engine, paths, visibility messages, import of a tarball-era setup, portal keyboard, no self-update; the owner writes manifest/metainfo/desktop entry and submits by hand | 059 | In progress |
 | Focus clarity: rows entered at their leftmost item (Advanced → Skill), amber only for focus, primary actions (Play, Install) in ember red, a distinct selected mark | 060 | In progress |
+| Library tab broken in v0.0.8 (stray frames under the header, one-card row) — regression | 061 (brief; report `reports/061-library-regression.md`) | In progress — blocks the next pre-release |
