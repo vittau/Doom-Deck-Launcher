@@ -9,6 +9,7 @@ mod copy;
 mod display;
 #[cfg(test)]
 mod fixtures;
+mod focus;
 #[cfg(test)]
 mod headless;
 mod input;

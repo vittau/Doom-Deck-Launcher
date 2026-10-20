@@ -1441,39 +1441,27 @@ impl Runtime {
         else {
             return;
         };
-        let (cx, cy) = (current.x + current.w / 2., current.y + current.h / 2.);
-        if let Some(next) = self
-            .nodes
-            .iter()
-            .filter(|n| n.actionable && n.id != self.focus)
-            .filter_map(|n| {
-                let (dx, dy) = (n.x + n.w / 2. - cx, n.y + n.h / 2. - cy);
-                let (along, across) = match direction {
-                    Action::Up => (-dy, dx.abs()),
-                    Action::Down => (dy, dx.abs()),
-                    Action::Left => (-dx, dy.abs()),
-                    Action::Right => (dx, dy.abs()),
-                    _ => return None,
-                };
-                let vertical = matches!(direction, Action::Up | Action::Down);
-                let overlap = n.x < current.x + current.w && n.x + n.w > current.x;
-                let separate_row = match direction {
-                    Action::Up => n.y + n.h <= current.y + 1.,
-                    Action::Down => n.y >= current.y + current.h - 1.,
-                    _ => true,
-                };
-                (along > 1. && separate_row).then_some((
-                    n.id,
-                    if vertical {
-                        (if overlap { 0. } else { 100_000. }) + along * 100. + across
-                    } else {
-                        along + across * 3.
-                    },
-                ))
-            })
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-        {
-            self.focus = next.0;
+        let next = if matches!(direction, Action::Up | Action::Down) {
+            crate::focus::vertical_target(&self.nodes, current, direction)
+        } else {
+            let (cx, cy) = (current.x + current.w / 2., current.y + current.h / 2.);
+            self.nodes
+                .iter()
+                .filter(|n| n.actionable && n.id != self.focus)
+                .filter_map(|n| {
+                    let (dx, dy) = (n.x + n.w / 2. - cx, n.y + n.h / 2. - cy);
+                    let (along, across) = match direction {
+                        Action::Left => (-dx, dy.abs()),
+                        Action::Right => (dx, dy.abs()),
+                        _ => return None,
+                    };
+                    (along > 1.).then_some((n.id, along + across * 3.))
+                })
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .map(|n| n.0)
+        };
+        if let Some(next) = next {
+            self.focus = next;
         } else if direction == Action::Up && self.root() && self.sheet.is_none() {
             self.remembered[self.tab_index()] = self.focus;
             self.focus = -(self.tab_index() as i32) - 1;
@@ -2203,6 +2191,10 @@ impl Runtime {
                                 c.optional,
                             );
                             b.nodes.last_mut().unwrap().fitted_label = true;
+                            if !c.optional {
+                                // Spec 060 R3: focus skips it, so it reads as disabled.
+                                b.nodes.last_mut().unwrap().kind = 16;
+                            }
                             y += b.nodes.last().unwrap().h + 16.;
                         }
                         b.row(

@@ -11,9 +11,14 @@ export global Tokens {
     out property <color> warning: #FFD078;
     out property <color> danger: #FFA69C;
     out property <color> line: #80533B;
-    // Action red keeps >=4.5:1 against the dark on-accent label across the pulse.
-    out property <color> ember-action: #BE6248;
-    out property <color> ember-pulse: #CA6A50;
+    // Spec 060: amber means focus only. Primary actions are blood red with bone
+    // text (>=4.5:1 in every state); focus only brightens a fill slightly.
+    out property <color> primary: #9A3226;
+    out property <color> primary-focus: #A93D2E;
+    out property <color> primary-pulse: #B03F30;
+    out property <color> raised-focus: #3F2D2F;
+    // Disabled / locked: dark sunken fill, dimmed text (>=3:1 on every surface).
+    out property <color> locked-ink: #9A928C;
     out property <color> disabled: #817C7B;
     out property <color> ember: #B8583F;
     out property <color> copper: #B8583F;
