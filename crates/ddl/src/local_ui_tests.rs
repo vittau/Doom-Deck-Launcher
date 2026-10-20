@@ -787,6 +787,17 @@ fn controller_057_focus_walks_every_multi_item_screen() {
     r.local.view = Some(View::New);
     r.sync(&ui);
     walk_rows(&mut r, &ui, &[&[1], &[2], &[3]]);
+    // Settings opened from a child screen retains that Back level, including
+    // the recovery → Diagnostics route introduced by spec 055.
+    r.local = LocalUi::default();
+    r.screen = Screen::Detail;
+    r.history.clear();
+    r.enter(Screen::Settings, 4);
+    r.sync(&ui);
+    assert!(!ui.get_quit_hint());
+    r.action(&ui, Action::Back);
+    assert_eq!(r.screen, Screen::Detail);
+    assert!(!ui.get_sheet_open());
 }
 
 #[test]

@@ -591,8 +591,9 @@ fn controller_057_tabs_skills_and_root_quit() {
     let quits = std::rc::Rc::new(std::cell::Cell::new(0));
     let q = quits.clone();
     ui.on_quit_requested(move || q.set(q.get() + 1));
-    scene.state.borrow_mut().screen = Screen::Home;
-    scene.state.borrow_mut().sync(ui);
+    super::press(&scene.window, Key::Escape);
+    super::press(&scene.window, Key::Escape);
+    ui.invoke_action(20);
     for (tab, screen) in [
         Screen::Home,
         Screen::Library,

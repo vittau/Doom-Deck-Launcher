@@ -554,7 +554,7 @@ impl Runtime {
                     (self.screen, self.focus) = self.history.pop().unwrap_or(self.return_to);
                 } else if self.screen == Screen::Settings && self.focus >= 70 {
                     self.focus = 1 + self.settings_section as i32;
-                } else if self.root() {
+                } else if self.root() && self.history.is_empty() {
                     self.show_sheet(Sheet::Quit);
                 } else if let Some(place) = self.history.pop() {
                     (self.screen, self.focus) = place;
@@ -2840,7 +2840,10 @@ impl Runtime {
         ui.set_active_tab(self.tab_index() as i32);
         ui.set_root_screen(self.root() && !self.playing);
         ui.set_quit_hint(
-            self.root() && !self.playing && !(self.screen == Screen::Settings && self.focus >= 70),
+            self.root()
+                && self.history.is_empty()
+                && !self.playing
+                && !(self.screen == Screen::Settings && self.focus >= 70),
         );
         ui.set_input_locked(self.playing);
         ui.set_setup_screen(setup && !self.playing);

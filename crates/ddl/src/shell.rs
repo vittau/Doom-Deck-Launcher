@@ -928,6 +928,7 @@ impl Shell {
         ui.set_root_screen(self.root());
         ui.set_quit_hint(
             self.root()
+                && self.stack.is_empty()
                 && self.sheet.is_none()
                 && !(self.screen == Screen::Settings && self.focus >= 70),
         );
