@@ -128,6 +128,8 @@ pub struct BuildReport {
     pub missing_txt: u32,
     /// Sidecars that existed but yielded nothing usable, or failed.
     pub bad_txt: u32,
+    /// Sidecars longer than the 64 KiB prefix; parsed from that prefix (F2).
+    pub truncated_txt: u32,
     /// Entries dropped from the inventory by the exclusion rules.
     pub excluded: usize,
     /// Why fetching stopped early, if it did.
@@ -286,11 +288,15 @@ pub fn build_index(
             match response {
                 TxtResponse::Fetched {
                     bytes,
+                    truncated,
                     etag,
                     last_modified,
                 } => {
                     consecutive_failures = 0;
                     report.fetched += 1;
+                    if truncated {
+                        report.truncated_txt += 1;
+                    }
                     bytes_read += bytes.len() as u64;
                     let meta = parse_txt(&bytes);
                     if meta.title.is_none() && meta.author.is_none() {
@@ -360,7 +366,9 @@ pub fn build_index(
         (a.dir.as_str(), a.entry.stem.as_str()).cmp(&(b.dir.as_str(), b.entry.stem.as_str()))
     });
     let mut entries: BTreeMap<String, Vec<Entry>> = BTreeMap::new();
+    let mut paths = BTreeSet::new();
     for row in rows {
+        paths.insert(format!("{}/{}", row.dir, row.entry.zip_name()));
         entries.entry(row.dir).or_default().push(row.entry);
     }
 
@@ -375,10 +383,6 @@ pub fn build_index(
         min_ddl_version: settings.min_ddl_version.clone(),
         entries,
     };
-    index.validate()?;
-    // Enforce the 2 MiB bound here, not only in the CLI, so a build that would
-    // publish an oversized file fails in CI with a clear reason.
-    index.to_json()?;
 
     let elapsed_unix = (clock.now_ms().saturating_sub(run_start_ms)) / 1_000;
     let finished_unix = settings.now_unix.saturating_add(elapsed_unix);
@@ -392,13 +396,14 @@ pub fn build_index(
     } else {
         gaps.iter().sum::<u64>() / gaps.len() as u64
     };
-    let telemetry = RunTelemetry {
+    let mut telemetry = RunTelemetry {
         started_at: format_unix_utc(settings.now_unix),
         finished_at: format_unix_utc(finished_unix),
         finished_unix,
         budget,
         requests: report.requests,
         bytes: bytes_read,
+        truncated: report.truncated_txt,
         statuses,
         min_gap_ms,
         mean_gap_ms,
@@ -406,7 +411,15 @@ pub fn build_index(
         stop: stop_label(stopped).to_owned(),
     };
 
-    let paths: BTreeSet<String> = rows_paths(&index);
+    // F4: record the run (validators, telemetry, back-off) *before* the final
+    // validation. If an entry still fails, the CLI writes this state on the
+    // error path, so a re-run sends conditional requests instead of fetching
+    // the whole day again. The run is labelled `error`, never `finished`, so a
+    // failed build cannot clear a mirror back-off (R9).
+    let validated = index.validate().and_then(|()| index.to_json().map(|_| ()));
+    if validated.is_err() {
+        telemetry.stop = "error".to_owned();
+    }
     state.retain(&paths);
     state.generated_at = format_unix_utc(settings.now_unix);
     state.schema = super::state::STATE_SCHEMA;
@@ -415,6 +428,8 @@ pub fn build_index(
     report.entries = index.entry_count();
     report.directories = index.directories();
     report.telemetry = telemetry;
+
+    validated?;
     Ok(BuildOutcome { index, report })
 }
 
@@ -561,18 +576,6 @@ fn mark_latest_versions(rows: &mut [Row]) {
     }
 }
 
-fn rows_paths(index: &Index) -> BTreeSet<String> {
-    index
-        .entries
-        .iter()
-        .flat_map(|(dir, entries)| {
-            entries
-                .iter()
-                .map(move |entry| format!("{dir}/{}", entry.zip_name()))
-        })
-        .collect()
-}
-
 /// A detail kept out of `StopReason` so tests can assert the reason alone.
 pub const fn request_gap() -> std::time::Duration {
     MIN_REQUEST_GAP
@@ -634,6 +637,7 @@ mod tests {
                 path_suffix,
                 TxtResponse::Fetched {
                     bytes: body.as_bytes().to_vec(),
+                    truncated: false,
                     etag: Some(format!("\"{path_suffix}\"")),
                     last_modified: None,
                 },
@@ -1051,6 +1055,86 @@ mod tests {
         assert_eq!(state.len(), 4);
         assert!(!state.attempts.contains_key("levels/doom2/a-c/gone.zip"));
         assert_eq!(state.generated_at, outcome.index.generated_at);
+    }
+
+    #[test]
+    fn an_oversized_sidecar_is_parsed_from_its_prefix_and_counted() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut source = FakeSource::default();
+        let mut body =
+            b"Title: Big One\nAuthor: Long Writer\nAdvanced engine needed: Boom\n".to_vec();
+        body.resize(70_000, b'x');
+        source.answer(
+            "tistartan.txt",
+            TxtResponse::Fetched {
+                bytes: body,
+                truncated: true,
+                etag: Some("\"big\"".into()),
+                last_modified: None,
+            },
+        );
+        let outcome = build(&settings(), None, &mut state, &mut source);
+        let tistartan = outcome.index.entries["levels/doom2/Ports/megawads"]
+            .iter()
+            .find(|entry| entry.stem == "tistartan")
+            .unwrap();
+        assert_eq!(tistartan.title, "Big One");
+        assert_eq!(tistartan.author, "Long Writer");
+        assert_eq!(tistartan.port, Port::Boom);
+        assert!(tistartan.txt);
+        assert_eq!(outcome.report.truncated_txt, 1);
+        assert_eq!(outcome.report.telemetry.truncated, 1);
+        assert_eq!(outcome.report.telemetry.statuses.get("error"), None);
+    }
+
+    #[test]
+    fn a_failed_final_validation_keeps_the_run_for_the_next_attempt() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut settings = settings();
+        // The document cannot be published with this version, so the failure
+        // happens after every sidecar was fetched (F4).
+        settings.min_ddl_version = "not a version".into();
+        let mut source = good_source();
+        let error = build_index(
+            INVENTORY,
+            &settings,
+            None,
+            &mut state,
+            &mut source,
+            &mut clock(),
+        )
+        .unwrap_err();
+        assert!(
+            error.to_string().contains("min_ddl_version"),
+            "the error names the field: {error}"
+        );
+        assert_eq!(source.calls.len(), 4);
+        let telemetry = state
+            .last_telemetry()
+            .expect("a failed validation still records the run");
+        assert_eq!(telemetry.requests, 4);
+        assert_eq!(telemetry.stop, "error");
+        assert_eq!(telemetry.statuses.get("200"), Some(&4));
+
+        // Tomorrow's build reuses today's validators: the same four requests
+        // are conditional instead of unconditional.
+        settings.min_ddl_version = DEFAULT_MIN_DDL_VERSION.to_owned();
+        let mut retry = good_source();
+        build_index(
+            INVENTORY,
+            &settings,
+            None,
+            &mut state,
+            &mut retry,
+            &mut clock(),
+        )
+        .unwrap();
+        assert_eq!(retry.calls.len(), 4);
+        assert!(
+            retry.calls.iter().all(|(_, etag, _)| etag.is_some()),
+            "every retry sends the stored ETag: {:?}",
+            retry.calls
+        );
     }
 
     #[test]

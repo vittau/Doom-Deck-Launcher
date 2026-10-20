@@ -93,7 +93,7 @@ fn main() -> ExitCode {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(failure) => {
                     eprintln!("{}: {failure}", cli::BIN);
-                    ExitCode::FAILURE
+                    ExitCode::from(failure.exit_code())
                 }
             }
         }

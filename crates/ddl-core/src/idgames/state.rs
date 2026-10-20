@@ -91,6 +91,9 @@ pub struct RunTelemetry {
     pub requests: u32,
     /// Body bytes read from `200` responses.
     pub bytes: u64,
+    /// Sidecars longer than the 64 KiB prefix; parsed from that prefix (F2).
+    #[serde(default)]
+    pub truncated: u32,
     /// Status label (`200`, `304`, `404`, `403`, `429`, `5xx`, `error`) → count.
     pub statuses: BTreeMap<String, u32>,
     /// Smallest gap between two request starts, in milliseconds.
@@ -99,7 +102,8 @@ pub struct RunTelemetry {
     pub mean_gap_ms: u64,
     /// Requests retried inside the run. DDL never retries: always 0 (R9).
     pub retries: u32,
-    /// `finished`, `budget`, `http-<status>`, `network` or `backoff-wait`.
+    /// `finished`, `budget`, `http-<status>`, `network`, `backoff-wait` or
+    /// `error` (the document failed its final validation).
     pub stop: String,
 }
 
@@ -123,10 +127,11 @@ impl RunTelemetry {
                 .join(", ")
         };
         format!(
-            "{} requests, {} bytes, statuses: {statuses}, gap min {} ms / mean {} ms, \
+            "{} requests, {} bytes, {} truncated, statuses: {statuses}, gap min {} ms / mean {} ms, \
              {} retries, budget {}, stop: {}",
             self.requests,
             self.bytes,
+            self.truncated,
             self.min_gap_ms,
             self.mean_gap_ms,
             self.retries,
@@ -363,8 +368,10 @@ impl CrawlState {
             self.backoff.consecutive_stops = (self.backoff.consecutive_stops + 1).min(8);
             self.backoff.last_stop_unix = Some(telemetry.finished_unix);
             self.backoff.clean_runs = 0;
-        } else if telemetry.stop != "backoff-wait" {
+        } else if telemetry.stop != "backoff-wait" && telemetry.stop != "error" {
             // A budget stop is a deliberate, healthy pause: it counts as clean.
+            // A failed build (`error`) does not: it says nothing about the
+            // mirror's health (R9).
             if self.backoff.consecutive_stops > 0 {
                 self.backoff.clean_runs += 1;
                 if self.backoff.clean_runs >= CLEAN_RUNS_TO_RECOVER {
@@ -414,6 +421,7 @@ mod tests {
             budget: 1_500,
             requests: 10,
             bytes: 32_000,
+            truncated: 2,
             statuses: BTreeMap::from([("200".to_owned(), 8), ("404".to_owned(), 2)]),
             min_gap_ms: 3_012,
             mean_gap_ms: 3_501,
@@ -580,6 +588,11 @@ mod tests {
         state.record_run(telemetry("backoff-wait", 1_001_000));
         assert_eq!(state.backoff.clean_runs, 0);
         assert_eq!(state.backoff.consecutive_stops, 1);
+        // A hard build failure says nothing about the mirror's health: it must
+        // not shorten the recovery either (spec 050 follow-up F4).
+        state.record_run(telemetry("error", 1_002_000));
+        assert_eq!(state.backoff.clean_runs, 0);
+        assert_eq!(state.backoff.consecutive_stops, 1);
     }
 
     #[test]
@@ -602,6 +615,7 @@ mod tests {
         for needle in [
             "10 requests",
             "32000 bytes",
+            "2 truncated",
             "200=8",
             "404=2",
             "gap min 3012 ms",

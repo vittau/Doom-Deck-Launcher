@@ -104,11 +104,37 @@ pub enum CliFailure {
     Blocker(Blocker),
     /// Anything else, already phrased for the user.
     Message(String),
+    /// A failure that asks the binary for a specific, documented non-zero exit
+    /// status (spec 050 follow-up F3: the `/idgames` crawl stop shares a code
+    /// with no other failure).
+    Exit {
+        /// The process exit status.
+        code: u8,
+        /// The message printed as `ddl: <message>`.
+        message: String,
+    },
 }
 
 impl CliFailure {
     pub fn message(message: impl Into<String>) -> Self {
         Self::Message(message.into())
+    }
+
+    /// A failure with an explicit process exit status.
+    pub fn with_exit_code(code: u8, message: impl Into<String>) -> Self {
+        Self::Exit {
+            code,
+            message: message.into(),
+        }
+    }
+
+    /// The process exit status this failure asks for (1 unless it says
+    /// otherwise).
+    pub fn exit_code(&self) -> u8 {
+        match self {
+            Self::Exit { code, .. } => *code,
+            Self::Blocker(_) | Self::Message(_) => 1,
+        }
     }
 }
 
@@ -117,6 +143,7 @@ impl fmt::Display for CliFailure {
         match self {
             Self::Blocker(blocker) => write!(f, "cannot launch: {blocker}"),
             Self::Message(message) => f.write_str(message),
+            Self::Exit { message, .. } => f.write_str(message),
         }
     }
 }

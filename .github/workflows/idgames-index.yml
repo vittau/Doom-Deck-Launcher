@@ -14,10 +14,14 @@
 # Publishing follows the catalog bundle (spec 019): an orphan `idgames-index`
 # branch with ordinary commits, never a force push. A failed build or
 # validation stops before the publish step, so the branch keeps the last good
-# index. A crawl that stops on 403/429/5xx still writes its partial index and
-# its back-off state, publishes both, then fails the job and opens or updates
-# the single `idgames-crawl` issue (R9). The next run waits at least 24 h and
-# halves its budget (floor 100) until three clean runs pass.
+# index. A crawl that stops on 403/429/5xx (or a dead network) exits with
+# status 3, still writes its partial index and its back-off state, publishes
+# both, then fails the job and opens or updates the single `idgames-crawl`
+# issue (R9, spec 050 follow-up F3). Any other non-zero status is a hard
+# failure: nothing is published and the issue is not touched; whatever files
+# exist are uploaded as a short-retention artifact for debugging. The next run
+# after a stop waits at least 24 h and halves its budget (floor 100) until
+# three clean runs pass.
 #
 # The first publish is triggered by hand (`workflow_dispatch`) after the owner
 # approves; the daily schedule takes over afterwards.
@@ -128,9 +132,11 @@ jobs:
           fi
 
       # The build writes the partial index and the state even when the mirror
-      # stops the crawl (R6), then exits non-zero (R9). The step captures that
-      # instead of aborting, so the validated partial index and the back-off
-      # state can still be published; the last step fails the job visibly.
+      # stops the crawl (R6), then exits with status 3 (R9/F3). The step
+      # captures that instead of aborting, so the validated partial index and
+      # the back-off state can still be published; the last step fails the job
+      # visibly. Any other non-zero status is a hard failure: no publish, no
+      # issue, only an artifact.
       - name: Build the index
         id: crawl
         run: |
@@ -151,23 +157,32 @@ jobs:
           cargo run --locked -p ddl -- "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/idgames/build.log"
           status="${PIPESTATUS[0]}"
           set -e
+          case "$status" in
+            0) outcome=ok ;;
+            3) outcome=stopped ;;
+            *) outcome=failed ;;
+          esac
           {
             echo "### /idgames crawl"
             echo '```'
             tail -n 8 "$RUNNER_TEMP/idgames/build.log"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$status" -ne 0 ]; then
-            echo "stopped=true" >> "$GITHUB_OUTPUT"
-            echo "status=$status" >> "$GITHUB_OUTPUT"
-          else
-            echo "stopped=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
           if [ -s "$RUNNER_TEMP/idgames/index.json" ]; then
             echo "index=true" >> "$GITHUB_OUTPUT"
           else
             echo "index=false" >> "$GITHUB_OUTPUT"
           fi
+          case "$outcome" in
+            stopped)
+              echo "::warning::The crawl stopped on the mirror (exit $status); publishing the partial index and resumable state."
+              ;;
+            failed)
+              echo "::error::The crawl failed hard (exit $status); nothing is published and no crawl issue is opened."
+              ;;
+          esac
 
       # A partial index is still a valid, complete inventory listing (R6: keep
       # everything fetched), so it is validated like any other. A hard failure
@@ -220,27 +235,50 @@ jobs:
           git commit -m "idgames: update from ${GITHUB_SHA}"
           git push origin "HEAD:${IDGAMES_BRANCH}"
 
-      # R9: one open issue, updated in place, never a retry. The state already
-      # halved tomorrow's budget and opened the 24 h window.
+      # Hard failure: the CLI wrote no index, so the branch keeps the last good
+      # one and the issue is not touched. Keep whatever the run did write
+      # (crawl-state.json holds today's validators/telemetry, F4) for a short
+      # while so the next attempt can be diagnosed.
+      - name: Keep the failed run's files for debugging
+        if: steps.crawl.outputs.outcome == 'failed' || steps.crawl.outputs.index != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: idgames-crawl-failed-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/idgames/index.json
+            ${{ runner.temp }}/idgames/crawl-state.json
+            ${{ runner.temp }}/idgames/build.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      # R9/F3b: one open issue, updated in place, never a retry. Only a mirror
+      # stop (exit 3) reaches this step, and only after the partial index and
+      # the state were published. The state already halved tomorrow's budget
+      # and opened the 24 h window.
       - name: Report a stopped crawl
-        if: steps.crawl.outputs.stopped == 'true'
+        if: steps.crawl.outputs.outcome == 'stopped' && steps.crawl.outputs.index == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          telemetry="$(grep -E '^(Wrote|Sidecars|Telemetry|Crawl stopped)' "$RUNNER_TEMP/idgames/build.log" || true)"
+          if [ -z "$telemetry" ]; then
+            telemetry="(no telemetry lines in build.log; see the run log)"
+          fi
           body="$(
             printf '%s\n' \
               "The scheduled /idgames index crawl stopped on $(date -u +%FT%TZ)." \
               "" \
               "- workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
               "- mirror: \`${IDGAMES_MIRROR}\`" \
+              "- build exit status: ${{ steps.crawl.outputs.status }} (crawl stopped)" \
               "- stop reason and telemetry:" \
               "" \
               '```' \
-              "$(grep -E '^(Wrote|Sidecars|Telemetry|Crawl stopped)' "$RUNNER_TEMP/idgames/build.log" || true)" \
+              "$telemetry" \
               '```' \
               "" \
-              "The partial index and crawl-state.json were published, so the work fetched so far is kept." \
+              "The partial index and crawl-state.json were published to the \`${IDGAMES_BRANCH}\` branch, so the work fetched so far is kept." \
               "The next run waits at least 24 h and halves the daily budget (floor 100) until three clean runs pass." \
               "Nothing was retried inside the run."
           )"
@@ -260,10 +298,11 @@ jobs:
           fi
           exit 1
 
-      # No document at all: a hard build failure. The branch keeps the last good
-      # index; fail the job without opening a crawl issue.
+      # No index and not a resumable stop: a hard build failure (F3c). The
+      # branch keeps the last good index and the crawl issue is untouched.
       - name: Fail after a hard build failure
-        if: steps.crawl.outputs.index != 'true'
+        if: steps.crawl.outputs.outcome == 'failed' || steps.crawl.outputs.index != 'true'
         run: |
-          echo "The /idgames index build produced no document; the published index is unchanged." >&2
+          echo "The /idgames index build failed hard (exit ${{ steps.crawl.outputs.status }}) or wrote no index; the published index and the crawl issue are unchanged." >&2
+          echo "Debug files: the idgames-crawl-failed-${{ github.run_id }} artifact (3 days)." >&2
           exit 1
