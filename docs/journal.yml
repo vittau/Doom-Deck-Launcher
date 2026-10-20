@@ -715,3 +715,14 @@
   refs: [docs/reports/042-cacowards-research.md, docs/reports/049-band-fade.md,
          docs/reports/054-steam-art-v2.md, docs/reports/038-dropbox-redirects.md,
          docs/reports/048-vector-panel-frames.md]
+- date: 2026-10-20
+  type: merge
+  summary: >-
+    Spec 040 merged (opencode worker): pinned downloads resume from a kept partial with
+    Range/If-Range, retry transient failures three times and bound the partial cache. Spec 046
+    merged (Sonnet worker): every recipe uses DSDA complevel aliases and complevel_status is gone;
+    v0.0.6 clients drop the new recipes and keep their embedded catalog. The 2026-10-19 Linux e2e
+    failed on a slow 156 MB archive.org download while installing all 89 recipes; spec 044 now
+    adds a lean e2e install sample. Spec 050 (/idgames index) started.
+  refs: [docs/reports/040-resumable-downloads.md, docs/reports/046-complevel-aliases.md,
+         docs/specs/044-catalog-link-health.md]
