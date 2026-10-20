@@ -15,6 +15,7 @@
 //! three-way merge in [`super::merge`] uses it to recognise a binding the
 //! player never touched when a new template version starts owning that key.
 
+use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::Deserialize;
@@ -66,6 +67,10 @@ pub struct Template {
     pub dsda_version_max: String,
     /// The scalar integer keys DDL owns, in template order.
     pub values: Vec<(String, i64)>,
+    /// DSDA-Doom upstream defaults for value keys that are new to the template,
+    /// sorted by key (spec 056, R3). The migration uses them to recognise an
+    /// untouched new key exactly like a binding's `upstream` triple.
+    pub upstream_values: Vec<(String, i64)>,
     /// The scalar string keys DDL owns, in template order (spec 029, R4).
     pub strings: Vec<(String, String)>,
     /// The `input_*` bindings DDL owns, in template order (spec 034, R2).
@@ -123,6 +128,14 @@ impl Template {
     /// unknown field, an unknown binding action, or an out-of-range button code.
     pub fn from_toml(text: &str) -> Result<Self, TemplateError> {
         let file: TemplateFile = toml::from_str(text).map_err(TemplateError::Toml)?;
+        let values = file.values.into_entries();
+        for key in file.upstream_values.keys() {
+            if !values.iter().any(|(owned, _)| owned == key) {
+                return Err(TemplateError::Invalid(format!(
+                    "upstream default `{key}` is not a value DDL owns"
+                )));
+            }
+        }
         let bindings = file
             .bindings
             .into_iter()
@@ -143,7 +156,8 @@ impl Template {
             template_version: file.template_version,
             dsda_version_min: file.dsda_version_min,
             dsda_version_max: file.dsda_version_max,
-            values: file.values.into_entries(),
+            values,
+            upstream_values: file.upstream_values.into_iter().collect(),
             strings: file.strings.into_entries(),
             bindings,
         })
@@ -187,6 +201,16 @@ impl Template {
             .iter()
             .find(|(key, _)| key == name)
             .map(|(_, value)| value.as_str())
+    }
+
+    /// The DSDA-Doom upstream default recorded for value key `name`, if the
+    /// template records one (spec 056, R3).
+    #[must_use]
+    pub fn upstream_value(&self, name: &str) -> Option<i64> {
+        self.upstream_values
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| *value)
     }
 
     /// The template's binding for `action`, if it owns that key.
@@ -262,6 +286,8 @@ struct TemplateFile {
     dsda_version_max: String,
     values: Values,
     #[serde(default)]
+    upstream_values: BTreeMap<String, i64>,
+    #[serde(default)]
     strings: Strings,
     #[serde(default)]
     bindings: Vec<TemplateBindingFile>,
@@ -283,6 +309,7 @@ struct Values {
     analog_look_acceleration: i64,
     dsda_mouse_acceleration: i64,
     mouse_sensitivity_horiz: i64,
+    mouse_sensitivity_vert: i64,
     mouse_sensitivity_mlook: i64,
     swap_analogs: i64,
     invert_analog_look: i64,
@@ -291,6 +318,9 @@ struct Values {
     exclusive_fullscreen: i64,
     render_aspect: i64,
     render_stretch_hud: i64,
+    // --- Frame pacing (spec 056, R1) ---
+    render_vsync: i64,
+    uncapped_framerate: i64,
 }
 
 /// Exactly the string keys DDL owns (spec 029, R4). Optional so a template
@@ -350,6 +380,10 @@ impl Values {
                 self.mouse_sensitivity_horiz,
             ),
             (
+                "mouse_sensitivity_vert".to_owned(),
+                self.mouse_sensitivity_vert,
+            ),
+            (
                 "mouse_sensitivity_mlook".to_owned(),
                 self.mouse_sensitivity_mlook,
             ),
@@ -359,6 +393,8 @@ impl Values {
             ("exclusive_fullscreen".to_owned(), self.exclusive_fullscreen),
             ("render_aspect".to_owned(), self.render_aspect),
             ("render_stretch_hud".to_owned(), self.render_stretch_hud),
+            ("render_vsync".to_owned(), self.render_vsync),
+            ("uncapped_framerate".to_owned(), self.uncapped_framerate),
         ]
     }
 }
@@ -460,7 +496,7 @@ mod tests {
     #[test]
     fn embedded_template_parses_with_the_expected_version() {
         let template = Template::embedded().expect("embedded template must be valid");
-        assert_eq!(template.template_version, "3");
+        assert_eq!(template.template_version, "4");
         assert_eq!(
             template.version_range().to_string(),
             "0.30.1",
@@ -493,9 +529,12 @@ mod tests {
             "analog_look_acceleration",
             "dsda_mouse_acceleration",
             "mouse_sensitivity_horiz",
+            "mouse_sensitivity_vert",
             "mouse_sensitivity_mlook",
             "swap_analogs",
             "invert_analog_look",
+            "render_vsync",
+            "uncapped_framerate",
         ] {
             assert!(template.get(key).is_some(), "{key} is missing");
         }
@@ -514,6 +553,7 @@ mod tests {
         "analog_look_acceleration = 0\n",
         "dsda_mouse_acceleration = 0\n",
         "mouse_sensitivity_horiz = 10\n",
+        "mouse_sensitivity_vert = 1\n",
         "mouse_sensitivity_mlook = 10\n",
         "swap_analogs = 0\n",
         "invert_analog_look = 0\n",
@@ -521,11 +561,13 @@ mod tests {
         "exclusive_fullscreen = 0\n",
         "render_aspect = 2\n",
         "render_stretch_hud = 2\n",
+        "render_vsync = 0\n",
+        "uncapped_framerate = 1\n",
     );
 
     fn minimal_template(extra: &str) -> String {
         format!(
-            "template_version = \"3\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}{extra}",
+            "template_version = \"4\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}{extra}",
         )
     }
 
@@ -545,6 +587,27 @@ mod tests {
         assert_eq!(template.get_str("screen_resolution"), None);
     }
 
+    /// R3 (spec 056): upstream defaults are optional, and when present they must
+    /// name a key the template actually owns.
+    #[test]
+    fn upstream_value_defaults_are_optional_but_validated() {
+        let template = Template::from_toml(&minimal_template("")).expect("parses");
+        assert!(template.upstream_values.is_empty());
+        assert_eq!(template.upstream_value("render_vsync"), None);
+
+        let template =
+            Template::from_toml(&minimal_template("\n[upstream_values]\nrender_vsync = 0\n"))
+                .expect("parses");
+        assert_eq!(template.upstream_value("render_vsync"), Some(0));
+
+        let error = Template::from_toml(&minimal_template("\n[upstream_values]\ntypo_key = 0\n"))
+            .expect_err("an upstream key the template does not own must fail");
+        assert!(
+            error.to_string().contains("typo_key"),
+            "the error names the key: {error}"
+        );
+    }
+
     /// A3: every new Deck video key parses and sits in DSDA's documented range.
     #[test]
     fn deck_video_values_are_in_the_documented_ranges() {
@@ -554,6 +617,8 @@ mod tests {
             ("exclusive_fullscreen", 0, 1),
             ("render_aspect", 0, 4),
             ("render_stretch_hud", 0, 2),
+            ("render_vsync", 0, 1),
+            ("uncapped_framerate", 0, 1),
         ] {
             let value = template
                 .get(key)
@@ -586,6 +651,61 @@ mod tests {
         );
     }
 
+    /// R1 (spec 056): VSync is on, uncapped interpolation stays on, and no FPS
+    /// limit key caps the frame rate. `dsda_fps_limit` is DSDA's own key with an
+    /// upstream default of 0; the template must not claim it.
+    #[test]
+    fn v4_turns_on_vsync_without_capping_the_frame_rate() {
+        let template = Template::embedded().expect("valid");
+        assert_eq!(template.get("render_vsync"), Some(1), "VSync is on");
+        assert_eq!(
+            template.get("uncapped_framerate"),
+            Some(1),
+            "interpolated uncapped rendering stays on"
+        );
+        assert_eq!(
+            template.get("dsda_fps_limit"),
+            None,
+            "neither `dsda_fps_limit` nor `dsda_background_fps_limit` may cap play"
+        );
+        assert!(template.get("dsda_background_fps_limit").is_none());
+    }
+
+    /// R2 (spec 056): the menu's "Horizontal Sensitivity" and "Vertical
+    /// Sensitivity" are the mouse keys [m_menu.c:3565-3566], and both are 5.
+    #[test]
+    fn v4_sets_both_mouse_look_sensitivities_to_five() {
+        let template = Template::embedded().expect("valid");
+        assert_eq!(template.get("mouse_sensitivity_horiz"), Some(5));
+        assert_eq!(template.get("mouse_sensitivity_vert"), Some(5));
+        assert_eq!(
+            template.get("mouse_sensitivity_mlook"),
+            Some(10),
+            "Free Look Sensitivity is a different setting and keeps its default"
+        );
+        assert_eq!(
+            template.get("right_analog_sensitivity_x"),
+            Some(1536),
+            "the analog keys use a different scale and are untouched"
+        );
+        assert_eq!(template.get("right_analog_sensitivity_y"), Some(768));
+    }
+
+    /// R3 (spec 056): the value keys added in v4 record DSDA's own default so
+    /// the migration can tell "untouched" from "the player changed it".
+    #[test]
+    fn v4_records_upstream_defaults_for_the_new_value_keys() {
+        let template = Template::embedded().expect("valid");
+        assert_eq!(template.upstream_value("render_vsync"), Some(0));
+        assert_eq!(template.upstream_value("uncapped_framerate"), Some(1));
+        assert_eq!(template.upstream_value("mouse_sensitivity_vert"), Some(1));
+        assert_eq!(
+            template.upstream_value("use_fullscreen"),
+            None,
+            "v2 keys were handled by their own migration and need no upstream record"
+        );
+    }
+
     #[test]
     fn documented_values_are_not_deck_tuning() {
         // Guard against someone "calibrating" the shipped baseline without the
@@ -594,7 +714,12 @@ mod tests {
         assert_eq!(template.get("left_analog_deadzone"), Some(6556));
         assert_eq!(template.get("right_analog_sensitivity_x"), Some(1536));
         assert_eq!(template.get("right_analog_sensitivity_y"), Some(768));
-        assert_eq!(template.get("mouse_sensitivity_horiz"), Some(10));
+        assert_eq!(template.get("mouse_sensitivity_mlook"), Some(10));
+        assert_eq!(
+            template.get("mouse_sensitivity_horiz"),
+            Some(5),
+            "the 5/5 mouse look preset is a deliberate owner request, not calibration"
+        );
     }
 
     #[test]

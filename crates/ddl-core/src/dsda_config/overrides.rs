@@ -57,6 +57,10 @@ pub const ALLOWED_KEYS: &[&str] = &[
     "exclusive_fullscreen",
     "render_aspect",
     "render_stretch_hud",
+    // Frame pacing the template owns (spec 056, R1). `dsda_fps_limit` is
+    // deliberately absent: DDL does not cap the frame rate.
+    "render_vsync",
+    "uncapped_framerate",
 ];
 
 /// Why an override could not be recorded.
