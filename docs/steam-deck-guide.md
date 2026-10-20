@@ -182,10 +182,10 @@ Start from Classic, then add gyro and set the trackpad. Still controller-only:
 1. In **Edit Layout**, choose **Gyro** from the list of controls.
 2. Set the gyro **Behavior** to **Gyro To Mouse**. (The current name; older Steam
    clients call the same mode "As Mouse".)
-3. In the same gyro screen, set the owner's calibrated values:
+3. In the same gyro screen, set these recommended values:
    - **Gyro Angles to Mouse Pixels: 25000** — how many mouse pixels Steam sends
-     for a full 360° turn of the Deck; higher is faster. This is the value
-     calibrated for DOOM with DDL's 5/5 mouse sensitivity.
+     for a full 360° turn of the Deck; higher is faster. A good starting point
+     for DOOM with DDL's 5/5 mouse sensitivity.
    - **Gyro Speed Deadzone: 0** — no minimum rotation speed, so the smallest
      movement produces aim.
    - **3DOF to 2D Conversion Style: Yaw** — turning the Deck left/right aims
