@@ -42,7 +42,7 @@ verified on the macOS arm64 dev host).
   extension approved by the coordinator for 41/60/69 and used for the same reason here); the
   downloader has a deliberate no-suffix rule (`hosts.rs` test
   `does_not_match_subdomains_or_suffixes`), so a real Dropbox install needs a code change, not a
-  catalog change.
+  catalog change. *(Implemented by spec 038; see §Spec 038 phase 2 — Dropbox mirrors.)*
 - **archive.org.** The community item `dbp-wad-archive`
   (`https://archive.org/details/dbp-wad-archive`) holds one ZIP per project for DBP **01–78**,
   including the ones missing from /idgames and from the Dropbox links that have rotted. Its
@@ -206,6 +206,45 @@ IWAD/complevel/gameplay: no DSDA-Doom run was performed on a Deck.
   no explicit `cl2` line in the readme (or no readme). Complevel 2 is **Proposed** from the
   limit-removing target, not **Confirmed**.
 
+## Spec 038 phase 2 — Dropbox mirrors (2026-10-19)
+
+Spec 038 added the downloader rule that admits a `www.dropbox.com` share link's per-request
+`<label>.dl.dropboxusercontent.com` host (same-host hops only; `docs/specs/038-dropbox-redirects.md`
+R1) and put `www.dropbox.com` in `catalog/hosts.toml` `downloads`. Phase 2 then revisited the 21
+recipes pinned to the `dbp-wad-archive` item that are not DBP41/60/69.
+
+**Method.** For each of the 21 release threads, the Dropbox link was read from a Wayback snapshot
+(the live board sits behind a proof-of-work challenge); the `?dl=1` URL was downloaded to a scratch
+directory, its SHA-256 compared with the recipe's pin, and nothing from it was executed. The `st=`
+signed token some links carry is short-lived and was dropped after confirming the link resolves
+without it, so the catalog URLs do not rot.
+
+**12 match the pin and are now mirrored Dropbox-first, archive.org second:** DBP38
+`chronicles-of-ghost-town`, DBP49 `mausoleum-nefarium`, DBP53 `plutonian-sunrise`, DBP61
+`tempest-enterprise`, DBP62 `haunting-hollow`, DBP64 `the-vast-silence`, DBP65
+`sanguine-holy-land`, DBP72 `wretched-morrow`, DBP73 `narcoleptic-strata`, DBP74
+`phantom-processing`, DBP75 `patagonian-pilgrimage`, DBP76 `stagnant-weather`.
+
+**9 serve a different file and stay archive.org only:**
+
+| DBP | Recipe | Dropbox file | Pinned file | Why |
+| --- | --- | --- | --- | --- |
+| 32 | `tomatomania` | `dbp32_v1-hotfix.wad`, 56,366,733 B | ZIP, 25,719,006 B | bare WAD, not the pinned ZIP |
+| 48 | `avpvtvjvvhvss` | `DBP_48.zip`, 2,945,064 B | ZIP, 156,109,133 B | 8-map limit-removing build only; the pin is the full bundle with the nested `dbp48-limit-removing.zip` |
+| 58 | `immortal-warfare` | `DBP_58.zip`, 4,263,591 B | ZIP, 4,223,970 B | repacked/different build |
+| 63 | `terminal-voltage` | `DBP63_v1.0.zip`, 3,109,438 B | ZIP, 3,052,543 B | different build |
+| 68 | `outposts-of-the-wasteland` | `DBP68_RC1.4.zip`, 16,062,519 B | ZIP, 16,063,876 B | same RC1.4 name, different bytes |
+| 70 | `forgotten-psychedelics` | `dbp70rc2.2.wad`, 18,948,117 B | ZIP, 6,753,014 B | bare WAD, not the pinned ZIP |
+| 71 | `grief-arbiter` | `DBP_71_v2.zip`, 3,444,237 B | ZIP, 3,500,730 B | different build |
+| 77 | `the-economy-of-the-dead` | `DBP_77.zip`, 6,036,661 B | ZIP, 6,361,417 B | different build |
+| 59 | `zeppelin-armada` | `DBP_59_full_bf1.zip` 12,485,582 B / `DBP_59_bf1.zip` 12,382,241 B | ZIP, 12,666,143 B | both Dropbox builds differ |
+
+**Measured speed**, same machine and connection, 2026-10-19: Dropbox full downloads totalled
+201.3 MiB in 86.0 s (**2.34 MiB/s**; the 54 MiB `tomatomania` WAD reached 6.3 MiB/s), while a 30 s
+timed Range read per archive.org copy totalled 14.7 MiB in 630 s (**0.023 MiB/s ≈ 1.4 MiB/min**,
+range 0.017–0.033). The full-download comparison, including connection setup per file, is in
+`docs/reports/038-dropbox-redirects.md`.
+
 ## Screenshots (spec 023/035)
 
 67 of the 76 new recipes carry one bundled in-game screenshot from the project's release thread
@@ -218,9 +257,10 @@ both facts are recorded in the matching `SOURCES.toml`.
 
 ## Left open
 
-- **Dropbox redirect policy** (D-028): see the blocker above. The 21 Dropbox-only projects are
-  pinned from archive.org for now; a `*.dl.dropboxusercontent.com` rule in the downloader would
-  restore the intended source and is much faster than archive.org (~50 KB/s from this host).
+- **Dropbox redirect policy** (D-028): **resolved by spec 038** — the downloader admits the
+  per-request host for a chain that begins at `www.dropbox.com`. 12 of the 21 archive.org-pinned
+  recipes are now Dropbox-first; the other 9 keep archive.org because their Dropbox file differs
+  from the pin (see §Spec 038 phase 2 — Dropbox mirrors).
 - **DBP78 "Ghost Riders of Christmas Past"** (RC1, no catalog card) and any later project: a
   follow-up inventory.
 - **Deck validation** of every recipe: IWAD detection, complevel, load order, gameplay and
