@@ -950,8 +950,126 @@ Implications for DDL (spec 029, all **Proposed** until the Deck re-check):
   `exclusive_fullscreen 0` composites correctly, and that the 16:10 bar fills the
   panel with no side texture.
 
+## 10. VSync, uncapped frame rate and mouse look sensitivity
+
+Desk research, 2026-10-20, for spec 056. The source was read at tag `v0.30.1` =
+`8ed581ad5c868b4dba1c39eb21d29e4ddbed9fad`; no engine build, window or Deck test
+was performed. **Confirmed** rows were read in that tagged source. Anything about
+the Deck's actual presentation, power draw or aiming feel is **Needs Deck
+Validation**.
+
+**Confirmed — frame-pacing keys, types, defaults and ranges.** All three are
+ordinary persisted `dsda_config` values (`type, lower, upper, { default }`), and
+the Options → Video Settings → FPS page labels them as shown.
+
+| Key | Type | Default | Range | Menu label | Tagged source |
+| --- | --- | --- | --- | --- | --- |
+| `render_vsync` | bool | `0` | `0–1` | "Vertical Sync" | [configuration.c:1185–1188](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1185-L1188); [m_menu.c:3527](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3527) |
+| `uncapped_framerate` | bool | `1` | `0–1` | "Uncapped FPS" | [configuration.c:1189–1192](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1189-L1192); [m_menu.c:3528](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3528) |
+| `dsda_fps_limit` | int | `0` | `0–1000` | "FPS Limit" | [configuration.c:1193–1196](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1193-L1196); [m_menu.c:3529](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3529) |
+| `dsda_background_fps_limit` | int | `35` | `0–1000` | "Background FPS Limit" | [configuration.c:1197–1200](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1197-L1200); [m_menu.c:3530](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3530) |
+
+**Confirmed — how the three keys combine.**
+
+1. `uncapped_framerate` sets the global `movement_smooth` flag (except in
+   single-tic mode or while capturing video)
+   [r_fps.c:81–87](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/r_fps.c#L81-L87).
+   With it set, the main loop draws whenever the display can be updated rather
+   than only once per 35 Hz game tic, and view/sector state is interpolated
+   between tics
+   [d_main.c:614–645](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L614-L645);
+   [r_fps.c:98–100](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/r_fps.c#L98-L100);
+   [r_fps.c:123–159](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/r_fps.c#L123-L159).
+2. Each `D_Display` ends by presenting the frame with `I_FinishUpdate`
+   [d_main.c:550–552](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L550-L552).
+   The OpenGL path swaps the buffers through `gld_Finish`/`SDL_GL_SwapWindow`
+   [i_video.c:614–620](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L614-L620);
+   [gl_main.c:972–977](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/gl_main.c#L972-L977).
+   The software path presents an SDL texture with `SDL_RenderPresent`
+   [i_video.c:656–668](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L656-L668).
+3. `render_vsync` is read once per video-mode update. The software path adds
+   `SDL_RENDERER_PRESENTVSYNC` when creating the renderer
+   [i_video.c:1298–1305](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1298-L1305);
+   the OpenGL path calls `SDL_GL_SetSwapInterval(1)`
+   [i_video.c:1358–1361](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1358-L1361).
+   It is forced off for `-timedemo` and `-fastdemo`
+   [i_video.c:1196–1201](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1196-L1201);
+   DDL adds neither flag (§1).
+4. After presenting, `dsda_LimitFPS` sleeps only when a numeric limit is non-zero
+   and either the game is uncapped or the window is unfocused; with
+   `dsda_fps_limit 0` it does nothing
+   [time.c:104–121](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/time.c#L104-L121);
+   [d_main.c:559–565](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L559-L565).
+   The background value is used only when the window is unfocused
+   [time.c:111–113](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/time.c#L111-L113).
+
+**Confirmed — result for template v4.** With `render_vsync 1`,
+`uncapped_framerate 1` and `dsda_fps_limit` left at its upstream `0`, the engine
+still renders and interpolates every frame it can, but the buffer swap blocks
+until the display is ready, so the effective frame rate is the panel refresh
+(60 Hz on the LCD Deck, up to 90 Hz on the OLED model). No key in DDL's template
+sets a numeric cap, and `dsda_background_fps_limit` only applies while the window
+is unfocused. This is the owner's request: VSync on, uncapped interpolation kept.
+
+**Confirmed — both renderers DDL can use honour VSync.** DDL's template does not
+set `videomode`, so a fresh install uses DSDA's upstream default `"Software"`
+(§9); a player who chose OpenGL in DSDA's menu gets the GL path. The software
+branch requests `SDL_RENDERER_PRESENTVSYNC`, the GL branch sets the swap interval,
+and both present once per frame as above. There is therefore no renderer or video
+mode DDL uses in which `render_vsync` is a no-op by construction, so spec 056 R1's
+stop condition is not triggered. `exclusive_fullscreen` does not participate:
+DDL keeps desktop fullscreen (spec 029) and the swap interval is set
+independently [i_video.c:1199–1201](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1199-L1201).
+
+**Needs Deck Validation:** `SDL_RENDERER_PRESENTVSYNC` is a request to SDL and the
+driver, and gamescope's compositor sits in between. Confirm on hardware that the
+image does not tear, that the frame rate tracks the panel (including 90 Hz OLED),
+and that power draw is lower than 0.0.7 at the same scene.
+
+**Confirmed — which menu labels are "Horizontal/Vertical Sensitivity".** In
+Options → Mouse Settings the two unprefixed labels are the mouse keys; the
+controller page prefixes them with Left/Right and uses the analog keys, which have
+a different `0–16384` scale.
+
+| Menu label | Config key | Default | Range | Tagged source |
+| --- | --- | --- | --- | --- |
+| "Horizontal Sensitivity" | `mouse_sensitivity_horiz` | `10` | `0–INT_MAX` | [m_menu.c:3565](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3565); [configuration.c:652–655](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L652-L655) |
+| "Vertical Sensitivity" | `mouse_sensitivity_vert` | `1` | `0–INT_MAX` | [m_menu.c:3566](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3566); [configuration.c:656–659](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L656-L659) |
+| "Free Look Sensitivity" | `mouse_sensitivity_mlook` | `10` | `0–INT_MAX` | [m_menu.c:3567](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3567); [configuration.c:664–667](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L664-L667) |
+| "Left/Right Horizontal/Vertical Sensitivity" | `left_/right_analog_sensitivity_x/y` | `100`/`100`, `1536`/`768` | `0–16384` | [m_menu.c:3587–3590](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3587-L3590); [configuration.c:1311–1326](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1311-L1326) |
+
+The owner's 5/5 request therefore maps to `mouse_sensitivity_horiz = 5` and
+`mouse_sensitivity_vert = 5`, not to the analog keys. Both values are inside the
+confirmed range, and template v4 changes only those two: Free Look Sensitivity
+stays `10` and the analog defaults stay as researched in §4.
+
+**Confirmed — which axis reads which setting.** Horizontal mouse motion is scaled
+by `mouse_sensitivity_horiz`. Vertical motion uses
+`mouse_sensitivity_vert / 8` when free aim is off, and
+`mouse_sensitivity_mlook` when `dsda_FreeAim()` is on
+[g_game.c:1396–1416](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L1396-L1416).
+`dsda_FreeAim()` requires `allow_freelook` (upstream `0`) and a map that does not
+disallow free aim, or a map that requires it
+[excmd.c:67–73](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/excmd.c#L67-L73);
+[configuration.c:343–346](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L343-L346).
+Steam Input's **Gyro To Mouse** emits relative mouse motion, so it reaches this
+same path. **Open question:** with free look enabled in DSDA's menu, vertical aim
+uses Free Look Sensitivity instead; spec 056 only asked for Horizontal and
+Vertical, so `mouse_sensitivity_mlook` is unchanged.
+
+**Confirmed — migration support.** Template v4 owns three value keys that v3 did
+not: `render_vsync`, `uncapped_framerate` and `mouse_sensitivity_vert`. DSDA
+rewrites the whole file on save, so the v3 baseline has no value for them while
+the active file holds DSDA's upstream defaults. The template therefore records
+those defaults in `[upstream_values]`, and the three-way merge treats a matching
+active value as "untouched" exactly like a binding's `upstream` triple; a value
+the player changed is kept and reported. This is the scalar counterpart of the
+spec-034 binding rule documented in `crates/ddl-core/src/dsda_config/merge.rs`.
+
 ## Open questions and validation gates
 
+- **Needs Deck Validation:** Spec 056: with `render_vsync 1`, `uncapped_framerate 1` and no FPS limit, confirm no tearing, a frame rate that tracks the panel (60 Hz LCD, 90 Hz OLED), smooth interpolation, and lower power draw than 0.0.7 at the same scene.
+- **Needs Deck Validation:** Spec 056: confirm the gyro presets in `docs/steam-deck-guide.md` (Gyro To Mouse, 25000 px, speed deadzone 0, Yaw conversion) feel right with the 5/5 mouse sensitivity, and that current Steam labels still match.
 - **Needs Deck Validation:** Execute the official AppImage `-v`, direct FUSE launch, `--appimage-extract`, and extracted `AppRun` on Linux/Deck; record statuses and stderr.
 - **Needs Deck Validation:** Identify the official asset's actual runtime/toolchain version, FUSE helper/library needs and payload glibc symbol baseline. The tagged build downloads mutable linuxdeploy and cannot prove these.
 - **Needs Deck Validation:** Verify GL/software rendering, audio, focus return and Steam child-process behavior on Deck.

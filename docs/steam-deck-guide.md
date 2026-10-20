@@ -13,15 +13,17 @@ real gameplay; see the [hardware checklist](deck-testing.md).
 - [FAQ](#faq)
 
 **Confirmed (source inspection):** the controller bindings below are the
-DSDA-Doom settings DDL itself provisions (baseline template v3, spec 034). They
-change nine bindings from DSDA-Doom [v0.30.1 defaults](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c);
-everything the table does not name stays at DSDA's own default. The
-[engine research](research/dsda-engine.md) §4 records the pinned upstream
-evidence — button codes, the three profile segments and the untouched defaults.
-Steam Input itself is still manual; the [runtime research](research/steam-runtime-build.md)
-records the Compatibility tool / glibc constraint. The layout is **Proposed**
-until the deck test confirms it; physical Deck results remain **Needs Deck
-Validation**.
+DSDA-Doom settings DDL itself provisions (baseline template v4, specs 034 and
+056). They change nine bindings from DSDA-Doom [v0.30.1 defaults](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c);
+everything the table does not name stays at DSDA's own default. Template v4 also
+turns **VSync** on with uncapped/interpolated rendering kept and no FPS cap, and
+presets DSDA's mouse **Horizontal Sensitivity** and **Vertical Sensitivity** to
+**5**. The [engine research](research/dsda-engine.md) §4 and §10 record the pinned
+upstream evidence — button codes, the three profile segments, untouched defaults
+and how the frame-pacing keys interact. Steam Input itself is still manual; the
+[runtime research](research/steam-runtime-build.md) records the Compatibility tool
+/ glibc constraint. The layout is **Proposed** until the deck test confirms it;
+physical Deck results remain **Needs Deck Validation**.
 
 ## Install (from a GitHub Release)
 
@@ -180,12 +182,30 @@ Start from Classic, then add gyro and set the trackpad. Still controller-only:
 1. In **Edit Layout**, choose **Gyro** from the list of controls.
 2. Set the gyro **Behavior** to **Gyro To Mouse**. (The current name; older Steam
    clients call the same mode "As Mouse".)
-3. Open the gyro activation settings — Steam labels these something like *Choose Gyro
+3. In the same gyro screen, set the owner's calibrated values:
+   - **Gyro Angles to Mouse Pixels: 25000** — how many mouse pixels Steam sends
+     for a full 360° turn of the Deck; higher is faster. This is the value
+     calibrated for DOOM with DDL's 5/5 mouse sensitivity.
+   - **Gyro Speed Deadzone: 0** — no minimum rotation speed, so the smallest
+     movement produces aim.
+   - **3DOF to 2D Conversion Style: Yaw** — turning the Deck left/right aims
+     horizontally and tilting it like a steering wheel is ignored.
+
+   The first and third names were checked against Valve's
+   [10/25/23 Gyro To Mouse notes](https://steamcommunity.com/games/1675200/announcements/detail/3714966246894291122)
+   and current community guides; Steam relabels this screen from time to time.
+   **Needs Deck Validation:** the exact current labels and whether 25000 px feels
+   right on the Deck's panel. Match by meaning if a name differs.
+4. Open the gyro activation settings — Steam labels these something like *Choose Gyro
    Button(s)* / *Gyro Enable Button* — and set **Right Stick Touch**. Gyro then only
    turns on while your thumb is on the right stick.
-4. Go back, choose **Trackpads → Right Trackpad**, and set its **Behavior** to
+5. Go back, choose **Trackpads → Right Trackpad**, and set its **Behavior** to
    **As Mouse**.
-5. Leave the right stick as a plain joystick.
+6. Leave the right stick as a plain joystick.
+
+DDL already presets DSDA's mouse **Horizontal Sensitivity** and **Vertical
+Sensitivity** to **5** (template v4), which is the in-game side of this gyro aim;
+you do not need to change it in DSDA's menu.
 
 The result:
 
@@ -227,14 +247,22 @@ Two places influence the same movement. Change one at a time and test.
   in its own **Options** menu. The values DDL provisions are:
   - right-stick look: `right_analog_sensitivity_x`, `right_analog_sensitivity_y`,
     `analog_look_acceleration`;
-  - mouse (gyro/trackpad) aim: `mouse_sensitivity_horiz`, `mouse_sensitivity_mlook`;
+  - mouse (gyro/trackpad) aim: `mouse_sensitivity_horiz` (menu **Horizontal
+    Sensitivity**, preset **5**), `mouse_sensitivity_vert` (**Vertical
+    Sensitivity**, preset **5**) and `mouse_sensitivity_mlook` (**Free Look
+    Sensitivity**, left at its default **10**);
   - stick deadzones: `left_analog_deadzone`, `right_analog_deadzone`.
 - **DDL keeps your in-game changes.** A DSDA-Doom option you change in its menu is
   preserved on the next launch. DDL only re-applies its baseline when the template
   version changes, and it backs up the old file first (spec 005, decision D-012).
 
-Suggested order: leave DDL's DSDA values at their defaults, get the gyro feeling right in
-Steam, then fine-tune the right stick inside DSDA-Doom's menu.
+Suggested order: leave DDL's DSDA values at their defaults (the 5/5 mouse preset is
+the recommended gyro starting point), get the gyro feeling right in Steam, then
+fine-tune the right stick inside DSDA-Doom's menu.
+
+> If you enable **Free Look** in DSDA-Doom's own menu, vertical mouse/gyro aim uses
+> **Free Look Sensitivity** instead of **Vertical Sensitivity**. DDL leaves it at
+> 10; lower it in DSDA's menu if vertical aim feels too fast.
 
 ### 6. Recording strict-mode demos? Use a keyboard + mouse layout
 
@@ -272,8 +300,13 @@ but these points have **not** been confirmed on a physical Deck yet:
   DDL starts DSDA-Doom and after focus returns to DDL (child-process handoff);
 - whether gyro-as-mouse activated by right-stick touch behaves as expected in current
   Gaming Mode, and does not disturb DDL's UI;
+- whether the gyro preset above (Gyro To Mouse, 25000 px, speed deadzone 0, Yaw)
+  feels right, and whether Steam's current labels still match;
 - whether strict demo recording really does block the mixed input exactly as described;
-- comfortable sensitivity and deadzone values — DDL ships DSDA-Doom's upstream defaults,
+- whether VSync with uncapped FPS removes tearing and lowers power draw without
+  hurting smoothness (spec 056);
+- comfortable sensitivity and deadzone values — DDL now ships the owner's 5/5 mouse
+  look preset, but the analog stick values remain DSDA-Doom's upstream defaults,
   which are a starting point, not tuned Deck values.
 
 These are tracked as checks **I1–I4** in [`docs/deck-testing.md`](deck-testing.md);
