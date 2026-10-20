@@ -365,11 +365,14 @@ def floor_tiles(defs, x0, x1, y0, y1, vx, vy, rng, glow_x, span):
     return out + path(joints, LEAD, opacity='0.55')
 
 
-def embers(region, n, rng, scale=1):
+def embers(region, n, rng, scale=1, avoid=None):
+    """Floating sparks; none inside `avoid` (a box kept clear for lettering)."""
     x0, y0, x1, y1 = region
     out = ''
     for _ in range(n):
         x, y = x0 + rng.random() * (x1 - x0), y0 + rng.random() * (y1 - y0)
+        if avoid and avoid[0] - 8 < x < avoid[2] + 8 and avoid[1] - 8 < y < avoid[3] + 8:
+            continue
         r = scale * (.6 + rng.random() * 1.6)
         out += poly([(x, y - r * 2.2), (x + r, y), (x, y + r * 2.2), (x - r, y)])
     return path(out, AMBER, opacity='0.7')
@@ -530,23 +533,23 @@ def library_capsule():
     b += floor_tiles(d, 0, W, floor, H, cx, 300, rng, cx, 300)
     b += pier(d, 18, spring, floor, 92, .55) + pier(d, 582, spring, floor, 92, -.55)
     b += brazier(d, 84, floor + 70, 34, rng) + brazier(d, 516, floor + 70, 34, rng)
-    b += embers((60, 80, 540, 760), 26, rng, 1)
+    b += embers((60, 80, 540, 760), 26, rng, 1, (128, 620, 472, 666))
     b += gloom(W, 160, .5)
     b += vignette(W, H, cx, 420, 300, 470, DARK, .08, 8, 1.4)
     return d.svg(), b
 
 
 def wide_capsule():
-    """920x430. Fits author.py: emblem 230 px at (64, 90), wordmark x1.3 at (320, 130),
-    name x0.8 at (320, 268). Emblem recess and lettering on a shaded wall bay; the
+    """920x430. Fits author.py: emblem 230 px at (80, 90), wordmark x1.3 at (336, 130),
+    name x0.8 at (336, 268). Emblem recess and lettering on a shaded wall bay; the
     glowing apse opens on the right."""
     W, H = 920, 430
     d, rng = Defs('wc'), random.Random(920)
     floor = 400
-    wall = d.radial([(0, STONE[5]), (.4, STONE[3]), (1, STONE[0])], 700, 760, 200)
+    wall = d.radial([(0, STONE[5]), (.4, STONE[3]), (1, STONE[0])], 700, 776, 200)
     b = path(rect(0, 0, W, H), wall) + masonry(0, -4, W, floor, 16, 50, rng)
     # Right: an arch into the apse with a lancet pair and the rose.
-    acx, half, k, spring = 762, 118, 1.6, 220
+    acx, half, k, spring = 776, 118, 1.6, 220
     b += mouldings(acx, floor, spring, half, k, [(34, STONE[1]), (27, STONE[6]), (21, STONE[3]),
                                                 (15, BRONZE_RAMP[2]), (10, STONE[2]), (5, STONE[7])])
     b += dogtooth(acx, floor, spring, half, k, 17.5, 2.6, BRONZE_RAMP[4])
@@ -567,11 +570,11 @@ def wide_capsule():
     b += mouldings(318, floor, 190, 268, 1.25, [(18, STONE[1]), (12, STONE[5]), (6, STONE[2])])
     b += path(poly(arch(318, floor, 190, 268, 1.25)), d.linear([(0, STONE[2]), (1, STONE[0])], 0, 0, 0, floor))
     b += masonry(50, 0, 586, floor, 14, 44, rng)
-    b += octagon_recess(179, 205, 230)
-    b += glow(179, 205, 150, 150, '#F08A3C', .03, 8)
-    b += glow(450, 215, 190, 120, DARK, .08, 9)
+    b += octagon_recess(195, 205, 230)
+    b += glow(195, 205, 150, 150, '#F08A3C', .03, 8)
+    b += glow(466, 215, 190, 120, DARK, .08, 9)
     b += floor_tiles(d, 0, W, floor, H, 460, 200, rng, acx, 260)
-    b += pier(d, 616, spring, floor, 50, -.8) + pier(d, 912, spring, floor, 50, -.6)
+    b += pier(d, 630, spring, floor, 50, -.8) + pier(d, 924, spring, floor, 50, -.6)
     b += pier(d, 8, 190, floor, 40, .25)
     b += brazier(d, 880, floor + 22, 26, rng)
     b += embers((640, 60, 900, 380), 18, rng, .8)
