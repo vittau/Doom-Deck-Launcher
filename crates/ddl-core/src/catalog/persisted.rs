@@ -50,7 +50,10 @@ struct StoredCompatibility {
 impl From<StoredRecipe> for Recipe {
     fn from(old: StoredRecipe) -> Self {
         let mut complevel = old.compatibility.complevel;
-        if let Complevel::Number(n) = complevel
+        // Only copies written before 046 (marked by the removed status field)
+        // are mapped; current-schema state keeps its exact representation.
+        if old.compatibility._complevel_status.is_some()
+            && let Complevel::Number(n) = complevel
             && let Some(alias) = ComplevelAlias::naming(n, old.base_game.game)
         {
             complevel = Complevel::Alias(alias);
@@ -135,6 +138,32 @@ mod tests {
                 assert!(saved["compatibility"].get("complevel_status").is_none());
             }
         }
+    }
+    #[test]
+    fn migrated_v006_copy_matches_a_catalog_recipe_that_now_uses_the_alias() {
+        // A v0.0.6 copy holds `complevel = 11` plus the removed status; the catalog
+        // now names the same level `mbf`. After migration the spec-020 comparison
+        // sees no difference, so no update is reported.
+        let mut catalog = Catalog::embedded().recipe("auger-zenith").unwrap().clone();
+        catalog.base_game.game = Game::Doom2;
+        catalog.compatibility.complevel = Complevel::Alias(ComplevelAlias::Mbf);
+        let mut old = catalog.clone();
+        old.compatibility.complevel = Complevel::Number(11);
+        let mut value = serde_json::to_value(old).unwrap();
+        value["compatibility"]["complevel_status"] = "confirmed".into();
+        let loaded: Holder = serde_json::from_value(serde_json::json!({"recipe": value})).unwrap();
+        assert_eq!(loaded.recipe, catalog);
+    }
+    #[test]
+    fn current_schema_numeric_complevel_round_trips_unchanged() {
+        let mut current = Catalog::embedded().recipe("auger-zenith").unwrap().clone();
+        current.base_game.game = Game::Doom2;
+        current.compatibility.complevel = Complevel::Number(11);
+        let value = serde_json::to_value(&current).unwrap();
+        assert!(value["compatibility"].get("complevel_status").is_none());
+        let loaded: Holder = serde_json::from_value(serde_json::json!({"recipe": value})).unwrap();
+        assert_eq!(loaded.recipe, current);
+        assert_eq!(loaded.recipe.compatibility.complevel, Complevel::Number(11));
     }
     #[test]
     fn state_recipe_still_rejects_unrelated_unknown_fields() {
