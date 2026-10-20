@@ -1,10 +1,10 @@
 # 038 — Dropbox as a fast mirror — worker report
 
 **Status:** Phase 1 (**R1**, **R3**) and phase 2 (**R2**) implemented. A1 verified; A2 verified
-(`lint --fetch` for the 12 changed recipes plus an offline lint of the whole catalog). A3's
-full-workspace checks wait for the coordinator's explicit slot go — `main`'s unrelated 13-recipe
-test fix (045) has since landed, but the shared build slot has not been released; the Linux e2e is
-the coordinator's. No new dependency.
+(`lint --fetch` for the 12 changed recipes plus an offline lint of the whole catalog). A3 verified
+on 2026-10-20 in the shared build slot, on a branch merged with `main` `a0db14b`: fmt clean,
+workspace clippy clean, workspace tests 441 passed; the Linux e2e is the coordinator's.
+No new dependency.
 
 ## What changed
 
@@ -140,16 +140,19 @@ repacked or different builds; both DBP59 Dropbox files differ from the pin.
 was run on each of the 12 changed recipe files individually (not the whole directory, so no other
 mapset was re-downloaded); all 12 → **passed (fetched packages verified)** on 2026-10-19.
 
-### A3 — static checks (partial, pending the build slot)
+### A3 — static checks (full workspace, 2026-10-20)
+
+Run in the shared build slot after merging `main` `a0db14b` (branch tip `17531a2`), in this order
+with `set -o pipefail`:
 
 - `cargo fmt --all --check` → clean.
-- `cargo clippy -p ddl-core --all-targets -- -D warnings` → clean.
-- `cargo test -p ddl-core catalog` → 56 passed (includes the offline `lint_paths` over the real
-  `catalog/`, so the edited recipes and `hosts.toml` lint).
-- Full `cargo clippy --workspace` / `cargo test --workspace` are **waiting for the build slot**:
-  `main` now carries the 045 fix for the unrelated 13-recipe headless test, but the coordinator has
-  not yet released the shared slot. Then: merge `main`, run fmt, clippy, test in that order with
-  `set -o pipefail`. The Linux e2e is the coordinator's (A3).
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean (42.9 s).
+- `cargo test --workspace` → **441 passed, 0 failed** across 11 test binaries (includes the
+  408-test `ddl-core` suite and the edited-recipe catalog lint).
+
+Targeted checks from earlier are unchanged: `cargo test -p ddl-core catalog` → 56 passed (includes
+the offline `lint_paths` over the real `catalog/`, so the edited recipes and `hosts.toml` lint).
+The Linux e2e is the coordinator's (A3).
 
 ## Dependencies
 
@@ -169,5 +172,4 @@ None added.
 
 ## Spec items left open
 
-- Full workspace `fmt`/`clippy`/`test` (A3) after the coordinator's "main ready + slot go", then
-  the Linux e2e (A3, coordinator-run).
+- The Linux e2e (A3, coordinator-run).
