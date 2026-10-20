@@ -371,7 +371,7 @@ fn shell_navigation_and_focus_render_headlessly() {
     press(&window, Key::LeftArrow);
     assert_eq!(focus(), 1);
     press(&window, Key::UpArrow);
-    assert_eq!(focus(), 3, "compacted Discover is above Continue");
+    assert_eq!(focus(), -1, "no row above Continue: enter the active tab");
     press(&window, Key::UpArrow);
     assert_eq!(focus(), -1);
     press(&window, Key::LeftArrow);
@@ -380,8 +380,12 @@ fn shell_navigation_and_focus_render_headlessly() {
     assert_eq!(focus(), -2);
     press(&window, Key::LeftArrow);
     press(&window, Key::DownArrow);
-    assert_eq!(focus(), 3, "Home remembers the compacted Discover control");
-    press(&window, Key::LeftArrow);
+    assert_eq!(
+        focus(),
+        1,
+        "Home remembers Continue after returning from its tab"
+    );
+    press(&window, Key::RightArrow);
     assert_eq!(focus(), 2);
     press(&window, Key::LeftArrow);
     assert_eq!(focus(), 1);
@@ -471,7 +475,11 @@ fn shell_navigation_and_focus_render_headlessly() {
     press(&window, Key::Escape);
     assert_eq!(focus(), 20);
     press(&window, Key::UpArrow);
-    assert_eq!(focus(), 11);
+    assert_eq!(
+        focus(),
+        10,
+        "wide card enters the category row at its left edge"
+    );
     press(&window, Key::UpArrow);
     assert_eq!(focus(), -3);
     let header = render(&window);
@@ -482,7 +490,11 @@ fn shell_navigation_and_focus_render_headlessly() {
         "top tab focus ring"
     );
     press(&window, Key::DownArrow);
-    assert_eq!(focus(), 11);
+    assert_eq!(
+        focus(),
+        10,
+        "wide card enters the category row at its left edge"
+    );
     press(&window, Key::F2);
     assert_eq!(state.borrow().screen, Screen::Library);
     capture("library.png");

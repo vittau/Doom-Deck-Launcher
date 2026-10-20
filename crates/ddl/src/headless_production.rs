@@ -2637,7 +2637,15 @@ pub(super) fn title_fit_journey(
                 );
                 for n in rows {
                     ui.set_fit_label(n.label.clone());
-                    ui.set_fit_width(n.w - if n.kind == 8 { 16. } else { 32. });
+                    ui.set_fit_width(
+                        n.w - if n.kind == 16 {
+                            72.
+                        } else if n.kind == 8 {
+                            if n.primary { 40. } else { 16. }
+                        } else {
+                            32.
+                        },
+                    );
                     ui.set_fit_height(if n.kind == 8 { n.h - 16. } else { 30. });
                     ui.set_fit_size(n.size);
                     ui.set_fit_smaller(20.);
@@ -2665,6 +2673,11 @@ pub(super) fn title_fit_journey(
                         let mut r = state.borrow_mut();
                         r.focus = n.id;
                         r.sync(ui);
+                        if !n.actionable {
+                            // Locked rows cannot take focus. Scroll the real plane
+                            // to audit their labels without changing that behavior.
+                            ui.set_scroll_offset((n.y + n.h + 12. - 506.).max(0.));
+                        }
                     }
                     capture_component(
                         window,
@@ -2776,17 +2789,25 @@ fn capture_component(
 ) {
     let frame = render(window);
     let button = node.kind == 8;
-    let inset = if button { 8. } else { 20. };
-    let x = (28. + node.x + inset) as u32;
+    let (left, right) = if node.kind == 16 {
+        (56., 16.)
+    } else if button && node.primary {
+        (32., 8.)
+    } else if button {
+        (8., 8.)
+    } else {
+        (16., 16.)
+    };
+    let x = (28. + node.x + left) as u32;
     let y = (218. + node.y - ui.get_scroll_offset() + 8.) as u32;
-    let w = (node.w - inset * 2.) as u32;
+    let w = (node.w - left - right) as u32;
     let h = if button { node.h as u32 - 16 } else { 30 };
     assert!(
         x + w <= WIDTH && y >= 210 && y + h <= HEIGHT - 64,
         "{name}: component must be in the viewport"
     );
-    let color = if node.primary {
-        (0x12, 0x0c, 0x0d)
+    let color = if node.kind == 16 {
+        (0x9a, 0x92, 0x8c)
     } else {
         (0xf8, 0xea, 0xd5)
     };
