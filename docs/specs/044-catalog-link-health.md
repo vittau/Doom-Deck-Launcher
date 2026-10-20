@@ -22,12 +22,25 @@ every run downloads whole archives. This job checks links without downloading th
   the table to the job summary, and opens or updates a single issue labelled `catalog-health`
   when R2 fails (closes it when a later run is clean). Least-privilege `permissions`
   (`contents: read`, `issues: write`).
+- **R4** — **Lean e2e install set:** the real-network e2e stops installing every recipe. Its run
+  of 2026-10-19 (run 39304815134) installed all 89 and failed after 41 min on one 156 MB
+  archive.org file (`avpvtvjvvhvss`, "download too slow"). It now installs a deterministic sample
+  chosen by a small, tested `ddl` helper or script (not a hand-kept list):
+  - the smallest recipe per first-source download host;
+  - every recipe with optional components, with each free component installed once, as today;
+  - every widescreen status-bar case, as today.
+  Each archive stays under a size cap, e.g. 64 MiB, unless it is the only recipe for its host.
+  Full-catalog coverage moves to R1–R3 (headers, all mirrors). The sample and the reasoning go
+  in the workflow comment, and the run summary lists the chosen ids.
 
 ## Acceptance criteria
 
 - [ ] **A1** (R1, R2) — tests against the local test server, no network: each outcome, `HEAD`
   refused → range fallback, redirect out of the allowlist, a recipe with one dead and one good
   mirror (warning), a recipe with no good source (failure), concurrency bound.
+- [ ] **A4** (R4) — a test of the sample selection over the real `catalog/`: every host is
+  covered, component and status-bar recipes are included, the size cap holds. The coordinator's
+  e2e dispatch after merge passes and finishes in under 30 minutes.
 - [ ] **A2** (R3) — `actionlint` (or the repo's YAML check) passes; the coordinator triggers it
   once with `workflow_dispatch` after merge and links the run in the report.
 - [ ] **A3** — fmt, clippy `-D warnings`, tests green.

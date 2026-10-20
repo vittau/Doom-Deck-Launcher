@@ -507,3 +507,42 @@ fn navigation_feedback() {
     r.action(ui, Action::NextTab);
     assert!(ui.get_toast().is_empty());
 }
+
+/// Spec 040 R6: a download row resumes from the bytes on disk and says
+/// "Resuming…" while the range request is in flight.
+#[test]
+fn resuming_download_row() {
+    if isolated(module_path!(), "resuming_download_row") {
+        return;
+    }
+    use crate::runtime::{Screen, download_row};
+    use ddl_core::downloads::{InstallProgress, Progress};
+    use slint::Model as _;
+
+    let scene = production::scene();
+    let state = scene.state.clone();
+    let ui = &scene.ui;
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Progress;
+        r.busy = true;
+        r.progress = Some(InstallProgress::transfer(Progress {
+            downloaded: 61 * 1024 * 1024,
+            total: Some(121 * 1024 * 1024),
+            resuming: true,
+        }));
+        r.sync(ui);
+        let row = download_row(r.progress);
+        assert_eq!(row.fraction, Some(504), "61 of 121 MiB");
+        assert!(row.resuming);
+    }
+    assert!(
+        ui.get_nodes().iter().any(|n| n.label.contains("Resuming")),
+        "the download row must say Resuming…"
+    );
+    assert!(
+        ui.get_nodes().iter().any(|n| n.art == 504),
+        "the bar starts at the resumed byte count"
+    );
+    scene.capture("040-resuming-download.png");
+}

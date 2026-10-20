@@ -44,6 +44,7 @@ pub mod extract;
 pub mod fetch;
 pub mod hash;
 pub mod host;
+mod partial;
 
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_http;
