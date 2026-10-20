@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from PIL import Image, __version__ as pillow_version
+ET.register_namespace('','http://www.w3.org/2000/svg')
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
 ASSETS=ROOT/'crates/ddl/ui/assets'
@@ -33,9 +34,17 @@ JOBS=[('emblem-small.svg', ASSETS/'logo/icon.png',256,256),
       ('social-preview-variants/atlas.svg',HERE/'social-preview-variants/atlas.png',1280,640),
       ('readme-logo-dark.svg',HERE/'readme-logo-dark.png',1520,400),
       ('readme-logo-light.svg',HERE/'readme-logo-light.png',1520,400),
-      ('contact-sheet.svg',HERE/'contact-sheet.png',1200,1200)]
+      ('contact-sheet.svg',HERE/'contact-sheet.png',1200,2020)]
 SOCIAL={'social-preview.svg','social-preview-variants/threshold.svg','social-preview-variants/atlas.svg'}
 BRAND_COLORS=['F8EAD5','B88960','52272B','FFD078','120C0D']
+# Spec 054: Steam compositions set the lettering straight on the scene. Name boxes
+# follow author.py's placements; the check fails if those placements move.
+STEAM={'library-capsule.svg':((600,900),'translate(132.48 620)',(128,620,472,666)),
+       'wide-capsule.svg':((920,430),'translate(336 268) scale(0.8)',(334,266,606,300)),
+       'hero.svg':((3840,1240),None,None)}
+# SteamGridDB upload limits for static images, from the site's upload dialog
+# (docs/research/steam-shortcuts.md section 5.4): grids 15 MB, heroes 24 MB, logos 15 MB.
+SGDB_LIMITS={'library-capsule.png':15_000_000,'wide-capsule.png':15_000_000,'hero.png':24_000_000,'logo.png':15_000_000}
 README_THEMES={'dark':('#F8EAD5','#0d1117'), 'light':('#120C0D','#ffffff')}
 
 def validate_readme(master, rendered):
@@ -72,6 +81,46 @@ def validate_readme(master, rendered):
     assert contrast>=4.5,'README name contrast below 4.5:1'
     print(f'{master.name}: corners alpha={corners}; all edges alpha=0; name {ink} on {background} contrast={contrast:.2f}:1')
 
+def luminance(rgb):
+    linear=[(v/255)/12.92 if v/255<=.04045 else ((v/255+.055)/1.055)**2.4 for v in rgb]
+    return sum(a*b for a,b in zip(linear,(.2126,.7152,.0722)))
+
+def validate_steam(master,resvg,scratch):
+    size,name_at,name_box=STEAM[master.name]
+    tree=ET.parse(master);root=tree.getroot()
+    assert (int(root.get('width')),int(root.get('height')))==size,master
+    body=[el for el in root if not el.tag.endswith('defs')]
+    if name_at is None:
+        assert not any('gl-' in v for el in root.iter() for v in el.attrib.values()),'hero carries no mark'
+        scene=body
+    else:
+        # Emblem, wordmark and name contours are the masters' (stacked.svg), unchanged.
+        scene,placed=body[:-3],body[-3:]
+        for group,source in zip(placed,list(ET.parse(HERE/'stacked.svg').getroot())[-3:]):
+            assert [ET.tostring(el) for el in group]==[ET.tostring(el) for el in source],'lettering contours changed'
+        assert placed[2].get('transform')==name_at,'name moved: update STEAM name box'
+    # No plate: no opaque flat-colour rectangle anywhere in the scene covers more
+    # than 5% of the frame (the walls and floor are gradients).
+    for group in scene:
+        for el in group.iter():
+            if not el.tag.endswith('path') or el.get('fill','').startswith('url(') or el.get('fill-opacity'): continue
+            for sub in re.findall(r'M[^M]*',el.get('d')):
+                v=[float(n) for n in re.findall(r'-?[\d.]+',sub)]
+                if len(v)==8 and re.fullmatch(r'M[-\d. ]+Z',sub.strip()):
+                    xs,ys=v[0::2],v[1::2]
+                    area=(max(xs)-min(xs))*(max(ys)-min(ys))
+                    assert area<=.05*size[0]*size[1],(master,'flat plate',sub)
+    if name_box is None:
+        print(f'{master.name}: no mark or text; no flat plate');return
+    # Name contrast against the bare scene (lettering removed), every pixel.
+    for el in placed: root.remove(el)
+    bare=Path(scratch)/f'bare-{master.stem}.svg';tree.write(bare)
+    subprocess.run([resvg,str(bare),str(bare.with_suffix('.png'))],check=True)
+    worst=max(luminance(px) for px in Image.open(bare.with_suffix('.png')).convert('RGB').crop(name_box).get_flattened_data())
+    contrast=(luminance((248,234,213))+.05)/(worst+.05)
+    assert contrast>=4.5,(master,contrast)
+    print(f'{master.name}: lettering unchanged, no flat plate, name contrast >= {contrast:.2f}:1')
+
 def validate_social(master):
     tree=ET.parse(master)
     ids={el.get('id') for el in tree.iter() if el.get('id')}
@@ -101,9 +150,6 @@ def validate_social(master):
     # Conservative contrast check across the entire tagline area, including
     # spaces; the dark wall layer is part of every composition.
     background=Image.open(images[0]).convert('RGB').resize((1280,640),Image.Resampling.LANCZOS)
-    def luminance(rgb):
-        linear=[(v/255)/12.92 if v/255<=.04045 else ((v/255+.055)/1.055)**2.4 for v in rgb]
-        return sum(a*b for a,b in zip(linear,(.2126,.7152,.0722)))
     wall=Image.new('RGB',background.size,'#120C0D')
     shade=next(el for el in tree.getroot() if el.get('id')=='copy-shade')
     darkened=Image.blend(background,wall,float(shade[0].get('opacity')))
@@ -129,6 +175,7 @@ def main():
     for name in MASTERS:
         assert (ASSETS/f'logo/{name}.svg').read_bytes()==(HERE/f'{name}.svg').read_bytes(),f'compiled copy differs: {name}'
     with tempfile.TemporaryDirectory(prefix='ddl-logo-') as scratch:
+        for name in STEAM: validate_steam(HERE/name,args.resvg,scratch)
         for src,dest,w,h in JOBS:
             out=Path(scratch)/dest.name
             subprocess.run([args.resvg,'--width',str(w),'--height',str(h),str(HERE/src),str(out)],check=True)
@@ -157,6 +204,11 @@ def main():
                 assert len(data)<=1_000_000,'social preview exceeds 1 MB'
                 assert data[25]==3,'indexed social export expected'
             else: assert data[25]==6,'RGBA export expected'
+            if dest.name in SGDB_LIMITS and dest.parent==ART:
+                assert len(data)<=SGDB_LIMITS[dest.name],f'{dest.name} over the SteamGridDB limit'
+            if dest.name=='logo.png':
+                alpha=Image.open(out).getchannel('A')
+                assert alpha.getextrema()[0]==0 and alpha.getpixel((0,0))==0,'logo.png must be transparent'
             if args.check: assert dest.read_bytes()==data,f'stale export: {dest}'
             else: dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
             print(f'{dest.relative_to(ROOT)}\t{w}x{h}\t{len(data)} bytes')
