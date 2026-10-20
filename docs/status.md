@@ -1,6 +1,6 @@
 # Status
 
-**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.6-local`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-20
+**Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.8-upgrade`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-20
 
 | Item | Spec / output | State |
 | --- | --- | --- |
@@ -76,7 +76,7 @@
 | Fade from the title panel into the art band | 049 | **Done**: 120 px gradient from the panel colour, headless regression measures the joint |
 | Steam artwork v2: detailed vector scenes, no plate behind the lettering | 054 | **Done**: procedural Ember Cathedral interiors (`docs/design/logo/scene.py`) for both capsules and the hero, owner-approved; `logo.png` unchanged (bottom-left); all five pieces uploaded to SteamGridDB (`/game/5558703`, pending site verification) |
 | Research: /idgames browse | 041 | **Done**: mirror `ls-laR.gz` (43,741 files, daily) + per-file txt; recommends a CI-built index; specs 050–053 written from its proposal; owner questions open (publish a derived index; courtesy note to the archive maintainers) |
-| /idgames index build and publish | 050 | Ready (first publish waits for the owner) |
+| /idgames index build and publish | 050 | **Done**: `ddl idgames index build/validate`, daily slow crawl (1 request at a time, ≥ 3 s, 1,500/run, back-off), publish to `idgames-index`; first publish running (the first try failed on a suffix-matching `ls-remote`, fixed for `catalog` too) |
 | /idgames browse core (fetch, cache, search) | 051 | Ready (after 050) |
 | /idgames unverified install and launch | 052 | Ready (after 051) |
 | /idgames browse UI and recipe-draft hand-off | 053 | Ready (after 052) |
@@ -86,7 +86,7 @@
 
 | Item | Spec | State |
 | --- | --- | --- |
-| Upgrade over 0.0.6 lost the saved setup (`app.json` recipe copies vs spec 046); recovery screen; Settings never empty | 055 | In progress (Codex) — release blocker |
-| DSDA template v4: VSync on with uncapped FPS, look sensitivity 5/5; gyro settings in the Deck guide (D-033) | 056 | In progress (opencode) |
-| Right-stick scroll, Play setup D-pad order, skill 4 "(UV)" default, tabs Home/Library/Discover, B at root → Quit (D-032) | 057 | In progress (Codex) |
-| Research: Flatpak on Flathub/Discover and running the engine from the sandbox | 058 | In progress (opencode) |
+| Upgrade over 0.0.6 lost the saved setup (`app.json` recipe copies vs spec 046); recovery screen; Settings never empty | 055 | **Done**: v0.0.5/0.0.6/0.0.7 state trees made by each tag's own serializers load with nothing lost (release guard test), legacy recipe copies decoded without loosening catalog parsing, recovery screen (Retry / Start fresh keeps `*.unreadable-<time>` / Diagnostics), Settings panels never empty. Codex, finished by Sonnet. Deck: U1–U2 |
+| DSDA template v4: VSync on with uncapped FPS, look sensitivity 5/5; gyro settings in the Deck guide (D-033) | 056 | **Done**: template v4 (`render_vsync 1`, `uncapped_framerate 1`, no FPS cap; `mouse_sensitivity_horiz/vert 5`), v3→v4 three-way migration, cited in research §10; gyro values in the Deck guide. Deck: U3–U4 |
+| Right-stick scroll, Play setup D-pad order, skill 4 "(UV)" default, tabs Home/Library/Discover, B at root → Quit (D-032) | 057 | **Done**: right-stick scroll on every scrollable view (incl. Recovery), Play setup focus order, skill labels/default, tab order, B → Quit at roots. Codex, finished by Sonnet. Deck: U5–U9. Pre-existing nit: the Advanced card's subtitle touches its bottom edge |
+| Research: Flatpak on Flathub/Discover and running the engine from the sandbox | 058 | **Done** (`research/flatpak.md`): extract-and-run the AppImage in the sandbox (no FUSE), runtime 26.08; Flathub's AI policy forbids AI-assisted manifests and agent-run submissions — channel choice waits for the owner |

@@ -736,3 +736,15 @@
   refs: [docs/reports/044-catalog-link-health.md, docs/specs/055-legacy-state-upgrade.md,
          docs/specs/056-dsda-template-v4-and-gyro-guide.md,
          docs/specs/057-controller-navigation-touch-ups.md, docs/specs/058-flatpak-research.md]
+- date: 2026-10-20
+  type: release
+  summary: >-
+    Merged 050 (/idgames index builder and daily publish workflow), 055 (older saved state loads;
+    recovery screen), 056 (DSDA template v4: VSync with uncapped interpolation, look sensitivity
+    5/5, gyro guide), 057 (right-stick scroll, focus order, skill 4 "(UV)" default, tab order,
+    B to quit) and 058 (Flatpak research). Codex hit its 5-hour limit mid-run; Sonnet workers
+    finished 055 and 057 on the same worktrees. Workflows now match publish branches by full ref.
+    Pre-release v0.0.8-upgrade for the Deck (checks U1-U9).
+  refs: [docs/reports/050-idgames-index.md, docs/reports/055-legacy-state-upgrade.md,
+         docs/reports/056-dsda-template-v4.md, docs/reports/057-controller-navigation.md,
+         docs/reports/058-flatpak-research.md, docs/deck-testing.md]

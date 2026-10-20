@@ -19,6 +19,23 @@ learned here flow back into `research/` and `decisions.md`.
 
 Result legend: ✅ pass · ❌ fail (add notes) · ⚠️ partial · ⏳ not run yet
 
+## Release 0.0.8 — upgrade fix and controller touch-ups
+
+**Install it over your current setup — do not delete `~/.config/ddl` first**: U1 checks the
+upgrade path. The 0.0.7 checks below (R1–R13) still apply.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| U1 | Replace the DDL folder with 0.0.8 and open it: engine, IWADs, installed mapsets, profiles and favorites are all there; no "Install DSDA-Doom" first-run, no "Could not read saved setup" | Gaming | ⏳ | spec 055; ideally also from a 0.0.6 setup |
+| U2 | If a saved file is ever unreadable: the recovery screen names it; Retry says when it still fails; Start fresh keeps the file as `*.unreadable-<time>`; Settings → Diagnostics shows paths | Gaming | ⏳ | spec 055 (only if it happens) |
+| U3 | In DSDA: no tearing, motion still smooth, fan/power lower than 0.0.7 on the same scene (VSync on, uncapped interpolation) | Gaming | ⏳ | spec 056; Options → Video → FPS shows Vertical Sync on |
+| U4 | DSDA Options → Mouse: Horizontal and Vertical Sensitivity are 5 (unless you changed them before); gyro with the guide's settings (Gyro to Mouse, 25000, deadzone 0, Yaw) feels right | Gaming | ⏳ | spec 056, [guide](steam-deck-guide.md) |
+| U5 | Right stick scrolls long screens (error text, Settings pages, mapset detail, dialogs) without moving the selection | Gaming | ⏳ | spec 057 |
+| U6 | Play setup: D-pad down from Advanced lands on Skill/Pistol start, then Recipe load order; up mirrors it | Gaming | ⏳ | spec 057 |
+| U7 | A new profile starts on "Skill 4 (UV)"; skill 5 reads "(Nightmare)"; your existing profiles keep their skill | Gaming | ⏳ | spec 057, D-032 |
+| U8 | Tabs read Home, Library, Discover, Settings | Gaming | ⏳ | spec 057 |
+| U9 | B on a tab's top level opens Quit with Quit selected; B closes it; in Settings' right page B first returns to the list | Gaming | ⏳ | spec 057, D-032 |
+
 ## Release 0.0.7 — re-checks after the 0.0.6 run
 
 Fixes since 0.0.6 that need the Deck. **Before you start, remove `SLINT_SCALE_FACTOR=1 %command%`

@@ -80,7 +80,9 @@ task may reuse that task's terminal. After settlement: release the worker, close
    push the branch, release it. To resume: a new worktree with `--base-branch <wip branch>` and a
    brief that starts with "read the handoff in the report".
 9. **Release for the Deck** when a build is worth testing: push a `v0.0.N-<label>` tag (release
-   workflow, spec 001) and add the checks to `docs/deck-testing.md`.
+   workflow, spec 001) and add the checks to `docs/deck-testing.md`. After tagging, a worker adds
+   the tag's saved-state fixture tree (`tests/fixtures/state/generate.py <tag>`, spec 055) and
+   its name to the release guard test, so the next release must still read it.
 
 ## Machine load
 
