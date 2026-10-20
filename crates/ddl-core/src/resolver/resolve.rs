@@ -16,7 +16,8 @@ use crate::catalog::{
 };
 use crate::dsda_config::{ALLOWED_KEYS, DsdaConfigManager, Overrides};
 use crate::engines::dsda::{
-    AssignAllowlist, AssignOverride, Complevel, LaunchPlan, Skill, ValidationError, Warp,
+    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, Skill, ValidationError,
+    Warp,
 };
 use crate::iwads::{CanonicalLinks, Game as IwadsGame, IwadTable, Registry, RegistryEntry};
 use crate::library::{InstallManifest, InstalledMember};
@@ -256,8 +257,7 @@ pub fn resolve(
         iwad_variant: entry.variant.clone(),
         iwad_path: canonical,
         content,
-        complevel: complevel.value(),
-        complevel_status: recipe.compatibility.complevel_status,
+        complevel,
         skill: profile.skill,
         pistol_start: profile.pistol_start,
         engine_version: engine.version.clone(),
@@ -345,17 +345,23 @@ fn verify_installed(entry: &InstalledMember) -> Result<(), Blocker> {
 }
 
 fn resolve_complevel(recipe: &Recipe, game: IwadsGame) -> Result<Complevel, Blocker> {
-    // Aliases as DSDA-Doom resolves them (`docs/research/dsda-engine.md` §1):
-    // `boom` is 9 (Boom 2.02), `mbf` is 11, `mbf21` is 21. `vanilla` is resolved
-    // by DDL from the identified family (D-017).
-    let value = match &recipe.compatibility.complevel {
-        RecipeComplevel::Number(number) => *number,
-        RecipeComplevel::Alias(ComplevelAlias::Vanilla) => vanilla_complevel(game),
-        RecipeComplevel::Alias(ComplevelAlias::Boom) => 9,
-        RecipeComplevel::Alias(ComplevelAlias::Mbf) => 11,
-        RecipeComplevel::Alias(ComplevelAlias::Mbf21) => 21,
+    // A recipe alias is sent to DSDA-Doom as the word and kept with its
+    // resolved number for display (D-030). `boom` is 9, `mbf` is 11 and `mbf21`
+    // is 21; `vanilla` is resolved by DDL from the identified family (D-017),
+    // the same way the engine resolves it (`docs/research/dsda-engine.md` §1).
+    let level = match &recipe.compatibility.complevel {
+        RecipeComplevel::Number(number) => Complevel::new(*number),
+        RecipeComplevel::Alias(alias) => {
+            let word = match alias {
+                ComplevelAlias::Vanilla => ComplevelWord::Vanilla,
+                ComplevelAlias::Boom => ComplevelWord::Boom,
+                ComplevelAlias::Mbf => ComplevelWord::Mbf,
+                ComplevelAlias::Mbf21 => ComplevelWord::Mbf21,
+            };
+            Complevel::from_word(word, vanilla_complevel(game))
+        }
     };
-    Complevel::new(value).map_err(|error| Blocker::IncompatibleChoice {
+    level.map_err(|error| Blocker::IncompatibleChoice {
         detail: error.to_string(),
     })
 }

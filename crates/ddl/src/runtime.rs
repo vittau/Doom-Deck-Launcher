@@ -2173,7 +2173,7 @@ impl Runtime {
                                 186. + summary.content.len() as f32 * 38.,
                                 448.,
                                 56.,
-                                value(ui, T::Complevel, summary.complevel),
+                                value(ui, T::Complevel, summary.complevel.label()),
                                 20.,
                             );
                             b.label(

@@ -1584,7 +1584,7 @@ exit 1
         let (doctor, _) = run(&fx, cli::Command::Doctor).unwrap();
         assert!(doctor.contains("base games:"));
         assert!(
-            doctor.contains("base:doom2  Doom II  complevel 2"),
+            doctor.contains("base:doom2  Doom II  complevel vanilla (2)"),
             "{doctor}"
         );
         let (out, _) = run(
@@ -1601,7 +1601,7 @@ exit 1
         )
         .unwrap();
         assert!(out.contains("-iwad"), "{out}");
-        assert!(out.contains("-complevel\n2"), "{out}");
+        assert!(out.contains("-complevel\nvanilla"), "{out}");
         assert!(!out.lines().any(|line| line == "-file"), "{out}");
         assert!(out.contains("-pistolstart"), "{out}");
         run(
@@ -1705,7 +1705,7 @@ exit 1
 
         let lines: Vec<&str> = out.lines().collect();
         assert!(lines[0].starts_with("program: "), "{out}");
-        // D-011: one `-file` list, one `-deh`, a numeric `-complevel`, and the
+        // D-011: one `-file` list, one `-deh`, a `-complevel` word, and the
         // IWAD through DDL's canonical link.
         assert_eq!(
             lines.iter().filter(|line| **line == "-file").count(),
@@ -1756,7 +1756,7 @@ exit 1
         let iwad = after("-iwad");
         assert!(iwad.starts_with('/'), "canonical link is absolute: {iwad}");
         assert!(iwad.ends_with("doomu.wad"), "{iwad}");
-        assert_eq!(after("-complevel"), "3", "numeric complevel: {out}");
+        assert_eq!(after("-complevel"), "vanilla", "alias complevel: {out}");
         assert_eq!(after("-skill"), "4", "{out}");
         assert!(
             lines

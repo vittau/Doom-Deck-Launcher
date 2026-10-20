@@ -574,6 +574,26 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
         "unreviewed complevel",
         "use vanilla, 0–17, 21, boom, mbf or mbf21 (never 18–20)",
     );
+    // D-030: a recipe names the level with DSDA's alias whenever one does; a
+    // number stays only for a level no alias names on this recipe's IWAD.
+    let named = match r.compatibility.complevel {
+        Complevel::Number(n) => ComplevelAlias::naming(n, r.base_game.game).map(|alias| (n, alias)),
+        Complevel::Alias(_) => None,
+    };
+    issue(
+        "compatibility.complevel".into(),
+        named.is_some(),
+        &named.map_or_else(String::new, |(n, alias)| {
+            format!(
+                "complevel {n} is what the alias `{}` means on {}",
+                alias.as_str(),
+                game_name(r.base_game.game)
+            )
+        }),
+        &named.map_or_else(String::new, |(n, alias)| {
+            format!("write complevel = \"{}\" instead of {n}", alias.as_str())
+        }),
+    );
     let range = semver::VersionReq::parse(&r.compatibility.engine.range);
     let version = semver::Version::parse(&r.verification.engine_version);
     issue(
@@ -722,6 +742,30 @@ pub fn validate_vocabulary(v: &TagVocabulary) -> Vec<Violation> {
     errors
 }
 
+fn game_name(game: Game) -> &'static str {
+    match game {
+        Game::Doom => "doom",
+        Game::Doom2 => "doom2",
+        Game::Tnt => "tnt",
+        Game::Plutonia => "plutonia",
+    }
+}
+
+/// The message and hint for a recipe that fails to parse. A key the schema
+/// dropped gets a precise explanation instead of serde's generic one.
+pub(crate) fn parse_failure(message: &str) -> (String, &'static str) {
+    if message.contains("unknown field `complevel_status`") {
+        return (
+            "`complevel_status` is no longer part of the recipe schema (D-030)".into(),
+            "delete the `complevel_status` line; a complevel has no verification status",
+        );
+    }
+    (
+        message.to_owned(),
+        "fix the schema/type; remove unknown keys and supply required fields",
+    )
+}
+
 fn diag(file: &Path, line: usize, message: impl ToString, hint: &str) -> Diagnostic {
     Diagnostic {
         file: file.into(),
@@ -756,12 +800,8 @@ fn parse<T: serde::de::DeserializeOwned>(path: &Path, text: &str) -> Result<T, D
         let line = e.span().map_or(1, |s| {
             text[..s.start].bytes().filter(|b| *b == b'\n').count() + 1
         });
-        diag(
-            path,
-            line,
-            e.message(),
-            "fix the schema/type; remove unknown keys and supply required fields",
-        )
+        let (message, hint) = parse_failure(e.message());
+        diag(path, line, message, hint)
     })
 }
 

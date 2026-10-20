@@ -188,8 +188,7 @@ member = "main"
 role = "maps"
 [compatibility]
 family = "vanilla"
-complevel = 3
-complevel_status = "proposed"
+complevel = "vanilla"
 [compatibility.engine]
 range = ">=0.30"
 status = "inspected"

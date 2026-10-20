@@ -46,7 +46,7 @@ the controller now work (gilrs).
 | F6 | AUGER;ZENITH add-on choice (None / Alternate / Deckard) persists after relaunch of DDL | Gaming | ⏳ | |
 | F7 | Missing IWAD (e.g. no Ultimate DOOM): Play disabled with the reason and **Add IWAD folder** | Gaming | ✅ | 0.0.6: AUGER;ZENITH shows "Base game missing" (Doom II not found, see F2) |
 | F9 | **0.0.3:** Ember Cathedral look is readable at arm's length; screens render without lag (S3) | Gaming | ⏳ | spec 012 A4 |
-| F10 | **0.0.3:** Eviternity installs (≈50 MB) and plays at complevel 11 (MAP01, music, DEHACKED changes active) | Gaming | ⏳ | complevel Proposed |
+| F10 | **0.0.3:** Eviternity installs (≈50 MB) and plays at complevel `mbf` (11) (MAP01, music, DEHACKED changes active) | Gaming | ⏳ | |
 | F11 | **0.0.3:** Steam artwork from `ddl/art/` set by hand per the [Steam Deck guide](steam-deck-guide.md#make-it-look-native-in-steam) looks right in the library | Gaming | ⏳ | spec 013 A4 |
 | F8 | Logs: `~/.local/state/ddl/logs/ddl.log` exists; attach it to any ❌ | Desktop | ⏳ | path shown in Settings → Diagnostics |
 
@@ -116,7 +116,7 @@ layout.
 | M1 | SIGIL: episode 5 reachable, complevel 3 plays correctly | Gaming | ⚠️ | 0.0.6: SIGIL plays; episode 5 and complevel not checked explicitly |
 | M2 | SIGIL compat variant replaces E3 | Gaming | ⏳ | |
 | M3 | SIGIL II: episode 6 reachable, complevel 3 | Gaming | ⏳ | |
-| M4 | AUGER;ZENITH at complevel 2: MAP01–MAP21 behave; no visual errors | Gaming | ⏳ | complevel still Proposed |
+| M4 | AUGER;ZENITH at complevel `vanilla` (2): MAP01–MAP21 behave; no visual errors | Gaming | ⏳ | |
 | M5 | AUGER;ZENITH with AlternateBlaster add-on: new pistol sound and muzzle flash | Gaming | ⏳ | |
 | M6 | Pistol start toggle resets inventory each map | Gaming | ⏳ | |
 

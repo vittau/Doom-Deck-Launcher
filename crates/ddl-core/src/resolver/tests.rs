@@ -513,7 +513,16 @@ fn missing_iwad_names_the_game_and_vanilla_resolves_per_family() {
             &config,
         )
         .expect("resolve");
-        assert_eq!(resolution.summary().complevel, expected, "{variant}");
+        assert_eq!(
+            resolution.summary().complevel.value(),
+            expected,
+            "{variant}"
+        );
+        // The alias reaches DSDA as the word, not the number (R3).
+        assert_eq!(resolution.summary().complevel.argument(), "vanilla");
+        let argv = resolution.plan().to_command();
+        let at = argv.iter().position(|arg| arg == "-complevel").unwrap();
+        assert_eq!(argv[at + 1], "vanilla", "{variant}");
         assert_eq!(
             resolution
                 .plan()
@@ -750,17 +759,26 @@ fn summary_snapshot_for_the_three_reference_recipes() {
             IwadsGame::Doom2,
             "doom2.wad",
             "AUGER;ZENITH (Doomer Boards Project 37)",
+            "vanilla (2)",
         ),
-        ("sigil", "doom-1.9ud", IwadsGame::Doom, "doomu.wad", "SIGIL"),
+        (
+            "sigil",
+            "doom-1.9ud",
+            IwadsGame::Doom,
+            "doomu.wad",
+            "SIGIL",
+            "vanilla (3)",
+        ),
         (
             "sigil-ii",
             "doom-1.9ud",
             IwadsGame::Doom,
             "doomu.wad",
             "SIGIL II",
+            "vanilla (3)",
         ),
     ];
-    for (id, variant, iwad_game, filename, label) in cases {
+    for (id, variant, iwad_game, filename, label, complevel) in cases {
         let dir = TempDir::new().unwrap();
         let data = dir.path();
         let recipe = embedded(id);
@@ -782,13 +800,9 @@ fn summary_snapshot_for_the_three_reference_recipes() {
         .expect("resolve");
         let text = normalize(&resolution.summary().to_string(), data);
         let expected = format!(
-            "Will launch\n  base game: {} (present)\n  IWAD: <data>/iwads/{variant}/{filename} ({variant})\n  content (load order):\n    1. {label}\n       <data>/library/{id}/{release}/free/maps.wad\n  complevel: {complevel} (proposed)\n  skill: 3\n  pistol start: no\n  engine: 0.30.1",
+            "Will launch\n  base game: {} (present)\n  IWAD: <data>/iwads/{variant}/{filename} ({variant})\n  content (load order):\n    1. {label}\n       <data>/library/{id}/{release}/free/maps.wad\n  complevel: {complevel}\n  skill: 3\n  pistol start: no\n  engine: 0.30.1",
             crate::resolver::game_label(recipe.base_game.game),
             release = recipe.release,
-            complevel = match &recipe.compatibility.complevel {
-                RecipeComplevel::Number(number) => *number,
-                _ => 0,
-            },
         );
         assert_eq!(text, expected, "{id}");
     }

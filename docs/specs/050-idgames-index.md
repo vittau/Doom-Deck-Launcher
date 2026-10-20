@@ -38,6 +38,13 @@ port hint for the archive, built from `ls-laR.gz` + sidecar txts, without the Do
 - **R8** — **ranking signals in the index:** per entry, `cacoward` (year, if any), `in_catalog`
   (recipe id, if a DDL recipe pins it), `maps` (count from the txt, when stated) and a
   `latest_version` flag when several uploads share a title, for spec 051's ranking.
+- **R9** — **Crawl telemetry (owner, 2026-10-20: "garanta que não estamos causando problemas para
+  o idgames"):** every run writes to the job summary and to the committed crawl state the requests
+  made, bytes read, status-code counts, mean and minimum spacing between requests, retries, and the
+  stop reason (budget, finished, 403/429/5xx, error). A run that stops on 403, 429 or 5xx fails
+  the job visibly and opens or updates one issue labelled `idgames-crawl`, without retrying. The
+  next run waits at least 24 h after such a stop and halves the daily budget (floor 100) until
+  three clean runs pass. Requests are never retried within a run.
 
 ## Acceptance criteria
 
@@ -48,4 +55,7 @@ port hint for the archive, built from `ls-laR.gz` + sidecar txts, without the Do
   fetcher counts requests).
 - [ ] **A3** (R5) — workflow reviewed; first publish triggered by the coordinator after merge and the
   resulting index size/entry count recorded.
+- [ ] **A5** (R6, R9) — fake-fetcher tests: spacing ≥ 3 s is enforced (virtual clock), the daily
+  budget holds, 403/429/5xx stop the run with state kept, the back-off halves the budget and
+  recovers, and the telemetry summary is produced.
 - [ ] **A4** — fmt, clippy `-D warnings`, tests green.

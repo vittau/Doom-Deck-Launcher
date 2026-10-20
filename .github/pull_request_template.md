@@ -6,7 +6,7 @@ follow [Add a mapset](../CONTRIBUTING.md#add-a-mapset).
 ## Verification evidence
 
 - Tester, date and exact DSDA-Doom version:
-- IWAD variant, complevel and selected components/load order:
+- IWAD variant, complevel (alias, and whether the author's TXT / `COMPLVL` / UMAPINFO or the port family convention gave it) and selected components/load order:
 - Evidence status (inspected / verified / partial / incompatible):
 - Archive/member size and SHA-256 provenance:
 - Known limitations and checks still needing a Steam Deck:

@@ -310,8 +310,8 @@ jobs:
               [ "$(count "$flag" "$E2E_ROOT/dry-argv-$id.txt")" = "1" ] \
                 || { echo "::error::$id: expected exactly one $flag"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
             done
-            awk '/^-complevel$/{getline; if ($0 !~ /^[0-9]+$/) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
-              || { echo "::error::$id: -complevel is not numeric"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
+            awk '/^-complevel$/{getline; if ($0 !~ /^([0-9]+|vanilla|boom|mbf|mbf21)$/) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
+              || { echo "::error::$id: -complevel is neither a number nor a DSDA alias"; cat "$E2E_ROOT/dry-argv-$id.txt"; exit 1; }
             awk '/^-iwad$/{getline; if ($0 !~ /^\//) exit 1}' "$E2E_ROOT/dry-argv-$id.txt" \
               || { echo "::error::$id: -iwad is not an absolute path"; exit 1; }
             echo "$id: argv matches D-011"

@@ -30,15 +30,63 @@ use std::process::Command;
 ///
 /// Only the reviewed numbers are representable: `0`-`17` and `21` (MBF21).
 /// Upstream's parser also accepts `-1` and the placeholder values `18`-`20`,
-/// and the words `vanilla`, `boom`, `mbf` and `mbf21`, but words are resolved
-/// earlier from the identified IWAD (decision D-017) and placeholders are not
-/// a compatibility family, so neither can reach a launch plan.
+/// which are not a compatibility family and so cannot reach a launch plan.
+///
+/// A level can carry the DSDA word that names it ([`ComplevelWord`], D-030):
+/// the plan then sends the word to `-complevel` and keeps the resolved number
+/// for display. A level without a word is sent as its number.
 ///
 /// Source: `docs/research/dsda-engine.md` § "Compatibility values and
 /// omission" (confirmed against upstream tag `v0.30.1`,
 /// `prboom2/src/doomtype.h:113-140`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Complevel(u8);
+pub struct Complevel {
+    value: u8,
+    word: Option<ComplevelWord>,
+}
+
+/// The `-complevel` words DSDA-Doom v0.30.1 accepts, case-insensitively.
+///
+/// `boom` is 9, `mbf` is 11 and `mbf21` is 21; `vanilla` resolves to 4 for
+/// TNT/Plutonia, 2 for other commercial Doom II games and otherwise 3.
+///
+/// Source: `docs/research/dsda-engine.md` §1 (confirmed against upstream tag
+/// `v0.30.1`, `prboom2/src/dsda/settings.c:60-170`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ComplevelWord {
+    /// `vanilla`: 2, 3 or 4 depending on the IWAD.
+    Vanilla,
+    /// `boom`: 9.
+    Boom,
+    /// `mbf`: 11.
+    Mbf,
+    /// `mbf21`: 21.
+    Mbf21,
+}
+
+impl ComplevelWord {
+    /// The word as DSDA-Doom receives it on the command line.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Vanilla => "vanilla",
+            Self::Boom => "boom",
+            Self::Mbf => "mbf",
+            Self::Mbf21 => "mbf21",
+        }
+    }
+
+    /// The word as the UI spells it (`Vanilla`, `Boom`, `MBF`, `MBF21`).
+    #[must_use]
+    pub const fn title(self) -> &'static str {
+        match self {
+            Self::Vanilla => "Vanilla",
+            Self::Boom => "Boom",
+            Self::Mbf => "MBF",
+            Self::Mbf21 => "MBF21",
+        }
+    }
+}
 
 impl Complevel {
     /// Doom 1.2.
@@ -79,13 +127,60 @@ impl Complevel {
     /// reviewed value (the compiler cannot check that, the constants above and
     /// [`Complevel::new`] are the only call sites).
     const fn from_reviewed(value: u8) -> Self {
-        Self(value)
+        Self { value, word: None }
     }
 
-    /// The number DSDA-Doom receives on the command line.
+    /// Builds the level a DSDA word names. `vanilla_value` is what `vanilla`
+    /// resolves to for the identified IWAD (2, 3 or 4); the other words have
+    /// one fixed number.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ValueRangeError::Complevel`] when the resolved number is not a
+    /// reviewed value.
+    pub fn from_word(word: ComplevelWord, vanilla_value: u8) -> Result<Self, ValueRangeError> {
+        let value = match word {
+            ComplevelWord::Vanilla => vanilla_value,
+            ComplevelWord::Boom => 9,
+            ComplevelWord::Mbf => 11,
+            ComplevelWord::Mbf21 => 21,
+        };
+        Self::new(value).map(|level| Self {
+            word: Some(word),
+            ..level
+        })
+    }
+
+    /// The number this level resolves to.
     #[must_use]
     pub const fn value(self) -> u8 {
-        self.0
+        self.value
+    }
+
+    /// The DSDA word that names this level, when it was built from one.
+    #[must_use]
+    pub const fn word(self) -> Option<ComplevelWord> {
+        self.word
+    }
+
+    /// What DSDA-Doom receives after `-complevel`: the word when there is one,
+    /// otherwise the number.
+    #[must_use]
+    pub fn argument(self) -> String {
+        match self.word {
+            Some(word) => word.as_str().to_owned(),
+            None => self.value.to_string(),
+        }
+    }
+
+    /// The player-facing label: `Vanilla (2)`, `Boom (9)`, `MBF21 (21)`, or the
+    /// bare number when no word names the level (D-030).
+    #[must_use]
+    pub fn label(self) -> String {
+        match self.word {
+            Some(word) => format!("{} ({})", word.title(), self.value),
+            None => self.value.to_string(),
+        }
     }
 
     /// The compatibility family this number selects.
@@ -94,7 +189,7 @@ impl Complevel {
     /// "Compatibility values and omission".
     #[must_use]
     pub const fn name(self) -> &'static str {
-        match self.0 {
+        match self.value {
             0 => "Doom 1.2",
             1 => "Doom 1.666",
             2 => "Doom/Doom II 1.9",
@@ -130,7 +225,10 @@ impl TryFrom<u8> for Complevel {
 
 impl fmt::Display for Complevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({})", self.0, self.name())
+        match self.word {
+            Some(word) => write!(f, "{} ({})", word.as_str(), self.value),
+            None => write!(f, "{} ({})", self.value, self.name()),
+        }
     }
 }
 
@@ -591,7 +689,7 @@ impl LaunchPlan {
 
         if let Some(complevel) = self.complevel {
             argv.push(OsString::from("-complevel"));
-            argv.push(OsString::from(complevel.value().to_string()));
+            argv.push(OsString::from(complevel.argument()));
         }
         argv.push(OsString::from("-skill"));
         argv.push(OsString::from(self.skill.value().to_string()));
@@ -1133,6 +1231,65 @@ mod tests {
         assert_eq!(
             Complevel::new(18).expect_err("placeholder").to_string(),
             "compatibility level 18 is not a reviewed DSDA-Doom compatibility value (0-17 or 21)"
+        );
+    }
+
+    #[test]
+    fn a_word_names_its_level_and_keeps_the_resolved_number() {
+        let vanilla = Complevel::from_word(ComplevelWord::Vanilla, 2).expect("reviewed");
+        assert_eq!(vanilla.value(), 2);
+        assert_eq!(vanilla.word(), Some(ComplevelWord::Vanilla));
+        assert_eq!(vanilla.argument(), "vanilla");
+        assert_eq!(vanilla.label(), "Vanilla (2)");
+        assert_eq!(vanilla.to_string(), "vanilla (2)");
+        for (word, value, argument, label) in [
+            (ComplevelWord::Boom, 9, "boom", "Boom (9)"),
+            (ComplevelWord::Mbf, 11, "mbf", "MBF (11)"),
+            (ComplevelWord::Mbf21, 21, "mbf21", "MBF21 (21)"),
+        ] {
+            let level = Complevel::from_word(word, 3).expect("reviewed");
+            assert_eq!(level.value(), value);
+            assert_eq!(level.argument(), argument);
+            assert_eq!(level.label(), label);
+        }
+        let number = Complevel::new(7).expect("reviewed");
+        assert_eq!(number.word(), None);
+        assert_eq!(number.argument(), "7");
+        assert_eq!(number.label(), "7");
+        assert!(Complevel::from_word(ComplevelWord::Vanilla, 18).is_err());
+    }
+
+    #[test]
+    fn an_alias_is_sent_as_a_word_and_a_number_as_a_number() {
+        let after_flag = |plan: &LaunchPlan| {
+            let argv = plan.to_command();
+            let at = argv.iter().position(|t| t == "-complevel").expect("flag");
+            argv[at + 1].to_string_lossy().into_owned()
+        };
+        let aliased = LaunchPlan {
+            complevel: Some(Complevel::from_word(ComplevelWord::Vanilla, 2).unwrap()),
+            ..sample_plan()
+        };
+        assert_eq!(after_flag(&aliased), "vanilla");
+        assert!(
+            aliased
+                .describe(Path::new("/home/deck"))
+                .contains("  complevel: vanilla (2)\n")
+        );
+        let boom = LaunchPlan {
+            complevel: Some(Complevel::from_word(ComplevelWord::Boom, 2).unwrap()),
+            ..sample_plan()
+        };
+        assert_eq!(after_flag(&boom), "boom");
+        let numeric = LaunchPlan {
+            complevel: Some(Complevel::new(7).unwrap()),
+            ..sample_plan()
+        };
+        assert_eq!(after_flag(&numeric), "7");
+        assert!(
+            numeric
+                .describe(Path::new("/home/deck"))
+                .contains("  complevel: 7 (Boom compatibility mode)\n")
         );
     }
 

@@ -31,9 +31,8 @@ pub use store::{CONFIG_DIR, DATA_DIR, ProfileDirs, ProfileStore};
 #[cfg(test)]
 pub(crate) fn test_recipe() -> crate::catalog::Recipe {
     use crate::catalog::{
-        BaseGame, Compatibility, Complevel, Component, ComponentMember, EngineEvidence,
-        EvidenceStatus, Game, Package, PortFamily, Recipe, Role, RuntimeDefaults, Verification,
-        VerificationStatus,
+        BaseGame, Compatibility, Complevel, Component, ComponentMember, EngineEvidence, Game,
+        Package, PortFamily, Recipe, Role, RuntimeDefaults, Verification, VerificationStatus,
     };
 
     let empty_members = || {
@@ -106,7 +105,6 @@ pub(crate) fn test_recipe() -> crate::catalog::Recipe {
         compatibility: Compatibility {
             family: PortFamily::Vanilla,
             complevel: Complevel::Number(3),
-            complevel_status: EvidenceStatus::Proposed,
             engine: EngineEvidence {
                 range: "=0.30.1".to_owned(),
                 status: VerificationStatus::Inspected,
