@@ -1,6 +1,9 @@
 //! Thin application services. Constructed and used exclusively on a worker thread.
 #[path = "state_recovery.rs"]
 mod state_recovery;
+#[cfg(test)]
+#[path = "flatpak_tests.rs"]
+pub(crate) mod flatpak_tests;
 pub use state_recovery::{UnreadableFile, start_fresh};
 
 use ddl_core::{
