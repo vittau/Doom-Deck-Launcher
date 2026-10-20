@@ -41,6 +41,18 @@ the shortcut to **DoomDeckLauncher** ([guide](steam-deck-guide.md#install-from-a
 | R12 | Steam artwork from `art/` or SteamGridDB (capsule, wide, hero, logo, icon) looks right in Gaming Mode | Gaming | ⏳ | spec 054 |
 | R13 | Catalog update toast disappears after the manual check (S2 of the catalog table) | Gaming | ⏳ | spec 030 |
 
+### 0.0.7 run, 2026-10-20 (owner)
+
+- ❌ **Upgrade over 0.0.6:** DDL opened on the first-run "Install DSDA-Doom"; Install showed
+  "Install stopped" / "Could not read saved setup"; every Settings panel was empty and Retry did
+  nothing. Cause: `app.json` stores recipe copies, and spec 046 removed `complevel_status`.
+  Workaround: delete `~/.config/ddl`. Fix: spec 055.
+- ✅ After a clean config: DSDA-Doom 0.30.1, Ultimate DOOM and DOOM II found; AUGER;ZENITH
+  installed and played.
+- Requests: VSync on with uncapped FPS and look sensitivity 5/5 (spec 056); right-stick scroll,
+  Play setup D-pad order (Advanced skipped the Skill row), skill default 4 "(UV)", tab order Home,
+  Library, Discover, B at root opens Quit (spec 057); Flatpak/Discover research (spec 058).
+
 ## Release 0.0.x — skeleton (spec 001)
 
 | # | Check | Mode | Result | Notes |
