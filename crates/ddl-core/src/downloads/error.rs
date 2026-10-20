@@ -197,6 +197,30 @@ impl fmt::Display for Error {
     }
 }
 
+impl Error {
+    /// Whether a retry could plausibly succeed (spec 040, R4): a connection
+    /// failure, a body timeout or a 5xx. A user cancel is never transient.
+    #[must_use]
+    pub fn is_transient(&self) -> bool {
+        match self {
+            Self::Network { .. } | Self::Stalled { .. } | Self::TooSlow { .. } => true,
+            Self::HttpStatus { status, .. } => (500..600).contains(status),
+            _ => false,
+        }
+    }
+
+    /// Whether a failure during a pinned transfer should leave its
+    /// `<sha256>.part` and sidecar behind (spec 040, R1): a network error, a
+    /// timeout or a user cancel. Anything else discards the partial.
+    #[must_use]
+    pub fn keeps_partial(&self) -> bool {
+        matches!(
+            self,
+            Self::Network { .. } | Self::Stalled { .. } | Self::TooSlow { .. } | Self::Cancelled
+        )
+    }
+}
+
 impl std::error::Error for Error {}
 
 #[cfg(test)]
@@ -263,6 +287,87 @@ mod tests {
         }
         .to_string();
         assert!(message.contains("compression ratio"));
+    }
+
+    #[test]
+    fn only_connection_and_5xx_failures_are_transient() {
+        // Spec 040 R4: retry connection errors, timeouts and 5xx.
+        assert!(
+            Error::Network {
+                url: "https://h/f".to_owned(),
+                detail: "connection reset".to_owned(),
+            }
+            .is_transient()
+        );
+        assert!(
+            Error::Stalled {
+                url: "https://h/f".to_owned(),
+                received: 0,
+                total: None,
+            }
+            .is_transient()
+        );
+        assert!(
+            Error::TooSlow {
+                url: "https://h/f".to_owned(),
+                downloaded: 0,
+                total: None,
+                elapsed: Duration::from_secs(1),
+            }
+            .is_transient()
+        );
+        assert!(
+            Error::HttpStatus {
+                url: "https://h/f".to_owned(),
+                status: 503,
+            }
+            .is_transient()
+        );
+        // A user cancel never retries, and a 4xx is not worth another try.
+        assert!(!Error::Cancelled.is_transient());
+        assert!(
+            !Error::HttpStatus {
+                url: "https://h/f".to_owned(),
+                status: 404,
+            }
+            .is_transient()
+        );
+        assert!(
+            !Error::HashMismatch {
+                expected: Sha256::of(b"a"),
+                actual: Sha256::of(b"b"),
+            }
+            .is_transient()
+        );
+    }
+
+    #[test]
+    fn only_network_timeouts_and_cancel_keep_a_partial() {
+        // Spec 040 R1: keep on a network error, a timeout or a cancel.
+        assert!(
+            Error::Network {
+                url: "https://h/f".to_owned(),
+                detail: "reset".to_owned(),
+            }
+            .keeps_partial()
+        );
+        assert!(Error::Cancelled.keeps_partial());
+        assert!(
+            Error::Stalled {
+                url: "https://h/f".to_owned(),
+                received: 1,
+                total: None,
+            }
+            .keeps_partial()
+        );
+        assert!(!Error::SizeExceeded { limit: 1, got: 2 }.keeps_partial());
+        assert!(
+            !Error::HttpStatus {
+                url: "https://h/f".to_owned(),
+                status: 500,
+            }
+            .keeps_partial()
+        );
     }
 
     #[test]

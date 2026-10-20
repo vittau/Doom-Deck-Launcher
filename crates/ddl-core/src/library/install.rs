@@ -627,10 +627,6 @@ impl Installer {
             if cancel.is_cancelled() {
                 return Err(InstallError::Download(crate::downloads::Error::Cancelled));
             }
-            progress(InstallProgress::transfer(crate::downloads::Progress {
-                downloaded: 0,
-                total: Some(package.size),
-            }));
             let cached = self.download_package(package, cancel, progress)?;
             progress(InstallProgress::stage(InstallStage::Extract));
             let dest = base.join(&package.id);
@@ -936,6 +932,14 @@ impl Installer {
         )
         .with_urls(package.urls.iter().cloned())
         .with_size(package.size);
+        // Spec 040 R6: start the row at the bytes already on disk so a resume
+        // never jumps back to 0 %.
+        progress(crate::downloads::InstallProgress::transfer(
+            crate::downloads::Progress::new(
+                self.fetcher.resumable_bytes(&request).unwrap_or(0),
+                Some(package.size),
+            ),
+        ));
         self.fetcher
             .download(&request, cancel, &mut |p| {
                 progress(crate::downloads::InstallProgress::transfer(p))
