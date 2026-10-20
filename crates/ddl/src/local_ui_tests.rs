@@ -690,6 +690,7 @@ fn walk_rows(r: &mut Runtime, ui: &AppWindow, rows: &[&[i32]]) {
             r.focus = rows[order[0]][column.min(rows[order[0]].len() - 1)];
             r.sync(ui);
             for &row in &order[1..] {
+                let source = r.nodes.iter().find(|n| n.id == r.focus).unwrap().clone();
                 r.action(ui, direction);
                 assert!(
                     rows[row].contains(&r.focus),
@@ -697,6 +698,20 @@ fn walk_rows(r: &mut Runtime, ui: &AppWindow, rows: &[&[i32]]) {
                     rows[row],
                     r.focus
                 );
+                // Spec 060 R1: the landing item is the leftmost row item the
+                // source spans, so a source over one column keeps that column.
+                let landing = rows[row]
+                    .iter()
+                    .filter_map(|id| r.nodes.iter().find(|n| n.id == *id))
+                    .filter(|n| n.x < source.x + source.w && n.x + n.w > source.x)
+                    .min_by(|a, b| a.x.total_cmp(&b.x));
+                if let Some(landing) = landing {
+                    assert_eq!(
+                        r.focus, landing.id,
+                        "{direction:?} from {} into {:?}",
+                        source.id, rows[row]
+                    );
+                }
             }
         }
     }
@@ -798,6 +813,53 @@ fn controller_057_focus_walks_every_multi_item_screen() {
     r.action(&ui, Action::Back);
     assert_eq!(r.screen, Screen::Detail);
     assert!(!ui.get_sheet_open());
+}
+
+/// Spec 060 A1: rows are entered at their leftmost item.
+#[test]
+fn controller_060_rows_are_entered_at_their_leftmost_item() {
+    if isolated("controller_060_rows_are_entered_at_their_leftmost_item") {
+        return;
+    }
+    let (_window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (mut s, _) = custom(&env);
+    s.register_fake_iwads(&temp.path().join("identified"))
+        .unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    r.selected = r
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .position(|i| i.recipe.id == "sigil")
+        .unwrap();
+    r.screen = Screen::Setup;
+    r.focus = 60;
+    r.sync(&ui);
+    // Down from the full-width Advanced card lands on Skill, not Pistol start.
+    r.focus = 42;
+    r.action(&ui, Action::Down);
+    assert_eq!(r.focus, 40, "Advanced → Skill");
+    // Up from the full-width Recipe load order lands on Skill as well.
+    r.focus = 43;
+    r.action(&ui, Action::Up);
+    assert_eq!(r.focus, 40, "Recipe load order → Skill");
+    // Pistol start stays one Right away, and Left returns.
+    r.action(&ui, Action::Right);
+    assert_eq!(r.focus, 41, "Skill → Pistol start");
+    r.action(&ui, Action::Left);
+    assert_eq!(r.focus, 40);
+    // A source over exactly one column keeps it: Pistol start → Load order →
+    // back up lands on the leftmost of the row it spans.
+    r.focus = 41;
+    r.action(&ui, Action::Down);
+    assert_eq!(r.focus, 43);
+    r.action(&ui, Action::Up);
+    assert_eq!(r.focus, 40);
 }
 
 #[test]

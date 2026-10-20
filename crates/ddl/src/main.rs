@@ -7,6 +7,7 @@ mod cli_exec;
 #[cfg(test)]
 mod copy;
 mod display;
+mod focus;
 #[cfg(test)]
 mod fixtures;
 #[cfg(test)]
