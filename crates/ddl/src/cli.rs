@@ -54,6 +54,10 @@ pub enum HelpTopic {
     Catalog,
     /// `ddl catalog bundle --help`.
     CatalogBundle,
+    /// `ddl catalog check-links --help`.
+    CatalogCheckLinks,
+    /// `ddl catalog e2e-sample --help`.
+    CatalogE2eSample,
     /// `ddl catalog status --help`.
     CatalogStatus,
     /// `ddl catalog update --help`.
@@ -236,6 +240,24 @@ pub enum Command {
         /// default `DEFAULT_MIN_DDL_VERSION`, a deliberate constant).
         min_ddl_version: Option<String>,
     },
+    /// `ddl catalog check-links`: header-only link health of every recipe
+    /// source (spec 044, R1–R2).
+    CatalogCheckLinks {
+        /// The catalog directory (default `catalog`).
+        dir: PathBuf,
+        /// Print the machine-readable report instead of the Markdown table.
+        json: bool,
+        /// List only the rows that are not `ok`.
+        problems_only: bool,
+    },
+    /// `ddl catalog e2e-sample`: the lean install set of the real-network e2e
+    /// (spec 044, R4).
+    CatalogE2eSample {
+        /// The catalog directory (default `catalog`).
+        dir: PathBuf,
+        /// Cap on one recipe's total download, in MiB (`--max-mib`).
+        max_mib: u64,
+    },
     /// `ddl catalog status`: the effective catalog's serial and source.
     CatalogStatus,
     /// `ddl catalog update`: fetch and accept a newer bundle now (spec 019, R5).
@@ -359,6 +381,8 @@ pub fn help_for(topic: HelpTopic) -> String {
 Usage: {BIN} [OPTIONS]
        {BIN} catalog lint [--fetch] [PATHS...]
        {BIN} catalog bundle --out <file> [--catalog <dir>] [--serial <unix>] [--commit <sha>] [--min-ddl-version <v>]
+       {BIN} catalog check-links [DIR] [--json] [--problems-only]
+       {BIN} catalog e2e-sample [DIR] [--max-mib <n>]
        {BIN} catalog status
        {BIN} catalog update
        {BIN} engine status
@@ -548,12 +572,16 @@ Usage: {BIN} doctor
 
 Usage: {BIN} catalog lint [--fetch] [PATHS...]
        {BIN} catalog bundle --out <file> [--catalog <dir>] [--serial <unix>] [--commit <sha>] [--min-ddl-version <v>]
+       {BIN} catalog check-links [DIR] [--json] [--problems-only]
+       {BIN} catalog e2e-sample [DIR] [--max-mib <n>]
        {BIN} catalog status
        {BIN} catalog update
 
 Commands:
-  lint    Validate catalog recipes (offline; --fetch verifies upstream bytes)
-  bundle  Lint, then write one JSON bundle for the CI catalog branch
+  lint         Validate catalog recipes (offline; --fetch verifies upstream bytes)
+  bundle       Lint, then write one JSON bundle for the CI catalog branch
+  check-links  Check every recipe mirror's headers (no downloads); fails when a recipe has no good source
+  e2e-sample   Print the lean set of installs the real-network e2e runs
   status  Show the catalog DDL is using (built-in or updated) and its date
   update  Fetch and accept a newer catalog bundle now
 "
@@ -577,6 +605,40 @@ Options:
       --min-ddl-version <v>  Oldest DDL allowed to consume the bundle
                              (default: a deliberate constant, currently 0.0.4;
                              raise it only when the bundle needs a newer client)
+"
+        ),
+        HelpTopic::CatalogCheckLinks => format!(
+            "\
+{BIN} catalog check-links [DIR] [--json] [--problems-only]
+
+Ask every source URL of every recipe in DIR (default: catalog) whether the file
+is still there and still the pinned size, without downloading it: a HEAD request
+(or GET with Range: bytes=0-0 when a host refuses HEAD) through the downloader's
+allowlist and redirect rules. At most 4 requests run at once and one per host.
+
+Each URL is ok, size-changed, gone (404/410), host-refused (a redirect left the
+download allowlist) or error. The report is a Markdown table on stdout. The exit
+status is non-zero when any recipe has no ok source left; a recipe with one dead
+mirror and one good one is only a warning.
+
+Usage: {BIN} catalog check-links [DIR] [--json] [--problems-only]
+
+Options:
+      --json           Print the report as JSON instead of a Markdown table
+      --problems-only  List only the rows that are not ok
+"
+        ),
+        HelpTopic::CatalogE2eSample => format!(
+            "\
+{BIN} catalog e2e-sample [DIR] [--max-mib <n>]
+
+Print the installs the real-network e2e should run, one per line as
+recipe<TAB>component<TAB>reason (the component is - for a plain install):
+the smallest recipe per first-source download host, plus every recipe with
+optional components, each free component once. Each recipe's total download
+stays under --max-mib (default 64) unless no recipe for its host fits.
+
+Usage: {BIN} catalog e2e-sample [DIR] [--max-mib <n>]
 "
         ),
         HelpTopic::CatalogStatus => format!(
@@ -781,6 +843,8 @@ fn parse_catalog(args: &[OsString]) -> Result<Command, ParseError> {
     match args.first().and_then(|arg| arg.to_str()) {
         Some("lint") => parse_catalog_lint(&args[1..]),
         Some("bundle") => parse_catalog_bundle(&args[1..]),
+        Some("check-links") => parse_catalog_check_links(&args[1..]),
+        Some("e2e-sample") => parse_catalog_e2e_sample(&args[1..]),
         Some("status") => {
             if wants_help(&args[1..]) {
                 return Ok(Command::Help(HelpTopic::CatalogStatus));
@@ -805,7 +869,7 @@ fn parse_catalog(args: &[OsString]) -> Result<Command, ParseError> {
         }
         _ if wants_help(args) => Ok(Command::Help(HelpTopic::Catalog)),
         _ => Err(ParseError::message(
-            "expected `catalog lint [--fetch] [paths]`, `catalog bundle --out <file>`, `catalog status` or `catalog update`",
+            "expected `catalog lint [--fetch] [paths]`, `catalog bundle --out <file>`, `catalog check-links`, `catalog e2e-sample`, `catalog status` or `catalog update`",
         )),
     }
 }
@@ -875,6 +939,68 @@ fn parse_catalog_bundle(args: &[OsString]) -> Result<Command, ParseError> {
         serial,
         commit,
         min_ddl_version,
+    })
+}
+
+fn parse_catalog_check_links(args: &[OsString]) -> Result<Command, ParseError> {
+    if wants_help(args) {
+        return Ok(Command::Help(HelpTopic::CatalogCheckLinks));
+    }
+    let mut dir = None;
+    let mut json = false;
+    let mut problems_only = false;
+    let mut positional = false;
+    for arg in args {
+        if !positional && arg == "--" {
+            positional = true;
+        } else if !positional && arg == "--json" {
+            json = true;
+        } else if !positional && arg == "--problems-only" {
+            problems_only = true;
+        } else if !positional && arg.to_string_lossy().starts_with('-') {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        } else if dir.replace(PathBuf::from(arg)).is_some() {
+            return Err(ParseError::message(
+                "`catalog check-links` takes at most one directory",
+            ));
+        }
+    }
+    Ok(Command::CatalogCheckLinks {
+        dir: dir.unwrap_or_else(|| PathBuf::from("catalog")),
+        json,
+        problems_only,
+    })
+}
+
+fn parse_catalog_e2e_sample(args: &[OsString]) -> Result<Command, ParseError> {
+    if wants_help(args) {
+        return Ok(Command::Help(HelpTopic::CatalogE2eSample));
+    }
+    let mut dir = None;
+    let mut max_mib = ddl_core::catalog::DEFAULT_MAX_ARCHIVE_BYTES / (1024 * 1024);
+    let mut positional = false;
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if !positional && arg == "--" {
+            positional = true;
+        } else if !positional && arg == "--max-mib" {
+            max_mib = option_value(args, index, "--max-mib")?
+                .parse()
+                .map_err(|_| ParseError::message("`--max-mib` must be a whole number of MiB"))?;
+            index += 1;
+        } else if !positional && arg.to_string_lossy().starts_with('-') {
+            return Err(ParseError::unknown(&arg.to_string_lossy()));
+        } else if dir.replace(PathBuf::from(arg)).is_some() {
+            return Err(ParseError::message(
+                "`catalog e2e-sample` takes at most one directory",
+            ));
+        }
+        index += 1;
+    }
+    Ok(Command::CatalogE2eSample {
+        dir: dir.unwrap_or_else(|| PathBuf::from("catalog")),
+        max_mib,
     })
 }
 
@@ -1516,6 +1642,67 @@ mod tests {
     }
 
     #[test]
+    fn catalog_check_links_parses_its_options() {
+        assert_eq!(
+            parse_str(&["catalog", "check-links"]),
+            Ok(Command::CatalogCheckLinks {
+                dir: "catalog".into(),
+                json: false,
+                problems_only: false
+            })
+        );
+        assert_eq!(
+            parse_str(&[
+                "catalog",
+                "check-links",
+                "other",
+                "--json",
+                "--problems-only"
+            ]),
+            Ok(Command::CatalogCheckLinks {
+                dir: "other".into(),
+                json: true,
+                problems_only: true
+            })
+        );
+        assert_eq!(
+            parse_str(&["catalog", "check-links", "--help"]),
+            Ok(Command::Help(HelpTopic::CatalogCheckLinks))
+        );
+        for args in [
+            &["catalog", "check-links", "--unknown"][..],
+            &["catalog", "check-links", "a", "b"],
+        ] {
+            assert!(parse_str(args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn catalog_e2e_sample_parses_its_options() {
+        assert_eq!(
+            parse_str(&["catalog", "e2e-sample"]),
+            Ok(Command::CatalogE2eSample {
+                dir: "catalog".into(),
+                max_mib: 64
+            })
+        );
+        assert_eq!(
+            parse_str(&["catalog", "e2e-sample", "--max-mib", "32", "other"]),
+            Ok(Command::CatalogE2eSample {
+                dir: "other".into(),
+                max_mib: 32
+            })
+        );
+        for args in [
+            &["catalog", "e2e-sample", "--max-mib"][..],
+            &["catalog", "e2e-sample", "--max-mib", "big"],
+            &["catalog", "e2e-sample", "--nope"],
+        ] {
+            assert!(parse_str(args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
     fn catalog_bundle_parses_its_options_and_requires_out() {
         assert_eq!(
             parse_str(&["catalog", "bundle", "--out", "bundle.json"]),
@@ -1898,6 +2085,8 @@ mod tests {
             HelpTopic::Doctor,
             HelpTopic::Catalog,
             HelpTopic::CatalogBundle,
+            HelpTopic::CatalogCheckLinks,
+            HelpTopic::CatalogE2eSample,
             HelpTopic::CatalogStatus,
             HelpTopic::CatalogUpdate,
             HelpTopic::Custom,

@@ -299,6 +299,12 @@ pub fn run_io(
                 }
             }
         }
+        cli::Command::CatalogCheckLinks {
+            dir,
+            json,
+            problems_only,
+        } => exec_check_links(&dir, json, problems_only, out, err),
+        cli::Command::CatalogE2eSample { dir, max_mib } => exec_e2e_sample(&dir, max_mib, out, err),
         cli::Command::CatalogStatus => {
             let services = open(env)?;
             print_catalog_status(&services.catalog_status(), out)
@@ -309,6 +315,77 @@ pub fn run_io(
             print_catalog_outcome(&outcome, out)
         }
     }
+}
+
+/// `ddl catalog check-links` (spec 044, R1–R2): probes every source URL and
+/// prints the report; fails when a recipe has no good source or a recipe file
+/// could not be loaded (it would otherwise go unchecked, silently).
+fn exec_check_links(
+    dir: &std::path::Path,
+    json: bool,
+    problems_only: bool,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    let catalog = ddl_core::catalog::load_catalog_dir(dir).map_err(CliFailure::message)?;
+    for skipped in &catalog.skipped {
+        writeln!(err, "not checked: {}: {}", skipped.file, skipped.reason).map_err(output_error)?;
+    }
+    let recipes: Vec<&ddl_core::catalog::Recipe> = catalog
+        .recipes
+        .iter()
+        .map(|loaded| &loaded.recipe)
+        .collect();
+    let allowed = ddl_core::downloads::HostAllowlist::new(catalog.hosts.downloads.iter());
+    let report = ddl_core::catalog::LinkChecker::new().check(&recipes, &allowed);
+    let text = if json {
+        report.to_json()
+    } else {
+        report.to_markdown(problems_only)
+    };
+    out.write_all(text.as_bytes()).map_err(output_error)?;
+    if report.has_failures() {
+        return Err(CliFailure::message(format!(
+            "{} recipe(s) have no working source: {}",
+            report.failed_recipes().len(),
+            report.failed_recipes().join(", ")
+        )));
+    }
+    if recipes.is_empty() || !catalog.skipped.is_empty() {
+        return Err(CliFailure::message(format!(
+            "{} recipe file(s) could not be loaded and were not checked",
+            catalog.skipped.len()
+        )));
+    }
+    Ok(())
+}
+
+/// `ddl catalog e2e-sample` (spec 044, R4): prints the install set, one tab
+/// separated `recipe component reason` line each.
+fn exec_e2e_sample(
+    dir: &std::path::Path,
+    max_mib: u64,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> Result<(), CliFailure> {
+    let catalog = ddl_core::catalog::load_catalog_dir(dir).map_err(CliFailure::message)?;
+    if let Some(skipped) = catalog.skipped.first() {
+        return Err(CliFailure::message(format!(
+            "{}: {} (run `catalog lint` first)",
+            skipped.file, skipped.reason
+        )));
+    }
+    let recipes: Vec<&ddl_core::catalog::Recipe> = catalog
+        .recipes
+        .iter()
+        .map(|loaded| &loaded.recipe)
+        .collect();
+    let sample = ddl_core::catalog::e2e_sample(&recipes, max_mib.saturating_mul(1024 * 1024));
+    for (id, reason) in &sample.skipped {
+        writeln!(err, "left out of the sample: {id}: {reason}").map_err(output_error)?;
+    }
+    out.write_all(sample.to_tsv().as_bytes())
+        .map_err(output_error)
 }
 
 /// The bundle serial from the environment (spec 019, R1): the source commit's
