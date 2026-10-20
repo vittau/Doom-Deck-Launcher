@@ -44,7 +44,10 @@ Validation**.
 3. Add it to Steam as a **non-Steam game**: in Desktop Mode open Steam →
    **Games → Add a Non-Steam Game to My Library…** → **Browse…** and select the
    `ddl` executable you just extracted.
-4. DDL now appears in your library. Launch it once from Desktop Mode to check it
+4. Rename the shortcut to **DoomDeckLauncher**: right-click it → **Properties** and replace
+   the name `ddl`. Artwork tools such as the SteamGridDB Decky plugin search by this name, and
+   the [SteamGridDB page](https://www.steamgriddb.com/game/5558703) is titled DoomDeckLauncher.
+5. DDL now appears in your library. Launch it once from Desktop Mode to check it
    starts, then switch to Gaming Mode and launch it from your library like any
    other game.
 
@@ -65,7 +68,7 @@ files.
 
 ## Make it look native in Steam
 
-The release includes original Rose Compass (Stained Glass) artwork in `ddl/art/`. In Desktop Mode,
+The release includes original Rose Compass (Stained Glass) artwork, set in a vector Ember Cathedral interior, in `ddl/art/`. In Desktop Mode,
 add DDL as a non-Steam game, then apply the images manually:
 
 1. Open the shortcut's **Properties**, click its icon and select `art/icon-256.png`
@@ -77,6 +80,10 @@ add DDL as a non-Steam game, then apply the images manually:
    custom background** → `art/hero.png`. Right-click there again → **Set custom
    logo** → `art/logo.png`. Adjust the logo position if desired.
 4. Return to Gaming Mode and check the artwork in your Library.
+
+The same artwork is on [SteamGridDB](https://www.steamgriddb.com/game/5558703) under
+**DoomDeckLauncher**, so a SteamGridDB tool can apply it for you once the shortcut carries that
+name. Steam's default logo position (bottom left) suits the hero.
 
 | File in `art/` | Size |
 | --- | --- |
