@@ -66,6 +66,65 @@ fn discover_and_detail() {
 }
 
 #[test]
+fn title_band_fades_from_panel() {
+    if isolated(module_path!(), "title_band_fades_from_panel") {
+        return;
+    }
+    let scene = production::scene();
+    replay(&scene, 2);
+    // Production Discover exercises screenshot and painted fallback sources;
+    // the final capture is the production Mapset detail screen.
+    let capture = |name: &str| {
+        assert!(scene.ui.get_art_band());
+        if name == "013-discover-fallback.png" {
+            assert!(scene.ui.get_band_screenshot().is_empty());
+            assert_eq!(scene.ui.get_band_art(), 4);
+        } else {
+            assert!(!scene.ui.get_band_screenshot().is_empty());
+        }
+        let frame = super::render(&scene.window);
+        let pixel = |x: usize, y: usize| frame.as_slice()[y * 1280 + x];
+        for y in 120..208 {
+            let panel = pixel(839, y);
+            assert_eq!((panel.r, panel.g, panel.b), (0x12, 0x0c, 0x0d));
+            for x in 840..960 {
+                let art = pixel(x, y);
+                // Even a white source must emerge gradually over 120 px.
+                // At the joint the allowed one-level rounding error rules out
+                // the old abrupt edge, regardless of the source image texture.
+                let bound = ((x - 840) * 255).div_ceil(120) as u8 + 2;
+                for (actual, deep) in [(art.r, panel.r), (art.g, panel.g), (art.b, panel.b)] {
+                    assert!(
+                        actual.abs_diff(deep) <= bound,
+                        "{name}: joint at {x},{y}: {actual} vs {deep}, bound {bound}"
+                    );
+                }
+            }
+        }
+        assert!(
+            (120..208).any(|y| {
+                let p = pixel(960, y);
+                p.r.abs_diff(0x12) > 20 || p.g.abs_diff(0x0c) > 20 || p.b.abs_diff(0x0d) > 20
+            }),
+            "{name}: the image must emerge from the fade"
+        );
+        super::write_png(&format!("049-{name}"), &frame);
+        // The heading and status retain their original placement and pixels.
+        scene.ui.set_art_band(false);
+        let plain = super::render(&scene.window);
+        for y in 120..208 {
+            let row = y * 1280;
+            assert_eq!(
+                &frame.as_slice()[row + 40..row + 824],
+                &plain.as_slice()[row + 40..row + 824]
+            );
+        }
+        scene.ui.set_art_band(true);
+    };
+    production::discover_and_detail(&scene, &capture);
+}
+
+#[test]
 fn install_progress_and_play_setup() {
     if isolated(module_path!(), "install_progress_and_play_setup") {
         return;
