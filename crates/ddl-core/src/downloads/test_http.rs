@@ -226,6 +226,13 @@ where
     stream.write_all(&out)?;
     stream.flush()?;
 
+    // A `HEAD` answer carries the headers (and the `Content-Length` of the body
+    // a `GET` would return) but never the body itself (spec 044).
+    if request.method.eq_ignore_ascii_case("HEAD") {
+        thread::sleep(Duration::from_millis(25));
+        return Ok(());
+    }
+
     // Trickled bodies model a slow link (or a stall when the first delay is
     // long): the headers land immediately, then each piece is sent after a
     // pause. Everything else goes out in one write.

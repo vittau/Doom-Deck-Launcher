@@ -52,7 +52,10 @@ pub mod test_http;
 pub use cancel::CancellationToken;
 pub use error::{Error, LimitKind};
 pub use extract::{ExtractLimits, ExtractedMember, Extraction, Extractor, MemberRequest};
-pub use fetch::{DEFAULT_REDIRECT_EXCEPTIONS, DownloadRequest, Fetcher, MAX_REDIRECTS, Progress};
+pub use fetch::{
+    DEFAULT_REDIRECT_EXCEPTIONS, DownloadRequest, Fetcher, MAX_REDIRECTS, PROBE_REQUEST_TIMEOUT,
+    ProbeMethod, ProbeResponse, Progress,
+};
 pub use hash::Sha256;
 pub use host::HostAllowlist;
 

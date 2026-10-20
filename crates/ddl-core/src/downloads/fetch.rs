@@ -57,6 +57,9 @@ use super::hash::Sha256;
 use super::host::{DROPBOX_REDIRECT_ORIGIN, HostAllowlist, is_dropbox_download_host};
 use super::partial::{self, Sidecar};
 
+mod probe;
+pub use probe::{PROBE_REQUEST_TIMEOUT, ProbeMethod, ProbeResponse};
+
 /// The maximum number of redirects followed per URL (spec 006, R1).
 pub const MAX_REDIRECTS: u32 = 5;
 
@@ -304,13 +307,30 @@ impl Fetcher {
         connect_timeout: Duration,
         response_timeout: Duration,
     ) -> Self {
-        let deadlines = DeadlinePolicy::default();
-        let agent = build_agent(connect_timeout, response_timeout, deadlines.idle);
         let downloads_dir = cache_dir.into().join("downloads");
         // R5: bound the partial cache whenever the fetcher starts. Best effort:
         // a cache that cannot be read must not make every install fail.
         let _ = fs::create_dir_all(&downloads_dir);
         partial::cleanup(&downloads_dir, SystemTime::now());
+        Self::build(downloads_dir, connect_timeout, response_timeout)
+    }
+
+    /// A fetcher for header-only probes (spec 044): it never touches the
+    /// filesystem, so `ddl catalog check-links` does not create or clean the
+    /// user's download cache. Its `downloads_dir` is empty; do not call the
+    /// download methods on it.
+    #[must_use]
+    pub(crate) fn headers_only(connect_timeout: Duration, response_timeout: Duration) -> Self {
+        Self::build(PathBuf::new(), connect_timeout, response_timeout)
+    }
+
+    fn build(
+        downloads_dir: PathBuf,
+        connect_timeout: Duration,
+        response_timeout: Duration,
+    ) -> Self {
+        let deadlines = DeadlinePolicy::default();
+        let agent = build_agent(connect_timeout, response_timeout, deadlines.idle);
         Self {
             agent,
             downloads_dir,

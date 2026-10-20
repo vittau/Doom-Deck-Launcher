@@ -8,10 +8,15 @@
 pub mod bundle;
 mod fetch;
 mod image;
+mod links;
 mod lint;
 mod loader;
 mod model;
+#[cfg(test)]
+mod recipe_fixture;
 pub mod remote;
+mod sample;
+mod source_dir;
 
 pub use bundle::{
     AcceptedBundle, BUNDLE_SCHEMA, Bundle, BundleRejection, CHECK_INTERVAL_SECS, CachedBundle,
@@ -24,6 +29,9 @@ pub use image::{
     ImageError, ImageFormat, MAX_SCREENSHOT_BYTES, MAX_SCREENSHOT_HEIGHT, MAX_SCREENSHOT_WIDTH,
     MIN_SCREENSHOT_HEIGHT, MIN_SCREENSHOT_WIDTH, accepted_asset_extension, image_info,
 };
+pub use links::{
+    LinkChecker, LinkResult, MAX_IN_FLIGHT, Outcome, PackageFinding, Report as LinkReport,
+};
 pub use lint::{
     Diagnostic, SCREENSHOTS_DIR, check_status_bar_lumps, lint_paths, validate, validate_tags,
     validate_vocabulary, wad_lump_names,
@@ -31,6 +39,8 @@ pub use lint::{
 pub use loader::{Catalog, LoadedRecipe, SkippedRecipe};
 pub use model::*;
 pub use remote::{BUNDLE_URL, CatalogUpdateError, HttpsRemoteFetch, RemoteFetch, load_remote};
+pub use sample::{DEFAULT_MAX_ARCHIVE_BYTES, Sample, SampleEntry, e2e_sample};
+pub use source_dir::load_catalog_dir;
 
 #[cfg(test)]
 mod tests;
