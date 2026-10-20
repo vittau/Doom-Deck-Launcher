@@ -623,6 +623,9 @@ mirror's ls-laR.gz and the authors' .txt sidecars and published on the
 `idgames-index` branch by CI. It is not the catalog: nothing in it is
 verified, and the app shows it as unverified.
 
+`build` exits 0 on success, 3 when the crawl stopped (403/429/5xx or network)
+after writing the partial index and crawl state, and 1 on a hard failure.
+
 Commands:
   build     Build index.json from an inventory and a polite sidecar crawl
   validate  Check a published index.json against the schema and bounds
@@ -665,6 +668,12 @@ Options:
                                catalog when present)
       --budget <n>             Sidecar requests this run (1-1500, default 1500)
       --min-ddl-version <v>    Oldest DDL allowed to read the index
+
+Exit status:
+  0  the index was built and written (complete, budget stop or back-off wait)
+  3  the crawl stopped (403/429/5xx or network); the partial index and
+     crawl-state.json were written, so CI may publish and resume
+  1  hard failure; no index was written
 "
         ),
         HelpTopic::IdgamesIndexValidate => format!(
