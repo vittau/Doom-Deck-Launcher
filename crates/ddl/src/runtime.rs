@@ -13,6 +13,7 @@ use local_ui::LocalUi;
 
 use ddl_core::{
     downloads::{CancellationToken, InstallProgress, InstallStage},
+    platform::{legacy_import::LegacyInstall, sandbox::Sandbox},
     resolver::Blocker,
 };
 use slint::{ComponentHandle, Model as _, ModelRc, SharedString, VecModel};
@@ -68,6 +69,8 @@ enum Sheet {
     DeleteProfile(String, String),
     /// Spec 022: the uninstall confirm carries the focused recipe id.
     Uninstall(String),
+    /// Spec 059 R5: offer to import a tarball-era setup into the Flatpak.
+    ImportOffer,
 }
 pub struct Runtime {
     env: Environment,
@@ -109,6 +112,13 @@ pub struct Runtime {
     updates: Vec<String>,
     updates_checked: bool,
     pub last_exit: Option<ddl_core::engines::dsda::LaunchOutcome>,
+    /// Spec 059: the sandbox DDL runs in.
+    sandbox: Sandbox,
+    /// Spec 059 R5: the tarball-era install to offer importing, until the
+    /// player answers or the import succeeds.
+    import_offer: Option<LegacyInstall>,
+    /// The next `start` imports `import_offer` before opening the services.
+    import_now: bool,
 }
 impl Runtime {
     pub fn new(env: Environment) -> Self {
@@ -149,7 +159,19 @@ impl Runtime {
             updates: vec![],
             updates_checked: false,
             last_exit: None,
+            sandbox: Sandbox::none(),
+            import_offer: None,
+            import_now: false,
         }
+    }
+    /// Runs inside `sandbox`: decides, before the services create any file of
+    /// their own, whether a tarball-era install should be offered (spec 059 R5).
+    #[must_use]
+    pub fn with_sandbox(mut self, sandbox: Sandbox) -> Self {
+        self.import_offer =
+            ddl_core::platform::legacy_import::find(&sandbox, &self.env.home, &self.env.paths);
+        self.sandbox = sandbox;
+        self
     }
     fn unreadable_text(&self) -> String {
         self.unreadable
@@ -166,11 +188,12 @@ impl Runtime {
     }
     fn diagnostics_text(&self) -> String {
         format!(
-            "DoomDeckLauncher {}\n\nLog: {}\n\nConfig: {}\n\nData: {}\n\n{}",
+            "DoomDeckLauncher {}\n\nLog: {}\n\nConfig: {}\n\nData: {}\n\n{}\n\n{}",
             crate::cli::VERSION,
             self.env.paths.state.join("logs/ddl.log").display(),
             self.env.paths.config.display(),
             self.env.paths.data.display(),
+            sandbox_line(&self.sandbox),
             self.unreadable_text()
         )
     }
@@ -257,6 +280,12 @@ impl Runtime {
             self.enter(Screen::Progress, 1);
         }
         let fresh = std::mem::take(&mut self.recovery_reset);
+        let import = if std::mem::take(&mut self.import_now) {
+            self.import_offer.clone()
+        } else {
+            None
+        };
+        let sandbox = self.sandbox.clone();
         let env = self.env.clone();
         let cancel = self.cancel.clone();
         let weak = ui.as_weak();
@@ -270,11 +299,17 @@ impl Runtime {
             };
             let prepared = if fresh {
                 services::start_fresh(&env).map(|_| ())
+            } else if let Some(legacy) = &import {
+                services::import_legacy(&env, legacy, &cancel).map(|report| {
+                    emit(Event::Imported {
+                        engines_to_reinstall: report.skipped_engines.len(),
+                    });
+                })
             } else {
                 Ok(())
             };
             let result = prepared
-                .and_then(|_| Services::open(env))
+                .and_then(|_| Services::open_with(env, sandbox))
                 .and_then(|mut services| {
                     services.execute(command, &cancel, &mut emit)?;
                     services.snapshot().map(Box::new)
@@ -308,6 +343,19 @@ impl Runtime {
                 Event::Updates(u) => {
                     self.updates = u;
                     self.updates_checked = true;
+                }
+                Event::Imported {
+                    engines_to_reinstall,
+                } => {
+                    self.import_offer = None;
+                    ui.invoke_show_toast(text(
+                        ui,
+                        if engines_to_reinstall == 0 {
+                            T::ImportDone
+                        } else {
+                            T::ImportEngineAgain
+                        },
+                    ));
                 }
                 Event::Catalog(outcome) => {
                     // Spec 019 R5: the manual action reports its result; an
@@ -378,6 +426,11 @@ impl Runtime {
                                     // Spec 019 R5: check in the background once
                                     // the UI is up, at most every 24 h.
                                     auto_check = self.should_auto_check();
+                                    // Spec 059 R5: a tarball-era install is
+                                    // offered once the UI is up.
+                                    if self.import_offer.is_some() {
+                                        self.show_sheet(Sheet::ImportOffer);
+                                    }
                                 }
                                 Some(Command::InstallEngine(_)) => {
                                     self.screen = self.return_to.0;
@@ -576,6 +629,12 @@ impl Runtime {
                         };
                     let delete_profiles = self.uninstall_delete_profiles;
                     self.focus = self.invoking;
+                    if matches!(sheet, Sheet::ImportOffer) && !confirm {
+                        // "No, don't ask again" is remembered; B only closes
+                        // the offer until the next start.
+                        services::decline_legacy(&self.env);
+                        self.import_offer = None;
+                    }
                     if confirm {
                         match sheet {
                             Sheet::Quit => ui.invoke_quit_requested(),
@@ -592,6 +651,10 @@ impl Runtime {
                             }
                             Sheet::Uninstall(id) => {
                                 self.start(ui, Command::Uninstall(id, delete_profiles));
+                            }
+                            Sheet::ImportOffer => {
+                                self.import_now = true;
+                                self.start(ui, Command::Startup);
                             }
                             Sheet::Profiles | Sheet::ProfileNames => {}
                         }
@@ -2579,6 +2642,23 @@ impl Runtime {
                                 );
                             }
                         }
+                        // Spec 059 R4: an empty or short list may only be the
+                        // sandbox not seeing the player's drive.
+                        let notes_y = if s.iwads.is_empty() {
+                            100.
+                        } else {
+                            100. + s.iwads.len() as f32 * 112.
+                        };
+                        for (i, path) in s.hidden_paths.iter().take(3).enumerate() {
+                            b.label(
+                                36.,
+                                notes_y + i as f32 * 48.,
+                                1152.,
+                                40.,
+                                value(ui, T::NotVisible, path.display()),
+                                20.,
+                            );
+                        }
                         b.button(1, 836., 390., 352., text(ui, T::UseGame), true);
                     }
                 }
@@ -2641,11 +2721,16 @@ impl Runtime {
                         crate::screenshots::all_credits().join(", "),
                     );
                     let credit_height = credits.chars().count().div_ceil(85).max(1) as f32 * 28.;
+                    // Spec 059: the engine version, the sandbox line and, under
+                    // Flatpak, the update-source note push the credits down.
+                    let about_extra = 88. + if self.sandbox.is_flatpak() { 64. } else { 0. };
+                    let hidden = self.snapshot.as_ref().map_or(0, |s| s.hidden_paths.len());
                     let height = match self.settings_section {
                         0 => 700.,
                         1 => self.snapshot.as_ref().map_or(316., |s| {
                             (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
                                 .max(316.)
+                                + if hidden > 0 { hidden as f32 * 48. + 20. } else { 0. }
                         }),
                         2 => 280.,
                         3 if self.snapshot.is_none() => {
@@ -2658,7 +2743,7 @@ impl Runtime {
                         }
                         // Tall enough for the spec 017 R6 widescreen status-bar credit and
                         // the spec 033 screenshot credits under the version block.
-                        _ => (384. + credit_height + 12.).max(478.),
+                        _ => (384. + about_extra + credit_height + 12.).max(478.),
                     };
                     b.panel(348., 12., 864., height);
                     for (i, label) in [T::Engine, T::Folders, T::Config, T::Diagnostics]
@@ -2873,6 +2958,20 @@ impl Runtime {
                                     );
                                     b.nodes.last_mut().unwrap().h = 88.;
                                 }
+                                // Spec 059 R4: say why a folder the host has
+                                // shows nothing, instead of an empty list.
+                                let rows = (s.folders.len() + s.automatic_folders.len()) as f32;
+                                let notes_y = 316. + rows * 112. - if s.folders.is_empty() { 0. } else { 96. };
+                                for (i, path) in s.hidden_paths.iter().enumerate() {
+                                    b.label(
+                                        372.,
+                                        notes_y + i as f32 * 48.,
+                                        816.,
+                                        40.,
+                                        value(ui, T::NotVisible, path.display()),
+                                        20.,
+                                    );
+                                }
                             }
                             2 => {
                                 b.label(
@@ -2913,9 +3012,29 @@ impl Runtime {
                                 b.logo(372., 170., 560., 128., false);
                                 b.label(960., 202., 228., 44., text(ui, T::AppVersion), 26.);
                                 b.label(960., 264., 228., 44., crate::cli::VERSION.into(), 22.);
+                                // Spec 059: the engine version is its own line,
+                                // then the sandbox state and, under Flatpak,
+                                // where DDL's updates come from (R1, R7).
+                                b.label(
+                                    372.,
+                                    316.,
+                                    816.,
+                                    40.,
+                                    s.engine.as_ref().map_or_else(
+                                        || text(ui, T::NoEngine),
+                                        |e| value(ui, T::EngineVersion, &e.version),
+                                    ),
+                                    22.,
+                                );
+                                b.label(372., 360., 816., 40., sandbox_text(ui, &self.sandbox), 22.);
+                                let mut y = 404.;
+                                if self.sandbox.is_flatpak() {
+                                    b.label(372., y, 816., 56., text(ui, T::StoreUpdates), 20.);
+                                    y += 64.;
+                                }
                                 // Spec 017, R6: credit the widescreen status bars.
-                                b.label(372., 316., 816., 56., text(ui, T::StatusBarCredit), 20.);
-                                b.label(372., 384., 816., credit_height, credits.clone(), 20.);
+                                b.label(372., y, 816., 56., text(ui, T::StatusBarCredit), 20.);
+                                b.label(372., y + 68., 816., credit_height, credits.clone(), 20.);
                             }
                         }
                     }
@@ -3027,7 +3146,7 @@ impl Runtime {
                 } else {
                     460.
                 }
-            } else if matches!(self.sheet, Some(Sheet::StartFresh)) {
+            } else if matches!(self.sheet, Some(Sheet::StartFresh | Sheet::ImportOffer)) {
                 380.
             } else if matches!(self.sheet, Some(Sheet::DeleteProfile(..))) {
                 340.
@@ -3050,6 +3169,7 @@ impl Runtime {
                 Sheet::Remove(_) => (T::RemoveConfirm, T::Cancel, T::Remove),
                 Sheet::Component(_) => (T::CompatConfirm, T::Keep, T::UseVariant),
                 Sheet::DeleteProfile(..) => (T::DeleteProfileConfirm, T::Cancel, T::DeleteProfile),
+                Sheet::ImportOffer => (T::ImportOffer, T::ImportNo, T::ImportYes),
                 Sheet::Profiles | Sheet::ProfileNames | Sheet::Uninstall(_) => unreachable!(),
             };
             ui.set_sheet_title(if let Sheet::DeleteProfile(_, name) = sheet {
@@ -3058,7 +3178,7 @@ impl Runtime {
                 text(ui, title)
             });
             let mut b = Nodes::new(ui);
-            let button_y = if matches!(sheet, Sheet::StartFresh) {
+            let button_y = if matches!(sheet, Sheet::StartFresh | Sheet::ImportOffer) {
                 268.
             } else if matches!(sheet, Sheet::DeleteProfile(..)) {
                 228.
@@ -3202,12 +3322,16 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Launch => T::ErrorLaunch,
         Problem::Busy => T::ErrorBusy,
         Problem::EngineRuntime(_) => T::ErrorEngineRuntime,
+        Problem::NotVisible(_) => T::NotVisible,
     }
 }
 
 /// The problem panel's label: a static key, or the engine runtime's own
 /// actionable message (spec 014 follow-up).
 fn problem_text(ui: &AppWindow, problem: &Problem) -> slint::SharedString {
+    if let Problem::NotVisible(path) = problem {
+        return value(ui, T::NotVisible, path.display());
+    }
     match problem_detail(problem) {
         Some(detail) => value(ui, T::ErrorEngineRuntime, detail),
         None => text(ui, problem_copy(problem)),
@@ -3509,7 +3633,19 @@ pub fn attach(ui: &AppWindow) -> Result<Rc<RefCell<Runtime>>, Box<dyn std::error
     Ok(attach_environment(ui, env))
 }
 pub fn attach_environment(ui: &AppWindow, env: Environment) -> Rc<RefCell<Runtime>> {
-    let state = Rc::new(RefCell::new(Runtime::new(env)));
+    attach_with_sandbox(ui, env, services::default_sandbox())
+}
+pub fn attach_with_sandbox(
+    ui: &AppWindow,
+    env: Environment,
+    sandbox: Sandbox,
+) -> Rc<RefCell<Runtime>> {
+    tracing::info!(
+        flatpak = sandbox.is_flatpak(),
+        app_id = sandbox.app_id().unwrap_or_default(),
+        "sandbox detected"
+    );
+    let state = Rc::new(RefCell::new(Runtime::new(env).with_sandbox(sandbox.clone())));
     let weak = ui.as_weak();
     let s = state.clone();
     ui.on_action(move |code| {
@@ -3531,14 +3667,32 @@ pub fn attach_environment(ui: &AppWindow, env: Environment) -> Rc<RefCell<Runtim
             s.borrow_mut().drain(&ui);
         }
     });
-    ui.on_profile_name_focused(|| {
-        if let Err(error) = osk::focused(&osk::SystemLauncher) {
+    ui.on_profile_name_focused(move || {
+        if let Err(error) = osk::focused(&osk::SystemLauncher, &sandbox) {
             tracing::debug!(%error, "Steam keyboard unavailable; use Steam + X");
         }
     });
     state.borrow_mut().start(ui, Command::Startup);
     state.borrow_mut().sync(ui);
     state
+}
+
+/// The Settings → About sandbox line (spec 059 R1).
+fn sandbox_text(ui: &AppWindow, sandbox: &Sandbox) -> SharedString {
+    match (sandbox.is_flatpak(), sandbox.app_id()) {
+        (false, _) => text(ui, T::FlatpakSandboxNo),
+        (true, Some(id)) => value(ui, T::FlatpakSandboxYes, id),
+        (true, None) => text(ui, T::FlatpakSandboxYesPlain),
+    }
+}
+
+/// "Flatpak sandbox: yes (<app id>)" / "no" as plain text (spec 059 R1).
+fn sandbox_line(sandbox: &Sandbox) -> String {
+    match (sandbox.is_flatpak(), sandbox.app_id()) {
+        (false, _) => "Flatpak sandbox: no".to_owned(),
+        (true, Some(id)) => format!("Flatpak sandbox: yes ({id})"),
+        (true, None) => "Flatpak sandbox: yes".to_owned(),
+    }
 }
 
 fn display_title(recipe: &ddl_core::catalog::Recipe) -> &str {
@@ -3790,6 +3944,7 @@ mod category_tests {
             attribution: None,
             iwads: vec![],
             folders: vec![],
+            hidden_paths: vec![],
             config_notice: false,
             config_usable: true,
             config_version: String::new(),
