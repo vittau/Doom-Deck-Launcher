@@ -1,7 +1,8 @@
 """Offline Ember production compositor. Run with Pillow 12.3.0; no runtime dependency.
 Source: original generated phase-A atlas; exact prompt retained in docs/design/visual-v2/ember-cathedral/prompt.txt.
 Painted Eviternity/fallback masters (now JPEG) are preserved; prompts retained below.
-Spec 035: opaque art is JPEG quality 60, at most 1280x800; frame and ornaments stay lossless PNG.
+Spec 035: opaque art is JPEG quality 60, at most 1280x800.
+Spec 048: vector frames and ornaments are authored separately by author_frame.py.
 """
 import argparse
 from pathlib import Path
@@ -59,24 +60,6 @@ for y in range(0,632,438):
 save(wall, 'wall.jpg')
 if args.wall_only:
     raise SystemExit(0)
-source_frame = a.crop((512,0,1024,438))
-f = source_frame.resize((256,220), Image.Resampling.LANCZOS)
-# Only plain rail cross-sections stretch. Corners and ornaments never scale up.
-frame = Image.new('RGB', (128,128), '#211719')
-for x,y,sx,sy in [(0,0,0,0),(100,0,228,0),(0,100,0,192),(100,100,228,192)]:
-    frame.paste(f.crop((sx,sy,sx+28,sy+28)), (x,y))
-frame.paste(f.crop((60,0,61,28)).resize((72,28)), (28,0))
-frame.paste(f.crop((60,192,61,220)).resize((72,28)), (28,100))
-frame.paste(f.crop((0,60,28,61)).resize((28,72)), (0,28))
-frame.paste(f.crop((228,60,256,61)).resize((28,72)), (100,28))
-save(frame, 'frame.png')
-for name, box, size in [
-    ('ornament-top.png', (208,0,304,56), (96,28)),
-    ('ornament-bottom.png', (208,382,304,438), (96,28)),
-    ('ornament-left.png', (0,190,56,248), (28,48)),
-    ('ornament-right.png', (456,190,512,248), (28,48)),
-]:
-    save(source_frame.crop(box).resize(size, Image.Resampling.LANCZOS), name)
 for i, name in enumerate(['sigil','sigil-ii','auger','eviternity','fallback']):
     if i < 3:
         cover=a.crop((i*512,438,(i+1)*512,1024))
