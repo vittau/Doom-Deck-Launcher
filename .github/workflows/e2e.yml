@@ -265,29 +265,53 @@ jobs:
           grep -q 'extracted' "$E2E_ROOT/engine-status-force.txt" \
             || { echo "::error::--force-extract did not install the extracted engine"; exit 1; }
 
-          # 2. Every catalog recipe, then every free optional component.
-          echo "== mapset list =="
-          ids="$("$ddl" mapset list | tee "$E2E_ROOT/mapset-list.txt" | awk 'NF {print $1}')"
+          # 2. The lean install set (spec 044, R4). The run of 2026-10-19 (run
+          # 39304815134) installed all 89 recipes, took 41 minutes and died on one
+          # 156 MB archive.org file ("download too slow"). Full-catalog coverage is now
+          # the weekly `catalog-health.yml` (every mirror's headers, nothing downloaded);
+          # this run installs only what exercises a *different code path*, chosen by
+          # `ddl catalog e2e-sample` from the catalog itself, never from a hand-kept list:
+          #   * the smallest recipe per first-source download host (one real download per
+          #     host: gamers.org, dsdarchive.com, archive.org, dropbox.com with its
+          #     per-request redirect host, raw.githubusercontent.com, romero.com);
+          #   * every recipe with optional components, each free component installed once
+          #     (a component the player must supply cannot be installed), which covers
+          #     every widescreen status-bar case of spec 017, R7;
+          #   * each recipe's total download stays under 64 MiB unless no recipe for its
+          #     host fits, so no single slow file can sink the run.
+          # The chosen ids go to the run summary. The sample is a pure function of
+          # `catalog/`, so it is deterministic and unit-tested over the real catalog.
+          echo "== e2e sample =="
+          sample="$E2E_ROOT/e2e-sample.tsv"
+          "$ddl" catalog e2e-sample catalog > "$sample"
+          ids="$(cut -f1 "$sample" | sort -u)"
+          catalog_count="$(find catalog -maxdepth 1 -name '*.toml' ! -name hosts.toml ! -name tags.toml | wc -l)"
+          {
+            echo "### E2E install sample (spec 044)"
+            echo ""
+            echo "$(wc -l < "$sample") installs of $(echo "$ids" | wc -l) recipes, out of $catalog_count in the catalog. \`catalog-health.yml\` checks every mirror of the rest."
+            echo ""
+            echo "| Recipe | Component | Why |"
+            echo "| --- | --- | --- |"
+            awk -F'\t' '{ printf "| %s | %s | %s |\n", $1, ($2 == "-" ? "(plain install)" : $2), $3 }' "$sample"
+          } >> "$GITHUB_STEP_SUMMARY"
           echo "recipes: $ids"
-          for id in $ids; do
-            echo "== mapset install $id =="
-            "$ddl" mapset install "$id"
-          done
-          echo "== free optional components =="
-          "$ddl" mapset install sigil --with compat
-          "$ddl" mapset install auger-zenith --with alternate-blaster
-          "$ddl" mapset install auger-zenith --with deckard-blaster
-          # Spec 017, R7: install each widescreen status-bar component once.
-          for id in ancient-aliens back-to-saturn-x-e1 back-to-saturn-x-e2 \
-                    eviternity valiant going-down scythe sigil sigil-ii; do
-            echo "== mapset install $id --with wide-status-bar =="
-            "$ddl" mapset install "$id" --with wide-status-bar
-          done
+          # `ddl` must not read the sample from this loop's stdin. A plain install has
+          # `-` as its component: with a tab `IFS`, `read` would merge an empty field away.
+          while IFS=$'\t' read -r id component reason; do
+            if [ "$component" = "-" ]; then
+              echo "== mapset install $id ($reason) =="
+              "$ddl" mapset install "$id" < /dev/null
+            else
+              echo "== mapset install $id --with $component =="
+              "$ddl" mapset install "$id" --with "$component" < /dev/null
+            fi
+          done < "$sample"
           "$ddl" mapset list | tee "$E2E_ROOT/mapset-list-after.txt"
 
-          # 3a. No IWADs exist (DDL never downloads them), so every dry-run must
-          # report the typed MissingIwad blocker.
-          echo "== dry-run: every recipe reports the MissingIwad blocker =="
+          # 3a. No IWADs exist (DDL never downloads them), so every dry-run of a
+          # sampled recipe must report the typed MissingIwad blocker.
+          echo "== dry-run: every sampled recipe reports the MissingIwad blocker =="
           for id in $ids; do
             if "$ddl" launch "$id" --dry-run > "$E2E_ROOT/dry-missing-$id.txt" 2>&1; then
               echo "::error::$id dry-run unexpectedly succeeded without an IWAD"
