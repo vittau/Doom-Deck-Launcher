@@ -1,0 +1,181 @@
+# Weekly catalog link health (spec 044, R3).
+#
+# With about a hundred recipes, an upstream file that moved, changed or died has to be
+# found before a player hits it. This job asks every mirror of every recipe for its
+# headers (`HEAD`, or a one-byte `Range` request when a host refuses `HEAD`) and compares
+# the size with the recipe's pinned size. Nothing is downloaded, so it is cheap enough to
+# run weekly; the real-network e2e (`e2e.yml`) stays manual and installs only a small
+# sample (spec 044, R4).
+#
+# `ddl catalog check-links` exits non-zero when any recipe has no `ok` source left. A
+# recipe with one dead mirror and one good one is a warning in the table, not a failure.
+# On a failure this workflow opens one issue labelled `catalog-health`, or updates the
+# one that is already open; a later clean run closes it.
+name: Catalog health
+
+on:
+  schedule:
+    # Mondays, 05:17 UTC (off the top of the hour, when the runner queue is busiest).
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+# Read the checkout; write only the issue.
+permissions:
+  contents: read
+  issues: write
+
+# One run at a time, and a running check is never cancelled half-way through its issue
+# update.
+concurrency:
+  group: catalog-health
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+
+jobs:
+  check-links:
+    name: Check every catalog mirror
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # The checkout supplies `rust-toolchain.toml`, which the next step reads.
+      - uses: actions/checkout@v4
+
+      # Same toolchain install as the `checks` job in `ci.yml`: rustup only, with the
+      # channel read back from the pin so it can never drift.
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
+          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          test -n "$channel"
+          echo "Pinned toolchain: $channel"
+          rustup toolchain install "$channel" --profile minimal
+          rustup default "$channel"
+          cargo --version
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: catalog-health-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            catalog-health-${{ runner.os }}-
+
+      # The same system packages as the `checks` job: `ddl` links Slint's text stack
+      # (fontconfig) and gilrs (libudev), even though this job never opens a window.
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
+
+      # A debug build is enough: the check is bound by the network, not the CPU.
+      - name: Build ddl
+        run: cargo build --locked -p ddl
+
+      # `check-links` exits non-zero on a failed recipe, which must not stop this step:
+      # the table and the issue update below come first. The step fails the job only when
+      # the tool produced no report at all (a crash or a usage error).
+      - name: Check every mirror's headers
+        id: check
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/catalog-health.md"
+          errors="$RUNNER_TEMP/catalog-health.err"
+          ./target/debug/ddl catalog check-links catalog > "$report" 2> "$errors"
+          status=$?
+          set -e
+          cat "$errors"
+          if [ ! -s "$report" ]; then
+            echo "::error::ddl catalog check-links produced no report (exit $status)"
+            exit 1
+          fi
+          {
+            echo "## Catalog link health"
+            echo ""
+            cat "$report"
+            if [ -s "$errors" ]; then
+              echo ""
+              echo '```'
+              cat "$errors"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The issue lists only what needs a fix: every row that is not `ok`.
+          problems="$RUNNER_TEMP/catalog-health-problems.md"
+          grep -v '| ok |' "$report" > "$problems" || true
+          {
+            echo "report=$report"
+            echo "problems=$problems"
+            echo "errors=$errors"
+            echo "status=$status"
+          } >> "$GITHUB_OUTPUT"
+
+      # One issue labelled `catalog-health`: opened on the first failure, edited by every
+      # later failing run, closed by the first clean one.
+      - name: Open, update or close the catalog-health issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.check.outputs.status }}
+          PROBLEMS: ${{ steps.check.outputs.problems }}
+          ERRORS: ${{ steps.check.outputs.errors }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          label=catalog-health
+          # Creating a label that already exists is the normal case.
+          gh label create "$label" --description "Weekly catalog link health" --color D93F0B 2>/dev/null || true
+          number="$(gh issue list --label "$label" --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ "$STATUS" = "0" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --comment "Clean run, every recipe has a working source again: $RUN_URL"
+              echo "closed issue #$number"
+            else
+              echo "clean run; no open $label issue"
+            fi
+            exit 0
+          fi
+          body="$RUNNER_TEMP/issue-body.md"
+          {
+            echo "At least one catalog recipe has **no working source** left (\`ddl catalog check-links\` exited $STATUS)."
+            echo ""
+            echo "Run: $RUN_URL ($(date -u +%Y-%m-%d))"
+            echo ""
+            echo "Only the rows that are not \`ok\` are listed; the run summary has the full table. \`gone\` means 404 or 410, \`size-changed\` means the file no longer has the size the recipe pins, \`host-refused\` means a redirect left the download allowlist in \`catalog/hosts.toml\`."
+            echo ""
+            cat "$PROBLEMS"
+            if [ -s "$ERRORS" ]; then
+              echo ""
+              echo '```'
+              cat "$ERRORS"
+              echo '```'
+            fi
+          } | head -c 60000 > "$body"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file "$body"
+            echo "updated issue #$number"
+          else
+            gh issue create --label "$label" --title "Catalog link health: recipes with no working source" --body-file "$body"
+          fi
+
+      # Red run, so the failure is visible in the Actions list and not only in the issue.
+      - name: Fail the run when a recipe has no working source
+        if: steps.check.outputs.status != '0'
+        run: |
+          echo "::error::at least one recipe has no working source; see the run summary and the catalog-health issue"
+          exit 1
