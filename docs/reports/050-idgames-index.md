@@ -146,3 +146,81 @@ one). Unit tests live beside each module. No test uses a socket.
 - `docs/journal.yml`: one entry when the first index is published (size, entries, mirror, crawl
   telemetry).
 - `docs/decisions.md` already carries the owner's 2026-10-20 approval in D-031; no change needed.
+
+## Follow-up: first real crawl
+
+**Status:** implemented on `vittau/idgames-crawl-fix`; not merged, no workflow triggered, no issue
+touched. The first real crawl (GitHub Actions
+[39475512048](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39475512048)) made ~1,500
+polite requests with no 403/429/5xx, then failed the final validation on
+`` `title` for `cinema2` contains a control character ``. The workflow read *any* non-zero exit as
+a crawl stop, so Validate/Publish were skipped, nothing was published, and the stop step opened
+issue #1 with an empty telemetry block while claiming the partial index had been published. Four
+sidecars were also dropped as "exceeds 65536 bytes" (`tnt2`, `dvii-1i`, `ppss2`, `10sector`).
+
+### What changed
+
+- **F1 — untrusted text can no longer invalidate the document.** `txt::sanitize_text` now runs on
+  every value `parse_txt` keeps: C0/C1 controls are dropped, tab/newline/CR and other whitespace
+  collapse to one space, the result is trimmed and capped at 240 characters (the index's own 512
+  bound still applies). Title, author and every other labelled field go through it before they
+  reach an `Entry`. `index::validate` stays strict/unchanged as the last line of defence; its error
+  still names the entry and field, and a test pins that wording.
+- **F2 — oversized sidecars are read, not discarded.** `fetch::read_sidecar` reads at most
+  `MAX_TXT_BYTES` (64 KiB), never more, and reports whether the body was longer (declared
+  `Content-Length` or a full prefix). `TxtResponse::Fetched` carries `truncated`; the builder parses
+  the header fields from the prefix, keeps the entry, and counts it in `BuildReport::truncated_txt`
+  and in run telemetry (`truncated`, shown by `summary()` and the "Sidecars" line). Old
+  `crawl-state.json` files still load (`#[serde(default)]`).
+- **F3 — distinct exit statuses and a truthful workflow.** `ddl idgames index build` now exits
+  `0` for a written index (complete, budget stop or back-off wait), `3` for a resumable stop
+  (403/429/5xx or network, index + state written) and `1` for a hard failure. The status is carried
+  by a new `CliFailure::with_exit_code`/`exit_code` (default stays `1` for every other command) and
+  used by `main`; the contract is in `ddl idgames --help` and `idgames index build --help`.
+  The workflow maps status to `outcome=ok|stopped|failed`: `ok`/`stopped` with an index validate
+  and publish; `stopped` then comments on/creates the single `idgames-crawl` issue with the real
+  telemetry lines (falling back to an explicit note if the log has none) and fails visibly;
+  `failed` publishes nothing, does not touch the issue, and uploads `index.json`,
+  `crawl-state.json` and `build.log` as a 3-day `idgames-crawl-failed-<run>` artifact.
+  The empty block was *caused by the old mapping*: a hard validation failure set
+  `stopped=true` after the CLI had already failed before printing `Wrote`/`Telemetry`, so the grep
+  found nothing. Only exit `3` reaches the issue step now, and only after a successful publish.
+- **F4 — the crawl state survives a refused document.** The builder now computes telemetry and
+  records the run (with `retain`/`generated_at`) *before* the final `validate()`/size check; a
+  failed build is labelled `stop: "error"` (never "finished"), so it cannot clear a mirror
+  back-off, and the CLI writes `crawl-state.json` on the error path. A re-run therefore sends the
+  stored `ETag`/`If-Modified-Since` instead of refetching the day. The error still names the entry
+  and field.
+
+Small supporting edits outside the module, approved by the coordinator: `CliFailure` gained the
+exit code in `crates/ddl/src/services.rs`, `main.rs` uses it, and `crates/ddl/src/cli.rs` documents
+the idgames statuses. Politeness is untouched: one mirror, one request in flight, ≥ 3 s + jitter,
+the same daily budget, no retries.
+
+### Verification
+
+- `crates/ddl-core/src/idgames/txt.rs`: control characters (`\x1a`, `\x0c`, `\x1b`, C1 U+0085) in
+  Title/Author are removed and spaces collapse; the length cap is asserted.
+- `fetch.rs`: `read_sidecar` reads exactly 64 KiB from a 65,000-byte body (never more), marks it
+  truncated, leaves a small body whole, and treats a full prefix without `Content-Length` as
+  truncated.
+- `build.rs`: an oversized sidecar still yields Title/Author/port and counts as truncated in the
+  report and telemetry; an invalid `min_ddl_version` fails after fetching, records
+  `stop: "error"` + four 200s in the state, and the next build sends all four ETags.
+- `cli_exec.rs`: `crawl_exit_code` maps complete/budget/back-off to `0` and 403/429/5xx/network to
+  `3`; hard failures stay `1`; the help text documents all three; a CLI build refused at final
+  validation exits `1`, prints telemetry and writes `crawl-state.json` with `"stop":"error"` while
+  writing no `index.json` (offline, previous index marks every entry as read).
+- `index.rs`: a control character in a title fails validation with the entry and field in the
+  message.
+- `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and
+  `cargo test --workspace` are green on this branch; `actionlint
+  .github/workflows/idgames-index.yml` reports no errors. No test opens a socket; no workflow was
+  triggered and no GitHub issue was modified.
+
+### Left for the coordinator
+
+- Re-run the crawl after merge and record A3 (size/entry count). Issue #1 still claims a publish
+  that never happened and has an empty telemetry block; it was deliberately not edited here.
+- If the next run is a clean crawl, `min_ddl_version`/schema do not change; the `truncated` field
+  only adds to `crawl-state.json`, and readers of the published `index.json` are unaffected.
