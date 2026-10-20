@@ -1406,7 +1406,10 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     let launcher = Rc::new(Fake::default());
     let fake_launcher = launcher.clone();
     ui.on_profile_name_focused(move || {
-        let _ = crate::runtime::osk::focused(fake_launcher.as_ref());
+        let _ = crate::runtime::osk::focused(
+            fake_launcher.as_ref(),
+            &ddl_core::platform::sandbox::Sandbox::none(),
+        );
     });
     press(window, Key::Return);
     idle(state);

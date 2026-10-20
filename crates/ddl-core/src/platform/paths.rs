@@ -227,6 +227,44 @@ mod tests {
         );
     }
 
+    /// Spec 059, R3: inside a Flatpak, HOME stays the real home while Flatpak
+    /// points every XDG base directory into `~/.var/app/<id>/`; DDL must follow
+    /// the XDG variables and never rebuild the paths from HOME.
+    #[test]
+    fn flatpak_xdg_directories_resolve_inside_the_app_data_dir() {
+        let app = "/home/deck/.var/app/io.github.vittau.Doom-Deck-Launcher";
+        let paths = resolve(&env(&[
+            ("HOME", "/home/deck"),
+            ("FLATPAK_ID", "io.github.vittau.Doom-Deck-Launcher"),
+            ("XDG_CONFIG_HOME", &format!("{app}/config")),
+            ("XDG_DATA_HOME", &format!("{app}/data")),
+            ("XDG_CACHE_HOME", &format!("{app}/cache")),
+            ("XDG_STATE_HOME", &format!("{app}/.local/state")),
+        ]))
+        .expect("HOME is absolute");
+
+        assert_eq!(paths.config, PathBuf::from(format!("{app}/config/ddl")));
+        assert_eq!(paths.data, PathBuf::from(format!("{app}/data/ddl")));
+        assert_eq!(paths.cache, PathBuf::from(format!("{app}/cache/ddl")));
+        assert_eq!(
+            paths.state,
+            PathBuf::from(format!("{app}/.local/state/ddl"))
+        );
+        for dir in [&paths.config, &paths.data, &paths.cache, &paths.state] {
+            assert!(
+                dir.starts_with(app),
+                "{} escapes the sandbox dir",
+                dir.display()
+            );
+            assert!(
+                !dir.starts_with("/home/deck/.config")
+                    && !dir.starts_with("/home/deck/.local/share"),
+                "{} fell back to the host layout",
+                dir.display()
+            );
+        }
+    }
+
     #[test]
     fn home_is_required_even_when_every_xdg_variable_is_absolute() {
         // Documented behaviour (module docs): DDL always needs HOME, so a

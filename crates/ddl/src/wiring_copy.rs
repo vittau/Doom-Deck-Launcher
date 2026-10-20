@@ -211,6 +211,17 @@ pub enum Text {
     FavoriteRemoveButton,
     SearchStandardFolders,
     StatusBarCredit,
+    ImportOffer,
+    ImportOfferBody,
+    ImportYes,
+    ImportNo,
+    ImportDone,
+    ImportEngineAgain,
+    FlatpakSandboxYes,
+    FlatpakSandboxYesPlain,
+    FlatpakSandboxNo,
+    StoreUpdates,
+    NotVisible,
 }
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
@@ -422,6 +433,17 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::FavoriteRemoveButton => s.get_favorite_remove_button(),
         Text::SearchStandardFolders => s.get_search_standard_folders(),
         Text::StatusBarCredit => s.get_status_bar_credit(),
+        Text::ImportOffer => s.get_import_offer(),
+        Text::ImportOfferBody => s.get_import_offer_body(),
+        Text::ImportYes => s.get_import_yes(),
+        Text::ImportNo => s.get_import_no(),
+        Text::ImportDone => s.get_import_done(),
+        Text::ImportEngineAgain => s.get_import_engine_again(),
+        Text::FlatpakSandboxYes => s.get_flatpak_sandbox_yes(),
+        Text::FlatpakSandboxYesPlain => s.get_flatpak_sandbox_yes_plain(),
+        Text::FlatpakSandboxNo => s.get_flatpak_sandbox_no(),
+        Text::StoreUpdates => s.get_store_updates(),
+        Text::NotVisible => s.get_not_visible(),
     }
 }
 pub fn value(ui: &AppWindow, key: Text, value: impl ToString) -> slint::SharedString {

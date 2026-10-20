@@ -25,6 +25,7 @@ pub mod registry;
 pub mod steam;
 pub mod stores;
 pub mod table;
+pub mod visibility;
 
 pub use canonical::{CanonicalLinks, LinkError};
 pub use folders::{FolderError, FolderScan, scan_folder};

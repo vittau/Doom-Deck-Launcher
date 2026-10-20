@@ -269,6 +269,8 @@ export component AppWindow inherits Window {
     in property <bool> local-confirm-hint: false;
     in property <bool> detail-hint: false;
     in property <bool> quit-hint: false;
+    // Spec 059: the import offer postpones on B instead of going back.
+    in property <bool> sheet-back-later: false;
     in-out property <string> toast;
     property <string> displayed-toast;
     out property <float> toast-opacity: toast-banner.opacity;
@@ -309,6 +311,8 @@ export component AppWindow inherits Window {
     in property <[ViewNode]> sheet-nodes;
     in property <bool> sheet-open: false;
     in property <string> sheet-title;
+    // Body copy for sheets whose explanation is too long for the display face.
+    in property <string> sheet-body;
     in property <float> sheet-height: 300;
     in property <bool> profile-hint: false;
     in property <bool> profile-name-open: false;
@@ -431,6 +435,11 @@ export component AppWindow inherits Window {
                 background: Tokens.deep; border-width: 4px;
                 border-color: Tokens.focus; border-radius: 16px;
             }
+            if root.sheet-body != "": Text {
+                x: 32px; y: 104px; width: parent.width - 64px; height: 148px;
+                text: root.sheet-body; color: Tokens.text; font-size: Tokens.body;
+                wrap: word-wrap; vertical-alignment: top;
+            }
             if root.profile-name-open: Rectangle {
                 x: 32px; y: 140px; width: 656px; height: 64px;
                 background: root.focused == 918 ? Tokens.raised-focus : Tokens.raised;
@@ -483,7 +492,7 @@ export component AppWindow inherits Window {
             y: 18px; width: parent.width; height: 28px; alignment: start;
             padding-left: 40px; padding-right: 40px; spacing: 24px;
             Hint { badge: @tr("A"); label: @tr("Select"); }
-            Hint { badge: @tr("B"); label: root.quit-hint ? @tr("Quit") : @tr("Back"); }
+            Hint { badge: @tr("B"); label: root.sheet-back-later ? @tr("Later") : root.quit-hint ? @tr("Quit") : @tr("Back"); }
             if root.favorite-hint && !root.sheet-open: Hint { badge: @tr("X"); label: root.favorite-label; }
             if root.detail-hint && !root.sheet-open: Hint { badge: @tr("X"); label: @tr("Details"); }
             if root.local-add-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: LocalStrings.add-hint; }

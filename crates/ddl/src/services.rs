@@ -1,4 +1,7 @@
 //! Thin application services. Constructed and used exclusively on a worker thread.
+#[cfg(test)]
+#[path = "flatpak_tests.rs"]
+pub(crate) mod flatpak_tests;
 #[path = "state_recovery.rs"]
 mod state_recovery;
 pub use state_recovery::{UnreadableFile, start_fresh};
@@ -17,8 +20,10 @@ use ddl_core::{
         self, Compatibility, CustomIwad, CustomSetup, Group as ExtraGroup, SetupStore, UserFile,
     },
     platform::{
+        legacy_import::{self, LegacyInstall},
         lock::{LockError, StateLock},
         paths::Paths,
+        sandbox::Sandbox,
     },
     profiles::{Profile, ProfileStore},
     resolver::{self, Blocker, Summary},
@@ -56,6 +61,8 @@ pub enum Problem {
     EngineRuntime(dsda::RuntimeError),
     Local(String),
     LocalFile(PathBuf, bool),
+    /// Spec 059 R4: the host has this path but the Flatpak cannot open it.
+    NotVisible(PathBuf),
 }
 
 impl fmt::Display for Problem {
@@ -63,6 +70,11 @@ impl fmt::Display for Problem {
         match self {
             Self::Local(message) => f.write_str(message),
             Self::LocalFile(path, _) => write!(f, "{}", path.display()),
+            Self::NotVisible(path) => write!(
+                f,
+                "{} is not visible to the Flatpak — see the guide",
+                path.display()
+            ),
             Self::Storage => f.write_str("could not write or read DDL's user storage"),
             Self::Unreadable(files) => write!(
                 f,
@@ -153,6 +165,52 @@ impl std::error::Error for CliFailure {}
 impl From<Blocker> for CliFailure {
     fn from(blocker: Blocker) -> Self {
         Self::Blocker(blocker)
+    }
+}
+
+/// Spec 059 R5: copies a tarball-era install into the Flatpak's directories
+/// under the normal state lock, then remembers that the question is settled.
+pub fn import_legacy(
+    env: &Environment,
+    legacy: &LegacyInstall,
+    cancel: &CancellationToken,
+) -> Result<legacy_import::Report, Problem> {
+    let _lock = StateLock::acquire(&env.paths.config).map_err(|e| logged(Problem::Busy, e))?;
+    let report =
+        legacy_import::import(legacy, &env.paths, cancel).map_err(|error| match error {
+            legacy_import::Error::Cancelled => Problem::Cancelled,
+            error => logged(Problem::Storage, error),
+        })?;
+    tracing::info!(%report, "imported the tarball-era setup");
+    if let Err(error) =
+        legacy_import::record_decision(&env.paths, legacy_import::Decision::Imported)
+    {
+        // The copied state now counts as the sandbox's own, which already
+        // stops the offer; a lost marker costs nothing.
+        tracing::warn!(%error, "could not record the import");
+    }
+    Ok(report)
+}
+
+/// Spec 059 R5: remembers a declined import so DDL never asks again.
+pub fn decline_legacy(env: &Environment) {
+    if let Err(error) =
+        legacy_import::record_decision(&env.paths, legacy_import::Decision::Declined)
+    {
+        tracing::warn!(%error, "could not remember the declined import");
+    }
+}
+
+/// The sandbox of this process. Unit tests never read the real filesystem
+/// marker, so a test run inside a Flatpak behaves like one outside.
+pub(crate) fn default_sandbox() -> Sandbox {
+    #[cfg(test)]
+    {
+        Sandbox::none()
+    }
+    #[cfg(not(test))]
+    {
+        Sandbox::detect_host()
     }
 }
 
@@ -376,6 +434,9 @@ pub struct Snapshot {
     pub search_standard_folders: bool,
     /// Spec 019 R5: the catalog in use and its automatic-update settings.
     pub catalog: CatalogInfo,
+    /// Spec 059 R4: paths a launcher record or a configured folder names that
+    /// the Flatpak cannot open. Always empty outside the sandbox.
+    pub hidden_paths: Vec<PathBuf>,
     pub config_notice: bool,
     pub config_usable: bool,
     pub config_version: String,
@@ -477,6 +538,11 @@ pub enum Event {
     Playing,
     Directory(Directory),
     Updates(Vec<String>),
+    /// Spec 059 R5: the tarball-era setup was imported; the count is how many
+    /// engine versions need installing again for the Flatpak.
+    Imported {
+        engines_to_reinstall: usize,
+    },
     /// Spec 019 R5: the result of a catalog check.
     Catalog(CatalogOutcome),
     Finished(Result<Box<Snapshot>, Problem>),
@@ -543,6 +609,8 @@ pub struct Services {
     profiles: ProfileStore,
     /// Spec 026: player-made custom setups under `<data>/custom/`.
     custom: SetupStore,
+    /// Spec 059: the sandbox DDL runs in; `Sandbox::none()` outside Flatpak.
+    sandbox: Sandbox,
 }
 /// Where the effective catalog came from (spec 019, R4).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -747,6 +815,11 @@ impl Services {
     }
 
     pub fn open(env: Environment) -> Result<Self, Problem> {
+        Self::open_with(env, default_sandbox())
+    }
+
+    /// Opens the services for an explicit sandbox (spec 059); tests pass a fake.
+    pub fn open_with(env: Environment, sandbox: Sandbox) -> Result<Self, Problem> {
         let paths = &env.paths;
         for dir in [&paths.config, &paths.data, &paths.cache, &paths.state] {
             fs::create_dir_all(dir).map_err(|e| logged(Problem::Storage, e))?;
@@ -807,7 +880,7 @@ impl Services {
         } else {
             installer
         };
-        let engine = EngineManager::for_paths(paths);
+        let engine = EngineManager::for_paths(paths).with_sandbox(sandbox.clone());
         #[cfg(test)]
         let engine = if let Some(test) = &env.test {
             let mut engine = EngineManager::with_parts(
@@ -821,7 +894,7 @@ impl Services {
             if let Some(timeout) = test.engine_response_timeout {
                 engine = engine.with_response_timeout(timeout);
             }
-            engine
+            engine.with_sandbox(sandbox.clone())
         } else {
             engine
         };
@@ -849,6 +922,7 @@ impl Services {
             engine,
             profiles,
             custom,
+            sandbox,
         })
     }
     fn save(&self) -> Result<(), Problem> {
@@ -1463,6 +1537,11 @@ impl Services {
             engine,
             iwads: self.registry.entries().to_vec(),
             folders: self.state.folders.clone(),
+            hidden_paths: iwads::visibility::hidden_paths(
+                &self.sandbox,
+                &self.env.home,
+                &self.state.folders,
+            ),
             search_standard_folders: self.state.search_standard_folders,
             config_notice: config.as_ref().is_none_or(|s| {
                 !s.conflicts.is_empty()
@@ -2161,6 +2240,16 @@ impl Services {
             unrecognized,
         })
     }
+    /// The problem for a folder that cannot be opened. Inside the sandbox a
+    /// missing or refused folder is most likely the host's, not the player's
+    /// mistake, so say that instead of a generic storage error (spec 059 R4).
+    fn unreadable_directory(&self, path: &Path, error: io::Error) -> Problem {
+        if self.sandbox.is_flatpak() && iwads::visibility::access(path).is_hidden() {
+            tracing::info!(path = %path.display(), %error, "folder not visible to the Flatpak");
+            return Problem::NotVisible(path.to_path_buf());
+        }
+        logged(Problem::Storage, error)
+    }
     fn browse(
         &self,
         path: &Path,
@@ -2169,7 +2258,7 @@ impl Services {
     ) -> Result<Directory, Problem> {
         let mut entries = vec![];
         for entry in fs::read_dir(path)
-            .map_err(|e| logged(Problem::Storage, e))?
+            .map_err(|e| self.unreadable_directory(path, e))?
             .take(4096)
         {
             if cancel.is_cancelled() {

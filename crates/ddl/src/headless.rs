@@ -602,3 +602,6 @@ mod journeys;
 
 #[path = "headless_recovery.rs"]
 mod recovery;
+
+#[path = "headless_flatpak.rs"]
+mod flatpak;
