@@ -7,6 +7,7 @@ real gameplay; see the [hardware checklist](deck-testing.md).
 
 - [Install](#install-from-a-github-release)
 - [Steam artwork](#make-it-look-native-in-steam)
+- [Flatpak (Discover)](#flatpak-discover)
 - [Controller layouts](#recommended-steam-deck-controller-setup)
 - [Build from source](#build-from-source)
 - [Konsole troubleshooting](#troubleshooting-from-konsole)
@@ -105,6 +106,74 @@ Mode. DDL never writes Steam configuration; all steps above are manual.
 Repository owners can upload [social-preview.png](design/logo/social-preview.png)
 (1280×640) in GitHub **Settings → General → Social preview**. See the
 [logo usage and export guide](design/logo/README.md) for SVG masters.
+
+## Flatpak (Discover)
+
+> **This section applies once DDL is on Flathub.** Until then, install from the GitHub
+> tarball above. Everything here is **Proposed** until the first Flatpak build has run on a
+> Deck (**Needs Deck Validation**); the facts it relies on are in the
+> [Flatpak research](research/flatpak.md).
+
+**Install.** In Desktop Mode open **Discover**, search for **DoomDeckLauncher** and install it.
+Updates to DDL itself come through Discover (Flathub); DDL has no self-update of its own.
+DSDA-Doom engine updates and the mapset catalog still update inside DDL (Settings → Engine).
+
+**Add it to Steam.** **Confirmed (source inspection):** Discover has no "Add to Steam" action, so
+this stays manual. In Desktop Mode open Steam → **Games → Add a Non-Steam Game to My Library…**
+and then either
+
+- pick **DoomDeckLauncher** if Steam lists it (Flatpak exports a launcher for it), or
+- **Browse…** to `/usr/bin/flatpak` and set the launch options to
+  `run io.github.vittau.Doom-Deck-Launcher`.
+
+**Needs Deck Validation:** which of the two the current Steam client offers. Rename the shortcut
+to **DoomDeckLauncher** so artwork tools find it.
+
+**Compatibility tool: none.** Leave it unset, as for the tarball. The Flatpak brings its own
+runtime, and a Steam Linux Runtime wrapped around `/usr/bin/flatpak` would run the Flatpak tool
+inside an older container.
+
+**Artwork.** Discover supplies the window icon and store page, not Steam's library capsule.
+Apply the artwork by hand as in [Make it look native in Steam](#make-it-look-native-in-steam),
+taking the images from the release tarball's `art/` folder or from
+[SteamGridDB](https://www.steamgriddb.com/game/5558703).
+
+**No Steam overlay.** **Confirmed (code):** Steam injects its overlay with `LD_PRELOAD`, which
+Flatpak clears, so the Steam overlay (FPS counter, Shift+Tab, screenshot hotkey) does not attach
+to DDL or to the games it starts. DDL's own screenshots are unaffected, and Steam Input layouts
+work as described below. **Needs Deck Validation:** the on-screen keyboard and controller layout
+picker in Gaming Mode without the overlay. DDL asks for Steam's keyboard through `xdg-open`
+when sandboxed; if it does not appear, the **Steam + X** hint on screen is the fallback.
+
+**Where your data lives.** Inside `~/.var/app/io.github.vittau.Doom-Deck-Launcher/`:
+
+| What | Folder |
+| --- | --- |
+| Settings, profiles, DSDA config | `config/ddl` |
+| Engine, installed mapsets, saves | `data/ddl` |
+| Downloads and caches | `cache/ddl` |
+| Logs | `.local/state/ddl/logs` |
+
+The engine is unpacked into `data/ddl/engines` once, and DDL runs it from there; the AppImage
+is never mounted inside the Flatpak.
+
+**Your IWADs.** DDL looks in the same places as the tarball: Steam (including SD-card libraries
+and the Steam Flatpak), GOG and Heroic (including its Flatpak) and the folders you add. A
+Flatpak only sees what it has been given access to. When a folder that a Steam or Heroic record
+(or your own folder list) names cannot be opened, Settings → IWAD folders and the IWAD review
+say so in one line, for example `/run/media/deck/SD/SteamLibrary is not visible to the Flatpak
+— see the guide`. Grant read access to that location (for example with Flatseal, or
+`flatpak override --user --filesystem=<path>:ro io.github.vittau.Doom-Deck-Launcher`), then
+use **Rescan**. **Needs Deck Validation:** which locations the first Flathub build can read.
+
+**Importing a tarball setup.** If you used the tarball before, the first start of the Flatpak
+(with no data of its own yet) offers **Import your existing setup?** It *copies* your settings,
+profiles, installed mapsets and saves from `~/.config/ddl` and `~/.local/share/ddl`; it never
+moves or changes the originals, and your IWADs stay where they are. A DSDA-Doom engine that the
+tarball ran as an AppImage is not copied: DDL installs it again for the Flatpak. **No, don't ask
+again** is remembered (B closes the question until the next start). To be asked again, delete
+`~/.var/app/io.github.vittau.Doom-Deck-Launcher/.local/state/ddl/legacy-import.json` while DDL
+still has no data of its own.
 
 ## Recommended Steam Deck Controller Setup
 
