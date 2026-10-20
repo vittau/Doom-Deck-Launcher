@@ -289,15 +289,45 @@ fn append_value(fields: &mut TxtFields, field: Field, value: &str) {
 
 fn clean_value(value: &str) -> String {
     let value = value.trim().trim_matches(['"', '\'', '*', ' ']);
-    let mut cleaned: String = value.chars().take(MAX_FIELD_CHARS * 2).collect();
+    let mut cleaned = sanitize_text(value);
     truncate(&mut cleaned);
     cleaned
+}
+
+/// Makes untrusted sidecar text safe for the index: control characters are
+/// dropped, tabs/newlines and other whitespace collapse to one space, the
+/// result is trimmed and bounded to [`MAX_FIELD_CHARS`].
+///
+/// Validation stays strict (a control character in the published document is
+/// still refused); this is the layer that stops an author's stray `0x1A`,
+/// form feed or ANSI escape from making the whole build invalid (spec 050,
+/// follow-up F1).
+#[must_use]
+pub fn sanitize_text(value: &str) -> String {
+    let mut cleaned = String::with_capacity(value.len());
+    let mut last_space = false;
+    for character in value.chars() {
+        if matches!(character, '\t' | '\n' | '\r')
+            || (!character.is_control() && character.is_whitespace())
+        {
+            if !last_space {
+                cleaned.push(' ');
+                last_space = true;
+            }
+        } else if character.is_control() {
+            // Drop C0/C1 controls (`\x0c`, `\x1a`, `\x1b`, U+0085, …).
+        } else {
+            cleaned.push(character);
+            last_space = false;
+        }
+    }
+    cleaned.trim().to_owned()
 }
 
 fn truncate(text: &mut String) {
     if text.chars().count() > MAX_FIELD_CHARS {
         let ended: String = text.chars().take(MAX_FIELD_CHARS).collect();
-        *text = ended;
+        *text = ended.trim_end().to_owned();
     }
 }
 
@@ -572,6 +602,35 @@ May Not Run With...: Vanilla, Chocolate
             Some("GZDoom 3.2.0 and up")
         );
         assert_eq!(meta.title.as_deref(), Some("X"));
+    }
+
+    #[test]
+    fn control_characters_never_reach_a_field() {
+        // A real sidecar had `0x1A` in its title and failed the whole build;
+        // `0x0C`, `0x1B` and C1 NEL (U+0085) must be just as harmless.
+        let text = "Title: Cinema\x1a 2\x0c \x1b Reloaded\nAuthor: A\u{85}B\x1bC\n";
+        let meta = parse_txt(text.as_bytes());
+        assert_eq!(meta.title.as_deref(), Some("Cinema 2 Reloaded"));
+        assert_eq!(meta.author.as_deref(), Some("ABC"));
+        assert!(
+            meta.title
+                .as_deref()
+                .is_some_and(|title| !title.contains(char::is_control))
+        );
+    }
+
+    #[test]
+    fn whitespace_is_collapsed_and_fields_are_bounded() {
+        let text = format!("Title:   A\t\tB  \nAuthor: {}\n", "x".repeat(600));
+        let meta = parse_txt(text.as_bytes());
+        assert_eq!(meta.title.as_deref(), Some("A B"));
+        let author = meta.author.unwrap();
+        assert_eq!(author.chars().count(), MAX_FIELD_CHARS);
+        assert!(!author.ends_with(' '));
+        assert_eq!(
+            sanitize_text("  \u{a0} spaced \t text \r\n "),
+            "spaced text"
+        );
     }
 
     #[test]

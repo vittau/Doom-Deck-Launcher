@@ -71,6 +71,7 @@ impl TxtSource for FixtureSource {
         match std::fs::read(fixture("txt").join(name)) {
             Ok(bytes) => TxtResponse::Fetched {
                 bytes,
+                truncated: false,
                 etag: Some(format!("\"{name}\"")),
                 last_modified: None,
             },

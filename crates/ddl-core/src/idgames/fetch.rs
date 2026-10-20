@@ -13,9 +13,11 @@
 //!   slept through the injected [`Clock`], so tests can prove it without
 //!   waiting;
 //! - sends `DoomDeckLauncher/<version> (+repo URL)`;
-//! - reads at most [`MAX_TXT_BYTES`] and treats 403/429/5xx as "stop the run"
-//!   ([`TxtResponse::Blocked`]), which the builder turns into telemetry, a
-//!   back-off and "keep what we have, resume tomorrow" (R6/R9);
+//! - reads at most [`MAX_TXT_BYTES`] and parses an oversized sidecar from that
+//!   prefix (the header fields are at the top), counting it as truncated, and
+//!   treats 403/429/5xx as "stop the run" ([`TxtResponse::Blocked`]), which the
+//!   builder turns into telemetry, a back-off and "keep what we have, resume
+//!   tomorrow" (R6/R9);
 //! - never retries a request within a run (R9).
 //!
 //! The traits are the test seams: no test opens a socket or sleeps for real.
@@ -150,8 +152,12 @@ fn encode_path(path: &str) -> String {
 pub enum TxtResponse {
     /// `200` with at most [`MAX_TXT_BYTES`] of body.
     Fetched {
-        /// The raw body; decoding happens in [`super::txt`].
+        /// The raw body (at most [`MAX_TXT_BYTES`]); decoding happens in
+        /// [`super::txt`]. Fields live at the top, so a prefix is enough
+        /// (follow-up F2).
         bytes: Vec<u8>,
+        /// Whether the sidecar was longer than the 64 KiB prefix read.
+        truncated: bool,
         /// The server's `ETag`, kept in the crawl state (R2).
         etag: Option<String>,
         /// The server's `Last-Modified`.
@@ -238,28 +244,19 @@ impl TxtSource for HttpTxtSource {
         let status = response.status().as_u16();
         let etag = header(&response, "etag");
         let last_modified = header(&response, "last-modified");
+        let content_length = response.body().content_length();
         match status {
-            200 => {
-                let mut bytes = Vec::new();
-                let read = response
-                    .body_mut()
-                    .as_reader()
-                    .take(MAX_TXT_BYTES + 1)
-                    .read_to_end(&mut bytes);
-                match read {
-                    Ok(_) if bytes.len() as u64 <= MAX_TXT_BYTES => TxtResponse::Fetched {
-                        bytes,
-                        etag,
-                        last_modified,
-                    },
-                    Ok(_) => TxtResponse::Failed {
-                        detail: format!("sidecar exceeds {MAX_TXT_BYTES} bytes"),
-                    },
-                    Err(error) => TxtResponse::Failed {
-                        detail: error.to_string(),
-                    },
-                }
-            }
+            200 => match read_sidecar(response.body_mut().as_reader(), content_length) {
+                Ok((bytes, truncated)) => TxtResponse::Fetched {
+                    bytes,
+                    truncated,
+                    etag,
+                    last_modified,
+                },
+                Err(error) => TxtResponse::Failed {
+                    detail: error.to_string(),
+                },
+            },
             304 => TxtResponse::NotModified,
             404 | 410 => TxtResponse::Missing,
             403 | 429 | 500..=599 => TxtResponse::Blocked { status },
@@ -268,6 +265,25 @@ impl TxtSource for HttpTxtSource {
             },
         }
     }
+}
+
+/// Reads at most [`MAX_TXT_BYTES`] of a sidecar and says whether more was left
+/// (follow-up F2).
+///
+/// The header fields are at the top of every `/idgames` text, so a bounded
+/// prefix still yields the title, author and engine lines; discarding the whole
+/// file only lost metadata (`tnt2`, `dvii-1i`, `ppss2`, `10sector`). The bound
+/// is never exceeded: the reader is capped at 64 KiB and the one byte past the
+/// cap is never requested.
+fn read_sidecar(
+    reader: impl std::io::Read,
+    content_length: Option<u64>,
+) -> std::io::Result<(Vec<u8>, bool)> {
+    let mut bytes = Vec::new();
+    reader.take(MAX_TXT_BYTES).read_to_end(&mut bytes)?;
+    let truncated = content_length.is_some_and(|length| length > MAX_TXT_BYTES)
+        || bytes.len() as u64 == MAX_TXT_BYTES;
+    Ok((bytes, truncated))
 }
 
 fn header(response: &ureq::http::Response<ureq::Body>, name: &str) -> Option<String> {
@@ -404,6 +420,27 @@ mod tests {
             seen.insert(gap);
         }
         assert!(seen.len() > 1, "jitter must vary, not be a constant");
+    }
+
+    #[test]
+    fn oversized_sidecars_keep_their_bounded_prefix() {
+        let body = vec![b'x'; MAX_TXT_BYTES as usize + 1_000];
+        let (bytes, truncated) =
+            read_sidecar(std::io::Cursor::new(&body), Some(body.len() as u64)).unwrap();
+        assert_eq!(bytes.len() as u64, MAX_TXT_BYTES, "never read past the cap");
+        assert!(truncated, "a longer sidecar is counted as truncated");
+
+        // No Content-Length: a full 64 KiB read is the conservative signal.
+        let exact = vec![b'y'; MAX_TXT_BYTES as usize];
+        let (bytes, truncated) = read_sidecar(std::io::Cursor::new(&exact), None).unwrap();
+        assert_eq!(bytes.len() as u64, MAX_TXT_BYTES);
+        assert!(truncated);
+
+        // A small sidecar is not truncated and is read whole.
+        let (bytes, truncated) =
+            read_sidecar(std::io::Cursor::new(b"Title: Tiny\n"), Some(12)).unwrap();
+        assert_eq!(bytes, b"Title: Tiny\n");
+        assert!(!truncated);
     }
 
     #[test]
