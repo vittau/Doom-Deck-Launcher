@@ -742,6 +742,20 @@ mod tests {
     }
 
     #[test]
+    fn a_validation_error_names_the_entry_and_the_field() {
+        let mut broken = index();
+        broken
+            .entries
+            .get_mut("levels/doom2/Ports/megawads")
+            .unwrap()[0]
+            .title = "Cinema\u{1a}2".into();
+        let error = broken.validate().unwrap_err();
+        let text = error.to_string();
+        assert!(text.contains("`title`"), "{text}");
+        assert!(text.contains("`augzen`"), "{text}");
+    }
+
+    #[test]
     fn at_most_one_latest_version_per_title() {
         let mut broken = index();
         for entry in broken

@@ -12,6 +12,7 @@ use std::path::PathBuf;
 
 use ddl_core::downloads::{InstallProgress, InstallStage};
 use ddl_core::engines::dsda;
+use ddl_core::idgames;
 use ddl_core::local::{self, Compatibility, CustomIwad, CustomSetup};
 use ddl_core::profiles::Profile;
 
@@ -323,14 +324,27 @@ fn idgames_failure(error: impl std::fmt::Display) -> CliFailure {
     CliFailure::message(error.to_string())
 }
 
+/// Exit status when a crawl stopped on `403`/`429`/`5xx` or a dead network but
+/// wrote the partial index and `crawl-state.json` for the next run (spec 050
+/// follow-up F3, variant b). Success is `0`; every hard failure is `1`.
+pub const EXIT_CRAWL_STOPPED: u8 = 3;
+
+/// The process exit status a finished build asks for (F3): `0` when it wrote a
+/// publishable index (complete, budget or back-off pause), [`EXIT_CRAWL_STOPPED`]
+/// when the mirror/network stopped it after writing a resumable index.
+fn crawl_exit_code(stopped: Option<idgames::StopReason>) -> u8 {
+    match stopped {
+        Some(idgames::StopReason::Blocked(_) | idgames::StopReason::Network) => EXIT_CRAWL_STOPPED,
+        Some(idgames::StopReason::Budget | idgames::StopReason::BackoffWait) | None => 0,
+    }
+}
+
 /// `ddl idgames index …` (spec 050, R4): build or validate the browse index.
 fn run_idgames(
     command: cli::IdgamesCommand,
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> Result<(), CliFailure> {
-    use ddl_core::idgames;
-
     match command {
         cli::IdgamesCommand::IndexValidate { file } => {
             let bytes =
@@ -440,15 +454,51 @@ fn run_idgames(
 
             let mut source = idgames::HttpTxtSource::new();
             let mut clock = idgames::SystemClock::new();
-            let outcome = idgames::build_index(
+            let recorded_runs = crawl_state.telemetry.len();
+            let outcome = match idgames::build_index(
                 &inventory_text,
                 &settings,
                 previous_index.as_ref(),
                 &mut crawl_state,
                 &mut source,
                 &mut clock,
-            )
-            .map_err(idgames_failure)?;
+            ) {
+                Ok(outcome) => outcome,
+                Err(error) => {
+                    // F4: the builder recorded today's attempts and telemetry
+                    // before the final validation, so persist them even when
+                    // the document is refused: a re-run reuses the conditional
+                    // requests instead of fetching the day again.
+                    let recorded = crawl_state.telemetry.len() > recorded_runs;
+                    if recorded {
+                        if let Some(telemetry) = crawl_state.last_telemetry() {
+                            writeln!(out, "Telemetry: {}", telemetry.summary())
+                                .map_err(output_error)?;
+                        }
+                        match crawl_state
+                            .to_json()
+                            .map_err(|state_error| state_error.to_string())
+                            .and_then(|json| {
+                                idgames::write_atomic(&state_path, &json)
+                                    .map_err(|error| error.to_string())
+                            }) {
+                            Ok(()) => writeln!(
+                                out,
+                                "Wrote {} (validators and telemetry kept for the next run)",
+                                state_path.display()
+                            )
+                            .map_err(output_error)?,
+                            Err(state_error) => writeln!(
+                                err,
+                                "could not write {}: {state_error}",
+                                state_path.display()
+                            )
+                            .map_err(output_error)?,
+                        }
+                    }
+                    return Err(idgames_failure(error));
+                }
+            };
 
             let json = outcome.index.to_json().map_err(idgames_failure)?;
             idgames::write_atomic(&destination, &json).map_err(|error| {
@@ -476,13 +526,14 @@ fn run_idgames(
             .map_err(output_error)?;
             writeln!(
                 out,
-                "Sidecars: {} requests, {} fetched, {} reused, {} not modified, {} missing, {} unusable; {} inventory entries excluded",
+                "Sidecars: {} requests, {} fetched, {} reused, {} not modified, {} missing, {} unusable, {} truncated; {} inventory entries excluded",
                 report.requests,
                 report.fetched,
                 report.reused,
                 report.not_modified,
                 report.missing_txt,
                 report.bad_txt,
+                report.truncated_txt,
                 report.excluded
             )
             .map_err(output_error)?;
@@ -496,9 +547,13 @@ fn run_idgames(
                     )
                     .map_err(output_error)?;
                     writeln!(out, "Crawl state: {}", state_path.display()).map_err(output_error)?;
-                    // R9: a mirror stop fails the job visibly, after the partial
-                    // index and the state were written for the next run.
-                    return Err(CliFailure::message(format!("the crawl stopped: {reason}")));
+                    // R9/F3b: a mirror stop exits with its own status, after
+                    // the partial index and the state were written for the
+                    // next run. Only this status publishes and reports.
+                    return Err(CliFailure::with_exit_code(
+                        crawl_exit_code(report.stopped),
+                        format!("the crawl stopped: {reason}"),
+                    ));
                 }
                 Some(idgames::StopReason::BackoffWait) => {
                     match crawl_state.backoff_until() {
@@ -2108,6 +2163,7 @@ exit 1
                 match std::fs::read(self.text_dir.join(name)) {
                     Ok(bytes) => TxtResponse::Fetched {
                         bytes,
+                        truncated: false,
                         etag: None,
                         last_modified: None,
                     },
@@ -2208,6 +2264,145 @@ exit 1
         )
         .unwrap_err();
         assert!(error.to_string().contains("index is"), "{error}");
+    }
+
+    #[test]
+    fn idgames_exit_statuses_are_distinct_and_documented() {
+        use ddl_core::idgames::StopReason;
+        assert_eq!(crawl_exit_code(None), 0);
+        assert_eq!(crawl_exit_code(Some(StopReason::Budget)), 0);
+        assert_eq!(crawl_exit_code(Some(StopReason::BackoffWait)), 0);
+        assert_eq!(
+            crawl_exit_code(Some(StopReason::Blocked(429))),
+            EXIT_CRAWL_STOPPED
+        );
+        assert_eq!(
+            crawl_exit_code(Some(StopReason::Network)),
+            EXIT_CRAWL_STOPPED
+        );
+        assert_eq!(EXIT_CRAWL_STOPPED, 3);
+        assert_eq!(CliFailure::message("hard failure").exit_code(), 1);
+        assert_eq!(
+            CliFailure::with_exit_code(EXIT_CRAWL_STOPPED, "stopped").exit_code(),
+            EXIT_CRAWL_STOPPED
+        );
+
+        let help = cli::help_for(cli::HelpTopic::IdgamesIndexBuild);
+        assert!(help.contains("Exit status:"), "{help}");
+        assert!(help.contains("3  the crawl stopped"), "{help}");
+        assert!(help.contains("1  hard failure"), "{help}");
+    }
+
+    #[test]
+    fn a_hard_failure_keeps_the_crawl_state_and_exits_1() {
+        use ddl_core::idgames::fetch::Clock;
+        use ddl_core::idgames::{
+            BuildSettings, CrawlState, TxtResponse, TxtSource, build_index, mirror_for,
+        };
+
+        #[derive(Default)]
+        struct VirtualClock {
+            ms: u64,
+        }
+        impl Clock for VirtualClock {
+            fn now_ms(&mut self) -> u64 {
+                self.ms
+            }
+            fn sleep(&mut self, duration: std::time::Duration) {
+                self.ms += u64::try_from(duration.as_millis()).unwrap_or(u64::MAX);
+            }
+        }
+
+        struct OfflineSource {
+            text_dir: std::path::PathBuf,
+        }
+        impl TxtSource for OfflineSource {
+            fn get(&mut self, url: &str, _: Option<&str>, _: Option<&str>) -> TxtResponse {
+                let name = url.rsplit('/').next().unwrap_or_default();
+                match std::fs::read(self.text_dir.join(name)) {
+                    Ok(bytes) => TxtResponse::Fetched {
+                        bytes,
+                        truncated: false,
+                        etag: None,
+                        last_modified: None,
+                    },
+                    Err(_) => TxtResponse::Missing,
+                }
+            }
+        }
+
+        let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../ddl-core/tests/fixtures/idgames");
+        let inventory_text = std::fs::read_to_string(fixtures.join("ls-laR.txt")).unwrap();
+        let settings = BuildSettings::new(
+            *mirror_for("youfailit.net").unwrap(),
+            "https://youfailit.net/pub/idgames/ls-laR.gz",
+            "502a7ccd3195452fb4955f077a078d0167bf80b721535be8c59e1daa269c2603",
+            1_792_386_428,
+        );
+        let mut state = CrawlState::new(1_792_386_428);
+        let built = build_index(
+            &inventory_text,
+            &settings,
+            None,
+            &mut state,
+            &mut OfflineSource {
+                text_dir: fixtures.join("txt"),
+            },
+            &mut VirtualClock::default(),
+        )
+        .unwrap();
+        let mut previous = built.index.clone();
+        for entry in previous.entries.values_mut().flatten() {
+            entry.txt = true;
+        }
+
+        let temp = tempfile::tempdir().unwrap();
+        let previous_path = temp.path().join("previous.json");
+        let state_path = temp.path().join("crawl-state.json");
+        let out_path = temp.path().join("index.json");
+        std::fs::write(&previous_path, previous.to_json().unwrap()).unwrap();
+        std::fs::write(&state_path, state.to_json().unwrap()).unwrap();
+
+        let home = temp.path().join("home");
+        std::fs::create_dir_all(&home).unwrap();
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .unwrap();
+
+        let mut out = Vec::new();
+        let failure = run_io(
+            cli::Command::Idgames(cli::IdgamesCommand::IndexBuild {
+                ls: fixtures.join("ls-laR.gz"),
+                mirror: "youfailit.net".into(),
+                out: out_path.clone(),
+                previous: Some(previous_path),
+                state: Some(state_path.clone()),
+                cacowards: Some(temp.path().join("absent.md")),
+                catalog: Some(temp.path().join("absent-catalog")),
+                budget: 1_500,
+                min_ddl_version: Some("not a version".into()),
+            }),
+            Environment {
+                paths,
+                home,
+                test: None,
+            },
+            &mut out,
+            &mut Vec::new(),
+        )
+        .unwrap_err();
+        assert_eq!(failure.exit_code(), 1, "{failure}");
+        let text = String::from_utf8(out).unwrap();
+        assert!(text.contains("Telemetry: "), "{text}");
+        assert!(text.contains("validators and telemetry kept"), "{text}");
+
+        // F4: the state written on the error path carries today's telemetry,
+        // so the next run reuses the conditional requests.
+        let state_text = std::fs::read_to_string(&state_path).unwrap();
+        assert!(state_text.contains("\"stop\":\"error\""), "{state_text}");
+        assert!(!out_path.exists(), "a hard failure writes no index");
     }
 
     #[test]
