@@ -415,6 +415,13 @@ fn shell_navigation_and_focus_render_headlessly() {
     assert_eq!(focus(), 20);
     press(&window, Key::Return);
     capture("mapset-detail.png");
+    // Spec 046, R4: the level shows as DSDA's alias with its number, no process label.
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "Complevel: Vanilla (3)" || n.detail == "Complevel: Vanilla (3)"),
+        "mapset detail names the complevel alias"
+    );
     press(&window, Key::Return);
     assert_eq!(state.borrow().screen, Screen::Setup);
     assert_eq!(focus(), 50);

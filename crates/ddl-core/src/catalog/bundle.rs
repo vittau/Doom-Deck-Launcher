@@ -555,6 +555,9 @@ pages = ["www.doomworld.com"]
 downloads = ["www.gamers.org"]
 "#;
 
+    /// The repository's own `hosts.toml`, as the app embeds it.
+    const HOSTS_EMBEDDED: &str = super::super::EMBEDDED_HOSTS;
+
     fn recipe(id: &str, url_host: &str) -> String {
         format!(
             r#"
@@ -847,6 +850,55 @@ limitations = []
             accept_bundle(&bundle, HOSTS, 100, "0.0.3"),
             Err(BundleRejection::TooNew { .. })
         ));
+    }
+
+    /// The `[compatibility]` table as DDL v0.0.6 and older parse it: the key
+    /// `complevel_status` is required and unknown keys are refused.
+    #[derive(Debug, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    #[allow(dead_code)]
+    struct LegacyCompatibility {
+        family: String,
+        complevel: toml::Value,
+        complevel_status: String,
+        engine: toml::Value,
+        #[serde(default)]
+        runtime: Option<toml::Value>,
+    }
+
+    /// Spec 046, R5. A bundle built from today's catalog has no
+    /// `complevel_status`, so a v0.0.6 reader refuses each of its recipes
+    /// individually (`missing field`) and the bundle gate (`min_ddl_version`) is
+    /// untouched; the app then finds no usable recipe and keeps its catalog
+    /// (`services.rs`, "carried no usable recipe"). Today's reader accepts all.
+    #[test]
+    fn an_old_schema_reader_drops_every_recipe_of_a_bundle_without_complevel_status() {
+        let catalog = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
+        let bundle = build_bundle(&catalog, 200, "abc1234", DEFAULT_MIN_DDL_VERSION)
+            .expect("the shipped catalog lints and bundles");
+        let recipes = bundle.recipe_files();
+        assert!(recipes.len() >= 80, "{} recipes", recipes.len());
+
+        for (name, text) in &recipes {
+            let table: toml::Table = toml::from_str(text).unwrap();
+            let compatibility = table["compatibility"].clone();
+            let error = compatibility
+                .try_into::<LegacyCompatibility>()
+                .expect_err(name);
+            assert!(
+                error.message().contains("missing field `complevel_status`"),
+                "{name}: {}",
+                error.message()
+            );
+        }
+
+        // The mechanism that applies is the per-recipe drop, not the bundle gate: a
+        // v0.0.6 client still passes `min_ddl_version`.
+        assert!(accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.6").is_ok());
+        let current = accept_bundle(&bundle, HOSTS_EMBEDDED, 100, env!("CARGO_PKG_VERSION"))
+            .expect("accepted");
+        assert_eq!(current.dropped(), &[], "today's reader keeps every recipe");
+        assert_eq!(current.catalog.recipes.len(), recipes.len());
     }
 
     #[test]

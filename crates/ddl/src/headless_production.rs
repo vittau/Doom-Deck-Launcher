@@ -629,6 +629,14 @@ pub(super) fn install_and_setup(scene: &Scene, capture: Captures) {
         .find(|n| n.label == "Will launch")
         .unwrap();
     assert_eq!(title.y, 36.);
+    // Spec 046, R4: the alias with its resolved number, no verification wording.
+    let complevel = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.label.starts_with("Complevel"))
+        .map(|n| n.label.to_string())
+        .expect("Play setup shows the complevel");
+    assert_eq!(complevel, "Complevel: Vanilla (3)");
     capture("010-play-setup-ready.png");
 }
 
