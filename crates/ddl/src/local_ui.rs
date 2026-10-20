@@ -850,13 +850,14 @@ impl Runtime {
                                 true,
                             );
                             b.nodes.last_mut().unwrap().h = 72.;
+                            c.set_value(item.profile.skill.to_string().into());
                             b.row(
                                 4,
                                 340.,
                                 308.,
                                 394.,
                                 "Skill".into(),
-                                item.profile.skill.to_string().into(),
+                                c.get_skill_value(),
                                 true,
                             );
                             b.nodes.last_mut().unwrap().h = 72.;
@@ -1568,6 +1569,7 @@ impl Runtime {
                 ui.set_band_screenshot(Default::default());
             }
         }
+        ui.set_sheet_error_text(Default::default());
         let c = ui.global::<LocalStrings>();
         if (BASE..BASE + 20).contains(&self.focus) {
             ui.set_favorite_hint(false);
@@ -1635,14 +1637,6 @@ impl Runtime {
             if view == View::Picker && self.focus >= PICK {
                 ui.set_a_hint(c.get_select());
             }
-            // The picker pages complete rows; other local screens share a scrollable plane.
-            let viewport = (ui.window().size().height as f32 - 294.).max(64.);
-            let offset = self
-                .nodes
-                .iter()
-                .find(|n| n.id == self.focus)
-                .map_or(0., |n| (n.y + n.h + 12. - viewport).max(0.));
-            ui.set_scroll_offset(if view == View::Picker { 0. } else { offset });
         }
         if let Some(dialog) = &self.local.dialog {
             ui.set_sheet_open(true);
@@ -1725,7 +1719,7 @@ impl Runtime {
                     }
                 }
                 Dialog::Error(message) => {
-                    b.label(32., 96., 656., 180., message.clone().into(), 22.);
+                    ui.set_sheet_error_text(message.clone().into());
                 }
                 Dialog::Saves => {
                     b.label(32., 112., 656., 120., c.get_saves(), 24.);

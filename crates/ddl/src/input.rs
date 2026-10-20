@@ -79,6 +79,8 @@ impl From<EventType> for Signal {
 struct Pad {
     x: f32,
     y: f32,
+    scroll_x: f32,
+    scroll_y: f32,
     dpad: [bool; 4],
     held: Option<Action>,
     next: Duration,
@@ -165,6 +167,20 @@ impl Mapper {
             Signal::Axis(Axis::LeftStickY, value) => {
                 pad.y = if value.is_finite() { value } else { 0. }
             }
+            Signal::Axis(Axis::RightStickX, value) => {
+                pad.scroll_x = if value.is_finite() {
+                    value.clamp(-1., 1.)
+                } else {
+                    0.
+                };
+            }
+            Signal::Axis(Axis::RightStickY, value) => {
+                pad.scroll_y = if value.is_finite() {
+                    -value.clamp(-1., 1.)
+                } else {
+                    0.
+                };
+            }
             Signal::Button(button, down) => {
                 if down {
                     if !pad.buttons.contains(&button) {
@@ -202,10 +218,37 @@ impl Mapper {
             // gilrs repeats are deliberately ignored: our timer is the sole repeat source.
             _ => return None,
         }
-        if pad.blocked && pad.direction().is_none() && pad.buttons.is_empty() {
+        if pad.blocked
+            && pad.direction().is_none()
+            && pad.scroll_x.abs().max(pad.scroll_y.abs()) < CONFIG.deadzone
+            && pad.buttons.is_empty()
+        {
             pad.blocked = false;
         }
-        pad.sample(now)
+        if matches!(
+            event,
+            Signal::Axis(Axis::RightStickX | Axis::RightStickY, _)
+        ) {
+            None
+        } else {
+            pad.sample(now)
+        }
+    }
+    /// Continuous wheel movement in logical pixels; never a navigation action.
+    /// Proposed maximum speed: 720 px/s, pending physical Deck validation.
+    pub fn scroll(&self, elapsed: Duration) -> (f32, f32) {
+        let speed = |axis: f32| {
+            axis.signum()
+                * ((axis.abs() - CONFIG.deadzone) / (1. - CONFIG.deadzone)).max(0.)
+                * 720.
+                * elapsed.as_secs_f32().min(0.05)
+        };
+        self.pads
+            .values()
+            .filter(|p| !p.blocked)
+            .fold((0., 0.), |(x, y), p| {
+                (x + speed(p.scroll_x), y + speed(p.scroll_y))
+            })
     }
     pub fn suspend(&mut self) {
         for pad in self.pads.values_mut() {
@@ -225,6 +268,7 @@ pub struct Gamepads {
     gilrs: Option<Gilrs>,
     mapper: Mapper,
     epoch: std::time::Instant,
+    last_poll: Duration,
 }
 impl Gamepads {
     pub fn new() -> Self {
@@ -242,9 +286,10 @@ impl Gamepads {
             gilrs,
             mapper: Mapper::default(),
             epoch: std::time::Instant::now(),
+            last_poll: Duration::ZERO,
         }
     }
-    pub fn poll(&mut self, active: bool) -> (Vec<Action>, Vec<bool>) {
+    pub fn poll(&mut self, active: bool) -> (Vec<Action>, Vec<bool>, (f32, f32)) {
         let now = self.epoch.elapsed();
         if !active {
             self.mapper.suspend();
@@ -269,8 +314,16 @@ impl Gamepads {
         }
         if active {
             actions.extend(self.mapper.repeat(now));
+        } else {
+            self.mapper.suspend();
         }
-        (actions, connections)
+        let scroll = if active {
+            self.mapper.scroll(now.saturating_sub(self.last_poll))
+        } else {
+            (0., 0.)
+        };
+        self.last_poll = now;
+        (actions, connections, scroll)
     }
 }
 #[cfg(test)]
@@ -338,6 +391,49 @@ mod tests {
         );
     }
     #[test]
+    fn right_stick_is_continuous_proportional_and_requires_neutral_after_suspend() {
+        let mut m = Mapper::default();
+        m.event(0, Signal::Axis(Axis::RightStickY, -0.1), Duration::ZERO);
+        assert_eq!(m.scroll(CONFIG.poll), (0., 0.));
+        assert_eq!(
+            m.event(0, Signal::Axis(Axis::RightStickY, -0.6), Duration::ZERO),
+            None
+        );
+        let slow = m.scroll(CONFIG.poll).1;
+        m.event(0, Signal::Axis(Axis::RightStickY, -1.), Duration::ZERO);
+        let fast = m.scroll(CONFIG.poll).1;
+        assert!(slow > 0. && fast > slow);
+        assert!(m.repeat(CONFIG.delay).is_empty());
+        m.event(0, Signal::Axis(Axis::LeftStickX, 1.), Duration::ZERO);
+        assert_eq!(
+            m.event(0, Signal::Axis(Axis::RightStickY, -1.), CONFIG.delay),
+            None
+        );
+        assert_eq!(m.repeat(CONFIG.delay), vec![Action::Right]);
+        m.event(0, Signal::Axis(Axis::LeftStickX, 0.), CONFIG.delay);
+        m.suspend();
+        assert_eq!(m.scroll(CONFIG.poll), (0., 0.));
+        m.event(0, Signal::Button(Button::South, false), Duration::ZERO);
+        assert_eq!(
+            m.scroll(CONFIG.poll),
+            (0., 0.),
+            "held right stick cannot re-arm on another neutral input"
+        );
+        m.event(0, Signal::Axis(Axis::RightStickY, 0.), Duration::ZERO);
+        m.event(0, Signal::Axis(Axis::RightStickX, 1.), Duration::ZERO);
+        assert!(m.scroll(CONFIG.poll).0 > 0.);
+        m.event(0, Signal::Disconnected, Duration::ZERO);
+        assert_eq!(m.scroll(CONFIG.poll), (0., 0.));
+        m.event(0, Signal::Connected, Duration::ZERO);
+        m.event(0, Signal::Axis(Axis::RightStickY, 1.), Duration::ZERO);
+        assert_eq!(m.scroll(CONFIG.poll), (0., 0.));
+        m.event(0, Signal::Axis(Axis::RightStickY, 0.), Duration::ZERO);
+        m.event(0, Signal::Axis(Axis::RightStickY, f32::NAN), Duration::ZERO);
+        assert_eq!(m.scroll(CONFIG.poll), (0., 0.));
+        m.event(0, Signal::Axis(Axis::RightStickY, 1.), Duration::ZERO);
+        assert!(m.scroll(CONFIG.poll).1 < 0.);
+    }
+    #[test]
     fn category_hold_delays_repeats_and_release_or_suspend_stops() {
         for (button, action) in [
             (Button::LeftTrigger2, Action::PreviousCategory),
@@ -365,9 +461,10 @@ mod tests {
             gilrs: None,
             mapper: Mapper::default(),
             epoch: std::time::Instant::now(),
+            last_poll: Duration::ZERO,
         };
-        assert_eq!(devices.poll(true), (vec![], vec![]));
-        assert_eq!(devices.poll(false), (vec![], vec![]));
+        assert_eq!(devices.poll(true), (vec![], vec![], (0., 0.)));
+        assert_eq!(devices.poll(false), (vec![], vec![], (0., 0.)));
         assert!(matches!(
             Signal::from(EventType::Connected),
             Signal::Connected

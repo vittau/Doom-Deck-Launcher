@@ -1,5 +1,5 @@
 export global Strings {
-    in-out property <int> skill: 3;
+    in-out property <int> skill: 4;
     in-out property <bool> pistol: false;
     out property <string> summary: @tr("Skill {} · Pistol start {}", self.skill, self.pistol ? @tr("On") : @tr("Off"));
     out property <[string]> values: [
@@ -65,8 +65,8 @@ export global Strings {
         @tr("Skill 1"),
         @tr("Skill 2"),
         @tr("Skill 3"),
-        @tr("Skill 4"),
-        @tr("Skill 5"),
+        @tr("Skill 4 (UV)"),
+        @tr("Skill 5 (Nightmare)"),
         @tr("Pistol start: Off"),
         @tr("Pistol start: On"),
         @tr("Reset inventory at each map"),
@@ -118,7 +118,7 @@ export global Strings {
         @tr("Connect a controller to continue"),
         @tr("Quit DoomDeckLauncher?"),
         @tr("Keep playing"),
-        @tr("Quit DDL"),
+        @tr("Quit"),
         @tr("Inspect"),
         @tr("Open"),
         @tr("Toggle"),

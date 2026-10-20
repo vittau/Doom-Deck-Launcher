@@ -51,7 +51,7 @@ impl Default for Shell {
             mapset: MapsetId::Sigil,
             profiles: Default::default(),
             tab: 0,
-            remembered: [1, 10, 20, 60],
+            remembered: [1, 20, 10, 60],
             stack: vec![],
             sheet: None,
             invoking: 1,
@@ -93,8 +93,8 @@ impl Shell {
             self.tab = tab;
             self.screen = [
                 Screen::Home,
-                Screen::Discover,
                 Screen::Library,
+                Screen::Discover,
                 Screen::Settings,
             ][tab];
             self.focus = self.remembered[tab];
@@ -127,6 +127,10 @@ impl Shell {
                 } else if let Some(place) = self.stack.pop() {
                     self.screen = place.screen;
                     self.focus = place.focus;
+                } else if self.root() {
+                    self.invoking = self.focus;
+                    self.sheet = Some(Sheet::Quit);
+                    self.focus = 100;
                 }
             }
             Action::PreviousTab => self.tab((self.tab + 3) % 4),
@@ -176,7 +180,7 @@ impl Shell {
     }
     fn activate(&mut self, ui: &AppWindow) {
         if let Some(sheet) = self.sheet.take() {
-            if self.focus == 101 {
+            if self.focus == if sheet == Sheet::Quit { 100 } else { 101 } {
                 match sheet {
                     Sheet::Quit => ui.invoke_quit_requested(),
                     Sheet::Compat => {
@@ -205,7 +209,7 @@ impl Shell {
                 };
                 self.enter(Screen::Detail, 30);
             }
-            (Screen::Home | Screen::Library, 3) => self.tab(1),
+            (Screen::Home | Screen::Library, 3) => self.tab(2),
             (Screen::Discover, 10..=14) => self.category = (self.focus - 10) as usize,
             (Screen::Library, 10..=13) => self.filter = (self.focus - 10) as usize,
             (Screen::Discover | Screen::Library, 20..=22) => {
@@ -922,6 +926,12 @@ impl Shell {
         ui.set_nodes(ModelRc::new(VecModel::from(self.nodes.clone())));
         ui.set_active_tab(self.tab as i32);
         ui.set_root_screen(self.root());
+        ui.set_quit_hint(
+            self.root()
+                && self.stack.is_empty()
+                && self.sheet.is_none()
+                && !(self.screen == Screen::Settings && self.focus >= 70),
+        );
         ui.set_setup_screen(self.screen == Screen::Setup);
         ui.set_focused(self.focus);
         ui.set_favorite_hint(
@@ -974,6 +984,21 @@ impl Shell {
             .find(|n| n.id == self.focus)
             .map_or(0., |n| (n.y + n.h + 12. - viewport).max(0.));
         ui.set_scroll_offset(offset);
+        ui.set_content_height(
+            self.nodes
+                .iter()
+                .filter(|n| self.screen != Screen::Setup || n.x < 700.)
+                .map(|n| n.y + n.h + 20.)
+                .fold(518_f32, f32::max),
+        );
+        ui.set_setup_content_height(
+            self.nodes
+                .iter()
+                .filter(|n| n.x >= 700.)
+                .map(|n| n.y + n.h + 20.)
+                .fold(518_f32, f32::max),
+        );
+        ui.set_setup_right_focused(self.nodes.iter().any(|n| n.id == self.focus && n.x >= 700.));
         ui.set_sheet_open(self.sheet.is_some());
         if let Some(sheet) = self.sheet {
             ui.set_sheet_title(text(
@@ -991,7 +1016,7 @@ impl Shell {
                 398.,
                 304.,
                 if sheet == Sheet::Quit {
-                    Copy::KeepPlaying
+                    Copy::Quit
                 } else {
                     Copy::KeepMain
                 },
@@ -1003,7 +1028,7 @@ impl Shell {
                 398.,
                 304.,
                 if sheet == Sheet::Quit {
-                    Copy::Quit
+                    Copy::KeepPlaying
                 } else {
                     Copy::UseCompat
                 },

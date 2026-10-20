@@ -16,8 +16,8 @@ use crate::catalog::Recipe;
 /// Schema version written into each profile document.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// The skill a new profile starts on (Hurt me plenty).
-pub const DEFAULT_SKILL: u8 = 3;
+/// The skill a new profile starts on (Ultra-Violence).
+pub const DEFAULT_SKILL: u8 = 4;
 
 /// One saved profile.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -196,8 +196,21 @@ mod tests {
         let recipe = test_recipe();
         let profile = Profile::new("p1", "Play SIGIL", "sigil-test");
         assert!(profile.validate(&recipe).is_ok());
-        assert_eq!(profile.skill, DEFAULT_SKILL);
+        assert_eq!(profile.skill, 4);
         assert!(profile.components.is_empty());
+    }
+
+    #[test]
+    fn loading_an_existing_skill_three_preserves_the_choice() {
+        let mut saved = Profile::new("p1", "Existing", "sigil-test");
+        saved.skill = 3;
+        let json = serde_json::to_vec(&saved).unwrap();
+        let loaded: Profile = serde_json::from_slice(&json).unwrap();
+        assert_eq!(loaded.skill, 3);
+        assert_eq!(
+            Profile::new("p2", "New custom setup", "custom-test").skill,
+            4
+        );
     }
 
     #[test]

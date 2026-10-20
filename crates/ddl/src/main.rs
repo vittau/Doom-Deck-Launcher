@@ -164,12 +164,13 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
     let mut gamepads = input::Gamepads::new();
     timer.start(slint::TimerMode::Repeated, input::CONFIG.poll, move || {
         if let Some(ui) = weak.upgrade() {
-            let (actions, connections) =
+            let (actions, connections, (scroll_x, scroll_y)) =
                 gamepads.poll(ui.get_input_active() && !state.borrow().playing);
             state.borrow_mut().neutral_poll(actions.is_empty());
             for connected in connections {
                 state.borrow().hotplug(&ui, connected);
             }
+            ui.invoke_scroll(scroll_x, scroll_y);
             for action in actions {
                 state.borrow_mut().action(&ui, action);
             }

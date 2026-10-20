@@ -118,7 +118,7 @@ class Render:
    self.fit(x+8,492,t,r-x-16,20)
    if selected:self.rect((x+2,490,x+4,519),self.s['focus'])
   self.row((64,542,696,622),'Advanced','Compatibility replacements require confirmation.')
-  self.button((64,638,368,694),'Skill 3');self.button((384,638,696,694),'Pistol start: Off')
+  self.button((64,638,368,694),'Skill 4 (UV)');self.button((384,638,696,694),'Pistol start: Off')
   self.text(768,246,'Will launch',30,display=True)
   self.text(768,299,'DOOM II · base game found',22)
   self.text(768,348,'1 content file · recipe order locked',22,self.s['muted'])
@@ -127,7 +127,7 @@ class Render:
   self.text(768,481,'Complevel 2 · recipe recommendation',20)
   self.text(768,508,'Not yet verified',20,self.s['focus'])
   self.text(768,542,'DSDA-Doom 0.30.1',20)
-  self.text(768,580,'Skill 3 · Pistol start: Off',20)
+  self.text(768,580,'Skill 4 (UV) · Pistol start: Off',20)
   self.button((768,620,1216,676),'Play',True,True)
   self.footer(True);self.save('play-setup-auger.png')
  def sheet(self):

@@ -105,6 +105,7 @@ pub struct Runtime {
     category: Category,
     /// First strip chip drawn when the strip is wider than the grid.
     strip_start: usize,
+    scroll_anchor: Option<(Screen, Option<local_ui::View>, i32)>,
     updates: Vec<String>,
     updates_checked: bool,
     pub last_exit: Option<ddl_core::engines::dsda::LaunchOutcome>,
@@ -144,6 +145,7 @@ impl Runtime {
             uninstall_delete_profiles: false,
             category: Category::All,
             strip_start: 0,
+            scroll_anchor: None,
             updates: vec![],
             updates_checked: false,
             last_exit: None,
@@ -204,8 +206,8 @@ impl Runtime {
             }
             self.screen = [
                 Screen::Home,
-                Screen::Discover,
                 Screen::Library,
+                Screen::Discover,
                 Screen::Settings,
             ][tab.min(3)];
             self.focus = self.remembered[tab.min(3)];
@@ -566,7 +568,12 @@ impl Runtime {
                 }
                 Action::Confirm => {
                     let sheet = self.sheet.take().unwrap();
-                    let confirm = self.focus == 901;
+                    let confirm = self.focus
+                        == if matches!(sheet, Sheet::Quit) {
+                            900
+                        } else {
+                            901
+                        };
                     let delete_profiles = self.uninstall_delete_profiles;
                     self.focus = self.invoking;
                     if confirm {
@@ -608,6 +615,8 @@ impl Runtime {
                     (self.screen, self.focus) = self.history.pop().unwrap_or(self.return_to);
                 } else if self.screen == Screen::Settings && self.focus >= 70 {
                     self.focus = 1 + self.settings_section as i32;
+                } else if self.root() && self.history.is_empty() {
+                    self.show_sheet(Sheet::Quit);
                 } else if let Some(place) = self.history.pop() {
                     (self.screen, self.focus) = place;
                 } else if self.screen == Screen::Review {
@@ -1170,8 +1179,8 @@ impl Runtime {
     }
     fn tab_index(&self) -> usize {
         match self.screen {
-            Screen::Discover => 1,
-            Screen::Library => 2,
+            Screen::Discover => 2,
+            Screen::Library => 1,
             Screen::Settings => 3,
             _ => 0,
         }
@@ -1446,7 +1455,21 @@ impl Runtime {
                     Action::Right => (dx, dy.abs()),
                     _ => return None,
                 };
-                (along > 1.).then_some((n.id, along + across * 3.))
+                let vertical = matches!(direction, Action::Up | Action::Down);
+                let overlap = n.x < current.x + current.w && n.x + n.w > current.x;
+                let separate_row = match direction {
+                    Action::Up => n.y + n.h <= current.y + 1.,
+                    Action::Down => n.y >= current.y + current.h - 1.,
+                    _ => true,
+                };
+                (along > 1. && separate_row).then_some((
+                    n.id,
+                    if vertical {
+                        (if overlap { 0. } else { 100_000. }) + along * 100. + across
+                    } else {
+                        along + across * 3.
+                    },
+                ))
             })
             .min_by(|a, b| a.1.total_cmp(&b.1))
         {
@@ -2918,7 +2941,7 @@ impl Runtime {
         {
             self.focus = self.nodes.iter().find(|n| n.actionable).map_or(0, |n| n.id);
         }
-        let setup = self.screen == Screen::Setup;
+        let setup = self.screen == Screen::Setup && self.local.view.is_none();
         let discover = self.screen == Screen::Discover;
         let viewport =
             (ui.window().size().height as f32 - if discover { 298. } else { 294. }).max(64.);
@@ -2928,11 +2951,30 @@ impl Runtime {
             .iter()
             .find(|n| n.id == self.focus && (!setup || n.x < 700.))
             .map_or(0., |n| (n.y + n.h + focus_inset - viewport).max(0.));
-        ui.set_scroll_offset(offset);
+        let anchor = (self.screen, self.local.view, self.focus);
+        let focus_changed = self.scroll_anchor != Some(anchor);
+        if focus_changed {
+            ui.set_scroll_offset(if self.local.view == Some(local_ui::View::Picker) {
+                0.
+            } else {
+                offset
+            });
+            ui.invoke_reset_scroll_x();
+            self.scroll_anchor = Some(anchor);
+        }
         ui.set_nodes(ModelRc::new(VecModel::from(self.nodes.clone())));
         ui.set_focused(self.focus);
         ui.set_active_tab(self.tab_index() as i32);
         ui.set_root_screen(self.root() && !self.playing);
+        // The footer says Quit exactly where B opens the Quit dialog: a root
+        // with no level left, and the recovery screen (spec 055).
+        ui.set_quit_hint(
+            !self.playing
+                && ((self.root()
+                    && self.history.is_empty()
+                    && !(self.screen == Screen::Settings && self.focus >= 70))
+                    || (self.screen == Screen::Recovery && self.sheet.is_none())),
+        );
         ui.set_input_locked(self.playing);
         ui.set_setup_screen(setup && !self.playing);
         ui.set_install_pulse(
@@ -3001,7 +3043,7 @@ impl Runtime {
             self.uninstall_sheet(ui);
         } else if let Some(sheet) = &self.sheet {
             let (title, safe, confirm) = match sheet {
-                Sheet::Quit => (T::QuitConfirm, T::KeepPlaying, T::Quit),
+                Sheet::Quit => (T::QuitConfirm, T::Quit, T::KeepPlaying),
                 Sheet::Cancel => (T::CancelConfirm, T::KeepDownloading, T::CancelInstall),
                 Sheet::Reset => (T::ResetConfirm, T::Cancel, T::Reset),
                 Sheet::StartFresh => (T::StartFreshConfirm, T::Cancel, T::StartFresh),
@@ -3028,6 +3070,32 @@ impl Runtime {
             ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
         }
         self.local_sheet(ui);
+        let bounds = |right: bool| {
+            self.nodes
+                .iter()
+                .filter(|n| !ui.get_setup_screen() || (n.x >= 700.) == right)
+                .fold((0_f32, 0_f32), |(w, h), n| {
+                    (
+                        (n.x + n.w + 20. - if right { 700. } else { 0. }).max(w),
+                        (n.y + n.h + 20.).max(h),
+                    )
+                })
+        };
+        let (width, height) = bounds(false);
+        ui.set_content_width(width);
+        ui.set_content_height(height);
+        let (width, height) = bounds(true);
+        ui.set_setup_content_width(width);
+        ui.set_setup_content_height(height);
+        ui.set_setup_right_focused(self.nodes.iter().any(|n| n.id == self.focus && n.x >= 700.));
+        if focus_changed {
+            let offset = self
+                .nodes
+                .iter()
+                .find(|n| n.id == self.focus && n.x >= 700.)
+                .map_or(0., |n| (n.y + n.h + 12. - viewport).max(0.));
+            ui.set_setup_scroll_offset(offset);
+        }
         if self.sheet.is_some() {
             let nodes: Vec<_> = ui.get_sheet_nodes().iter().collect();
             if !nodes.iter().any(|n| n.id == self.focus && n.actionable) {

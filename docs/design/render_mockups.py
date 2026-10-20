@@ -99,12 +99,12 @@ def setup(blocked=False,auger=False):
     row(64,342,632,'Main mapset','Required · enabled')
     if auger:
         row(64,430,632,'Optional add-on','Enabled · loads after the main PWAD')
-        row(64,518,632,'Skill 3','Player preference')
+        row(64,518,632,'Skill 4 (UV)','Player preference')
         row(64,606,632,'Pistol start: Off','Reset inventory at each map')
     else:
         row(64,430,632,'Soundtrack: not provided — import','Optional · included MIDI music is available')
         row(64,518,632,'Advanced: compat variant Off','Mutually exclusive with main mapset')
-        row(64,606,304,'Skill 3'); row(384,606,312,'Pistol start: Off')
+        row(64,606,304,'Skill 4 (UV)'); row(384,606,312,'Pistol start: Off')
         txt(64,672,'Load order follows the selected recipe.',20,'muted')
     txt(768,254,'Will launch',26,bold=True)
     game='DOOM II' if auger else 'Ultimate DOOM'
@@ -122,7 +122,7 @@ def setup(blocked=False,auger=False):
         button(768,592,448,'View recipe evidence',True)
         txt(768,670,'Play unavailable · recipe incomplete',20,'red')
     else:
-        txt(768,548,'Skill 3 · Pistol start Off',22,'muted')
+        txt(768,548,'Skill 4 (UV) · Pistol start Off',22,'muted')
         button(768,610,448,'Play',True,True)
         txt(768,678,'Soundtrack is optional.',20,'muted')
 setup(); save('play-setup-sigil')

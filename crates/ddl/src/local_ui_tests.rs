@@ -584,7 +584,7 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     assert_eq!(r.local.view, Some(View::BaseSetup));
     write_png("032-base-play-setup.png", &render(&window));
     click(&mut r, &ui, 4);
-    assert_eq!(r.base_item().unwrap().profile.skill, 4);
+    assert_eq!(r.base_item().unwrap().profile.skill, 5);
     click(&mut r, &ui, 5);
     assert!(r.base_item().unwrap().profile.pistol_start);
     click(&mut r, &ui, 2);
@@ -677,4 +677,252 @@ fn base_games_library_page_setup_sources_and_recent_history() {
         r.nodes.iter().any(|n| n.label == "Doom II" && n.y == 400.),
         "base games remain in mixed recent history"
     );
+}
+
+/// Spec 057 A2: walk real production rows in both directions, including both
+/// columns of multi-item rows. Only directional input is used during each walk.
+fn walk_rows(r: &mut Runtime, ui: &AppWindow, rows: &[&[i32]]) {
+    for column in 0..rows.iter().map(|row| row.len()).max().unwrap() {
+        for (direction, order) in [
+            (Action::Down, (0..rows.len()).collect::<Vec<_>>()),
+            (Action::Up, (0..rows.len()).rev().collect::<Vec<_>>()),
+        ] {
+            r.focus = rows[order[0]][column.min(rows[order[0]].len() - 1)];
+            r.sync(ui);
+            for &row in &order[1..] {
+                r.action(ui, direction);
+                assert!(
+                    rows[row].contains(&r.focus),
+                    "{direction:?}: expected row {:?}, got {}",
+                    rows[row],
+                    r.focus
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn controller_057_focus_walks_every_multi_item_screen() {
+    if isolated("controller_057_focus_walks_every_multi_item_screen") {
+        return;
+    }
+    let (_window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (mut s, _) = custom(&env);
+    s.register_fake_iwads(&temp.path().join("identified"))
+        .unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    assert_eq!(r.snapshot.as_ref().unwrap().custom_profiles[0].skill, 4);
+    r.selected = r
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .position(|i| i.recipe.id == "sigil")
+        .unwrap();
+    r.screen = Screen::Setup;
+    r.focus = 60;
+    r.sync(&ui);
+    // Advanced → Skill/Pistol start → Recipe load order, and the exact reverse.
+    walk_rows(&mut r, &ui, &[&[42], &[40, 41], &[43]]);
+    // Include every preceding option row, even if a recipe adds components.
+    let mut options: Vec<_> = r
+        .nodes
+        .iter()
+        .filter(|n| n.actionable && n.x < 700.)
+        .collect();
+    options.sort_by(|a, b| a.y.total_cmp(&b.y).then(a.x.total_cmp(&b.x)));
+    let mut rows: Vec<Vec<i32>> = vec![];
+    let mut y = f32::NEG_INFINITY;
+    for n in options {
+        if (n.y - y).abs() > 1. {
+            rows.push(vec![]);
+            y = n.y;
+        }
+        rows.last_mut().unwrap().push(n.id);
+    }
+    let refs: Vec<_> = rows.iter().map(Vec::as_slice).collect();
+    walk_rows(&mut r, &ui, &refs);
+    r.screen = Screen::Detail;
+    r.sync(&ui);
+    walk_rows(&mut r, &ui, &[&[1], &[3]]);
+    r.screen = Screen::Settings;
+    r.settings_section = 1;
+    r.sync(&ui);
+    walk_rows(&mut r, &ui, &[&[1], &[2], &[3], &[4]]);
+    r.settings_section = 1;
+    walk_rows(&mut r, &ui, &[&[72], &[70, 71]]);
+    // Folder actions return to the preceding full-width preference row.
+    for id in [70, 71] {
+        r.focus = id;
+        r.action(&ui, Action::Up);
+        assert_eq!(r.focus, 72);
+    }
+    r.screen = Screen::Library;
+    r.local = LocalUi::default();
+    r.sync(&ui);
+    click(&mut r, &ui, BASE);
+    assert_eq!(r.local.view, Some(View::Base));
+    // The base-game page has one action row; each column is a boundary.
+    for id in [1, 2] {
+        r.focus = id;
+        r.action(&ui, Action::Up);
+        assert_eq!(r.focus, id);
+        r.action(&ui, Action::Down);
+        assert_eq!(r.focus, id);
+    }
+    click(&mut r, &ui, 2);
+    walk_rows(&mut r, &ui, &[&[1], &[2], &[3], &[4, 5], &[6]]);
+    r.local = LocalUi::default();
+    r.sync(&ui);
+    click(&mut r, &ui, CUSTOM);
+    assert_eq!(r.local.view, Some(View::Detail));
+    walk_rows(&mut r, &ui, &[&[1, 2], &[3], &[4], &[5]]);
+    r.local.creating = Some("New setup".into());
+    r.local.iwad = Some(NewIwad::File(env.home.join("base.wad")));
+    r.local.view = Some(View::New);
+    r.sync(&ui);
+    walk_rows(&mut r, &ui, &[&[1], &[2], &[3]]);
+    // Settings opened from a child screen retains that Back level, including
+    // the recovery → Diagnostics route introduced by spec 055.
+    r.local = LocalUi::default();
+    r.screen = Screen::Detail;
+    r.history.clear();
+    r.enter(Screen::Settings, 4);
+    r.sync(&ui);
+    assert!(!ui.get_quit_hint());
+    r.action(&ui, Action::Back);
+    assert_eq!(r.screen, Screen::Detail);
+    assert!(!ui.get_sheet_open());
+}
+
+#[test]
+fn controller_057_right_stick_scrolls_planes_without_focus_changes() {
+    if isolated("controller_057_right_stick_scrolls_planes_without_focus_changes") {
+        return;
+    }
+    use crate::input::{CONFIG, Mapper, Signal};
+    use gilrs::Axis;
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (s, _) = custom(&env);
+    let mut r = runtime(&env, &s, &ui);
+    let mut mapper = Mapper::default();
+    assert_eq!(
+        mapper.event(0, Signal::Axis(Axis::RightStickY, -1.), Duration::ZERO),
+        None
+    );
+    let scroll = mapper.scroll(CONFIG.poll);
+    assert!(scroll.1 > 0.);
+    // Real scrollable screens all use the bounded content plane.
+    for screen in [
+        Screen::Home,
+        Screen::Discover,
+        Screen::Library,
+        Screen::Detail,
+        Screen::Settings,
+        Screen::Setup,
+    ] {
+        r.screen = screen;
+        r.focus = 1;
+        r.sync(&ui);
+        // Give each real screen an overflowing content extent to exercise the
+        // shared plane even when this small fixture fits on a Deck viewport.
+        ui.set_content_height(1200.);
+        ui.set_scroll_offset(0.);
+        let focus = ui.get_focused();
+        ui.invoke_scroll(scroll.0, scroll.1);
+        assert!(
+            ui.get_scroll_offset() > 0.,
+            "{screen:?}: height {}, size {:?}",
+            ui.get_content_height(),
+            window.size()
+        );
+        assert_eq!(ui.get_focused(), focus);
+        if screen == Screen::Settings {
+            r.sync(&ui);
+            ui.set_scroll_offset(0.);
+            ui.invoke_scroll(scroll.0, scroll.1);
+            let offset = ui.get_scroll_offset();
+            assert!(offset > 0., "the real Engine page overflows");
+            r.sync(&ui);
+            assert_eq!(
+                ui.get_scroll_offset(),
+                offset,
+                "service repaint preserves manual scrolling"
+            );
+        }
+    }
+    // The fixed setup summary has its own plane, chosen by the logical target.
+    r.screen = Screen::Setup;
+    r.focus = 50;
+    r.sync(&ui);
+    let summary_focus = ui.get_focused();
+    ui.set_setup_content_height(1000.);
+    ui.set_setup_scroll_offset(0.);
+    ui.invoke_scroll(0., scroll.1);
+    assert!(ui.get_setup_scroll_offset() > 0.);
+    assert_eq!(ui.get_focused(), summary_focus);
+    r.local.view = Some(View::Compat);
+    r.screen = Screen::Library;
+    r.focus = 10;
+    r.sync(&ui);
+    ui.set_scroll_offset(0.);
+    ui.invoke_scroll(0., scroll.1);
+    assert!(ui.get_scroll_offset() > 0.);
+    assert_eq!(ui.get_focused(), 10);
+    r.local_error("Long diagnostic detail.\n".repeat(100));
+    r.sync(&ui);
+    ui.invoke_scroll(0., scroll.1);
+    assert!(ui.get_error_scroll_offset() > 0.);
+    assert_eq!(ui.get_focused(), 900);
+    write_png("057-long-error-scroll.png", &render(&window));
+    r.local.dialog = None;
+    r.local.view = None;
+    r.show_sheet(Sheet::Quit);
+    r.sync(&ui);
+    ui.set_sheet_height(1000.);
+    ui.invoke_scroll(0., scroll.1);
+    assert!(ui.get_sheet_scroll_offset() > 0.);
+    assert_eq!(ui.get_focused(), 900);
+    // Spec 055 recovery lists every unreadable file on the shared plane; the
+    // content grows with the list, so no fixture extent is forced here.
+    r.sheet = None;
+    r.unreadable = (0..12)
+        .map(|n| crate::services::UnreadableFile {
+            path: format!("/config/profiles/unreadable-{n}.json").into(),
+            reason: "expected value at line 1 column 1; ".repeat(4),
+        })
+        .collect();
+    r.screen = Screen::Recovery;
+    r.focus = 800;
+    r.sync(&ui);
+    let recovery_focus = ui.get_focused();
+    assert!(ui.get_quit_hint(), "B opens Quit on the recovery screen");
+    assert!(ui.get_content_height() > ui.window().size().height as f32 - 294.);
+    ui.set_scroll_offset(0.);
+    ui.invoke_scroll(0., scroll.1);
+    assert!(ui.get_scroll_offset() > 0., "long Recovery list scrolls");
+    assert_eq!(ui.get_focused(), recovery_focus);
+    r.unreadable.clear();
+    // Horizontal overflow is bounded by the same plane (e.g. a narrow window).
+    r.screen = Screen::Library;
+    r.focus = 1;
+    r.sync(&ui);
+    ui.set_content_width(1800.);
+    mapper.event(0, Signal::Axis(Axis::RightStickX, 1.), Duration::ZERO);
+    let (x, y) = mapper.scroll(CONFIG.poll);
+    ui.invoke_scroll(x, y);
+    assert!(ui.get_scroll_x_offset() > 0.);
+    let focus = ui.get_focused();
+    mapper.event(0, Signal::Axis(Axis::RightStickX, 0.1), Duration::ZERO);
+    mapper.event(0, Signal::Axis(Axis::RightStickY, 0.1), Duration::ZERO);
+    assert_eq!(mapper.scroll(CONFIG.poll), (0., 0.));
+    assert_eq!(ui.get_focused(), focus);
 }

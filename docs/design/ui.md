@@ -128,7 +128,7 @@ Button glyphs remain physical labels; their accompanying actions translate. Engl
 
 ```text
 First run → Engine install → IWAD folders → Home
-Home ↔ Discover ↔ Library ↔ Settings                 (L1 / R1)
+Home ↔ Library ↔ Discover ↔ Settings                 (L1 / R1)
 Home / Discover / Library → Mapset detail → Play setup → Game → Play setup
 Mapset detail → Download / install → Mapset detail
 Settings → Engine / IWAD folders / Storage / DSDA config / Diagnostics
@@ -144,9 +144,9 @@ accidental scrolling. Proposed stick threshold/repeat require input-spec tuning 
 
 A confirms; B returns one level; X/Y only perform the visible contextual action. L1/R1 switches
 root tabs, preserving each tab's scroll/focus; within detail/setup they do nothing and are omitted
-from hints. Start opens the menu. At a root tab B does nothing; it never opens Menu. The persistent legend always labels B as “Back”, including at root where it is inactive. Start alone opens Menu. Quit requires confirmation with “Keep playing” (cancel) focused.
+from hints. Start opens the menu. At a root tab B opens the quit confirmation (Settings’ right page first returns to its sidebar); B again cancels it. Its left button, Quit, has initial focus, and A confirms exit (D-032, spec 057). The legend labels B as “Quit” at root and “Back” on child screens or dialogs. The right stick scrolls the active content region with proportional speed outside its deadzone, without changing focus.
 
-Persistent hint bar shows available actions in physical order (with the inactive B Back hint retained at root): A, B, X, Y, L1/R1, Start.
+Persistent hint bar shows available actions in physical order: A, B, X, Y, L1/R1, Start.
 A's verb describes the focused action (“Import”, “Toggle”, “Choose folder”), never a misleading
 “Play” when focus is elsewhere. Disabled actions display why in the content; no hidden shortcuts.
 Sheets trap focus; B cancels, returns to the invoking control and discards uncommitted changes.
@@ -229,7 +229,7 @@ launch details → Play. Compat is off in this expanded advanced mockup; normall
 Required compatibility stays separate from player preferences. Show “Complevel 3 — recipe
 recommendation (not yet verified)” for SIGIL; lock recipe-required values until Advanced is
 explicitly selected. Unsupported values block Play. Skill picker uses recipe/engine-provided
-labels and values; mockup “Skill 3” avoids inventing map-specific text. Pistol start shows Off/On
+labels and values; mockup “Skill 4 (UV)” avoids inventing map-specific text. Pistol start shows Off/On
 and “Reset inventory at each map”; if unsupported/unvalidated show “Unavailable for this engine”
 with reason, not an ineffective toggle. D-011 confirms the flag; actual transitions/save behavior
 remain **Needs Deck Validation**. Recording mode cannot combine with pistol start.
@@ -336,7 +336,7 @@ proceed offline. No automatic IWAD downloads or Steam Input onboarding.
 **Confirmed:** reference research documents `SIGIL_V1_23.wad` (main E5),
 `SIGIL_COMPAT_V1_23.wad` (E3 alternative), and paid REG/compat soundtrack arrangements.
 **Proposed:** design example uses Ultimate DOOM, free main enabled, compat off, soundtrack not
-provided, Skill 3 and pistol start off. Right summary: “Will launch: Ultimate DOOM · 1 content
+provided, Skill 4 (UV) and pistol start off. Right summary: “Will launch: Ultimate DOOM · 1 content
 file”; numbered order 1 `SIGIL_V1_23.wad`. IWAD is listed separately and is not counted as content.
 Complevel 3 remains a research recommendation pending Deck evidence.
 
