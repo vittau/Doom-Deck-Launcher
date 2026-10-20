@@ -39,7 +39,7 @@ pub use build::{BuildError, BuildOutcome, BuildReport, BuildSettings, StopReason
 pub use cacowards::{Cacowards, parse_cacowards};
 pub use catalog_map::catalog_paths;
 pub use date::{Date, format_unix_utc, is_rfc3339_utc};
-pub use fetch::{HttpTxtSource, Mirror, TxtResponse, TxtSource, mirror_for};
+pub use fetch::{Clock, HttpTxtSource, Mirror, SystemClock, TxtResponse, TxtSource, mirror_for};
 pub use index::{
     DEFAULT_MIN_DDL_VERSION, Entry, INDEX_SCHEMA, Index, IndexError, IndexGame, IndexSource,
     MAX_INDEX_BYTES, Port,
@@ -48,7 +48,10 @@ pub use inventory::{
     Inventory, InventoryEntry, InventoryReport, MAX_INVENTORY_GZIP_BYTES, decode_inventory_gzip,
     parse_inventory, parse_inventory_gzip,
 };
-pub use state::{AttemptOutcome, CrawlState};
+pub use state::{
+    AttemptOutcome, BACKOFF_FLOOR, BACKOFF_WINDOW_SECS, Backoff, CLEAN_RUNS_TO_RECOVER, CrawlState,
+    RunTelemetry,
+};
 pub use txt::{MAX_TXT_BYTES, TxtMeta, parse_txt};
 
 use std::io::Write as _;
@@ -99,10 +102,7 @@ pub fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>, String> {
     let metadata = std::fs::metadata(path)
         .map_err(|error| format!("could not read {}: {error}", path.display()))?;
     if metadata.len() > limit {
-        return Err(format!(
-            "{} is larger than {limit} bytes",
-            path.display()
-        ));
+        return Err(format!("{} is larger than {limit} bytes", path.display()));
     }
     std::fs::read(path).map_err(|error| format!("could not read {}: {error}", path.display()))
 }

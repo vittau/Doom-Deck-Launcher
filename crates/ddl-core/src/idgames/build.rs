@@ -30,14 +30,14 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::date::{Date, format_unix_utc};
 use super::fetch::{
-    DEFAULT_DAILY_BUDGET, MAX_CONSECUTIVE_FAILURES, MAX_DAILY_BUDGET, MIN_REQUEST_GAP, Mirror,
-    Pacer, TxtResponse, TxtSource,
+    Clock, DEFAULT_DAILY_BUDGET, MAX_CONSECUTIVE_FAILURES, MAX_DAILY_BUDGET, MAX_JITTER_MS,
+    MIN_REQUEST_GAP, Mirror, TxtResponse, TxtSource, next_jitter,
 };
 use super::index::{
-    DEFAULT_MIN_DDL_VERSION, Entry, INDEX_SCHEMA, Index, IndexError, IndexGame, IndexSource,
+    DEFAULT_MIN_DDL_VERSION, Entry, INDEX_SCHEMA, Index, IndexError, IndexGame, IndexSource, Port,
 };
 use super::inventory::{InventoryEntry, parse_inventory};
-use super::state::{AttemptOutcome, CrawlState};
+use super::state::{AttemptOutcome, CrawlState, RunTelemetry};
 use super::txt::parse_txt;
 
 /// Everything the builder needs from the caller.
@@ -65,7 +65,12 @@ impl BuildSettings {
     /// Settings with the deliberate defaults: the daily budget, the constant
     /// `min_ddl_version`, no Cacoward/catalog data and `now_unix` as the clock.
     #[must_use]
-    pub fn new(mirror: Mirror, index_url: impl Into<String>, index_sha256: impl Into<String>, now_unix: u64) -> Self {
+    pub fn new(
+        mirror: Mirror,
+        index_url: impl Into<String>,
+        index_sha256: impl Into<String>,
+        now_unix: u64,
+    ) -> Self {
         Self {
             mirror,
             index_url: index_url.into(),
@@ -88,6 +93,8 @@ pub enum StopReason {
     Blocked(u16),
     /// Too many consecutive transport failures: treat the mirror as down.
     Network,
+    /// The R9 window after a mirror stop is still open: no requests today.
+    BackoffWait,
 }
 
 impl std::fmt::Display for StopReason {
@@ -96,6 +103,8 @@ impl std::fmt::Display for StopReason {
             Self::Budget => formatter.write_str("daily request budget reached"),
             Self::Blocked(status) => write!(formatter, "mirror answered HTTP {status}; stopping"),
             Self::Network => formatter.write_str("too many network failures; stopping"),
+            Self::BackoffWait => formatter
+                .write_str("back-off: waiting 24 h after the last mirror stop; no requests today"),
         }
     }
 }
@@ -123,6 +132,8 @@ pub struct BuildReport {
     pub excluded: usize,
     /// Why fetching stopped early, if it did.
     pub stopped: Option<StopReason>,
+    /// The R9 telemetry for this run (also committed in the crawl state).
+    pub telemetry: RunTelemetry,
 }
 
 /// A finished build.
@@ -167,7 +178,8 @@ impl From<IndexError> for BuildError {
 ///
 /// `previous` is yesterday's published index (or a later one); entries whose
 /// path, size and date are unchanged keep their metadata without a request.
-/// `state` is updated in place and should be committed with the index.
+/// `state` is updated in place with the day's attempts, the telemetry and the
+/// back-off, and should be committed with the index (R6/R9).
 ///
 /// # Errors
 ///
@@ -179,12 +191,12 @@ pub fn build_index(
     previous: Option<&Index>,
     state: &mut CrawlState,
     source: &mut dyn TxtSource,
-    pacer: &mut dyn Pacer,
+    clock: &mut dyn Clock,
 ) -> Result<BuildOutcome, BuildError> {
-    if settings.budget == 0 || settings.budget > MAX_DAILY_BUDGET {
+    if settings.budget > MAX_DAILY_BUDGET {
         // Defensive: the CLI clamps, but the core must not hammer a mirror.
         return Err(BuildError::Index(IndexError::Malformed(format!(
-            "budget {} is outside 1..={MAX_DAILY_BUDGET}",
+            "budget {} is above the {MAX_DAILY_BUDGET} ceiling",
             settings.budget
         ))));
     }
@@ -224,79 +236,113 @@ pub fn build_index(
         )
     });
 
+    // R9: a mirror stop opens a 24 h window and halves the budget until three
+    // clean runs pass. A waiting run makes no request at all.
+    let budget = state.effective_budget(settings.budget, settings.now_unix);
+    let waiting = budget == 0 && !candidates.is_empty();
+    let mut stopped = waiting.then_some(StopReason::BackoffWait);
+
+    let run_start_ms = clock.now_ms();
+    let mut request_starts: Vec<u64> = Vec::new();
+    let mut statuses: BTreeMap<String, u32> = BTreeMap::new();
+    let mut bytes_read = 0u64;
+    let mut jitter_seed = settings.now_unix | 1;
     let mut consecutive_failures = 0u32;
-    let mut stopped = None;
-    for index in candidates {
-        if report.requests >= settings.budget {
-            stopped = Some(StopReason::Budget);
-            break;
-        }
-        let path = rows[index].path.clone();
-        let url = settings.mirror.url(&txt_path(&path));
-        let etag = state.etag(&path).map(ToOwned::to_owned);
-        let last_modified = state
-            .last_modified(&path)
-            .map(ToOwned::to_owned)
-            .or_else(|| previous_entries.get(&path).map(|entry| entry.date.to_http()));
-        pacer.pause();
-        let response = source.get(&url, etag.as_deref(), last_modified.as_deref());
-        report.requests += 1;
-        match response {
-            TxtResponse::Fetched {
-                bytes,
-                etag,
-                last_modified,
-            } => {
-                consecutive_failures = 0;
-                report.fetched += 1;
-                let meta = parse_txt(&bytes);
-                if meta.title.is_none() && meta.author.is_none() {
-                    report.bad_txt += 1;
-                }
-                let row = &mut rows[index];
-                row.entry.txt = true;
-                row.entry.title = meta.title.unwrap_or_else(|| row.entry.stem.clone());
-                row.entry.author = meta.author.unwrap_or_default();
-                if let Some(game) = meta.game {
-                    row.entry.game = game;
-                }
-                row.entry.port = meta.port;
-                row.entry.maps = meta.maps;
-                state.record(&path, today, AttemptOutcome::Ok, etag, last_modified);
-            }
-            TxtResponse::NotModified => {
-                consecutive_failures = 0;
-                if rows[index].entry.txt {
-                    report.not_modified += 1;
-                    state.record(&path, today, AttemptOutcome::Ok, etag, last_modified);
-                } else {
-                    // A 304 with no cached metadata is a mirror inconsistency:
-                    // keep the filename fallback and try again next run.
-                    report.bad_txt += 1;
-                    state.record(&path, today, AttemptOutcome::Bad, None, None);
-                }
-            }
-            TxtResponse::Missing => {
-                consecutive_failures = 0;
-                report.missing_txt += 1;
-                let row = &mut rows[index];
-                row.entry.txt = false;
-                row.entry.title = row.entry.stem.clone();
-                row.entry.author.clear();
-                state.record(&path, today, AttemptOutcome::Missing, None, None);
-            }
-            TxtResponse::Blocked { status } => {
-                stopped = Some(StopReason::Blocked(status));
+
+    if !waiting {
+        for index in candidates {
+            if report.requests >= budget {
+                stopped = Some(StopReason::Budget);
                 break;
             }
-            TxtResponse::Failed { detail } => {
-                tracing::warn!(url, %detail, "sidecar request failed");
-                consecutive_failures += 1;
-                report.bad_txt += 1;
-                state.record(&path, today, AttemptOutcome::Bad, None, None);
-                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
-                    stopped = Some(StopReason::Network);
+            // R6/R9: one request in flight, at least 3 s apart plus jitter,
+            // measured through the injected clock. Never retried in a run.
+            if report.requests > 0 {
+                let jitter = next_jitter(&mut jitter_seed, MAX_JITTER_MS);
+                clock.sleep(MIN_REQUEST_GAP + std::time::Duration::from_millis(jitter));
+            }
+            request_starts.push(clock.now_ms());
+            let path = rows[index].path.clone();
+            let url = settings.mirror.url(&txt_path(&path));
+            let etag = state.etag(&path).map(ToOwned::to_owned);
+            let last_modified = state
+                .last_modified(&path)
+                .map(ToOwned::to_owned)
+                .or_else(|| {
+                    previous_entries
+                        .get(&path)
+                        .map(|entry| entry.date.to_http())
+                });
+            let response = source.get(&url, etag.as_deref(), last_modified.as_deref());
+            report.requests += 1;
+            let status_key = match &response {
+                TxtResponse::Fetched { .. } => "200".to_owned(),
+                TxtResponse::NotModified => "304".to_owned(),
+                TxtResponse::Missing => "404".to_owned(),
+                TxtResponse::Blocked { status } => status.to_string(),
+                TxtResponse::Failed { .. } => "error".to_owned(),
+            };
+            *statuses.entry(status_key).or_default() += 1;
+            match response {
+                TxtResponse::Fetched {
+                    bytes,
+                    etag,
+                    last_modified,
+                } => {
+                    consecutive_failures = 0;
+                    report.fetched += 1;
+                    bytes_read += bytes.len() as u64;
+                    let meta = parse_txt(&bytes);
+                    if meta.title.is_none() && meta.author.is_none() {
+                        report.bad_txt += 1;
+                    }
+                    let row = &mut rows[index];
+                    row.entry.txt = true;
+                    row.entry.title = meta.title.unwrap_or_else(|| row.entry.stem.clone());
+                    row.entry.author = meta.author.unwrap_or_default();
+                    if let Some(game) = meta.game {
+                        row.entry.game = game;
+                    }
+                    row.entry.port = meta.port;
+                    row.entry.maps = meta.maps;
+                    state.record(&path, today, AttemptOutcome::Ok, etag, last_modified);
+                }
+                TxtResponse::NotModified => {
+                    consecutive_failures = 0;
+                    if rows[index].entry.txt {
+                        report.not_modified += 1;
+                        state.record(&path, today, AttemptOutcome::Ok, etag, last_modified);
+                    } else {
+                        // A 304 with no cached metadata is a mirror
+                        // inconsistency: keep the fallback, retry next run.
+                        report.bad_txt += 1;
+                        state.record(&path, today, AttemptOutcome::Bad, None, None);
+                    }
+                }
+                TxtResponse::Missing => {
+                    consecutive_failures = 0;
+                    report.missing_txt += 1;
+                    let row = &mut rows[index];
+                    row.entry.txt = false;
+                    row.entry.title = row.entry.stem.clone();
+                    row.entry.author.clear();
+                    row.entry.port = Port::Unknown;
+                    row.entry.maps = None;
+                    state.record(&path, today, AttemptOutcome::Missing, None, None);
+                }
+                TxtResponse::Blocked { status } => {
+                    stopped = Some(StopReason::Blocked(status));
                     break;
+                }
+                TxtResponse::Failed { detail } => {
+                    tracing::warn!(url, %detail, "sidecar request failed");
+                    consecutive_failures += 1;
+                    report.bad_txt += 1;
+                    state.record(&path, today, AttemptOutcome::Bad, None, None);
+                    if consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
+                        stopped = Some(StopReason::Network);
+                        break;
+                    }
                 }
             }
         }
@@ -334,14 +380,54 @@ pub fn build_index(
     // publish an oversized file fails in CI with a clear reason.
     index.to_json()?;
 
+    let elapsed_unix = (clock.now_ms().saturating_sub(run_start_ms)) / 1_000;
+    let finished_unix = settings.now_unix.saturating_add(elapsed_unix);
+    let gaps: Vec<u64> = request_starts
+        .windows(2)
+        .map(|pair| pair[1].saturating_sub(pair[0]))
+        .collect();
+    let min_gap_ms = gaps.iter().copied().min().unwrap_or(0);
+    let mean_gap_ms = if gaps.is_empty() {
+        0
+    } else {
+        gaps.iter().sum::<u64>() / gaps.len() as u64
+    };
+    let telemetry = RunTelemetry {
+        started_at: format_unix_utc(settings.now_unix),
+        finished_at: format_unix_utc(finished_unix),
+        finished_unix,
+        budget,
+        requests: report.requests,
+        bytes: bytes_read,
+        statuses,
+        min_gap_ms,
+        mean_gap_ms,
+        retries: 0,
+        stop: stop_label(stopped).to_owned(),
+    };
+
     let paths: BTreeSet<String> = rows_paths(&index);
     state.retain(&paths);
     state.generated_at = format_unix_utc(settings.now_unix);
     state.schema = super::state::STATE_SCHEMA;
+    state.record_run(telemetry.clone());
 
     report.entries = index.entry_count();
     report.directories = index.directories();
+    report.telemetry = telemetry;
     Ok(BuildOutcome { index, report })
+}
+
+fn stop_label(reason: Option<StopReason>) -> &'static str {
+    match reason {
+        None => "finished",
+        Some(StopReason::Budget) => "budget",
+        Some(StopReason::Blocked(403)) => "http-403",
+        Some(StopReason::Blocked(429)) => "http-429",
+        Some(StopReason::Blocked(_)) => "http-5xx",
+        Some(StopReason::Network) => "network",
+        Some(StopReason::BackoffWait) => "backoff-wait",
+    }
 }
 
 struct Row {
@@ -427,9 +513,15 @@ fn game_for_dir(dir: &str) -> IndexGame {
 fn crawl_rank(dir: &str, lower_path: &str, cacowards: &BTreeMap<String, u16>) -> u8 {
     if cacowards.contains_key(lower_path) {
         0
-    } else if dir.split('/').any(|segment| segment.eq_ignore_ascii_case("megawads")) {
+    } else if dir
+        .split('/')
+        .any(|segment| segment.eq_ignore_ascii_case("megawads"))
+    {
         1
-    } else if !dir.split('/').any(|segment| segment.eq_ignore_ascii_case("Ports")) {
+    } else if !dir
+        .split('/')
+        .any(|segment| segment.eq_ignore_ascii_case("Ports"))
+    {
         2
     } else {
         3
@@ -489,9 +581,40 @@ pub const fn request_gap() -> std::time::Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::idgames::fetch::{NoPacer, TxtResponse, TxtSource, mirror_for};
-    use crate::idgames::index::Port;
+    use crate::idgames::fetch::{Clock, TxtResponse, TxtSource, mirror_for};
     use std::collections::VecDeque;
+    use std::time::Duration;
+
+    /// A clock that advances instead of sleeping, so A5 can prove the spacing
+    /// without waiting three seconds per request.
+    #[derive(Default)]
+    struct VirtualClock {
+        ms: u64,
+    }
+
+    impl Clock for VirtualClock {
+        fn now_ms(&mut self) -> u64 {
+            self.ms
+        }
+
+        fn sleep(&mut self, duration: Duration) {
+            self.ms += u64::try_from(duration.as_millis()).unwrap_or(u64::MAX);
+        }
+    }
+
+    fn clock() -> VirtualClock {
+        VirtualClock::default()
+    }
+
+    fn build_with(
+        settings: &BuildSettings,
+        previous: Option<&Index>,
+        state: &mut CrawlState,
+        source: &mut FakeSource,
+        clock: &mut VirtualClock,
+    ) -> BuildOutcome {
+        build_index(INVENTORY, settings, previous, state, source, clock).unwrap()
+    }
 
     /// A source that answers from a queue and records every call.
     #[derive(Default)]
@@ -529,13 +652,16 @@ mod tests {
             etag: Option<&str>,
             last_modified: Option<&str>,
         ) -> TxtResponse {
-            self.calls
-                .push((url.to_owned(), etag.map(ToOwned::to_owned), last_modified.map(ToOwned::to_owned)));
+            self.calls.push((
+                url.to_owned(),
+                etag.map(ToOwned::to_owned),
+                last_modified.map(ToOwned::to_owned),
+            ));
             let suffix = url.rsplit_once('/').map(|(_, name)| name).unwrap_or(url);
-            if let Some(queue) = self.answers.get_mut(suffix) {
-                if let Some(answer) = queue.pop_front() {
-                    return answer;
-                }
+            if let Some(queue) = self.answers.get_mut(suffix)
+                && let Some(answer) = queue.pop_front()
+            {
+                return answer;
             }
             TxtResponse::Missing
         }
@@ -587,7 +713,8 @@ mod tests {
         state: &mut CrawlState,
         source: &mut FakeSource,
     ) -> BuildOutcome {
-        build_index(INVENTORY, settings, previous, state, source, &mut NoPacer).unwrap()
+        let mut clock = clock();
+        build_index(INVENTORY, settings, previous, state, source, &mut clock).unwrap()
     }
 
     #[test]
@@ -603,7 +730,10 @@ mod tests {
         assert_eq!(outcome.report.stopped, None);
 
         let megawads = &index.entries["levels/doom2/Ports/megawads"];
-        let augzen = megawads.iter().find(|entry| entry.stem == "dbp37_augzen").unwrap();
+        let augzen = megawads
+            .iter()
+            .find(|entry| entry.stem == "dbp37_augzen")
+            .unwrap();
         assert_eq!(augzen.title, "AUGER;ZENITH");
         assert_eq!(augzen.author, "Doomer Boards Community");
         assert_eq!(augzen.game, IndexGame::Doom2);
@@ -633,7 +763,10 @@ mod tests {
         assert_eq!(outcome.report.bad_txt, 1);
         assert_eq!(outcome.report.missing_txt, 3);
         let megawads = &outcome.index.entries["levels/doom2/Ports/megawads"];
-        let tistartan = megawads.iter().find(|entry| entry.stem == "tistartan").unwrap();
+        let tistartan = megawads
+            .iter()
+            .find(|entry| entry.stem == "tistartan")
+            .unwrap();
         assert!(!tistartan.txt);
         assert_eq!(tistartan.title, "tistartan");
         assert_eq!(tistartan.author, "");
@@ -654,12 +787,19 @@ mod tests {
             &mut state,
             &mut second,
         );
-        assert_eq!(second.calls.len(), 0, "unchanged entries must not be re-fetched");
+        assert_eq!(
+            second.calls.len(),
+            0,
+            "unchanged entries must not be re-fetched"
+        );
         assert_eq!(second_outcome.report.reused, 4);
         assert_eq!(second_outcome.index, first_outcome.index);
 
         // Change one upload's size: only that entry is fetched again.
-        let changed = INVENTORY.replace("   1000000 Jan  5  1999 abyspe65.zip", "   2000000 Jan  5  1999 abyspe65.zip");
+        let changed = INVENTORY.replace(
+            "   1000000 Jan  5  1999 abyspe65.zip",
+            "   2000000 Jan  5  1999 abyspe65.zip",
+        );
         let mut third = good_source();
         let third_outcome = build_index(
             &changed,
@@ -667,7 +807,7 @@ mod tests {
             Some(&first_outcome.index),
             &mut state,
             &mut third,
-            &mut NoPacer,
+            &mut clock(),
         )
         .unwrap();
         assert_eq!(third.calls.len(), 1);
@@ -682,7 +822,10 @@ mod tests {
         let first_outcome = build(&settings(), None, &mut state, &mut first);
 
         // The upload changed date but the sidecar says 304: keep the old fields.
-        let changed = INVENTORY.replace("Jul 26  2021 dbp37_augzen.zip", "Jul 27  2021 dbp37_augzen.zip");
+        let changed = INVENTORY.replace(
+            "Jul 26  2021 dbp37_augzen.zip",
+            "Jul 27  2021 dbp37_augzen.zip",
+        );
         let mut second = FakeSource::default();
         second.answer("dbp37_augzen.txt", TxtResponse::NotModified);
         let second_outcome = build_index(
@@ -691,11 +834,30 @@ mod tests {
             Some(&first_outcome.index),
             &mut state,
             &mut second,
-            &mut NoPacer,
+            &mut clock(),
         )
         .unwrap();
         assert_eq!(second.calls.len(), 1);
         assert_eq!(second_outcome.report.not_modified, 1);
+        // The request is conditional: the stored ETag and the previous archive
+        // date are sent as validators (R2).
+        assert_eq!(second.calls[0].1.as_deref(), Some("\"dbp37_augzen.txt\""));
+        assert_eq!(
+            second.calls[0].2.as_deref(),
+            Some("Mon, 26 Jul 2021 00:00:00 GMT")
+        );
+        // R2: the request was conditional on the stored ETag and the previous
+        // archive date.
+        assert_eq!(
+            second.calls[0].1.as_deref(),
+            Some("\"dbp37_augzen.txt\""),
+            "the stored ETag is sent as If-None-Match"
+        );
+        assert_eq!(
+            second.calls[0].2.as_deref(),
+            Some("Mon, 26 Jul 2021 00:00:00 GMT"),
+            "the previous archive date is sent as If-Modified-Since"
+        );
         let augzen = second_outcome.index.entries["levels/doom2/Ports/megawads"]
             .iter()
             .find(|entry| entry.stem == "dbp37_augzen")
@@ -750,7 +912,12 @@ mod tests {
     fn repeated_network_failures_stop_the_run() {
         let mut state = CrawlState::new(1_792_386_428);
         let mut source = FakeSource::default();
-        for suffix in ["dbp37_augzen.txt", "tistartan.txt", "abyspe65.txt", "old.txt"] {
+        for suffix in [
+            "dbp37_augzen.txt",
+            "tistartan.txt",
+            "abyspe65.txt",
+            "old.txt",
+        ] {
             source.answer(
                 suffix,
                 TxtResponse::Failed {
@@ -771,10 +938,9 @@ mod tests {
     fn crawl_order_puts_cacowards_then_megawads_first() {
         let mut state = CrawlState::new(1_792_386_428);
         let mut settings = settings();
-        settings.cacowards.insert(
-            "levels/doom/a-c/old.zip".to_owned(),
-            1999,
-        );
+        settings
+            .cacowards
+            .insert("levels/doom/a-c/old.zip".to_owned(), 1999);
         let mut source = good_source();
         let outcome = build(&settings, None, &mut state, &mut source);
         let urls = source.urls();
@@ -832,7 +998,7 @@ mod tests {
             None,
             &mut state,
             &mut source,
-            &mut NoPacer,
+            &mut clock(),
         )
         .unwrap();
         let entries = &outcome.index.entries["levels/doom2/a-c"];
@@ -864,7 +1030,7 @@ mod tests {
             None,
             &mut state,
             &mut FakeSource::default(),
-            &mut NoPacer,
+            &mut clock(),
         )
         .unwrap_err();
         assert!(matches!(error, BuildError::EmptyInventory));
@@ -890,5 +1056,166 @@ mod tests {
     #[test]
     fn the_request_gap_is_the_d031_minimum() {
         assert_eq!(request_gap(), std::time::Duration::from_secs(3));
+    }
+
+    // ---- A5: R6/R9 telemetry and back-off ---------------------------------
+
+    fn settings_at(now_unix: u64) -> BuildSettings {
+        let mut settings = settings();
+        settings.now_unix = now_unix;
+        settings
+    }
+
+    #[test]
+    fn spacing_between_requests_is_at_least_three_seconds() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut source = good_source();
+        let mut clock = VirtualClock::default();
+        let outcome = build_with(&settings(), None, &mut state, &mut source, &mut clock);
+        assert_eq!(outcome.report.requests, 4);
+        let telemetry = &outcome.report.telemetry;
+        assert!(
+            telemetry.min_gap_ms >= 3_000,
+            "min gap was {} ms",
+            telemetry.min_gap_ms
+        );
+        assert!(
+            telemetry.mean_gap_ms >= 3_000 && telemetry.mean_gap_ms < 4_000,
+            "mean gap was {} ms",
+            telemetry.mean_gap_ms
+        );
+        // One request in flight: the virtual clock advanced only through the
+        // sleeps, so the mean is exactly the elapsed time over three gaps.
+        assert_eq!(telemetry.mean_gap_ms, clock.ms / 3);
+    }
+
+    #[test]
+    fn telemetry_records_requests_bytes_statuses_and_the_stop_reason() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut source = good_source();
+        let mut clock = VirtualClock::default();
+        let outcome = build_with(&settings(), None, &mut state, &mut source, &mut clock);
+        let telemetry = &outcome.report.telemetry;
+        assert_eq!(telemetry.requests, 4);
+        assert_eq!(telemetry.statuses.get("200"), Some(&4));
+        assert!(telemetry.bytes > 0);
+        assert_eq!(telemetry.retries, 0, "DDL never retries inside a run");
+        assert_eq!(telemetry.stop, "finished");
+        assert_eq!(telemetry.budget, 1_500);
+        assert_eq!(state.last_telemetry(), Some(telemetry));
+        assert!(!telemetry.is_mirror_stop());
+    }
+
+    #[test]
+    fn a_blocked_run_keeps_state_and_opens_the_backoff() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut source = FakeSource::default();
+        source.ok("tistartan.txt", "Title: First\n");
+        source.answer("dbp37_augzen.txt", TxtResponse::Blocked { status: 429 });
+        let now = 1_792_386_428;
+        let outcome = build_with(
+            &settings_at(now),
+            None,
+            &mut state,
+            &mut source,
+            &mut clock(),
+        );
+        let telemetry = outcome.report.telemetry.clone();
+        assert_eq!(telemetry.stop, "http-429");
+        assert_eq!(telemetry.statuses.get("429"), Some(&1));
+        assert!(telemetry.is_mirror_stop());
+        assert_eq!(state.backoff.consecutive_stops, 1);
+        assert_eq!(state.backoff.last_stop_unix, Some(telemetry.finished_unix));
+        assert_eq!(state.effective_budget(1_500, now + 3_600), 0);
+        // The inventory is still complete: everything fetched was kept.
+        assert_eq!(outcome.index.entry_count(), 4);
+    }
+
+    #[test]
+    fn the_next_run_waits_then_halves_the_budget() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let now = 1_792_386_428;
+        state.record_run(RunTelemetry {
+            finished_unix: now,
+            stop: "http-429".into(),
+            ..RunTelemetry::default()
+        });
+
+        // Within 24 h: wait, no request at all.
+        let mut source = good_source();
+        let waiting = build_with(
+            &settings_at(now + 3_600),
+            None,
+            &mut state,
+            &mut source,
+            &mut clock(),
+        );
+        assert_eq!(waiting.report.requests, 0);
+        assert_eq!(waiting.report.telemetry.budget, 0);
+        assert_eq!(waiting.report.telemetry.stop, "backoff-wait");
+        assert_eq!(waiting.report.stopped, Some(StopReason::BackoffWait));
+        assert_eq!(waiting.index.entry_count(), 4, "the index is still rebuilt");
+
+        // After the window: half the configured budget.
+        let mut source = good_source();
+        let halved = build_with(
+            &settings_at(now + 86_400),
+            None,
+            &mut state,
+            &mut source,
+            &mut clock(),
+        );
+        assert_eq!(halved.report.telemetry.budget, 750);
+        assert!(halved.report.requests <= 750);
+    }
+
+    #[test]
+    fn requests_are_never_retried_within_a_run() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let mut source = FakeSource::default();
+        for suffix in [
+            "tistartan.txt",
+            "dbp37_augzen.txt",
+            "abyspe65.txt",
+            "old.txt",
+        ] {
+            source.answer(
+                suffix,
+                TxtResponse::Failed {
+                    detail: "connection reset".into(),
+                },
+            );
+        }
+        let outcome = build_with(&settings(), None, &mut state, &mut source, &mut clock());
+        assert_eq!(outcome.report.telemetry.stop, "network");
+        assert_eq!(outcome.report.telemetry.statuses.get("error"), Some(&3));
+        assert_eq!(
+            source.calls.len(),
+            outcome.report.requests as usize,
+            "each request is attempted exactly once"
+        );
+        let unique: BTreeSet<&str> = source
+            .calls
+            .iter()
+            .map(|(url, _, _)| url.as_str())
+            .collect();
+        assert_eq!(unique.len(), source.calls.len());
+    }
+
+    #[test]
+    fn a_budget_stop_is_clean_for_the_backoff() {
+        let mut state = CrawlState::new(1_792_386_428);
+        let now = 1_792_386_428;
+        state.record_run(RunTelemetry {
+            finished_unix: now,
+            stop: "http-500".into(),
+            ..RunTelemetry::default()
+        });
+        let mut settings = settings_at(now + 86_400);
+        settings.budget = 2;
+        let mut source = good_source();
+        let outcome = build_with(&settings, None, &mut state, &mut source, &mut clock());
+        assert_eq!(outcome.report.telemetry.stop, "budget");
+        assert_eq!(state.backoff.clean_runs, 1);
     }
 }

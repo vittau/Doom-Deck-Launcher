@@ -9,16 +9,37 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use ddl_core::idgames::build::{build_index, BuildSettings};
+use ddl_core::idgames::Date;
+use ddl_core::idgames::build::{BuildSettings, build_index};
 use ddl_core::idgames::cacowards::parse_cacowards;
 use ddl_core::idgames::catalog_map::catalog_paths;
-use ddl_core::idgames::fetch::{mirror_for, NoPacer, TxtResponse, TxtSource};
+use ddl_core::idgames::fetch::{Clock, TxtResponse, TxtSource, mirror_for};
 use ddl_core::idgames::index::{Entry, Index, IndexGame, MAX_INDEX_BYTES, Port};
 use ddl_core::idgames::inventory::{Exclusion, parse_inventory, parse_inventory_gzip};
 use ddl_core::idgames::state::CrawlState;
-use ddl_core::idgames::Date;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/idgames");
+
+/// A clock that advances instead of sleeping: A5's spacing assertions must not
+/// cost three seconds per request.
+#[derive(Default)]
+struct VirtualClock {
+    ms: u64,
+}
+
+impl Clock for VirtualClock {
+    fn now_ms(&mut self) -> u64 {
+        self.ms
+    }
+
+    fn sleep(&mut self, duration: std::time::Duration) {
+        self.ms += u64::try_from(duration.as_millis()).unwrap_or(u64::MAX);
+    }
+}
+
+fn clock() -> VirtualClock {
+    VirtualClock::default()
+}
 
 /// The day the fixtures were "generated": recent `ls` dates belong to 2026.
 fn today() -> Date {
@@ -40,12 +61,7 @@ struct FixtureSource {
 }
 
 impl TxtSource for FixtureSource {
-    fn get(
-        &mut self,
-        url: &str,
-        etag: Option<&str>,
-        last_modified: Option<&str>,
-    ) -> TxtResponse {
+    fn get(&mut self, url: &str, etag: Option<&str>, last_modified: Option<&str>) -> TxtResponse {
         self.calls.push((
             url.to_owned(),
             etag.map(ToOwned::to_owned),
@@ -150,13 +166,19 @@ fn the_built_index_has_the_fields_the_spec_requires() {
         None,
         &mut state,
         &mut source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
     assert_eq!(outcome.report.requests, 8);
     assert_eq!(outcome.report.fetched, 6);
-    assert_eq!(outcome.report.missing_txt, 2, "nocase.zip and old.zip have no sidecar");
-    assert_eq!(outcome.report.bad_txt, 1, "freeform.txt has no labelled field");
+    assert_eq!(
+        outcome.report.missing_txt, 2,
+        "nocase.zip and old.zip have no sidecar"
+    );
+    assert_eq!(
+        outcome.report.bad_txt, 1,
+        "freeform.txt has no labelled field"
+    );
     assert_eq!(outcome.report.stopped, None);
 
     let index = &outcome.index;
@@ -178,7 +200,11 @@ fn the_built_index_has_the_fields_the_spec_requires() {
     assert_eq!(augzen.in_catalog.as_deref(), Some("auger-zenith"));
 
     let tistartan = entry(index, "levels/doom2/Ports/megawads", "tistartan");
-    assert_eq!(tistartan.date.to_iso(), "2026-10-18", "recent date year inferred");
+    assert_eq!(
+        tistartan.date.to_iso(),
+        "2026-10-18",
+        "recent date year inferred"
+    );
     assert_eq!(tistartan.maps, Some(32));
 
     let latin1 = entry(index, "levels/doom2/Ports/megawads", "latin1");
@@ -223,7 +249,7 @@ fn the_document_round_trips_is_deterministic_and_bounded() {
         None,
         &mut state,
         &mut source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
     let mut source = FixtureSource::default();
@@ -233,7 +259,7 @@ fn the_document_round_trips_is_deterministic_and_bounded() {
         None,
         &mut state,
         &mut source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
     let json = first.index.to_json().unwrap();
@@ -250,7 +276,10 @@ fn the_document_round_trips_is_deterministic_and_bounded() {
         "This is just prose",
         "Tested With",
     ] {
-        assert!(!text.contains(forbidden), "{forbidden} must not be published");
+        assert!(
+            !text.contains(forbidden),
+            "{forbidden} must not be published"
+        );
     }
 }
 
@@ -264,7 +293,7 @@ fn incremental_builds_fetch_only_added_or_changed_entries() {
         None,
         &mut state,
         &mut first_source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
     assert_eq!(first_source.calls.len(), 8);
@@ -276,11 +305,14 @@ fn incremental_builds_fetch_only_added_or_changed_entries() {
         Some(&first.index),
         &mut state,
         &mut second_source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
     assert_eq!(second_source.calls.len(), 0);
-    assert_eq!(second.report.reused, 6, "entries with a usable sidecar are reused");
+    assert_eq!(
+        second.report.reused, 6,
+        "entries with a usable sidecar are reused"
+    );
 
     // One upload changed size: exactly one request, for that entry.
     let changed = inventory_text().replace(
@@ -294,7 +326,7 @@ fn incremental_builds_fetch_only_added_or_changed_entries() {
         Some(&second.index),
         &mut state,
         &mut third_source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
     assert_eq!(third_source.calls.len(), 1);
@@ -320,10 +352,14 @@ fn the_crawl_order_is_by_relevance() {
         None,
         &mut state,
         &mut source,
-        &mut NoPacer,
+        &mut clock(),
     )
     .unwrap();
-    let urls: Vec<&str> = source.calls.iter().map(|(url, _, _)| url.as_str()).collect();
+    let urls: Vec<&str> = source
+        .calls
+        .iter()
+        .map(|(url, _, _)| url.as_str())
+        .collect();
     // dbp37_augzen (2021) and sstruggle (2022) are Cacoward winners, so they
     // are the first two requests; the newest of the two wins the tie.
     assert!(
@@ -338,7 +374,10 @@ fn the_crawl_order_is_by_relevance() {
     assert!(urls[3].contains("/Ports/megawads/"), "{urls:#?}");
     assert!(
         urls.iter().position(|url| url.contains("latin1")).unwrap()
-            < urls.iter().position(|url| url.contains("zdoom_only")).unwrap(),
+            < urls
+                .iter()
+                .position(|url| url.contains("zdoom_only"))
+                .unwrap(),
         "{urls:#?}"
     );
 }

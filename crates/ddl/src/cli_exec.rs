@@ -302,7 +302,8 @@ pub fn run_io(
         cli::Command::CatalogStatus => {
             let services = open(env)?;
             print_catalog_status(&services.catalog_status(), out)
-        }        cli::Command::CatalogUpdate => {
+        }
+        cli::Command::CatalogUpdate => {
             let mut services = open(env)?;
             let outcome = services.catalog_update()?;
             print_catalog_outcome(&outcome, out)
@@ -326,8 +327,8 @@ fn run_idgames(
 
     match command {
         cli::IdgamesCommand::IndexValidate { file } => {
-            let bytes = idgames::read_bounded(&file, idgames::MAX_INDEX_BYTES)
-                .map_err(idgames_failure)?;
+            let bytes =
+                idgames::read_bounded(&file, idgames::MAX_INDEX_BYTES).map_err(idgames_failure)?;
             let index = idgames::Index::parse(&bytes).map_err(idgames_failure)?;
             writeln!(
                 out,
@@ -387,19 +388,20 @@ fn run_idgames(
                     .unwrap_or_else(|| std::path::Path::new("."))
                     .join("crawl-state.json")
             });
-            let state_bytes = match idgames::read_bounded(&state_path, idgames::state::MAX_STATE_BYTES)
-            {
-                Ok(bytes) => Some(bytes),
-                Err(error) => {
-                    writeln!(err, "starting a fresh crawl state ({error})").map_err(output_error)?;
-                    None
-                }
-            };
-            let mut crawl_state = idgames::CrawlState::load_or_new(state_bytes.as_deref(), now_unix);
+            let state_bytes =
+                match idgames::read_bounded(&state_path, idgames::state::MAX_STATE_BYTES) {
+                    Ok(bytes) => Some(bytes),
+                    Err(error) => {
+                        writeln!(err, "starting a fresh crawl state ({error})")
+                            .map_err(output_error)?;
+                        None
+                    }
+                };
+            let mut crawl_state =
+                idgames::CrawlState::load_or_new(state_bytes.as_deref(), now_unix);
 
-            let cacowards_path = cacowards.unwrap_or_else(|| {
-                std::path::PathBuf::from("docs/research/cacowards.md")
-            });
+            let cacowards_path =
+                cacowards.unwrap_or_else(|| std::path::PathBuf::from("docs/research/cacowards.md"));
             let cacoward_years = match idgames::read_bounded(
                 &cacowards_path,
                 idgames::cacowards::MAX_CACOWARDS_BYTES,
@@ -415,8 +417,7 @@ fn run_idgames(
                     std::collections::BTreeMap::new()
                 }
             };
-            let catalog_dir =
-                catalog.unwrap_or_else(|| std::path::PathBuf::from("catalog"));
+            let catalog_dir = catalog.unwrap_or_else(|| std::path::PathBuf::from("catalog"));
             let catalog = idgames::catalog_paths(&catalog_dir);
 
             let mut settings = idgames::BuildSettings::new(
@@ -432,14 +433,14 @@ fn run_idgames(
             settings.catalog = catalog;
 
             let mut source = idgames::HttpTxtSource::new();
-            let mut pacer = idgames::fetch::SlowPacer::default();
+            let mut clock = idgames::SystemClock::new();
             let outcome = idgames::build_index(
                 &inventory_text,
                 &settings,
                 previous_index.as_ref(),
                 &mut crawl_state,
                 &mut source,
-                &mut pacer,
+                &mut clock,
             )
             .map_err(idgames_failure)?;
 
@@ -454,10 +455,7 @@ fn run_idgames(
                 .to_json()
                 .map_err(|error| CliFailure::message(format!("crawl state: {error}")))?;
             idgames::write_atomic(&state_path, &state_json).map_err(|error| {
-                CliFailure::message(format!(
-                    "could not write {}: {error}",
-                    state_path.display()
-                ))
+                CliFailure::message(format!("could not write {}: {error}", state_path.display()))
             })?;
 
             let report = &outcome.report;
@@ -482,14 +480,38 @@ fn run_idgames(
                 report.excluded
             )
             .map_err(output_error)?;
+            writeln!(out, "Telemetry: {}", report.telemetry.summary()).map_err(output_error)?;
             match report.stopped {
-                Some(reason) => writeln!(
+                Some(reason @ (idgames::StopReason::Blocked(_) | idgames::StopReason::Network)) => {
+                    writeln!(
+                        out,
+                        "Crawl stopped: {reason}. Everything fetched was kept; the state records \
+                         the stop, so the next run waits and backs off."
+                    )
+                    .map_err(output_error)?;
+                    writeln!(out, "Crawl state: {}", state_path.display()).map_err(output_error)?;
+                    // R9: a mirror stop fails the job visibly, after the partial
+                    // index and the state were written for the next run.
+                    return Err(CliFailure::message(format!("the crawl stopped: {reason}")));
+                }
+                Some(idgames::StopReason::BackoffWait) => {
+                    match crawl_state.backoff_until() {
+                        Some(until) => writeln!(
+                            out,
+                            "Back-off: no requests today; the window closes at {}.",
+                            idgames::format_unix_utc(until)
+                        ),
+                        None => writeln!(out, "Back-off: no requests today."),
+                    }
+                    .map_err(output_error)?;
+                }
+                Some(idgames::StopReason::Budget) => writeln!(
                     out,
-                    "Crawl stopped early: {reason}. Everything fetched was kept; the next run resumes."
-                ),
-                None => writeln!(out, "Crawl complete."),
+                    "Daily budget reached. Everything fetched was kept; the next run resumes."
+                )
+                .map_err(output_error)?,
+                None => writeln!(out, "Crawl complete.").map_err(output_error)?,
             }
-            .map_err(output_error)?;
             writeln!(out, "Crawl state: {}", state_path.display()).map_err(output_error)
         }
     }
@@ -1975,10 +1997,23 @@ exit 1
 
     #[test]
     fn idgames_index_build_then_validate_round_trips_without_network() {
-        use ddl_core::idgames::fetch::NoPacer;
+        use ddl_core::idgames::fetch::Clock;
         use ddl_core::idgames::{
             BuildSettings, CrawlState, Index, TxtResponse, TxtSource, build_index, mirror_for,
         };
+
+        #[derive(Default)]
+        struct VirtualClock {
+            ms: u64,
+        }
+        impl Clock for VirtualClock {
+            fn now_ms(&mut self) -> u64 {
+                self.ms
+            }
+            fn sleep(&mut self, duration: std::time::Duration) {
+                self.ms += u64::try_from(duration.as_millis()).unwrap_or(u64::MAX);
+            }
+        }
         use std::path::Path;
 
         // A tiny source that answers from the spec-050 fixtures.
@@ -2023,7 +2058,7 @@ exit 1
             None,
             &mut state,
             &mut source,
-            &mut NoPacer,
+            &mut VirtualClock::default(),
         )
         .unwrap();
         let mut previous = built.index.clone();

@@ -119,10 +119,7 @@ pub fn decode_text(bytes: &[u8]) -> String {
     if let Ok(text) = std::str::from_utf8(bytes) {
         return text.trim_start_matches('\u{feff}').to_owned();
     }
-    bytes
-        .iter()
-        .map(|byte| windows_1252(*byte))
-        .collect()
+    bytes.iter().map(|byte| windows_1252(*byte)).collect()
 }
 
 /// One byte of Windows-1252. Bytes `0x80–0x9F` are the typographic block; the
@@ -225,7 +222,9 @@ fn field_for(label: &str) -> Option<Field> {
             Some(Field::Episode)
         }
         "primary purpose" | "primary purpose:" => Some(Field::Purpose),
-        _ if label.starts_with("advanced engine needed") || label.starts_with("advanced engine") => {
+        _ if label.starts_with("advanced engine needed")
+            || label.starts_with("advanced engine") =>
+        {
             Some(Field::Engine)
         }
         _ if label.starts_with("engine needed") || label.starts_with("advanced port needed") => {
@@ -433,10 +432,10 @@ pub fn parse_map_count(value: &str) -> Option<u16> {
             while index < bytes.len() && bytes[index].is_ascii_digit() {
                 index += 1;
             }
-            if index - start <= 4 {
-                if let Ok(number) = value[start..index].parse::<u32>() {
-                    numbers.push((number, start, index));
-                }
+            if index - start <= 4
+                && let Ok(number) = value[start..index].parse::<u32>()
+            {
+                numbers.push((number, start, index));
             }
         } else {
             index += 1;
@@ -556,7 +555,8 @@ May Not Run With...: Vanilla, Chocolate
 
     #[test]
     fn starred_and_spaced_labels_are_recognised() {
-        let text = "*** TITLE:  My Map\n# Author : Someone\nAdvanced  engine needed : GZDoom 4.7.1\n";
+        let text =
+            "*** TITLE:  My Map\n# Author : Someone\nAdvanced  engine needed : GZDoom 4.7.1\n";
         let meta = parse_txt(text.as_bytes());
         assert_eq!(meta.title.as_deref(), Some("My Map"));
         assert_eq!(meta.author.as_deref(), Some("Someone"));
@@ -611,10 +611,7 @@ May Not Run With...: Vanilla, Chocolate
         assert_eq!(classify_port(Some("DSDA-Doom 0.30.0"), None), Port::Unknown);
         assert_eq!(classify_port(Some("PrBoom+"), None), Port::Boom);
         // The author says DDL's engine will not run it: block.
-        assert_eq!(
-            classify_port(Some("MBF21"), Some("DSDA-Doom")),
-            Port::Other
-        );
+        assert_eq!(classify_port(Some("MBF21"), Some("DSDA-Doom")), Port::Other);
         // A vanilla-only complaint is not DSDA-hostile.
         assert_eq!(
             classify_port(Some("MBF21"), Some("Vanilla, Chocolate")),
@@ -647,7 +644,10 @@ May Not Run With...: Vanilla, Chocolate
             classify_game(Some("Doom 2, Plutonia"), None),
             Some(IndexGame::Plutonia)
         );
-        assert_eq!(classify_game(None, Some("E1M1-E1M9")), Some(IndexGame::Doom));
+        assert_eq!(
+            classify_game(None, Some("E1M1-E1M9")),
+            Some(IndexGame::Doom)
+        );
         assert_eq!(
             classify_game(None, Some("MAP01-MAP10")),
             Some(IndexGame::Doom2)

@@ -163,10 +163,11 @@ pub fn parse_inventory(text: &str, today: Date) -> Inventory {
     let mut entries = Vec::new();
     let lines: Vec<&str> = text.lines().collect();
 
-    let fullsort = !lines.iter().any(|line| is_directory_header(line)) && lines.iter().any(|line| {
-        let fields: Vec<&str> = line.split_whitespace().collect();
-        is_fullsort_record(&fields)
-    });
+    let fullsort = !lines.iter().any(|line| is_directory_header(line))
+        && lines.iter().any(|line| {
+            let fields: Vec<&str> = line.split_whitespace().collect();
+            is_fullsort_record(&fields)
+        });
 
     if fullsort {
         for line in &lines {
@@ -207,7 +208,8 @@ pub fn parse_inventory(text: &str, today: Date) -> Inventory {
         }
     }
 
-    entries.sort_by(|a, b| (a.dir.as_str(), a.stem.as_str()).cmp(&(b.dir.as_str(), b.stem.as_str())));
+    entries
+        .sort_by(|a, b| (a.dir.as_str(), a.stem.as_str()).cmp(&(b.dir.as_str(), b.stem.as_str())));
     entries.dedup_by(|a, b| a.dir == b.dir && a.stem == b.stem);
     report.kept = entries.len();
     Inventory { entries, report }
@@ -283,7 +285,10 @@ fn keep_entry(
         report.count(Exclusion::UnsafePath);
         return None;
     }
-    let Some(stem) = name.strip_suffix(".zip").or_else(|| name.strip_suffix(".ZIP")) else {
+    let Some(stem) = name
+        .strip_suffix(".zip")
+        .or_else(|| name.strip_suffix(".ZIP"))
+    else {
         report.count(Exclusion::NotAZip);
         return None;
     };
@@ -325,7 +330,11 @@ pub(crate) fn is_indexable_dir(dir: &str) -> bool {
 }
 
 fn exclusion_for(dir: &str) -> Exclusion {
-    if dir == "incoming" || dir.starts_with("incoming/") || dir == "newstuff" || dir.starts_with("newstuff/") {
+    if dir == "incoming"
+        || dir.starts_with("incoming/")
+        || dir == "newstuff"
+        || dir.starts_with("newstuff/")
+    {
         Exclusion::TransientTree
     } else if has_segment(dir, "deathmatch") {
         Exclusion::Deathmatch
@@ -335,7 +344,8 @@ fn exclusion_for(dir: &str) -> Exclusion {
 }
 
 fn has_segment(dir: &str, wanted: &str) -> bool {
-    dir.split('/').any(|segment| segment.eq_ignore_ascii_case(wanted))
+    dir.split('/')
+        .any(|segment| segment.eq_ignore_ascii_case(wanted))
 }
 
 /// A directory made only of ordinary segments.
@@ -437,7 +447,8 @@ total 12
 
     #[test]
     fn filenames_with_spaces_are_kept_whole() {
-        let ls = "./levels/doom2/a-c:\n-rw-rw-r-- 1 idgmaint idgames 100 Oct 18 11:48 odd name.zip\n";
+        let ls =
+            "./levels/doom2/a-c:\n-rw-rw-r-- 1 idgmaint idgames 100 Oct 18 11:48 odd name.zip\n";
         let inventory = parse_inventory(ls, today());
         assert_eq!(inventory.entries.len(), 1);
         assert_eq!(inventory.entries[0].stem, "odd name");
@@ -466,10 +477,7 @@ total 12
                 "levels/doom2/Ports/megawads/tistartan.zip".to_owned(),
             ]
         );
-        assert_eq!(
-            inventory.entries[0].date,
-            Date::new(2021, 7, 26).unwrap()
-        );
+        assert_eq!(inventory.entries[0].date, Date::new(2021, 7, 26).unwrap());
         assert_eq!(inventory.report.excluded_count(Exclusion::TransientTree), 1);
         assert_eq!(inventory.report.excluded_count(Exclusion::OtherGame), 2);
         assert_eq!(inventory.report.excluded_count(Exclusion::Deathmatch), 1);
@@ -484,7 +492,12 @@ total 12
 
     #[test]
     fn unsafe_paths_never_reach_a_url() {
-        for dir in ["/etc", "levels/..", "levels/doom2/../../x", "levels/do\nom2"] {
+        for dir in [
+            "/etc",
+            "levels/..",
+            "levels/doom2/../../x",
+            "levels/do\nom2",
+        ] {
             assert!(!safe_dir(dir), "{dir:?} must be unsafe");
         }
         assert!(safe_dir("levels/doom2/Ports/megawads"));

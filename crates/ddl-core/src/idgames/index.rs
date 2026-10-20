@@ -52,9 +52,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::date::{Date, is_rfc3339_utc};
 use super::inventory::is_indexable_dir;
@@ -100,7 +100,9 @@ pub enum IndexGame {
 }
 
 /// The port family the author's text requires (research §6.4).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "kebab-case")]
 pub enum Port {
     /// No special engine; vanilla limits.
@@ -118,13 +120,8 @@ pub enum Port {
     /// A port DDL does not ship: the entry stays browsable, Play is disabled.
     Other,
     /// No engine line, or a line that names no format.
+    #[default]
     Unknown,
-}
-
-impl Default for Port {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl Port {
@@ -261,9 +258,7 @@ impl<'de> Deserialize<'de> for Entry {
                 let maps: Option<u16> = field(&mut seq, 10)?;
                 let latest_version: bool = field(&mut seq, 11)?;
                 if seq.next_element::<de::IgnoredAny>()?.is_some() {
-                    return Err(de::Error::custom(
-                        "an index entry has more than 12 fields",
-                    ));
+                    return Err(de::Error::custom("an index entry has more than 12 fields"));
                 }
                 Ok(Entry {
                     stem,
@@ -331,8 +326,8 @@ impl Index {
     /// [`MAX_INDEX_BYTES`], or [`IndexError::Malformed`] if serialization
     /// itself fails (it cannot for this model, but the caller must not assume).
     pub fn to_json(&self) -> Result<Vec<u8>, IndexError> {
-        let mut bytes = serde_json::to_vec(self)
-            .map_err(|error| IndexError::Malformed(error.to_string()))?;
+        let mut bytes =
+            serde_json::to_vec(self).map_err(|error| IndexError::Malformed(error.to_string()))?;
         bytes.push(b'\n');
         if bytes.len() as u64 > MAX_INDEX_BYTES {
             return Err(IndexError::Oversize {
@@ -394,13 +389,13 @@ impl Index {
             let mut previous: Option<&str> = None;
             for entry in entries {
                 validate_entry(entry)?;
-                if let Some(last) = previous {
-                    if last >= entry.stem.as_str() {
-                        return Err(IndexError::Malformed(format!(
-                            "directory `{dir}` is not sorted by stem at `{}`",
-                            entry.stem
-                        )));
-                    }
+                if let Some(last) = previous
+                    && last >= entry.stem.as_str()
+                {
+                    return Err(IndexError::Malformed(format!(
+                        "directory `{dir}` is not sorted by stem at `{}`",
+                        entry.stem
+                    )));
                 }
                 previous = Some(&entry.stem);
                 if !seen.insert(entry.stem.clone()) {
@@ -502,29 +497,29 @@ fn validate_entry(entry: &Entry) -> Result<(), IndexError> {
             entry.stem, entry.size
         )));
     }
-    if let Some(year) = entry.cacoward {
-        if !(1994..=2100).contains(&year) {
-            return Err(IndexError::Malformed(format!(
-                "entry `{}` has Cacoward year {year}",
-                entry.stem
-            )));
-        }
+    if let Some(year) = entry.cacoward
+        && !(1994..=2100).contains(&year)
+    {
+        return Err(IndexError::Malformed(format!(
+            "entry `{}` has Cacoward year {year}",
+            entry.stem
+        )));
     }
-    if let Some(maps) = entry.maps {
-        if !(1..=999).contains(&maps) {
-            return Err(IndexError::Malformed(format!(
-                "entry `{}` has map count {maps}",
-                entry.stem
-            )));
-        }
+    if let Some(maps) = entry.maps
+        && !(1..=999).contains(&maps)
+    {
+        return Err(IndexError::Malformed(format!(
+            "entry `{}` has map count {maps}",
+            entry.stem
+        )));
     }
-    if let Some(recipe) = &entry.in_catalog {
-        if !safe_slug(recipe) {
-            return Err(IndexError::Malformed(format!(
-                "entry `{}` has an invalid recipe id `{recipe}`",
-                entry.stem
-            )));
-        }
+    if let Some(recipe) = &entry.in_catalog
+        && !safe_slug(recipe)
+    {
+        return Err(IndexError::Malformed(format!(
+            "entry `{}` has an invalid recipe id `{recipe}`",
+            entry.stem
+        )));
     }
     Ok(())
 }
@@ -608,10 +603,9 @@ pub enum IndexError {
 impl fmt::Display for IndexError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Oversize { limit, got } => write!(
-                formatter,
-                "index is larger than {limit} bytes (got {got})"
-            ),
+            Self::Oversize { limit, got } => {
+                write!(formatter, "index is larger than {limit} bytes (got {got})")
+            }
             Self::UnknownSchema { got } => write!(
                 formatter,
                 "index schema {got} is not supported (this DDL understands {INDEX_SCHEMA})"
@@ -692,10 +686,7 @@ mod tests {
     fn unknown_schema_and_oversize_documents_are_refused() {
         let mut broken = index();
         broken.schema = 2;
-        assert_eq!(
-            broken.validate(),
-            Err(IndexError::UnknownSchema { got: 2 })
-        );
+        assert_eq!(broken.validate(), Err(IndexError::UnknownSchema { got: 2 }));
 
         let huge = vec![b' '; MAX_INDEX_BYTES as usize + 1];
         assert!(matches!(
@@ -718,10 +709,9 @@ mod tests {
     #[test]
     fn non_doom_directories_are_refused() {
         let mut broken = index();
-        broken.entries.insert(
-            "levels/heretic".to_owned(),
-            vec![entry("heretic_thing")],
-        );
+        broken
+            .entries
+            .insert("levels/heretic".to_owned(), vec![entry("heretic_thing")]);
         assert!(broken.validate().is_err());
         let mut broken = index();
         broken.entries.insert(

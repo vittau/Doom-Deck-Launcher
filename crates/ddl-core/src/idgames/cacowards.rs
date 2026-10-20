@@ -68,7 +68,10 @@ fn idgames_paths(line: &str) -> Vec<String> {
         rest = &rest[start + "/idgames/".len()..];
         let end = rest
             .find(|character: char| {
-                matches!(character, ')' | '`' | ' ' | '\t' | '|' | ']' | '[' | '"' | '\'')
+                matches!(
+                    character,
+                    ')' | '`' | ' ' | '\t' | '|' | ']' | '[' | '"' | '\''
+                )
             })
             .unwrap_or(rest.len());
         let candidate = rest[..end].trim_end_matches('.');
@@ -123,9 +126,7 @@ mod tests {
     #[test]
     fn deathmatch_and_special_awards_are_not_index_entries() {
         let winners = parse_cacowards(DOC);
-        assert!(
-            !winners.contains_key("levels/doom2/deathmatch/ports/megawads/32in24-5.zip")
-        );
+        assert!(!winners.contains_key("levels/doom2/deathmatch/ports/megawads/32in24-5.zip"));
         assert!(!winners.contains_key("levels/doom2/ports/megawads/hellcore.zip"));
         assert_eq!(winners.len(), 2);
     }

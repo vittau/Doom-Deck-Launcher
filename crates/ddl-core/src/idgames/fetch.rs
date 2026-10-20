@@ -1,4 +1,4 @@
-//! Polite, bounded sidecar fetching (spec 050, R2/R6, D-031).
+//! Polite, bounded sidecar fetching (spec 050, R2/R6/R9, D-031).
 //!
 //! The archive is a volunteer service: `docs/research/idgames-browse.md` §2.5
 //! records that the master rate-limits bursts and asks clients to use a mirror.
@@ -9,13 +9,16 @@
 //!   outside the allowlist);
 //! - issues **one request at a time** — [`TxtSource::get`] is synchronous and
 //!   the builder never runs two — with at least [`MIN_REQUEST_GAP`] between
-//!   requests plus up to [`MAX_JITTER_MS`] of random jitter ([`SlowPacer`]);
+//!   requests plus up to [`MAX_JITTER_MS`] of jitter; the gap is measured and
+//!   slept through the injected [`Clock`], so tests can prove it without
+//!   waiting;
 //! - sends `DoomDeckLauncher/<version> (+repo URL)`;
 //! - reads at most [`MAX_TXT_BYTES`] and treats 403/429/5xx as "stop the run"
-//!   ([`TxtResponse::Blocked`]), which the builder turns into "keep what we
-//!   have and resume tomorrow" (R6).
+//!   ([`TxtResponse::Blocked`]), which the builder turns into telemetry, a
+//!   back-off and "keep what we have, resume tomorrow" (R6/R9);
+//! - never retries a request within a run (R9).
 //!
-//! The trait is the test seam: no test opens a socket.
+//! The traits are the test seams: no test opens a socket or sleeps for real.
 
 use std::io::Read as _;
 use std::time::Duration;
@@ -174,12 +177,7 @@ pub enum TxtResponse {
 pub trait TxtSource {
     /// Fetches one sidecar, sending `etag`/`last_modified` as conditional
     /// validators when the crawl state has them.
-    fn get(
-        &mut self,
-        url: &str,
-        etag: Option<&str>,
-        last_modified: Option<&str>,
-    ) -> TxtResponse;
+    fn get(&mut self, url: &str, etag: Option<&str>, last_modified: Option<&str>) -> TxtResponse;
 }
 
 /// A single blocking HTTPS client with one connection at a time.
@@ -221,12 +219,7 @@ impl Default for HttpTxtSource {
 }
 
 impl TxtSource for HttpTxtSource {
-    fn get(
-        &mut self,
-        url: &str,
-        etag: Option<&str>,
-        last_modified: Option<&str>,
-    ) -> TxtResponse {
+    fn get(&mut self, url: &str, etag: Option<&str>, last_modified: Option<&str>) -> TxtResponse {
         let mut request = self.agent.get(url);
         if let Some(etag) = etag {
             request = request.header("If-None-Match", etag);
@@ -285,67 +278,69 @@ fn header(response: &ureq::http::Response<ureq::Body>, name: &str) -> Option<Str
         .map(ToOwned::to_owned)
 }
 
-/// Waits between sidecar requests.
-pub trait Pacer {
-    /// Blocks for the polite delay before the next request.
-    fn pause(&mut self);
+/// The clock the crawl measures its spacing with.
+///
+/// Production uses [`SystemClock`] (`Instant` plus a real sleep). Tests use a
+/// virtual clock, so "at least 3 s between requests" can be asserted without
+/// waiting and the telemetry numbers are exact (A5).
+pub trait Clock {
+    /// Monotonic milliseconds since the clock started.
+    fn now_ms(&mut self) -> u64;
+    /// Waits (or, in tests, advances virtual time) by `duration`.
+    fn sleep(&mut self, duration: Duration);
 }
 
-/// The production pacer: 3 s plus a pseudo-random 0–1000 ms (D-031).
-pub struct SlowPacer {
-    gap: Duration,
-    jitter_ms: u64,
-    state: u64,
+/// The production clock: monotonic time plus `std::thread::sleep`.
+pub struct SystemClock {
+    start: std::time::Instant,
 }
 
-impl SlowPacer {
-    /// A pacer with an explicit gap and jitter ceiling, for tests and callers
-    /// that need a different pace.
+impl SystemClock {
+    /// A clock anchored at `now`.
     #[must_use]
-    pub fn new(gap: Duration, jitter_ms: u64) -> Self {
-        let seed = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0x9e37_79b9_7f4a_7c15, |elapsed| elapsed.as_nanos() as u64);
+    pub fn new() -> Self {
         Self {
-            gap,
-            jitter_ms,
-            state: seed | 1,
-        }
-    }
-
-    fn next_jitter(&mut self) -> u64 {
-        // A 64-bit LCG (Knuth's constants): no `rand` dependency for 0–1 s of
-        // jitter, and the sequence is not a fixed value a mirror could pin.
-        self.state = self
-            .state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        if self.jitter_ms == 0 {
-            0
-        } else {
-            (self.state >> 33) % self.jitter_ms
+            start: std::time::Instant::now(),
         }
     }
 }
 
-impl Default for SlowPacer {
+impl Default for SystemClock {
     fn default() -> Self {
-        Self::new(MIN_REQUEST_GAP, MAX_JITTER_MS)
+        Self::new()
     }
 }
 
-impl Pacer for SlowPacer {
-    fn pause(&mut self) {
-        let jitter = Duration::from_millis(self.next_jitter());
-        std::thread::sleep(self.gap + jitter);
+impl Clock for SystemClock {
+    fn now_ms(&mut self) -> u64 {
+        u64::try_from(self.start.elapsed().as_millis()).unwrap_or(u64::MAX)
+    }
+
+    fn sleep(&mut self, duration: Duration) {
+        std::thread::sleep(duration);
     }
 }
 
-/// A pacer that never sleeps, for tests.
-pub struct NoPacer;
+/// The polite delay before request number `request_index + 1` (D-031): at least
+/// [`MIN_REQUEST_GAP`] plus up to [`MAX_JITTER_MS`] derived from `seed`.
+///
+/// The jitter is a small LCG, not a fixed value, so the crawl does not beat a
+/// metronome a rate limiter could pin. `seed` is per run and advanced by the
+/// caller.
+pub fn polite_gap(seed: &mut u64) -> Duration {
+    let jitter = next_jitter(seed, MAX_JITTER_MS);
+    MIN_REQUEST_GAP + Duration::from_millis(jitter)
+}
 
-impl Pacer for NoPacer {
-    fn pause(&mut self) {}
+pub fn next_jitter(seed: &mut u64, ceiling: u64) -> u64 {
+    *seed = seed
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1_442_695_040_888_963_407);
+    if ceiling == 0 {
+        0
+    } else {
+        (*seed >> 33) % ceiling
+    }
 }
 
 #[cfg(test)]
@@ -354,7 +349,10 @@ mod tests {
 
     #[test]
     fn only_mirrors_are_crawlable() {
-        assert_eq!(mirror_for("youfailit.net").unwrap().base_path, "/pub/idgames");
+        assert_eq!(
+            mirror_for("youfailit.net").unwrap().base_path,
+            "/pub/idgames"
+        );
         assert_eq!(
             mirror_for("FTP.FU-BERLIN.DE").unwrap().base_path,
             "/pc/games/idgames"
@@ -392,18 +390,28 @@ mod tests {
     fn the_budget_and_gap_match_d031() {
         assert_eq!(MIN_REQUEST_GAP, Duration::from_secs(3));
         assert_eq!(DEFAULT_DAILY_BUDGET, 1_500);
-        assert!(MAX_DAILY_BUDGET <= 1_500);
+        assert_eq!(MAX_DAILY_BUDGET, 1_500);
     }
 
     #[test]
-    fn jitter_stays_inside_the_ceiling() {
-        let mut pacer = SlowPacer::new(Duration::from_secs(3), 1_000);
+    fn the_polite_gap_is_at_least_three_seconds_and_jitters() {
+        let mut seed = 42;
         let mut seen = std::collections::BTreeSet::new();
         for _ in 0..50 {
-            let jitter = pacer.next_jitter();
-            assert!(jitter < 1_000);
-            seen.insert(jitter);
+            let gap = polite_gap(&mut seed);
+            assert!(gap >= MIN_REQUEST_GAP, "{gap:?}");
+            assert!(gap < MIN_REQUEST_GAP + Duration::from_millis(MAX_JITTER_MS));
+            seen.insert(gap);
         }
         assert!(seen.len() > 1, "jitter must vary, not be a constant");
+    }
+
+    #[test]
+    fn urls_percent_encode_what_is_not_safe_in_a_path() {
+        let mirror = mirror_for("youfailit.net").unwrap();
+        assert_eq!(
+            mirror.url("levels/doom2/a-c/odd name#1.txt"),
+            "https://youfailit.net/pub/idgames/levels/doom2/a-c/odd%20name%231.txt"
+        );
     }
 }

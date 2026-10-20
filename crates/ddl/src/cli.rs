@@ -1594,9 +1594,8 @@ fn parse_idgames_index(args: &[OsString]) -> Result<Command, ParseError> {
                 }
                 file = Some(PathBuf::from(arg));
             }
-            let file = file.ok_or_else(|| {
-                ParseError::message("expected `idgames index validate <file>`")
-            })?;
+            let file = file
+                .ok_or_else(|| ParseError::message("expected `idgames index validate <file>`"))?;
             Ok(Command::Idgames(IdgamesCommand::IndexValidate { file }))
         }
         _ if wants_help(args) => Ok(Command::Help(HelpTopic::IdgamesIndex)),
@@ -1657,9 +1656,14 @@ fn parse_idgames_index_build(args: &[OsString]) -> Result<Command, ParseError> {
         index += 1;
     }
     let ls = ls.ok_or_else(|| ParseError::message("`--ls <file>` is required"))?;
-    let mirror =
-        mirror.ok_or_else(|| ParseError::message("`--mirror <host>` is required"))?;
+    let mirror = mirror.ok_or_else(|| ParseError::message("`--mirror <host>` is required"))?;
     let out = out.ok_or_else(|| ParseError::message("`--out <file>` is required"))?;
+    let budget = budget.unwrap_or(ddl_core::idgames::fetch::DEFAULT_DAILY_BUDGET);
+    if budget == 0 || budget > ddl_core::idgames::fetch::MAX_DAILY_BUDGET {
+        return Err(ParseError::message(
+            "`--budget` must be between 1 and 1500 requests (D-031)",
+        ));
+    }
     Ok(Command::Idgames(IdgamesCommand::IndexBuild {
         ls,
         mirror,
@@ -1668,7 +1672,7 @@ fn parse_idgames_index_build(args: &[OsString]) -> Result<Command, ParseError> {
         state,
         cacowards,
         catalog,
-        budget: budget.unwrap_or(ddl_core::idgames::fetch::DEFAULT_DAILY_BUDGET),
+        budget,
         min_ddl_version,
     }))
 }
@@ -2082,8 +2086,15 @@ mod tests {
     fn idgames_index_subcommands_parse_into_typed_commands() {
         assert_eq!(
             parse_str(&[
-                "idgames", "index", "build", "--ls", "ls-laR.gz", "--mirror", "youfailit.net",
-                "--out", "index.json"
+                "idgames",
+                "index",
+                "build",
+                "--ls",
+                "ls-laR.gz",
+                "--mirror",
+                "youfailit.net",
+                "--out",
+                "index.json"
             ]),
             Ok(Command::Idgames(IdgamesCommand::IndexBuild {
                 ls: PathBuf::from("ls-laR.gz"),
@@ -2153,7 +2164,15 @@ mod tests {
                 "--budget", "many",
             ],
             vec![
-                "idgames", "index", "build", "--ls", "x", "--mirror", "y", "--out", "z",
+                "idgames",
+                "index",
+                "build",
+                "--ls",
+                "x",
+                "--mirror",
+                "y",
+                "--out",
+                "z",
                 "--unknown",
             ],
         ] {

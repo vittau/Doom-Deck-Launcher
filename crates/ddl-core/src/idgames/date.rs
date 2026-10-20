@@ -314,8 +314,7 @@ mod tests {
         );
         // A later month belongs to last year (a January listing shows December).
         assert_eq!(
-            parse_ls_date("Dec", "24", "12:00", Date::new(2026, 1, 5).unwrap())
-                .map(Date::to_iso),
+            parse_ls_date("Dec", "24", "12:00", Date::new(2026, 1, 5).unwrap()).map(Date::to_iso),
             Some("2025-12-24".to_owned())
         );
         // An explicit year is used verbatim.
