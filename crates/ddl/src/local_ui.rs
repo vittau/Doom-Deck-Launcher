@@ -1302,16 +1302,6 @@ impl Runtime {
                 b.button(NEW, 12., 12., 1200., c.get_new(), true);
                 b.label(36., 96., 1152., 56., "No installed mapsets yet".into(), 26.);
             }
-            if !b.nodes.iter().any(|n| n.id == self.focus && n.actionable) {
-                // Mapsets keep first focus (specs 010/015); base games take it only
-                // when nothing else on Library can.
-                self.focus = self
-                    .library_items()
-                    .first()
-                    .map(|&i| 10 + i as i32)
-                    .or_else(|| (!s.custom.is_empty()).then_some(CUSTOM))
-                    .unwrap_or(BASE);
-            }
             for node in &mut b.nodes {
                 if node.y >= 96. {
                     node.y += 202.;
@@ -1331,6 +1321,18 @@ impl Runtime {
                 "Mapsets and custom setups".into(),
                 28.,
             );
+            if !b.nodes.iter().any(|n| n.id == self.focus && n.actionable) {
+                // Validate only after the base-game cards exist, so a refresh
+                // preserves focus on any Library entry.
+                // Mapsets keep first focus (specs 010/015); base games take it only
+                // when nothing else on Library can.
+                self.focus = self
+                    .library_items()
+                    .first()
+                    .map(|&i| 10 + i as i32)
+                    .or_else(|| (!s.custom.is_empty()).then_some(CUSTOM))
+                    .unwrap_or(BASE);
+            }
         }
         if self.screen == Screen::Home
             && let Some(s) = &self.snapshot

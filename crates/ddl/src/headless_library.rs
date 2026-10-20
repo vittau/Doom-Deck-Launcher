@@ -171,7 +171,7 @@ fn library_owner_scene_renders() {
         assert!(changed > 100_000, "rendered card fills column at {x}");
     }
     ui.set_nodes(ModelRc::new(VecModel::from(nodes)));
-    r.focus = 6000; // New custom setup, at the absolute top of the Library.
+    r.focus = 6300; // First base game, at the absolute top of the Library.
     r.sync(&ui);
     assert_eq!(ui.get_scroll_offset(), 0.);
     write_png("061-library-top.png", &capture());
@@ -288,4 +288,62 @@ fn neutral_stick_tick_preserves_each_plane_offset() {
         280.,
         "sheet offset survives a neutral tick"
     );
+}
+
+#[test]
+fn library_base_game_focus_survives_refresh_and_dpad_navigation() {
+    if isolated(
+        module_path!(),
+        "library_base_game_focus_survives_refresh_and_dpad_navigation",
+    ) {
+        return;
+    }
+    use crate::input::Action;
+    let (_window, ui) = setup();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    r.focus = 6300;
+    r.sync(&ui);
+    assert_eq!(
+        r.focus, 6300,
+        "base-game focus survives a full node rebuild"
+    );
+    // Replace the service snapshot just as a refresh does, retaining the
+    // installed mapsets, four base games and custom setups in this fixture.
+    let mut refreshed = r.snapshot.as_ref().unwrap().clone();
+    refreshed.items[0].profile.name.push_str(" refreshed");
+    r.snapshot = Some(refreshed);
+    r.sync(&ui);
+    assert_eq!(r.focus, 6300, "base-game focus survives snapshot refresh");
+    assert_eq!(ui.get_focused(), 6300);
+    r.focus = 6000;
+    r.sync(&ui);
+    r.action(&ui, Action::Down);
+    assert!(
+        (6300..=6303).contains(&r.focus),
+        "Down enters the base-game row"
+    );
+    for _ in 0..3 {
+        if r.focus == 6300 {
+            break;
+        }
+        r.action(&ui, Action::Left);
+    }
+    assert_eq!(r.focus, 6300, "Left reaches the first base game");
+    for id in 6301..=6303 {
+        r.action(&ui, Action::Right);
+        assert_eq!(r.focus, id, "Right reaches every base game");
+        r.sync(&ui);
+        assert_eq!(r.focus, id, "focus remains on the selected base game");
+    }
+    for id in (6300..=6302).rev() {
+        r.action(&ui, Action::Left);
+        assert_eq!(r.focus, id, "Left traverses the base-game row");
+    }
+    r.action(&ui, Action::Down);
+    assert_eq!(r.focus, 10, "Down reaches the installed mapsets");
+    r.action(&ui, Action::Up);
+    assert!((6300..=6303).contains(&r.focus), "Up returns to base games");
+    r.action(&ui, Action::Up);
+    assert_eq!(r.focus, 6000, "Up returns to New custom setup");
 }
