@@ -296,41 +296,27 @@ impl Shell {
         else {
             return;
         };
-        let (cx, cy) = (current.x + current.w / 2., current.y + current.h / 2.);
-        let next = self
-            .nodes
-            .iter()
-            .filter(|n| n.actionable && n.id != self.focus)
-            .filter_map(|n| {
-                let (dx, dy) = (n.x + n.w / 2. - cx, n.y + n.h / 2. - cy);
-                let (along, across, overlap) = match direction {
-                    Action::Up => (
-                        -dy,
-                        dx.abs(),
-                        n.x < current.x + current.w && n.x + n.w > current.x,
-                    ),
-                    Action::Down => (
-                        dy,
-                        dx.abs(),
-                        n.x < current.x + current.w && n.x + n.w > current.x,
-                    ),
-                    Action::Left => (
-                        -dx,
-                        dy.abs(),
-                        n.y < current.y + current.h && n.y + n.h > current.y,
-                    ),
-                    Action::Right => (
-                        dx,
-                        dy.abs(),
-                        n.y < current.y + current.h && n.y + n.h > current.y,
-                    ),
-                    _ => return None,
-                };
-                (along > 1.)
-                    .then_some((n.id, along + across * 2. + if overlap { 0. } else { 1000. }))
-            })
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|n| n.0);
+        let next = if matches!(direction, Action::Up | Action::Down) {
+            crate::focus::vertical_target(&self.nodes, current, direction)
+        } else {
+            let (cx, cy) = (current.x + current.w / 2., current.y + current.h / 2.);
+            self.nodes
+                .iter()
+                .filter(|n| n.actionable && n.id != self.focus)
+                .filter_map(|n| {
+                    let (dx, dy) = (n.x + n.w / 2. - cx, n.y + n.h / 2. - cy);
+                    let (along, across) = match direction {
+                        Action::Left => (-dx, dy.abs()),
+                        Action::Right => (dx, dy.abs()),
+                        _ => return None,
+                    };
+                    let overlap = n.y < current.y + current.h && n.y + n.h > current.y;
+                    (along > 1.)
+                        .then_some((n.id, along + across * 2. + if overlap { 0. } else { 1000. }))
+                })
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .map(|n| n.0)
+        };
         if let Some(id) = next {
             self.focus = id;
         } else if direction == Action::Up && self.root() {
