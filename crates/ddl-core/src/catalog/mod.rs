@@ -12,6 +12,7 @@ mod links;
 mod lint;
 mod loader;
 mod model;
+pub mod persisted;
 #[cfg(test)]
 mod recipe_fixture;
 pub mod remote;
