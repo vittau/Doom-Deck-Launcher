@@ -692,3 +692,14 @@
     to 89 recipes. Spec 038 phase 1 (Dropbox redirect rule) merged earlier the same day. Specs
     040-048 written; D-030 recorded (complevel aliases, no complevel status).
   refs: [docs/reports/037-doomer-boards-catalog.md, docs/research/doomer-boards-projects.md]
+- date: 2026-10-19
+  type: merge
+  summary: >-
+    Specs 045 and 047 merged (Codex workers), research 041 and 043 merged. Main was red after the
+    037 merge: a headless journey assumed the 13-recipe catalog (640x360 screenshots, tags by
+    position), and the coordinator's verification pipe hid cargo's exit code; fixed in the 045
+    follow-up, verification now runs with pipefail. 045: seamless wall, no process labels in the
+    player UI. 047: transparent theme-aware README logo. D-031 recorded (own /idgames index, slow
+    crawl, relevance ranking); specs 049-053 written.
+  refs: [docs/reports/045-ui-touch-ups.md, docs/reports/047-transparent-readme-logo.md,
+         docs/reports/041-idgames-browse-research.md, docs/reports/043-steam-shortcuts-research.md]
