@@ -33,6 +33,13 @@
   Record the rule in `docs/design/ui.md` (states table: default, focused, primary, selected,
   disabled), and keep the first-run pulsing emphasis of spec 030 on the new primary style.
 
+- **R3 — Locked items look disabled.** Owner: "O elemento 'cannot be unchecked' tem que ficar
+  greyed-out pra entender que é pulado por causa disso, parece um bug quando a navegação pula
+  ele." Required recipe components (and any other non-focusable item the D-pad skips, e.g. locked
+  recipe files in Extra files) render in the **disabled** state of R2's table: dimmed fill and
+  text, a lock glyph, no hover/focus affordance, so it is obvious why focus skips them. Text stays
+  readable (≥ 3:1 for the dimmed label, the "Required by the recipe" line still legible).
+
 ## Constraints
 
 Never open visible windows or capture the screen — headless Slint renders only. Keep the Ember
@@ -47,6 +54,6 @@ an import dialog, a Diagnostics line); merge `main` before your final checks.
 - [ ] **A2** (R2) headless before/after renders of Play setup (Play unfocused and focused, Skill
   focused), Home first run (Install), a dialog, and the add-on chips with a selected chip; a
   contrast table in the report; the states table in `docs/design/ui.md`.
-- [ ] **A3** README renders refreshed (`readme-screenshots.py --check`); fmt, clippy
+- [ ] **A3** (R3) headless render of Play setup with a locked required component next to a focusable one; the states table covers it. README renders refreshed (`readme-screenshots.py --check`); fmt, clippy
   `-D warnings`, `cargo test --workspace` green.
 - [ ] **Needs Deck Validation:** Play no longer looks selected; focus is obvious on every screen.
