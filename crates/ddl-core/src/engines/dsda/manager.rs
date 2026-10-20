@@ -1033,7 +1033,10 @@ exit 1
         assert_eq!(calls.trim(), "--appimage-extract", "no FUSE probe");
         // Pinning and verification are the same as outside the sandbox.
         assert_eq!(engine.sha256, hash.to_hex());
-        assert_eq!(manager.installed().unwrap().active.as_deref(), Some("0.30.1"));
+        assert_eq!(
+            manager.installed().unwrap().active.as_deref(),
+            Some("0.30.1")
+        );
         assert_no_staging(temp.path());
     }
 

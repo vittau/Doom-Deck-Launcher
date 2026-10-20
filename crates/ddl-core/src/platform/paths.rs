@@ -246,9 +246,16 @@ mod tests {
         assert_eq!(paths.config, PathBuf::from(format!("{app}/config/ddl")));
         assert_eq!(paths.data, PathBuf::from(format!("{app}/data/ddl")));
         assert_eq!(paths.cache, PathBuf::from(format!("{app}/cache/ddl")));
-        assert_eq!(paths.state, PathBuf::from(format!("{app}/.local/state/ddl")));
+        assert_eq!(
+            paths.state,
+            PathBuf::from(format!("{app}/.local/state/ddl"))
+        );
         for dir in [&paths.config, &paths.data, &paths.cache, &paths.state] {
-            assert!(dir.starts_with(app), "{} escapes the sandbox dir", dir.display());
+            assert!(
+                dir.starts_with(app),
+                "{} escapes the sandbox dir",
+                dir.display()
+            );
             assert!(
                 !dir.starts_with("/home/deck/.config")
                     && !dir.starts_with("/home/deck/.local/share"),

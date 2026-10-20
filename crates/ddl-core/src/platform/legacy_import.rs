@@ -182,7 +182,11 @@ fn has_state(config: &Path, data: &Path) -> bool {
         || non_empty_dir(&data.join("library"))
         || non_empty_dir(&data.join("custom"))
         || non_empty_dir(&data.join("profiles"))
-        || data.join(ENGINES[0]).join(ENGINES[1]).join(STATE_FILE).is_file()
+        || data
+            .join(ENGINES[0])
+            .join(ENGINES[1])
+            .join(STATE_FILE)
+            .is_file()
 }
 
 fn non_empty_dir(path: &Path) -> bool {
@@ -383,7 +387,8 @@ impl Copier<'_> {
             self.report.rewritten += 1;
             return Ok(());
         }
-        let copied = fs::copy(source, target).map_err(io_error("copy a file from the old install"))?;
+        let copied =
+            fs::copy(source, target).map_err(io_error("copy a file from the old install"))?;
         self.report.files += 1;
         self.report.bytes += copied;
         Ok(())
@@ -460,7 +465,8 @@ impl Copier<'_> {
 
     #[cfg(unix)]
     fn copy_symlink(&mut self, source: &Path, target: &Path) -> Result<(), Error> {
-        let destination = fs::read_link(source).map_err(io_error("read a link in the old install"))?;
+        let destination =
+            fs::read_link(source).map_err(io_error("read a link in the old install"))?;
         // An absolute target into the old directories follows the data to its
         // new home; any other target (an IWAD, say) keeps pointing at the
         // player's own file.
@@ -520,7 +526,10 @@ impl Copier<'_> {
                 .is_some_and(|v| kept.installed.iter().any(|e| &e.version == v))
         };
         kept.active = state.active.clone().filter(|_| has(&state.active));
-        kept.previous_good = state.previous_good.clone().filter(|_| has(&state.previous_good));
+        kept.previous_good = state
+            .previous_good
+            .clone()
+            .filter(|_| has(&state.previous_good));
         kept.save(&target.join(STATE_FILE))
             .map_err(|error| Error::Io {
                 context: "write the imported engine state",
@@ -537,10 +546,7 @@ fn is_lock(name: &std::ffi::OsStr) -> bool {
 }
 
 fn is_safe_component(name: &str) -> bool {
-    !name.is_empty()
-        && name != "."
-        && name != ".."
-        && !name.contains(['/', '\\', '\0'])
+    !name.is_empty() && name != "." && name != ".." && !name.contains(['/', '\\', '\0'])
 }
 
 fn copy_permissions(source: &Path, target: &Path) {
@@ -610,11 +616,7 @@ mod tests {
                 copy_tree(&entry.path(), &target, recorded, real);
             } else {
                 let text = fs::read_to_string(entry.path()).unwrap();
-                fs::write(
-                    target,
-                    text.replace(recorded, real.to_str().unwrap()),
-                )
-                .unwrap();
+                fs::write(target, text.replace(recorded, real.to_str().unwrap())).unwrap();
             }
         }
     }
@@ -630,7 +632,10 @@ mod tests {
                 let relative = path.strip_prefix(root).unwrap().to_path_buf();
                 let kind = entry.file_type().unwrap();
                 if kind.is_symlink() {
-                    out.insert(relative, format!("-> {}", fs::read_link(&path).unwrap().display()));
+                    out.insert(
+                        relative,
+                        format!("-> {}", fs::read_link(&path).unwrap().display()),
+                    );
                 } else if kind.is_dir() {
                     out.insert(relative, "dir".into());
                     walk(root, &path, out);
@@ -738,7 +743,11 @@ mod tests {
         let new_data = paths.data.to_str().unwrap();
         let imported = snapshot(&paths.data);
         for (path, content) in &imported {
-            assert!(!content.contains(old_data), "{} still names {old_data}", path.display());
+            assert!(
+                !content.contains(old_data),
+                "{} still names {old_data}",
+                path.display()
+            );
         }
         // …and the recorded paths followed the data.
         let manifest = &imported[Path::new("library/sigil/active.json")];
@@ -748,7 +757,8 @@ mod tests {
         let registry = fs::read_to_string(paths.config.join("iwads.json")).unwrap();
         assert!(registry.contains("/ddl-fixture/iwads-one/doom2.wad"));
         // The manual engine lives outside DDL's data and is untouched.
-        let engines = fs::read_to_string(paths.data.join("engines/dsda-doom/installed.json")).unwrap();
+        let engines =
+            fs::read_to_string(paths.data.join("engines/dsda-doom/installed.json")).unwrap();
         assert!(engines.contains("\"/ddl-fixture/dsda\""));
         #[cfg(unix)]
         {
@@ -801,12 +811,21 @@ mod tests {
 
         assert_eq!(report.skipped_engines, ["0.30.0"]);
         let new_engines = paths.data.join("engines/dsda-doom");
-        assert!(!new_engines.join("0.30.0").exists(), "FUSE-mode engine not copied");
+        assert!(
+            !new_engines.join("0.30.0").exists(),
+            "FUSE-mode engine not copied"
+        );
         assert!(new_engines.join("0.30.1/squashfs-root/AppRun").is_file());
         let loaded = InstalledState::load(&new_engines.join(STATE_FILE)).unwrap();
         assert_eq!(loaded.installed.len(), 1);
-        assert_eq!(loaded.installed[0].path, new_engines.join("0.30.1/squashfs-root/AppRun"));
-        assert_eq!(loaded.active, None, "the dropped engine is no longer active");
+        assert_eq!(
+            loaded.installed[0].path,
+            new_engines.join("0.30.1/squashfs-root/AppRun")
+        );
+        assert_eq!(
+            loaded.active, None,
+            "the dropped engine is no longer active"
+        );
         assert_eq!(loaded.previous_good.as_deref(), Some("0.30.1"));
     }
 

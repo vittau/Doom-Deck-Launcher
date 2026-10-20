@@ -1,9 +1,9 @@
 //! Thin application services. Constructed and used exclusively on a worker thread.
-#[path = "state_recovery.rs"]
-mod state_recovery;
 #[cfg(test)]
 #[path = "flatpak_tests.rs"]
 pub(crate) mod flatpak_tests;
+#[path = "state_recovery.rs"]
+mod state_recovery;
 pub use state_recovery::{UnreadableFile, start_fresh};
 
 use ddl_core::{
@@ -176,12 +176,14 @@ pub fn import_legacy(
     cancel: &CancellationToken,
 ) -> Result<legacy_import::Report, Problem> {
     let _lock = StateLock::acquire(&env.paths.config).map_err(|e| logged(Problem::Busy, e))?;
-    let report = legacy_import::import(legacy, &env.paths, cancel).map_err(|error| match error {
-        legacy_import::Error::Cancelled => Problem::Cancelled,
-        error => logged(Problem::Storage, error),
-    })?;
+    let report =
+        legacy_import::import(legacy, &env.paths, cancel).map_err(|error| match error {
+            legacy_import::Error::Cancelled => Problem::Cancelled,
+            error => logged(Problem::Storage, error),
+        })?;
     tracing::info!(%report, "imported the tarball-era setup");
-    if let Err(error) = legacy_import::record_decision(&env.paths, legacy_import::Decision::Imported)
+    if let Err(error) =
+        legacy_import::record_decision(&env.paths, legacy_import::Decision::Imported)
     {
         // The copied state now counts as the sandbox's own, which already
         // stops the offer; a lost marker costs nothing.
@@ -192,7 +194,8 @@ pub fn import_legacy(
 
 /// Spec 059 R5: remembers a declined import so DDL never asks again.
 pub fn decline_legacy(env: &Environment) {
-    if let Err(error) = legacy_import::record_decision(&env.paths, legacy_import::Decision::Declined)
+    if let Err(error) =
+        legacy_import::record_decision(&env.paths, legacy_import::Decision::Declined)
     {
         tracing::warn!(%error, "could not remember the declined import");
     }
@@ -537,7 +540,9 @@ pub enum Event {
     Updates(Vec<String>),
     /// Spec 059 R5: the tarball-era setup was imported; the count is how many
     /// engine versions need installing again for the Flatpak.
-    Imported { engines_to_reinstall: usize },
+    Imported {
+        engines_to_reinstall: usize,
+    },
     /// Spec 019 R5: the result of a catalog check.
     Catalog(CatalogOutcome),
     Finished(Result<Box<Snapshot>, Problem>),

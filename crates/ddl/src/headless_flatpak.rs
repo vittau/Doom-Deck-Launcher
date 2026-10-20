@@ -92,7 +92,10 @@ fn scene_with(sandbox: Sandbox, tarball_install: bool, hidden_sd_card: bool) -> 
 
 #[test]
 fn import_offer_can_be_postponed_then_declined_for_good() {
-    if isolated(module_path!(), "import_offer_can_be_postponed_then_declined_for_good") {
+    if isolated(
+        module_path!(),
+        "import_offer_can_be_postponed_then_declined_for_good",
+    ) {
         return;
     }
     let Scene {
@@ -126,7 +129,10 @@ fn import_offer_can_be_postponed_then_declined_for_good() {
         Some(legacy_import::Decision::Declined)
     );
     assert!(
-        !env.paths.config.join("profiles/fixture-sigil.json").exists(),
+        !env.paths
+            .config
+            .join("profiles/fixture-sigil.json")
+            .exists(),
         "nothing imported"
     );
     assert!(
@@ -139,15 +145,15 @@ fn import_offer_can_be_postponed_then_declined_for_good() {
     state.borrow_mut().start(&ui, Command::Startup);
     settle(&state);
     assert!(!ui.get_sheet_open(), "a declined offer never comes back");
-    assert_eq!(
-        legacy_import::find(&flatpak(), &env.home, &env.paths),
-        None
-    );
+    assert_eq!(legacy_import::find(&flatpak(), &env.home, &env.paths), None);
 }
 
 #[test]
 fn import_offer_accepted_brings_the_old_setup_across() {
-    if isolated(module_path!(), "import_offer_accepted_brings_the_old_setup_across") {
+    if isolated(
+        module_path!(),
+        "import_offer_accepted_brings_the_old_setup_across",
+    ) {
         return;
     }
     let Scene {
@@ -167,13 +173,24 @@ fn import_offer_accepted_brings_the_old_setup_across() {
     settle(&state);
 
     assert!(!ui.get_sheet_open());
-    assert!(state.borrow().problem.is_none(), "{:?}", state.borrow().problem);
+    assert!(
+        state.borrow().problem.is_none(),
+        "{:?}",
+        state.borrow().problem
+    );
     let state_ref = state.borrow();
-    let snapshot = state_ref.snapshot.as_ref().expect("the imported state loaded");
+    let snapshot = state_ref
+        .snapshot
+        .as_ref()
+        .expect("the imported state loaded");
     assert_eq!(snapshot.engine.as_ref().unwrap().version, "0.30.1");
     assert_eq!(snapshot.folders.len(), 2, "IWAD folders came across");
     assert_eq!(
-        snapshot.items.iter().filter(|i| i.manifest.is_some()).count(),
+        snapshot
+            .items
+            .iter()
+            .filter(|i| i.manifest.is_some())
+            .count(),
         2,
         "both installed mapsets came across"
     );
@@ -238,7 +255,12 @@ fn diagnostics_outside_the_sandbox_say_no_and_hide_the_store_note() {
     } = scene(Sandbox::none(), true);
     // Not sandboxed: a tarball install next to us is nobody's business.
     assert!(!ui.get_sheet_open());
-    assert!(!env.paths.config.join("profiles/fixture-sigil.json").exists());
+    assert!(
+        !env.paths
+            .config
+            .join("profiles/fixture-sigil.json")
+            .exists()
+    );
 
     state.borrow_mut().screen = Screen::Settings;
     state.borrow_mut().focus = 4;
@@ -253,7 +275,10 @@ fn diagnostics_outside_the_sandbox_say_no_and_hide_the_store_note() {
 
 #[test]
 fn settings_name_a_library_the_flatpak_cannot_see() {
-    if isolated(module_path!(), "settings_name_a_library_the_flatpak_cannot_see") {
+    if isolated(
+        module_path!(),
+        "settings_name_a_library_the_flatpak_cannot_see",
+    ) {
         return;
     }
     let Scene {

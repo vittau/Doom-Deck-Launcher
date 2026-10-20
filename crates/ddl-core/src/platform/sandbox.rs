@@ -167,7 +167,10 @@ mod tests {
             &marker(true),
             &env(&[("FLATPAK_ID", "io.github.vittau.Doom-Deck-Launcher")]),
         );
-        assert_eq!(sandbox.app_id(), Some("io.github.vittau.Doom-Deck-Launcher"));
+        assert_eq!(
+            sandbox.app_id(),
+            Some("io.github.vittau.Doom-Deck-Launcher")
+        );
     }
 
     #[test]

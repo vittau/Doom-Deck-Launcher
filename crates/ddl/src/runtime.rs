@@ -2730,7 +2730,11 @@ impl Runtime {
                         1 => self.snapshot.as_ref().map_or(316., |s| {
                             (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
                                 .max(316.)
-                                + if hidden > 0 { hidden as f32 * 64. + 20. } else { 0. }
+                                + if hidden > 0 {
+                                    hidden as f32 * 64. + 20.
+                                } else {
+                                    0.
+                                }
                         }),
                         2 => 280.,
                         3 if self.snapshot.is_none() => {
@@ -2961,7 +2965,8 @@ impl Runtime {
                                 // Spec 059 R4: say why a folder the host has
                                 // shows nothing, instead of an empty list.
                                 let rows = (s.folders.len() + s.automatic_folders.len()) as f32;
-                                let notes_y = 316. + rows * 112. - if s.folders.is_empty() { 0. } else { 96. };
+                                let notes_y = 316. + rows * 112.
+                                    - if s.folders.is_empty() { 0. } else { 96. };
                                 for (i, path) in s.hidden_paths.iter().enumerate() {
                                     b.label(
                                         372.,
@@ -3026,7 +3031,14 @@ impl Runtime {
                                     ),
                                     22.,
                                 );
-                                b.label(372., 360., 816., 40., sandbox_text(ui, &self.sandbox), 22.);
+                                b.label(
+                                    372.,
+                                    360.,
+                                    816.,
+                                    40.,
+                                    sandbox_text(ui, &self.sandbox),
+                                    22.,
+                                );
                                 let mut y = 404.;
                                 if self.sandbox.is_flatpak() {
                                     b.label(372., y, 816., 56., text(ui, T::StoreUpdates), 20.);
@@ -3645,7 +3657,9 @@ pub fn attach_with_sandbox(
         app_id = sandbox.app_id().unwrap_or_default(),
         "sandbox detected"
     );
-    let state = Rc::new(RefCell::new(Runtime::new(env).with_sandbox(sandbox.clone())));
+    let state = Rc::new(RefCell::new(
+        Runtime::new(env).with_sandbox(sandbox.clone()),
+    ));
     let weak = ui.as_weak();
     let s = state.clone();
     ui.on_action(move |code| {

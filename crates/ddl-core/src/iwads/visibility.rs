@@ -150,7 +150,7 @@ mod tests {
 
         let hidden = hidden_paths(&sandboxed(), &home, &[]);
 
-        assert_eq!(hidden, [sd_card.clone()]);
+        assert_eq!(hidden, std::slice::from_ref(&sd_card));
         assert_eq!(access(&sd_card), Access::Missing);
         assert_eq!(access(&visible), Access::Visible);
         // The visible library is still discovered as before.
@@ -195,7 +195,10 @@ mod tests {
         let lost = temp.path().join("mnt/games/DOOM II");
         fs::write(
             heroic.join("installed.json"),
-            format!("{{\"installed\":[{{\"install_path\":\"{}\"}}]}}", lost.display()),
+            format!(
+                "{{\"installed\":[{{\"install_path\":\"{}\"}}]}}",
+                lost.display()
+            ),
         )
         .unwrap();
         let mini = home.join(".config/minigalaxy");

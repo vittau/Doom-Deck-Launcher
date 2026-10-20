@@ -66,7 +66,7 @@ fn a_steam_library_the_flatpak_cannot_see_is_reported_not_silently_empty() {
 
     let sandboxed = Services::open_with(env.clone(), flatpak()).unwrap();
     let snapshot = sandboxed.snapshot().unwrap();
-    assert_eq!(snapshot.hidden_paths, [sd_card.clone()]);
+    assert_eq!(snapshot.hidden_paths, std::slice::from_ref(&sd_card));
 
     // Outside the sandbox the same files report nothing: behaviour unchanged.
     let plain = Services::open_with(env.clone(), Sandbox::none()).unwrap();
@@ -82,7 +82,11 @@ fn a_steam_library_the_flatpak_cannot_see_is_reported_not_silently_empty() {
         .browse(&env.home, false, &CancellationToken::new())
         .unwrap();
     assert!(directory.shortcuts.contains(&env.home));
-    assert!(directory.shortcuts.contains(&visible.join("steamapps/common")));
+    assert!(
+        directory
+            .shortcuts
+            .contains(&visible.join("steamapps/common"))
+    );
     assert!(
         !directory.shortcuts.iter().any(|p| p.starts_with(&sd_card)),
         "the hidden library is not offered as a place"
@@ -126,7 +130,10 @@ fn browsing_a_folder_the_flatpak_cannot_open_says_so() {
     let text = Problem::NotVisible(missing.clone()).to_string();
     assert_eq!(
         text,
-        format!("{} is not visible to the Flatpak — see the guide", missing.display())
+        format!(
+            "{} is not visible to the Flatpak — see the guide",
+            missing.display()
+        )
     );
 }
 
@@ -197,8 +204,8 @@ fn every_release_fixture_imports_and_loads_in_the_sandbox() {
         );
         assert_eq!(legacy_import::find(&flatpak(), &env.home, &env.paths), None);
 
-        let services = Services::open_with(env.clone(), flatpak())
-            .unwrap_or_else(|e| panic!("{tag}: {e}"));
+        let services =
+            Services::open_with(env.clone(), flatpak()).unwrap_or_else(|e| panic!("{tag}: {e}"));
         let snapshot = services.snapshot().unwrap_or_else(|e| panic!("{tag}: {e}"));
         assert_eq!(snapshot.engine.unwrap().version, "0.30.1", "{tag}");
         // IWAD references keep pointing at the player's files.
@@ -209,7 +216,11 @@ fn every_release_fixture_imports_and_loads_in_the_sandbox() {
             .iter()
             .filter(|i| i.manifest.is_some())
             .collect();
-        assert_eq!(installed.len(), 2, "{tag}: both installed mapsets came across");
+        assert_eq!(
+            installed.len(),
+            2,
+            "{tag}: both installed mapsets came across"
+        );
         let auger = installed
             .iter()
             .find(|i| i.recipe.id == "auger-zenith")
@@ -226,6 +237,11 @@ fn every_release_fixture_imports_and_loads_in_the_sandbox() {
         );
         // The player's original files are untouched.
         assert!(legacy.config.join("app.json").is_file());
-        assert!(legacy.data.join("library/auger-zenith/active.json").is_file());
+        assert!(
+            legacy
+                .data
+                .join("library/auger-zenith/active.json")
+                .is_file()
+        );
     }
 }
