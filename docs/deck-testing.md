@@ -199,6 +199,20 @@ selection, configuration and load order; they do not establish audible playback 
 | M8 | Import SIGIL SHREDS_COMPAT, launch E3, then switch to native SIGIL or REG | Gaming | ⏳ | Required COMPAT maps activate automatically, music follows maps, switching leaves no orphaned music |
 | M9 | On an imported component row, toggle On/Off, replace its file with Import, and dismiss with Back | Gaming | ⏳ | Repeat Import after removing its managed copy; original user file remains untouched |
 
+## Current UI and catalog refinements (specs 071–077)
+
+Pending the next prerelease; all physical checks remain **Needs Deck Validation**. Headless
+geometry, fake transports and persistence tests complement these checks but do not replace them.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| R1 | Inspect mapset cards and original base-game cards, both focused and unfocused | Gaming | ⏳ | Art must clear the ornate frame; long titles, readiness text and two tag rows must remain readable |
+| R2 | Toggle Pistol start repeatedly for an installed large mapset and an original base game, then restart DDL | Gaming | ⏳ | Immediate visible feedback, final value persists, no lost input or noticeable pause; actual launch still validates files |
+| R3 | Open SIGIL setup and import normal paid music, then COMPAT paid music | Gaming | ⏳ | Player-facing choices distinguish normal and COMPAT; exact filenames remain in import help |
+| R4 | Open Discover twice within one day online, then once offline | Gaming | ⏳ | Each online start checks in the background; UI/play stay usable during slow network; offline retains catalog without an error |
+| R5 | Verify the ordered specific categories, last mapset accessibility and catalog date after an update | Gaming | ⏳ | No All/Featured tab; Doomer Boards follows Community Projects; source date uses English UTC, not device fetch time |
+| R6 | Install Memento Mori and Memento Mori II from Classics and launch each | Gaming | ⏳ | Doom II, vanilla, map WAD then original music WAD; confirm MIDI playback and map selection |
+
 ## Input and Steam Input (manual setup)
 
 Follow the [controller layouts](steam-deck-guide.md#recommended-steam-deck-controller-setup).
