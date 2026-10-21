@@ -50,7 +50,9 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
    as a raw OpenPGP signature. `ddl --version` is checked against `Cargo.toml`.
 7. **Pages deployment is explicit.** Pushes made with `GITHUB_TOKEN` do not trigger a Pages build,
    so the workflow requests one through `POST /repos/{owner}/{repo}/pages/builds` (permission
-   `pages: write`), waits for the build of the pushed commit and then checks the served files.
+   `pages: write`, bounded with `--max-time`), waits for the build of the pushed commit and then
+   re-checks the served `.flatpakref` and `repo/summary` until the summary is byte-identical to the
+   exported one. A stale CDN copy is retried and fails the job on exhaustion.
 7. **Runtimes stay on Flathub.** `RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo`;
    only the app comes from this remote.
 8. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
