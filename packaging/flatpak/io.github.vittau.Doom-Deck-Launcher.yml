@@ -61,6 +61,10 @@ modules:
   # before the build sandbox starts, so the build itself stays offline.
   - name: rust-toolchain
     buildsystem: simple
+    build-options:
+      # The SDK does not ship eu-strip; this module is removed by `cleanup`
+      # anyway, so skip debuginfo extraction entirely.
+      no-debuginfo: true
     build-commands:
       # flatpak-builder strips the archive's single top-level directory, so the
       # official tarball's install.sh lands at the module build root.
@@ -78,6 +82,8 @@ modules:
   - name: ddl
     buildsystem: simple
     build-options:
+      # No eu-strip in the SDK; the release profile has no debug info to keep.
+      no-debuginfo: true
       # Use the pinned toolchain, not a host or extension compiler.
       prepend-path: /app/rust/bin
       env:
