@@ -1,0 +1,363 @@
+# Publish a signed Flatpak repository to
+# https://www.vitormach.dev/Doom-Deck-Launcher/ (spec 063).
+#
+# This is the install channel for Steam Deck users. The built app is exported to
+# an OSTree repository, signed with the dedicated repository key and committed to
+# this repository's `gh-pages` branch, which GitHub Pages serves under the
+# repository name. Users install with one command:
+#
+#   flatpak install --user --from \
+#     https://www.vitormach.dev/Doom-Deck-Launcher/io.github.vittau.Doom-Deck-Launcher.flatpakref
+#
+# It is deliberately separate from `.github/workflows/flatpak.yml`, which stays
+# an artifact-only validation job. Nothing here creates a GitHub Release, and
+# nothing here is a Flathub submission.
+#
+# External references:
+#   * actions/checkout v4, pinned by commit.
+#   * flatpak-cargo-generator at commit 74697c7 (2026-09-30), plus its SHA-256.
+#   * Runtime/SDK branch org.freedesktop.*//26.08 from Flathub.
+#   * Rust 1.99.1 from static.rust-lang.org, pinned by SHA-256 in the manifest.
+#
+# Required repository secret:
+#   FLATPAK_GPG_PRIVATE_KEY  base64 of the ASCII-armored private key
+#                            (`scripts/flatpak/make-signing-key.sh` prints it)
+#   FLATPAK_GPG_KEY_ID       optional; fingerprint, if the keyring holds > 1 key
+#
+# One-time setup (Pages source and the first `gh-pages` commit) is documented in
+# docs/flatpak-remote.md.
+name: Flatpak repository
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag, branch or commit to publish"
+        required: true
+        default: main
+        type: string
+
+# The only write is the push to `gh-pages`; `main` is never touched.
+permissions:
+  contents: write
+
+# Never cancel a half-finished publication; let a queued run follow it.
+concurrency:
+  group: flatpak-remote
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  APP_ID: io.github.vittau.Doom-Deck-Launcher
+  MANIFEST: packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml
+  SITE_BASE: https://www.vitormach.dev/Doom-Deck-Launcher
+  PAGES_BRANCH: gh-pages
+  GENERATOR_COMMIT: 74697c75b630d7330e77250fc13cb5ea688d9479
+  GENERATOR_SHA256: 0a2db6be87d75910facef28ab46d4d6460802e8419ab850d0caa6a364d26b380
+
+jobs:
+  publish:
+    name: Build and publish the Flatpak repository
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    steps:
+      - name: Check the repository secret
+        env:
+          GPG_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GPG_KEY" ]; then
+            echo "::error::FLATPAK_GPG_PRIVATE_KEY is not set. Run scripts/flatpak/make-signing-key.sh."
+            exit 1
+          fi
+
+      - name: Check out the source to publish
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Tag pushes must publish the tagged commit; manual runs pass a ref.
+          ref: ${{ inputs.ref || github.sha }}
+          # `git log -1` only needs the checked-out commit.
+          fetch-depth: 1
+
+      - name: Install Flatpak tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            flatpak flatpak-builder gnupg desktop-file-utils appstream
+          flatpak --version
+          flatpak-builder --version
+          gpg --version | head -n 1
+
+      - name: Add Flathub and install the 26.08 SDK/runtime
+        run: |
+          set -euo pipefail
+          flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub \
+            org.freedesktop.Platform//26.08 \
+            org.freedesktop.Sdk//26.08
+          flatpak info --user org.freedesktop.Sdk//26.08 | tee "$RUNNER_TEMP/sdk-info.txt"
+
+      - name: Generate and verify cargo-sources.json
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/generator-venv"
+          "$RUNNER_TEMP/generator-venv/bin/pip" install --quiet --disable-pip-version-check \
+            --no-cache-dir 'aiohttp==3.14.5' 'tomlkit==0.15.2'
+          generator="$RUNNER_TEMP/flatpak-cargo-generator.py"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/${GENERATOR_COMMIT}/cargo/flatpak-cargo-generator.py" \
+            -o "$generator"
+          echo "$GENERATOR_SHA256  $generator" | sha256sum -c -
+          "$RUNNER_TEMP/generator-venv/bin/python" "$generator" Cargo.lock \
+            -o "$RUNNER_TEMP/cargo-sources.json"
+          if ! cmp -s packaging/flatpak/cargo-sources.json "$RUNNER_TEMP/cargo-sources.json"; then
+            echo "::error::packaging/flatpak/cargo-sources.json is stale; regenerate it from Cargo.lock"
+            diff -u packaging/flatpak/cargo-sources.json "$RUNNER_TEMP/cargo-sources.json" | head -200 || true
+            exit 1
+          fi
+          echo "cargo-sources.json matches Cargo.lock"
+
+      - name: Check the pinned Rust compiler against the repository MSRV
+        run: |
+          set -euo pipefail
+          toolchain="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          msrv="$(sed -n 's/^rust-version *= *"\([^"]*\)"/\1/p' Cargo.toml)"
+          manifest_rust="$(grep -o 'dist/[^/]*/rust-[0-9][0-9.]*' "$MANIFEST" \
+            | head -n 1 | sed 's#.*rust-##')"
+          test -n "$toolchain"
+          test -n "$msrv"
+          test "$manifest_rust" = "$toolchain"
+          test "$(printf '%s\n%s\n' "$msrv" "$toolchain" | sort -V | head -1)" = "$msrv"
+          echo "toolchain=$toolchain msrv=$msrv"
+
+      - name: Validate desktop entry and AppStream metainfo
+        run: |
+          set -euo pipefail
+          desktop-file-validate packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop
+          appstreamcli validate --no-net --explain \
+            packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml
+
+      - name: Import the repository signing key
+        env:
+          GPG_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          install -d -m 0700 "$GNUPGHOME"
+          printf '%s' "$GPG_KEY" | base64 --decode | gpg --batch --quiet --import
+          fingerprint="$GPG_KEY_ID"
+          if [ -z "$fingerprint" ]; then
+            fingerprint="$(gpg --batch --with-colons --list-secret-keys \
+              | awk -F: '/^fpr:/ {print $10; exit}')"
+          fi
+          test -n "$fingerprint"
+          gpg --batch --list-secret-keys "$fingerprint" >/dev/null
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "GPG_FINGERPRINT=$fingerprint" >> "$GITHUB_ENV"
+          echo "Signing key: $fingerprint"
+
+      - name: Build the tagged tree
+        run: |
+          set -euo pipefail
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::$MANIFEST is missing. This ref predates the Flatpak packaging; publish a newer tag."
+            exit 1
+          fi
+          # The serial is the source commit's UTC time, baked into the binary.
+          serial="$(git log -1 --format=%ct)"
+          test "$serial" -gt 0
+          printf '%s\n' "$serial" > packaging/flatpak/catalog-serial
+          echo "catalog serial: $serial"
+          install -d -m 0700 "$RUNNER_TEMP/xdg"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
+          mkdir -p "$RUNNER_TEMP/build"
+          flatpak-builder --user --arch=x86_64 --force-clean --disable-rofiles-fuse \
+            "$RUNNER_TEMP/build" "$MANIFEST" 2>&1 | tee "$RUNNER_TEMP/flatpak-build.log"
+
+      - name: Fetch the published site branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/site"
+          auth="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')"
+          rm -rf "$site"
+          # The token stays out of .git/config; the branch may not exist yet.
+          if git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
+               clone --quiet --depth 1 --branch "$PAGES_BRANCH" \
+               "https://github.com/${GITHUB_REPOSITORY}.git" "$site"; then
+            echo "Reusing the published history on ${PAGES_BRANCH}"
+          else
+            rm -rf "$site"
+            mkdir -p "$site"
+            git -C "$site" init --quiet -b "$PAGES_BRANCH"
+            git -C "$site" remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+            echo "First publication: ${PAGES_BRANCH} does not exist yet"
+          fi
+          install -d "$site/repo"
+
+      - name: Export and sign the repository
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/site"
+          timestamp="$(git log -1 --format=%cI)"
+          subject="$(git log -1 --format=%s)"
+          body="$(git log -1 --format=%H)"
+          # Signed commit on the `stable` branch, reproducible from the tag date.
+          flatpak build-export --arch=x86_64 \
+            --timestamp="$timestamp" --subject="$subject" --body="$body" \
+            --gpg-sign="$GPG_FINGERPRINT" --gpg-homedir="$GNUPGHOME" \
+            "$site/repo" "$RUNNER_TEMP/build" stable
+          # Sign the summary, ship static deltas, keep two older versions.
+          flatpak build-update-repo \
+            --title="DoomDeckLauncher" \
+            --comment="Experimental DoomDeckLauncher builds for Steam Deck" \
+            --homepage="https://github.com/vittau/Doom-Deck-Launcher" \
+            --default-branch=stable \
+            --generate-static-deltas --prune --prune-depth=2 \
+            --gpg-sign="$GPG_FINGERPRINT" --gpg-homedir="$GNUPGHOME" \
+            "$site/repo"
+          du -sh "$site/repo"
+
+      - name: Smoke-test the exported build
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/site"
+          install -d -m 0700 "$RUNNER_TEMP/xdg"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
+          # Local, throwaway remote: prove the exported commit starts before it
+          # is published. Signature verification is exercised by real clients.
+          flatpak --user remote-add --if-not-exists --no-gpg-verify ddl-smoke "$site/repo"
+          flatpak --user install -y --noninteractive ddl-smoke "${APP_ID}//stable"
+          flatpak run --command=ddl "${APP_ID}//stable" --version | tee "$RUNNER_TEMP/version.txt"
+          version="$(sed -n 's/^version *= *"\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+          test -n "$version"
+          grep -Fx "ddl $version" "$RUNNER_TEMP/version.txt" >/dev/null
+          flatpak --user uninstall -y "${APP_ID}//stable"
+          flatpak --user remote-delete --force ddl-smoke
+
+      - name: Render the site
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/site"
+          version="$(sed -n 's/^version *= *"\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+          test -n "$version"
+          public_key="$(gpg --batch --export "$GPG_FINGERPRINT" | base64 | tr -d '\n')"
+          test -n "$public_key"
+          repo_url="${SITE_BASE}/repo/"
+
+          cat > "$site/${APP_ID}.flatpakref" <<EOF
+          [Flatpak Ref]
+          Version=1
+          Name=${APP_ID}
+          Branch=stable
+          Title=DoomDeckLauncher
+          Comment=Experimental DoomDeckLauncher build for Steam Deck
+          Homepage=https://github.com/vittau/Doom-Deck-Launcher
+          Url=${repo_url}
+          IsRuntime=false
+          SuggestRemoteName=ddl
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          GPGKey=${public_key}
+          EOF
+
+          cat > "$site/ddl.flatpakrepo" <<EOF
+          [Flatpak Repo]
+          Version=1
+          Title=DoomDeckLauncher
+          Url=${repo_url}
+          Homepage=https://github.com/vittau/Doom-Deck-Launcher
+          Comment=Experimental DoomDeckLauncher builds for Steam Deck
+          Description=Signed, self-hosted builds of DoomDeckLauncher. Runtimes come from Flathub.
+          DefaultBranch=stable
+          GPGKey=${public_key}
+          EOF
+
+          sed -e "s|@@VERSION@@|${version}|g" \
+              -e "s|@@DATE@@|$(date -u +%Y-%m-%d)|g" \
+              -e "s|@@APP_ID@@|${APP_ID}|g" \
+              -e "s|@@SITE_BASE@@|${SITE_BASE}|g" \
+              packaging/flatpak/site/index.html > "$site/index.html"
+          touch "$site/.nojekyll"
+
+          # The published site carries only what we render here plus repo/.
+          find "$site" -maxdepth 1 -type f \
+            ! -name "index.html" ! -name ".nojekyll" \
+            ! -name "${APP_ID}.flatpakref" ! -name "ddl.flatpakrepo" -delete
+
+          echo "SITE_VERSION=$version" >> "$GITHUB_ENV"
+          ls -la "$site"
+
+      - name: Publish the site branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/site"
+          git -C "$site" add --all
+          if git -C "$site" diff --cached --quiet; then
+            echo "Nothing changed since the last publication"
+            exit 0
+          fi
+          git -C "$site" \
+            -c user.name="ddl-flatpak-bot" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "Publish ${APP_ID} ${SITE_VERSION}"
+          auth="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')"
+          git -C "$site" \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
+            push --quiet origin "$PAGES_BRANCH"
+          echo "Published ${SITE_VERSION} to ${SITE_BASE}/"
+
+      - name: Check that Pages serves the ref (best effort)
+        run: |
+          set -euo pipefail
+          url="${SITE_BASE}/${APP_ID}.flatpakref"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 15 "$url" >/dev/null; then
+              echo "Served: $url"
+              exit 0
+            fi
+            echo "Waiting for GitHub Pages (attempt $attempt)..."
+            sleep 15
+          done
+          echo "::warning::GitHub Pages has not served $url yet; check the Pages build for ${GITHUB_REPOSITORY}."
+
+      - name: Write the job summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "### Flatpak repository publication"
+            echo
+            echo "- App id: \`${APP_ID}\`"
+            echo "- Requested ref: \`${{ inputs.ref || github.sha }}\`"
+            echo "- Version: \`${SITE_VERSION:-unknown}\`"
+            echo "- Site: ${SITE_BASE}/"
+            echo "- Signing key: \`${GPG_FINGERPRINT:-not imported}\`"
+            echo
+            echo '```sh'
+            echo "flatpak install --user --from ${SITE_BASE}/${APP_ID}.flatpakref"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the build log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ddl-flatpak-repo-log
+          path: |
+            ${{ runner.temp }}/flatpak-build.log
+            ${{ runner.temp }}/sdk-info.txt
+          if-no-files-found: warn
+          retention-days: 14
