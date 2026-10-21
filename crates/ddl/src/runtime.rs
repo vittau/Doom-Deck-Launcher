@@ -161,12 +161,11 @@ pub struct Runtime {
     catalog_checked: bool,
     /// Spec 077, R1: a newer catalog is cached and the fresh view is pending.
     catalog_reload_pending: bool,
-    /// Spec 075, R2: the last Pistol start requested while a command was running.
-    pistol_queue: Option<(String, String, bool)>,
+    /// Spec 075, R2: the last Pistol start requested while a command was running,
+    /// with the value it replaced so a failure can restore it.
+    pistol_queue: Option<(String, String, bool, bool)>,
     /// Spec 075, R2: the same for a base-game profile.
-    base_pistol_queue: Option<(String, bool)>,
-    /// Spec 075, R2: the last value this UI knows to be persisted per profile.
-    pistol_last_saved: Option<(String, bool)>,
+    base_pistol_queue: Option<(String, bool, bool)>,
 }
 
 /// Spec 075, R2: what an in-flight Pistol start changed, so a failed write can
@@ -225,7 +224,6 @@ impl Runtime {
             catalog_reload_pending: false,
             pistol_queue: None,
             base_pistol_queue: None,
-            pistol_last_saved: None,
         }
     }
     /// Runs inside `sandbox`: decides, before the services create any file of
@@ -511,7 +509,6 @@ impl Runtime {
                             }
                         }
                     }
-                    self.pistol_last_saved = Some((profile.id.clone(), value));
                     self.pistol_pending = None;
                 }
                 Event::Finished(result) => {
@@ -682,16 +679,12 @@ impl Runtime {
             // Spec 075, R2: a toggle pressed while a command was running is
             // applied once it finishes, so the last requested value is never
             // lost.
-            if let Some((recipe_id, profile_id, value)) = self.pistol_queue.take() {
-                self.dispatch_pistol_start(ui, recipe_id, profile_id, value);
-            } else if let Some((profile_id, value)) = self.base_pistol_queue.take() {
+            if let Some((recipe_id, profile_id, value, previous)) = self.pistol_queue.take() {
+                self.dispatch_pistol_start(ui, recipe_id, profile_id, value, previous);
+            } else if let Some((profile_id, value, previous)) = self.base_pistol_queue.take() {
                 self.pistol_pending = Some(PistolPending {
                     profile_id: profile_id.clone(),
-                    previous: self
-                        .pistol_last_saved
-                        .as_ref()
-                        .filter(|(id, _)| id == &profile_id)
-                        .map_or(!value, |(_, saved)| *saved),
+                    previous,
                 });
                 self.start(
                     ui,
@@ -1015,6 +1008,18 @@ impl Runtime {
             return;
         }
         if self.busy {
+            // Spec 075, R2: the Pistol row keeps a repeated press while a
+            // command runs; `set_pistol_start` queues the last intent.
+            if self.screen == Screen::Setup && self.focus == 41 {
+                if let Some(item) = self.item() {
+                    let recipe_id = item.recipe.id.clone();
+                    let profile_id = item.profile.id.clone();
+                    let value = !item.profile.pistol_start;
+                    self.set_pistol_start(ui, recipe_id, profile_id, value);
+                }
+                self.sync(ui);
+                return;
+            }
             if self.screen == Screen::Progress
                 && self.focus == 1
                 && self
@@ -1509,11 +1514,10 @@ impl Runtime {
         let Some(previous) = self.patch_pistol_value(&profile_id, value) else {
             return;
         };
-        self.pistol_last_saved = Some((profile_id.clone(), previous));
         if self.busy {
             // The user pressed again while a command ran: keep the last intent
-            // and apply it when the worker is free (spec 075, R2).
-            self.pistol_queue = Some((recipe_id, profile_id, value));
+            // (and the value it replaced) and apply it when the worker is free.
+            self.pistol_queue = Some((recipe_id, profile_id, value, previous));
             return;
         }
         self.pistol_pending = Some(PistolPending {
@@ -1536,12 +1540,14 @@ impl Runtime {
         recipe_id: String,
         profile_id: String,
         value: bool,
+        previous: bool,
     ) {
+        let _ = previous;
         let previous = self
-            .pistol_last_saved
+            .pistol_pending
             .as_ref()
-            .filter(|(id, _)| id == &profile_id)
-            .map_or(!value, |(_, saved)| *saved);
+            .filter(|pending| pending.profile_id == profile_id)
+            .map_or(previous, |pending| pending.previous);
         self.pistol_pending = Some(PistolPending {
             profile_id: profile_id.clone(),
             previous,
@@ -1561,9 +1567,8 @@ impl Runtime {
         let Some(previous) = self.patch_pistol_value(&profile_id, value) else {
             return;
         };
-        self.pistol_last_saved = Some((profile_id.clone(), previous));
         if self.busy {
-            self.base_pistol_queue = Some((profile_id, value));
+            self.base_pistol_queue = Some((profile_id, value, previous));
             return;
         }
         self.pistol_pending = Some(PistolPending {
@@ -1605,6 +1610,10 @@ impl Runtime {
         let Some(pending) = self.pistol_pending.take() else {
             return;
         };
+        // A failed write discards any queued intent (it would build on an
+        // unsaved value) and shows the last persisted value.
+        self.pistol_queue = None;
+        self.base_pistol_queue = None;
         self.patch_pistol_value(&pending.profile_id, pending.previous);
     }
     /// X: toggles the favorite mark of the focused card, or of the open detail.
@@ -4856,6 +4865,78 @@ mod startup_and_pistol_tests {
                 last_check: None,
             },
         }
+    }
+
+    /// Spec 075, R2 review: the real Confirm route. Two quick presses on the
+    /// Play-setup row must both reach a persisted profile, so the final intent
+    /// (false, after two flips) is durable and the selected profile list mirrors
+    /// `item.profile`.
+    #[test]
+    fn two_confirm_presses_through_the_action_path_persist_the_final_intent() {
+        std::thread::spawn(|| {
+            let (_window, ui) = crate::headless::setup();
+            let env = test_environment();
+            // Persist the profile the Setup screen shows, as the first Save would.
+            {
+                let mut services = services::Services::open(env.clone()).expect("services open");
+                let profile = services
+                    .snapshot()
+                    .expect("snapshot")
+                    .items
+                    .into_iter()
+                    .find(|item| item.recipe.id == "sigil")
+                    .expect("sigil item")
+                    .profile;
+                services
+                    .execute(
+                        services::Command::Save(profile),
+                        &CancellationToken::new(),
+                        &mut |_| {},
+                    )
+                    .expect("profile saved");
+            }
+            let mut runtime = Runtime::new(env.clone());
+            runtime.snapshot = Some(snapshot_with_sigil(false));
+            runtime.screen = Screen::Setup;
+            runtime.focus = 41;
+
+            runtime.action(&ui, Action::Confirm);
+            assert!(runtime.busy, "the first press dispatched a worker");
+            runtime.action(&ui, Action::Confirm);
+            assert_eq!(
+                runtime.pistol_queue,
+                Some(("sigil".into(), "sigil-default".into(), false, true)),
+                "the rapid second press keeps its intent for when the worker is free"
+            );
+
+            for _ in 0..400 {
+                crate::headless::pump_events();
+                runtime.drain(&ui);
+                if !runtime.busy && runtime.pistol_queue.is_none() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            assert!(!runtime.busy && runtime.pistol_queue.is_none(), "settled");
+            let stored = services::Services::open(env)
+                .expect("reopen")
+                .snapshot()
+                .expect("snapshot")
+                .items
+                .into_iter()
+                .find(|item| item.recipe.id == "sigil")
+                .expect("sigil item")
+                .profile;
+            assert!(!stored.pistol_start, "two presses leave the value off");
+            let item = &runtime.snapshot.as_ref().unwrap().items[0];
+            assert!(!item.profile.pistol_start);
+            assert_eq!(
+                item.profile.id, stored.id,
+                "the row mirrors the stored profile"
+            );
+        })
+        .join()
+        .expect("the headless phase passes");
     }
 
     /// Spec 075, R2: the row and the launch summary flip together, and a failed

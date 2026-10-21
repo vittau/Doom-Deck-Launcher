@@ -52,6 +52,9 @@ unknown. `serial_date` (Settings, CLI) is unchanged.
 - **Lost queued reload:** `catalog_reload_pending` is cleared only when `RefreshCatalog` is actually
   dispatched, and the reload goes before any queued Pistol toggle, so a busy moment can never drop
   it.
+- **Cache read/compare/store is one locked step:** the anti-rollback comparison and the cache write
+  now hold the cross-process state lock together (after the network, never during it), so two
+  checks cannot interleave read/compare/store.
 - **Malformed/newer-schema `app.json`:** the attempt recorder leaves an unreadable or
   unsupported-schema file untouched (it writes only when the file parses or is missing) and never
   rewrites `iwads.json`.

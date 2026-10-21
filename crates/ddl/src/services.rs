@@ -852,19 +852,24 @@ impl Services {
             .profiles
             .load_optional(profile_id)
             .map_err(|e| logged(Problem::State, e))?;
-        let base_id = match &existing {
-            Some(profile) => profile.recipe_id.clone(),
-            // A first press before any Save: the id names the base game, e.g.
-            // `base-doom2-profile-1`, so resolve the base from the registry.
-            None => profile_id
-                .rsplit_once("-profile-")
-                .map(|(base, _)| base.to_owned())
+        let bases = iwads::base_games::list(&self.registry);
+        // A first press before any Save has no recipe_id to read, so resolve the
+        // base from the profile id: the default is `base-doom2` and a copy is
+        // `base-doom2-profile-2`, while `BaseGame::id()` is `base:doom2`.
+        let base = match &existing {
+            Some(profile) => bases
+                .into_iter()
+                .find(|base| base.id() == profile.recipe_id)
                 .ok_or(Problem::State)?,
+            None => {
+                let stem = profile_id.split("-profile-").next().unwrap_or(profile_id);
+                let game = stem.strip_prefix("base-").ok_or(Problem::State)?;
+                bases
+                    .into_iter()
+                    .find(|base| base.id() == format!("base:{game}"))
+                    .ok_or(Problem::State)?
+            }
         };
-        let base = iwads::base_games::list(&self.registry)
-            .into_iter()
-            .find(|base| base.id() == base_id)
-            .ok_or(Problem::State)?;
         let mut profile =
             existing.unwrap_or_else(|| Profile::new(profile_id, "Default", base.id()));
         // Base profiles have no recipe component combination to validate; keep
@@ -4669,6 +4674,85 @@ mod tests {
         }
         assert_eq!(s.counters().snapshots(), snapshots, "no snapshot built");
         assert!(s.profiles.load(&profile.id).unwrap().pistol_start);
+    }
+
+    /// Spec 075, R2 review: a real positive base-game first press with no
+    /// profile JSON, against the identified fixture registry (base ids are
+    /// `base:doom2` while profile ids are `base-doom2[-profile-N]`).
+    #[test]
+    fn the_first_base_pistol_press_works_without_a_saved_profile() {
+        fn copy_dir(from: &Path, to: &Path) {
+            fs::create_dir_all(to).unwrap();
+            for entry in fs::read_dir(from).unwrap().flatten() {
+                let target = to.join(entry.file_name());
+                if entry.file_type().unwrap().is_dir() {
+                    copy_dir(&entry.path(), &target);
+                } else {
+                    fs::copy(entry.path(), &target).unwrap();
+                }
+            }
+        }
+        let fixture =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/state/v0.0.10-audio");
+        let temp = tempfile::tempdir().unwrap();
+        copy_dir(&fixture, temp.path());
+        let env = Environment {
+            paths: Paths {
+                config: temp.path().join("config"),
+                data: temp.path().join("data"),
+                cache: temp.path().join("cache"),
+                state: temp.path().join("state"),
+            },
+            home: "/ddl-fixture".into(),
+            screen: None,
+            test: None,
+        };
+        let mut s = Services::open(env).unwrap();
+        // The fixture registry points at `/ddl-fixture` paths; give every entry a
+        // real file so `base_games::list` sees an identified Doom II.
+        let doom2 = temp.path().join("doom2.wad");
+        fs::write(&doom2, b"IWAD").unwrap();
+        let size = fs::metadata(&doom2).unwrap().len();
+        for mut entry in s.registry.entries().to_vec() {
+            if entry.game == Some(iwads::Game::Doom2) {
+                entry.path = doom2.clone();
+                entry.size = size;
+                s.registry.insert(entry);
+            }
+        }
+        let base = iwads::base_games::list(&s.registry)
+            .into_iter()
+            .find(|base| base.id() == "base:doom2")
+            .expect("the fixture identifies Doom II");
+        for profile_id in [
+            format!("{}-profile-9", base.id().replace(':', "-")),
+            "base-doom2".to_owned(),
+        ] {
+            assert!(
+                !s.profiles.path(&profile_id).unwrap().is_file(),
+                "no profile JSON exists yet: {profile_id}"
+            );
+            match s
+                .execute(
+                    Command::Local(LocalCommand::BasePistolStart {
+                        profile_id: profile_id.clone(),
+                        value: true,
+                    }),
+                    &CancellationToken::new(),
+                    &mut |_| {},
+                )
+                .expect("the first base press succeeds")
+            {
+                Refresh::Profile(saved) => {
+                    assert!(saved.pistol_start);
+                    assert_eq!(saved.recipe_id, base.id());
+                }
+                Refresh::Full => panic!("the base toggle must not rebuild the snapshot"),
+            }
+            let stored = s.profiles.load(&profile_id).unwrap();
+            assert!(stored.pistol_start);
+            assert_eq!(stored.recipe_id, base.id());
+        }
     }
 
     /// Spec 075, R2: a failed write is reported, never silently dropped.
