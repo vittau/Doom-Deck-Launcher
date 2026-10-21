@@ -214,6 +214,14 @@ jobs:
             echo "First publication: ${PAGES_BRANCH} does not exist yet"
           fi
           install -d "$site/repo"
+          # Git cannot store empty directories, so a fresh clone of the published
+          # branch loses the empty parts of the OSTree layout. OSTree only
+          # creates the layout for a new repository (ostree-repo.c returns early
+          # when objects/ exists), so restore the full set before exporting:
+          # tmp, state, extensions, refs/{heads,mirrors,remotes}, objects.
+          for dir in tmp state extensions refs/heads refs/mirrors refs/remotes objects; do
+            install -d "$site/repo/$dir"
+          done
 
       - name: Export and sign the repository
         run: |
