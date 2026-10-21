@@ -32,7 +32,7 @@ GPT-6.1 Sol medium for medium-complexity work normally assigned to DeepSeek Flas
 when Codex short-window usage is below 50%; otherwise use the normal routing below. Existing
 workers keep their current conversations for the same task and review corrections.
 
-| Work | Agent | Fallback at usage/token limit |
+| Work | Agent | Fallback at usage/token usage ≥90% |
 | --- | --- | --- |
 | High complexity or extensive context | Codex, GPT-6.1 Sol, medium | OpenCode, DeepSeek V4.1 Flash, high |
 | Medium complexity, likely long | OpenCode, DeepSeek V4.1 Flash, high | — |
@@ -205,8 +205,8 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Add saved-state fixture trees for `v0.0.8-upgrade` and `v0.0.9-focus` to
-  `tests/fixtures/state/` and the release guard test (spec 055 R4; small opencode task).
+- Tagged serializer fixtures through `v0.0.10-audio` are complete (070). After the next
+  pre-release, add its saved-state fixture and update the release guard (055 R4).
 - Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
   from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
 - Current integration 2026-10-21: 067 Audio/soundfonts and 068 verified SIGIL editions,

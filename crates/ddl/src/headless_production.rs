@@ -2577,6 +2577,152 @@ pub(super) fn catalog_92_journey(ui: &AppWindow) {
     );
 }
 
+/// Spec 074: card content keeps a 28 px inset from the card edge, stays clear
+/// of the 20 px ornamental frame and fits two tag rows above the bottom edge.
+pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+        (key == "HOME").then(|| home.display().to_string())
+    })
+    .unwrap();
+    let env = Environment {
+        paths,
+        home,
+        screen: None,
+        test: None,
+    }
+    .without_catalog_auto_updates();
+    let state = crate::runtime::attach_environment(ui, env);
+    idle(&state);
+    let focused;
+    {
+        let mut r = state.borrow_mut();
+        r.choose_category(crate::runtime::Category::Tag("doomer-boards".into()));
+        r.screen = Screen::Discover;
+        r.sync(ui);
+        focused = card_ids(ui).into_iter().min().unwrap();
+        // One installed card proves the installed line keeps its inset too.
+        let index = (focused - crate::runtime::CARD) as usize;
+        let recipe = r.snapshot.as_ref().unwrap().items[index].recipe.clone();
+        r.snapshot.as_mut().unwrap().items[index].manifest =
+            Some(ddl_core::library::InstallManifest {
+                schema_version: 1,
+                recipe_id: recipe.id,
+                release: recipe.release,
+                recipe_sha256: "a".repeat(64),
+                installed_at: 0,
+                packages: vec![],
+                members: vec![],
+            });
+        r.focus = focused;
+        r.sync(ui);
+    }
+    let nodes = ui.get_nodes();
+    let card = nodes
+        .iter()
+        .find(|n| n.id == focused && n.kind == 1)
+        .expect("the focused card");
+    let inside = |n: &crate::ViewNode| {
+        n.x >= card.x + 28.
+            && n.y >= card.y + 28.
+            && n.x + n.w <= card.x + 384. - 28.
+            && n.y + n.h <= card.y + 410. - 28.
+    };
+    let content: Vec<crate::ViewNode> = nodes
+        .iter()
+        .filter(|n| {
+            (n.kind == 4
+                || n.kind == 12
+                || n.kind == 13
+                || n.kind == 20
+                || n.kind == 21
+                || (n.kind == 0 && !n.label.is_empty()))
+                && n.x >= card.x
+                && n.x < card.x + 384.
+                && n.y >= card.y
+                && n.y < card.y + 410.
+        })
+        .collect();
+    assert!(
+        content.iter().any(|n| n.kind == 4),
+        "the base-game art is on the card"
+    );
+    for node in &content {
+        assert!(
+            inside(node),
+            "kind {} at ({}, {}) {}×{} leaves the 28 px inset",
+            node.kind,
+            node.x,
+            node.y,
+            node.w,
+            node.h
+        );
+    }
+    let art = content.iter().find(|n| n.kind == 4).unwrap();
+    assert_eq!(
+        (art.x, art.y, art.w, art.h),
+        (card.x + 28., card.y + 28., 328., 128.),
+        "the art clears the frame on every side"
+    );
+    let title = content.iter().find(|n| n.kind == 20).unwrap();
+    assert!(
+        title.y >= card.y + 164. && title.y + title.h <= card.y + 224.,
+        "the title keeps its room below the art"
+    );
+    let chips: Vec<&crate::ViewNode> = content.iter().filter(|n| n.kind == 13).collect();
+    assert_eq!(
+        chips.len(),
+        2,
+        "a Doomer Boards card shows both requested tags"
+    );
+    assert!(
+        chips.iter().any(|n| n.y == card.y + 314.) && chips.iter().any(|n| n.y == card.y + 352.),
+        "the tags use two rows"
+    );
+    assert!(
+        chips.iter().all(|n| n.y + n.h <= card.y + 382.),
+        "the second tag row stays above the card inset"
+    );
+    assert!(
+        content
+            .iter()
+            .any(|n| n.kind == 0 && n.label == "Installed"),
+        "the installed state is shown"
+    );
+    // Unfocused cards and the installed/uninstalled variants use the same
+    // inset: no content may leave a card or reach its frame.
+    for other in nodes.iter().filter(|n| n.kind == 1) {
+        for node in nodes.iter().filter(|n| {
+            (n.kind == 4
+                || n.kind == 12
+                || n.kind == 13
+                || n.kind == 20
+                || n.kind == 21
+                || (n.kind == 0 && !n.label.is_empty()))
+                && n.x >= other.x
+                && n.x < other.x + 384.
+                && n.y >= other.y
+                && n.y < other.y + 410.
+        }) {
+            assert!(
+                node.x >= other.x + 28.
+                    && node.y >= other.y + 28.
+                    && node.x + node.w <= other.x + 384. - 28.
+                    && node.y + node.h <= other.y + 410. - 28.,
+                "kind {} at ({}, {}) leaves card ({}, {})",
+                node.kind,
+                node.x,
+                node.y,
+                other.x,
+                other.y
+            );
+        }
+    }
+    write_png("074-card-after.png", &render(window));
+}
+
 fn commercial_wad() -> Vec<u8> {
     let mut bytes = b"IWAD".to_vec();
     bytes.extend_from_slice(&32i32.to_le_bytes());

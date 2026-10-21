@@ -33,6 +33,14 @@ on a TV: software CPU power around 4–5 W, hardware around half or less. This i
 CPU power for that scenario, not a total-system-power or battery-life claim. Confirm the engine
 setting from pinned upstream source; implementation/tests are part of spec 064.
 
+**D-038 — Independent catalog checked at each startup (Accepted, owner, 2026-10-21).**
+Check the existing GitHub catalog source at every application opening, updating automatically
+in the background while retaining the opt-out and safe offline cache/fallback. This replaces
+D-025/spec 019's once-per-24-hour cadence. Discover shows a small effective-catalog source
+timestamp in English UTC (for example `October 21, 2026 at 13:39 (UTC)`), rather than device
+fetch time. Catalog publication stays independent of app releases; version gates only advance
+when the catalog genuinely requires a newer client capability. Spec 077.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |

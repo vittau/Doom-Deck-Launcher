@@ -22,7 +22,9 @@ signed repository publication `39609918709` succeeded. Canonical site identifies
   guard, fmt and clippy passed. No application behavior changed in this follow-up.
 - **Under integration review:** compact application branding and specific ordered Discover
   categories (071/072), verified Memento Mori I/II and dedicated Doomer Boards membership
-  (073). Combined checks are running on a verification branch; these are not yet released.
+  (073). Initial combined app checks passed 202 tests and exposed two test expectations to update
+  (92-card fixture category and frozen recipe versus live display tags); core/integration/doc
+  checks passed. Fixes remain on the verification/task branches and are not yet released.
 - **Next fixes, in owner priority order:** card/base-game padding and art clear of frames (074);
   investigate and optimize Pistol start latency (075 audit); normal versus COMPAT SIGIL music
   copy (076); check the independent GitHub catalog at every startup and show its effective
