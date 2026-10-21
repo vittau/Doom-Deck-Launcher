@@ -293,16 +293,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
 
-      # Spec 019, R1/R3: the bundle's serial is the source commit's UTC Unix
-      # time, the same value `build.rs` bakes into a release built from this
-      # commit. `ddl catalog bundle` refuses to write on any lint error.
+      # Spec 019 R1/R3, corrected by spec 077 R3: the serial is the UTC Unix
+      # time of the newest commit that touched `catalog/` — the catalog's
+      # content time, not the app commit. `build.rs` bakes the same value into
+      # every binary built from this commit, so the embedded and published
+      # serials describe the same catalog content. `ddl catalog bundle` refuses
+      # to write on any lint error.
       - name: Build the catalog bundle
         if: steps.changes.outputs.changed == 'true'
         run: |
           set -euo pipefail
           # Pass the values as arguments: a `$GITHUB_ENV` write only reaches later steps,
           # so exporting it here left the first published bundle at serial 0.
-          serial="$(git log -1 --format=%ct "${GITHUB_SHA}")"
+          serial="$(git log -1 --format=%ct "${GITHUB_SHA}" -- catalog/)"
           test "$serial" -gt 0
           cargo run --locked -p ddl -- catalog bundle --out "$RUNNER_TEMP/catalog.json" \
             --serial "$serial" --commit "${GITHUB_SHA}"
