@@ -26,7 +26,7 @@ finish-args:
   - --share=ipc
   - --socket=wayland
   - --socket=fallback-x11
-  # Catalog/engine downloads and the once-a-day catalog bundle check.
+  # Catalog/engine downloads and the per-startup catalog bundle check.
   - --share=network
   # Audio through PipeWire's PulseAudio compatibility layer (DSDA-Doom).
   - --socket=pulseaudio
@@ -94,8 +94,8 @@ modules:
       # Prove the compiler still satisfies the repository pin before building.
       - test "$(rustc --version | cut -d ' ' -f2)" = "1.99.1"
       - cargo --version
-      # The serial is the source commit's UTC time. CI writes it from
-      # `git log -1 --format=%ct`; the checked-in 0 is a sentinel that fails
+      # The serial is the newest catalog/ content commit's UTC time. CI writes
+      # it from `git log -1 --format=%ct -- catalog/`; checked-in 0 fails
       # loudly instead of baking serial 0 into a build.
       - serial="$(cat packaging/flatpak/catalog-serial)"; test "$serial" -gt 0
       # `--locked` keeps Cargo.lock unchanged; `--offline` forbids network access.
