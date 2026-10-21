@@ -1,5 +1,6 @@
 """Offline acceptance checks: python3 -m unittest discover -s packaging/flatpak/site."""
 import importlib.util
+import hashlib
 from html.parser import HTMLParser
 from pathlib import Path
 import re
@@ -126,6 +127,14 @@ class RenderTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     renderer.refresh(self.out, APP_ID, BASE)
                 self.assertEqual((self.out / "index.html").read_text(), text)
+
+    def test_stylesheet_url_tracks_css_content(self):
+        text = self.render()
+        digest = hashlib.sha256((self.out / "assets/style.css").read_bytes()).hexdigest()[:16]
+        doc = Document(text)
+        styles = [a["href"] for tag, a in doc.elements
+                  if tag == "link" and a.get("rel") == "stylesheet"]
+        self.assertEqual(styles, [f"assets/style.css?v={digest}"])
 
     def test_url_attribute_is_escaped(self):
         text = self.render(site_base='https://example.com/a"quoted')

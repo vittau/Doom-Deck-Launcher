@@ -6,6 +6,7 @@ publish date, application ID and site base; asset sources stay in their existing
 repository homes so their provenance and licenses remain attached.
 """
 import argparse
+import hashlib
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -43,7 +44,8 @@ def render(output, version, published, app_id, site_base):
     if url.scheme != "https" or not url.netloc or url.query or url.fragment or url.username:
         raise ValueError("site base must be an absolute HTTPS URL without query or fragment")
     html = (SITE / "index.html").read_text()
-    values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base)
+    values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base,
+                  STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16])
     for key, value in values.items():
         html = html.replace(f"@@{key}@@", escape(value, quote=True))
     if re.search(r"@@[A-Z_]+@@", html):

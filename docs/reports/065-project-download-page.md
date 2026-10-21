@@ -151,3 +151,14 @@ Independent deployment run `39551167942` passed end to end: page refresh/push, P
 Cloudflare prefix purge and canonical HTML/CSS/ref/summary checks. The compact hero support
 action is live. Redundant build run `39550620509` was cancelled during compilation, before
 export/publication; the previously published app repository remains intact.
+
+## Header placement and browser cache correction (owner revision, 2026-10-21)
+
+Moved the compact donation action to the header navigation, labelled Donate with an explicit
+Buy Me a Coffee accessible name. The hero again contains only the install action. Desktop
+button bounds are approximately 93×44 px. Headless 1280×800, 390×844 and 320×740 checks show
+no horizontal overflow and the donation action remains in the header. Desktop render inspected.
+The owner's screenshot showed an unstyled underlined link; the served stylesheet has a one-day
+browser cache lifetime. Added a CSS content hash to its URL so browser caches cannot retain
+an earlier stylesheet under the same asset URL. Eight offline renderer tests pass, including
+verification that the rendered stylesheet URL matches its content hash. No dependencies added.
