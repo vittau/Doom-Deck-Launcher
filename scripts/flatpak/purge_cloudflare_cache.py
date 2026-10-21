@@ -34,6 +34,7 @@ ZONE_ENV = "CLOUDFLARE_ZONE_ID"
 MAX_ATTEMPTS = 3
 RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
 TIMEOUT_SECONDS = 20
+MAX_RESPONSE_BYTES = 8192
 ZONE_PATTERN = re.compile(r"^[0-9a-fA-F]{32}$")
 
 
@@ -67,7 +68,11 @@ def build_payload(prefix: str) -> dict:
 
 
 def post_json(url: str, token: str, body: bytes) -> tuple[int, bytes]:
-    """POST ``body`` and return (status, response bytes); HTTP errors are data."""
+    """POST ``body``; return (status, at most MAX_RESPONSE_BYTES+1).
+
+    HTTP errors are data, not exceptions. Reading is capped so a hostile or
+    broken response cannot grow memory without bound.
+    """
     request = urllib.request.Request(
         url,
         data=body,
@@ -79,25 +84,38 @@ def post_json(url: str, token: str, body: bytes) -> tuple[int, bytes]:
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            return response.status, response.read()
+            return response.status, response.read(MAX_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as error:
-        return error.code, error.read()
+        return error.code, error.read(MAX_RESPONSE_BYTES + 1)
 
 
-def _api_messages(raw: bytes) -> str:
-    """Collect Cloudflare error messages, never echoing request headers."""
+def redact(text: str, token: str) -> str:
+    """Remove the credential from anything that may reach stderr."""
+    text = str(text)
+    if token:
+        text = text.replace(token, "[REDACTED]")
+    return text
+
+
+def _api_messages(raw: bytes, token: str) -> str:
+    """Sanitized error codes/messages; never the raw body."""
     try:
         payload = json.loads(raw.decode("utf-8", "replace") or "{}")
     except json.JSONDecodeError:
-        text = raw.decode("utf-8", "replace").strip()
-        return text[:300] if text else "empty response"
+        return "non-JSON response"
     if not isinstance(payload, dict):
-        return "unexpected response"
-    messages = []
+        return "unexpected response shape"
+    parts = []
     for entry in payload.get("errors") or []:
-        if isinstance(entry, dict) and entry.get("message"):
-            messages.append(str(entry["message"]))
-    return "; ".join(messages) or "no error message in response"
+        if not isinstance(entry, dict):
+            continue
+        code = entry.get("code")
+        message = entry.get("message")
+        if code is not None and message:
+            parts.append(f"{code}: {message}")
+        elif message:
+            parts.append(str(message))
+    return redact("; ".join(parts) or "no error details", token)[:300]
 
 
 def purge(
@@ -114,20 +132,31 @@ def purge(
     body = json.dumps(payload).encode("utf-8")
     last_error = "no attempt made"
     for attempt in range(1, attempts + 1):
+        retryable = False
         try:
             status, raw = post(url, token, body)
         except (urllib.error.URLError, TimeoutError, OSError) as error:
-            last_error = f"network error: {error}"
-            status, raw = 0, b""
+            last_error = redact(f"network error: {error}", token)[:300]
+            retryable = True
         else:
-            last_error = f"HTTP {status}: {_api_messages(raw)}"
-            try:
-                decoded = json.loads(raw.decode("utf-8", "replace") or "{}")
-            except json.JSONDecodeError:
-                decoded = {}
-            if status == 200 and isinstance(decoded, dict) and decoded.get("success"):
-                return
-        if attempt == attempts or (status and status not in RETRY_STATUS):
+            if len(raw) > MAX_RESPONSE_BYTES:
+                last_error = (
+                    f"HTTP {status}: response exceeded {MAX_RESPONSE_BYTES} bytes"
+                )
+            else:
+                try:
+                    decoded = json.loads(raw.decode("utf-8", "replace") or "{}")
+                except json.JSONDecodeError:
+                    decoded = None
+                if (
+                    status == 200
+                    and isinstance(decoded, dict)
+                    and decoded.get("success") is True
+                ):
+                    return
+                last_error = f"HTTP {status}: {_api_messages(raw, token)}"
+                retryable = status in RETRY_STATUS
+        if attempt == attempts or not retryable:
             break
         sleep(attempt * 2)
     raise PurgeError(last_error)

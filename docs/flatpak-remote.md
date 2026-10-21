@@ -158,7 +158,8 @@ scoped to this repository and cannot touch `main` history.
 - **No host execution.** The app still runs entirely inside the sandbox; the engine is downloaded at
   runtime and extracted, never mounted.
 - **Cloudflare token.** The purge token needs only **Zone → Cache Purge** for this zone. It is read
-  from the environment, never printed, and the purge is one prefix under the DDL path.
+  from the environment, never printed, and any API or network error text is redacted before it
+  reaches the log. The purge is one prefix under the DDL path and the API response is size-capped.
 - **Scope of the token.** `GITHUB_TOKEN` with `contents: write` can push any branch of this
   repository, including `main`, though this workflow only writes `gh-pages`. Protect `main` with a
   branch ruleset if that residual scope matters.

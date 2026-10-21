@@ -4,6 +4,7 @@
 import io
 import json
 import unittest
+import unittest.mock as mock
 import urllib.error
 
 import purge_cloudflare_cache as purge_mod
@@ -166,6 +167,70 @@ class RequestTests(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         self.assertEqual(len(post.calls), 2)
+
+    def test_success_must_be_the_literal_boolean_true(self):
+        for body in (b'{"success": "true"}', b'{"success": 1}', b'{"result": {}}'):
+            with self.subTest(body=body):
+                code, _, _, _, err = run(responses=[(200, body)])
+                self.assertEqual(code, 1)
+                self.assertIn("HTTP 200", err)
+
+    def test_oversize_response_is_rejected_without_retry(self):
+        oversized = b"x" * (purge_mod.MAX_RESPONSE_BYTES + 1)
+        code, post, sleeps, _, err = run(responses=[(200, oversized)])
+        self.assertEqual(code, 1)
+        self.assertEqual(len(post.calls), 1)
+        self.assertEqual(sleeps, [])
+        self.assertIn("exceeded", err)
+        self.assertNotIn("x" * 32, err)
+
+    def test_non_json_error_is_sanitized(self):
+        body = b"<html>internal detail</html>"
+        code, _, _, _, err = run(responses=[(200, body)])
+        self.assertEqual(code, 1)
+        self.assertIn("non-JSON response", err)
+        self.assertNotIn("<html>", err)
+
+    def test_token_in_api_message_is_redacted(self):
+        code, _, _, _, err = run(responses=[rejected(f"bad request for {TOKEN}")])
+        self.assertEqual(code, 1)
+        self.assertIn("[REDACTED]", err)
+        self.assertNotIn(TOKEN, err)
+
+    def test_token_in_network_error_is_redacted(self):
+        code, post, _, _, err = run(
+            responses=[urllib.error.URLError(f"reset while sending {TOKEN}")]
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(len(post.calls), purge_mod.MAX_ATTEMPTS)
+        self.assertIn("[REDACTED]", err)
+        self.assertNotIn(TOKEN, err)
+
+
+class TransportCapTests(unittest.TestCase):
+    def test_post_reads_at_most_the_cap(self):
+        read_sizes = []
+
+        class Response:
+            status = 200
+
+            def read(self, size=-1):
+                read_sizes.append(size)
+                return b"{}"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc_info):
+                return False
+
+        with mock.patch.object(
+            purge_mod.urllib.request, "urlopen", return_value=Response()
+        ):
+            status, raw = purge_mod.post_json("https://example.invalid", TOKEN, b"{}")
+        self.assertEqual(status, 200)
+        self.assertEqual(raw, b"{}")
+        self.assertEqual(read_sizes, [purge_mod.MAX_RESPONSE_BYTES + 1])
 
 
 if __name__ == "__main__":

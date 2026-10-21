@@ -78,7 +78,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | R3 stable URLs | Render step writes `<app-id>.flatpakref`, `ddl.flatpakrepo`, `index.html`, `.nojekyll`; `repo/` comes from `build-export`; paths verified by dry-running the render block locally |
 | R4 key handling | `scripts/flatpak/make-signing-key.sh`: isolated `GNUPGHOME`, `umask 077`, refuses to overwrite, never prints private material; workflow fails early without the secret and imports into `$RUNNER_TEMP/gnupg` |
 | R5 documentation | `docs/flatpak-remote.md` covers install/update/remove, setup, security, rotation, rollback and the Flathub path |
-| R6 scoped purge | `scripts/flatpak/purge_cloudflare_cache.py` sends exactly `{"prefixes": ["www.vitormach.dev/Doom-Deck-Launcher/"]}` to `POST /zones/{id}/purge_cache`, validates the prefix and the zone id, retries only 429/5xx (three attempts) and requires `success: true`; 15 offline tests cover scope, skip/partial configuration, retries and secret-safe output |
+| R6 scoped purge | `scripts/flatpak/purge_cloudflare_cache.py` sends exactly `{"prefixes": ["www.vitormach.dev/Doom-Deck-Launcher/"]}` to `POST /zones/{id}/purge_cache`, validates the prefix and the zone id, retries only 429/5xx (three attempts), caps the response at 8 KiB and requires the literal `success: true`; 21 offline tests cover scope, skip/partial configuration, bounded retries, oversize/non-JSON responses and token redaction |
 
 ## Verification run
 
@@ -90,7 +90,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | HTML parse | `html.parser` over the rendered template | no unclosed tags, no `@@…@@` placeholders left |
 | Render dry run | heredoc + `sed` with sample values | `.flatpakref` key/URL lines correct, no indentation |
 | OSTree layout roundtrip | local git repo with `repo/{config,objects,refs/heads/…,summary}`, committed and cloned | the clone loses `tmp`, `state`, `extensions`, `refs/mirrors`, `refs/remotes` (empty directories); the restore loop recreates all of them |
-| Purge helper tests | `python3 -m unittest -v test_purge_cloudflare_cache` in `scripts/flatpak/` | 15 tests pass: one-prefix payload without scheme, rejected prefixes, skip/partial configuration, bounded retries, API rejection, and no token in output |
+| Purge helper tests | `python3 -m unittest -v test_purge_cloudflare_cache` in `scripts/flatpak/` | 21 tests pass: one-prefix payload without scheme, rejected prefixes, skip/partial configuration, bounded retries, oversize and non-JSON responses, literal `success`, and no token in output |
 | Whitespace | `git diff --check` | pass |
 
 Not run, because there is no Flatpak runtime on the macOS dev host:
