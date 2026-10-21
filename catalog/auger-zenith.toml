@@ -7,7 +7,7 @@ release = "2021-07-26"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp37_augzen"
 description = "DOOM II: MAP01–MAP22 (21 levels and a credits map). Optional blaster replacements."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
-tags = ["featured", "classics", "cacowards", "community-projects"]
+tags = ["featured", "classics", "cacowards", "community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the images live under
 # crates/ddl/ui/assets/screenshots/auger-zenith/ with source, credit and permission

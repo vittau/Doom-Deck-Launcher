@@ -7,7 +7,7 @@ release = "2025-09-16"
 page = "https://doomer.boards.net/thread/4139/stagnant-weather-dbp76"
 description = "DOOM II: MAP01–MAP14 (14 maps). Ancient extraterrestrial structures are located on a forbidden planet where the weather never changes."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/stagnant-weather/ with source and credit in SOURCES.toml

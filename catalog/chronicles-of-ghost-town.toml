@@ -7,7 +7,7 @@ release = "2021-08-01"
 page = "https://doomer.boards.net/thread/2218/chronicles-ghost-town"
 description = "DOOM II: MAP01–MAP17 (17 maps). Whispers of the ghost town, haunted by a forbidden poltergeist... designed by the many members of doomer boards."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/chronicles-of-ghost-town/ with source and credit in SOURCES.toml

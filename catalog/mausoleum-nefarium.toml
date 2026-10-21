@@ -7,7 +7,7 @@ release = "2022-07-01"
 page = "https://doomer.boards.net/thread/2666/mausoleum-nefarium"
 description = "DOOM II: MAP01–MAP11 (11 maps). Explore the hidden crypts and the forgotten story left behind by its disciples."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/mausoleum-nefarium/ with source and credit in SOURCES.toml

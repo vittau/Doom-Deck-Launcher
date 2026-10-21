@@ -7,7 +7,7 @@ release = "2024-04-13"
 page = "https://doomer.boards.net/thread/3531/dbp65-sanguine-holy-land"
 description = "DOOM II: MAP01–MAP14 (14 maps). Enter the dark, gothic fortresses, shadowed under the dim red light of the sky."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/sanguine-holy-land/ with source and credit in SOURCES.toml

@@ -7,7 +7,7 @@ release = "2025-11-16"
 page = "https://doomer.boards.net/thread/4191/economy-dead-dbp77"
 description = "DOOM II: MAP01–MAP09 (9 maps). Commercial real estate crashes under the intergalactic UAC Logistics center."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects", "episode"]
+tags = ["community-projects", "doomer-boards", "episode"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/the-economy-of-the-dead/ with source and credit in SOURCES.toml

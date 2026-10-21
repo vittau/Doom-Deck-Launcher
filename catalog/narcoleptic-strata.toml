@@ -7,7 +7,7 @@ release = "2025-06-01"
 page = "https://doomer.boards.net/thread/4010/narcoleptic-strata"
 description = "DOOM II: MAP01–MAP14 (14 maps). Amidst the eerie beauty of an alien planet, danger lurks in every shadow in this mushroom-laden retreat."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/narcoleptic-strata/ with source and credit in SOURCES.toml

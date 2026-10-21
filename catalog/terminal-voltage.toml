@@ -7,7 +7,7 @@ release = "2023-12-07"
 page = "https://doomer.boards.net/thread/3421/terminal-voltage"
 description = "DOOM II: MAP01–MAP09 (9 maps). An OSHA inspector's dream comes true when a facility of extreme electrical hazards goes awry."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects", "episode"]
+tags = ["community-projects", "doomer-boards", "episode"]
 
 [base_game]
 game = "doom2"
