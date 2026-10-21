@@ -51,9 +51,6 @@ pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.4";
 /// Largest bundle DDL accepts, matching spec 019 R3's ≤ 2 MiB bound.
 pub const MAX_BUNDLE_BYTES: u64 = 2 * 1024 * 1024;
 
-/// The automatic-check interval (spec 019, R5).
-pub const CHECK_INTERVAL_SECS: u64 = 24 * 60 * 60;
-
 /// File names that are not recipes inside a bundle.
 const NON_RECIPE_FILES: [&str; 2] = ["hosts.toml", "tags.toml"];
 
@@ -510,14 +507,6 @@ fn temp_path(path: &Path) -> PathBuf {
     path.with_file_name(format!(".{name}.tmp.{}.{unique}", std::process::id()))
 }
 
-/// Whether an automatic check is due (spec 019, R5): never checked, or at least
-/// [`CHECK_INTERVAL_SECS`] ago. `now` is passed in so tests use a fake clock;
-/// a clock that moved backwards is treated as "not due".
-#[must_use]
-pub fn catalog_check_due(last_check: Option<u64>, now: u64) -> bool {
-    last_check.is_none_or(|last| now.saturating_sub(last) >= CHECK_INTERVAL_SECS)
-}
-
 /// The UTC calendar date of a serial (`YYYY-MM-DD`), or `None` for serial `0`
 /// ("unknown"). Used by Settings and `ddl catalog status` (spec 019, R5).
 #[must_use]
@@ -939,18 +928,11 @@ limitations = []
     }
 
     #[test]
-    fn throttle_is_due_when_never_checked_or_older_than_a_day() {
-        assert!(catalog_check_due(None, 1_000));
-        assert!(!catalog_check_due(Some(1_000), 1_000));
-        assert!(!catalog_check_due(
-            Some(1_000),
-            1_000 + CHECK_INTERVAL_SECS - 1
-        ));
-        assert!(catalog_check_due(Some(1_000), 1_000 + CHECK_INTERVAL_SECS));
-        assert!(
-            !catalog_check_due(Some(2_000), 1_000),
-            "a backwards clock is not due"
-        );
+    fn serials_format_as_utc_dates() {
+        assert_eq!(serial_date(0), None);
+        assert_eq!(serial_date(86_400).as_deref(), Some("1970-01-02"));
+        assert_eq!(serial_date(1_700_000_000).as_deref(), Some("2023-11-14"));
+        assert_eq!(serial_date(1_767_225_600).as_deref(), Some("2026-01-01"));
     }
 
     /// Spec 077, R3: the Discover subtitle format, in UTC, with an honest
@@ -984,13 +966,5 @@ limitations = []
             serial_datetime(1).as_deref(),
             Some("January 1, 1970 at 00:00 (UTC)")
         );
-    }
-
-    #[test]
-    fn serials_format_as_utc_dates() {
-        assert_eq!(serial_date(0), None);
-        assert_eq!(serial_date(86_400).as_deref(), Some("1970-01-02"));
-        assert_eq!(serial_date(1_700_000_000).as_deref(), Some("2023-11-14"));
-        assert_eq!(serial_date(1_767_225_600).as_deref(), Some("2026-01-01"));
     }
 }

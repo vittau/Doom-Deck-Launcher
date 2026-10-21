@@ -7,6 +7,7 @@
 //! rather than a crash or a silently accepted recipe (D-002, D-010).
 
 use std::path::Path;
+use std::sync::OnceLock;
 
 use crate::downloads::Sha256;
 
@@ -52,13 +53,24 @@ pub struct Catalog {
 
 impl Catalog {
     /// Loads the catalog compiled into the binary.
+    ///
+    /// The embedded sources are immutable `&'static str`, so the parse and
+    /// validation run once per process and every caller gets a clone (spec 075,
+    /// R1): re-opening the catalog for each UI command must not re-parse every
+    /// recipe. Mutable values stay per caller — a [`Catalog`] clone can be
+    /// changed (hosts, tags, loaded recipes) without affecting another.
     #[must_use]
     pub fn embedded() -> Self {
-        Self::from_sources(
-            super::EMBEDDED_HOSTS,
-            super::EMBEDDED_TAGS,
-            super::EMBEDDED_RECIPES,
-        )
+        static EMBEDDED: OnceLock<Catalog> = OnceLock::new();
+        EMBEDDED
+            .get_or_init(|| {
+                Self::from_sources(
+                    super::EMBEDDED_HOSTS,
+                    super::EMBEDDED_TAGS,
+                    super::EMBEDDED_RECIPES,
+                )
+            })
+            .clone()
     }
 
     /// Loads a catalog from raw source text: the host allowlist, the tag
