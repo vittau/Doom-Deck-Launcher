@@ -175,12 +175,17 @@ below are the ones most easily lost between sessions.
 - **Platform order:** everything working and fully validated on the Steam Deck first; then
   Windows; macOS last (owner, 2026-10-19). Do not start port work or port research before the Deck
   validation is done, but keep new code portable (OS specifics behind `cfg`/traits).
-- **Distribution:** GitHub pre-releases now; Flatpak on Flathub next (D-034). Flathub's AI policy
-  means the **owner** writes the manifest, AppStream metainfo, desktop entry and every Flathub
-  text; agents never create those files or post to Flathub.
+- **Distribution:** GitHub pre-releases and the experimental signed self-hosted Flatpak remote
+  at `https://www.vitormach.dev/Doom-Deck-Launcher/` (D-035, owner confirmed 2026-10-21).
+  The owner explicitly authorized agent-written packaging for this channel (specs 062–063).
+  Flathub is a later, policy-bound option: do not submit these AI-assisted manifests or automate
+  submission/review interactions. Spec 065 will replace the provisional page with a launcher-themed
+  page and a prominent signed `.flatpakref` install link.
 - **UI:** unmistakably DOOM, tasteful and detailed (D-020), better than UZDeck; UI work goes to
   Codex, and large visual changes are shown to the owner as headless renders before merging.
-  Amber means focus only; primary actions are ember red (spec 060).
+  Amber means focus only; only actions that launch a game are red (D-036/spec 064 supersedes
+  spec 060's primary-action rule). Base-game menu/title art is an explicit owner-authorized
+  exception to D-020; retain source/credit. The owner's hardware-renderer default is D-037.
 - **Catalog:** community-contributable TOML recipes via PR (D-010); AUGER;ZENITH (with add-on),
   SIGIL and SIGIL II are reference mapsets.
 - **Tracking** lives only in `docs/` (no Linear, no GitHub Issues except the automated
@@ -212,9 +217,11 @@ below are the ones most easily lost between sessions.
 
 - Add saved-state fixture trees for `v0.0.8-upgrade` and `v0.0.9-focus` to
   `tests/fixtures/state/` and the release guard test (spec 055 R4; small opencode task).
-- Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; write the Flathub manifest,
-  metainfo and desktop entry (D-034), then a local `flatpak-builder` build for spec 059's
-  Needs Deck Validation items.
+- Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
+  from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
+- Active work 2026-10-21: 063 publication review fixes; 064 button-actions/config (existing
+  worker started directly by owner); 066 Antaresian Reliquary catalog, including MAP31 Deck
+  performance warning. 065 project/download page follows stabilization of current work.
 - Next backlog: specs 051–053 (/idgames browse on top of the published index); the
   "Advanced" card subtitle touching its bottom edge (cosmetic, pre-existing).
 
