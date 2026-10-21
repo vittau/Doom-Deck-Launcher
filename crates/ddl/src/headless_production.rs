@@ -1988,23 +1988,39 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         );
     }
     let catalog = Catalog::embedded();
-    let used: Vec<_> = catalog
-        .tags
-        .ordered()
-        .into_iter()
-        .filter(|tag| {
-            catalog
-                .recipes
-                .iter()
-                .any(|r| r.recipe.tags.contains(&tag.id))
-        })
-        .collect();
+    // Spec 072 R1: only the owner's requested specific categories, in this
+    // exact order, then Favorites. All, Featured and other vocabulary entries
+    // stay in catalog metadata but are not navigation chips.
+    let used: Vec<_> = [
+        "cacowards",
+        "megawad",
+        "community-projects",
+        "doomer-boards",
+        "classics",
+        "episode",
+        "challenging",
+    ]
+    .into_iter()
+    .filter_map(|id| catalog.tags.get(id))
+    .filter(|tag| {
+        catalog
+            .recipes
+            .iter()
+            .any(|r| r.recipe.tags.contains(&tag.id))
+    })
+    .collect();
     assert!(used.len() >= 2, "the shipped recipes use several tags");
     {
         let mut r = state.borrow_mut();
         r.screen = Screen::Discover;
         r.focus = 10;
         r.sync(ui);
+        // The session starts on the first requested category that has recipes,
+        // not on the removed All view; land focus on one of its actual cards.
+        if let Some(&first) = card_ids(ui).first() {
+            r.focus = first;
+            r.sync(ui);
+        }
     }
     let all = card_ids(ui);
     // The grid draws the cards that fit the viewport, and the active catalog may be a
@@ -2020,8 +2036,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         !all.is_empty() && all.len() <= shown,
         "the grid draws cards"
     );
-    let mut expected = vec!["All".to_owned()];
-    expected.extend(used.iter().map(|t| t.label.clone()));
+    let mut expected: Vec<String> = used.iter().map(|t| t.label.clone()).collect();
     expected.push("Favorites".into());
     // The strip scrolls when it is wider than the grid: the visible chips are a window
     // of the full list, and arrows mark what is hidden.
@@ -2030,12 +2045,15 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         visible.len() >= 6 && expected.starts_with(&visible),
         "{visible:?}"
     );
+    assert!(!expected.iter().any(|label| label == "All"));
+    assert!(!expected.iter().any(|label| label == "Featured"));
+    assert!(!expected.iter().any(|label| label == "Beginner Friendly"));
     let arrow = |glyph: &str| ui.get_nodes().iter().any(|n| n.label == glyph);
     assert_eq!(arrow("›"), visible.len() < expected.len());
     assert!(!arrow("‹"));
-    assert_eq!(selected_chip(ui), "All");
+    assert_eq!(selected_chip(ui), used[0].label);
     assert!(ui.get_category_hint() && ui.get_favorite_hint());
-    capture(window, "015-discover-all.png");
+    capture(window, "015-discover-specific.png");
 
     // Spec 023 R3/A2, spec 033 R4: every card that ships a screenshot resolves to the
     // embedded image with no caption over it; the credit is plain text on Mapset detail.
@@ -2085,6 +2103,13 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         );
         {
             let mut r = state.borrow_mut();
+            // Spec 072: every requested category shows its own cards, so open a
+            // category that contains this recipe before rendering its card.
+            let category = used
+                .iter()
+                .find(|tag| recipe.tags.contains(&tag.id))
+                .expect("every reviewed recipe is in a requested category");
+            r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
             r.focus = 10 + index as i32;
             r.selected = index;
             r.sync(ui);
@@ -2144,6 +2169,11 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             .position(|i| i.recipe.id == reordered.id)
             .unwrap();
         r.snapshot.as_mut().unwrap().items[index].recipe = reordered.clone();
+        let category = used
+            .iter()
+            .find(|tag| reordered.tags.contains(&tag.id))
+            .expect("ancient-aliens is in a requested category");
+        r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
         r.selected = index;
         r.focus = 10 + index as i32;
         r.sync(ui);
@@ -2196,6 +2226,15 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     {
         let mut r = state.borrow_mut();
         let saved = r.snapshot.clone();
+        let category = r
+            .snapshot
+            .as_ref()
+            .and_then(|s| {
+                used.iter()
+                    .find(|tag| s.items[0].recipe.tags.contains(&tag.id))
+            })
+            .expect("the first recipe is in a requested category");
+        r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
         r.snapshot.as_mut().unwrap().items[0]
             .recipe
             .screenshots
@@ -2222,6 +2261,17 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.sync(ui);
     }
 
+    // Return to the session's first requested category with a real card focused.
+    {
+        let mut r = state.borrow_mut();
+        r.choose_category(crate::runtime::Category::Tag(used[0].id.clone()));
+        r.sync(ui);
+        if let Some(&first) = card_ids(ui).first() {
+            r.focus = first;
+            r.sync(ui);
+        }
+    }
+
     // Up from the grid reaches the strip; Left/Right switch the category as focus moves.
     press(window, Key::UpArrow);
     assert_eq!(ui.get_focused(), 200);
@@ -2229,11 +2279,15 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     press(window, Key::LeftArrow);
     assert_eq!(
         ui.get_focused(),
-        201 + used.len() as i32,
+        200 + used.len() as i32,
         "wrap to Favorites"
     );
     press(window, Key::RightArrow);
-    assert_eq!(ui.get_focused(), 200, "wrap back to All");
+    assert_eq!(
+        ui.get_focused(),
+        200,
+        "wrap back to the first specific category"
+    );
     let tag_cards = |id: &str| {
         let cards = card_ids(ui);
         let items = state.borrow().snapshot.as_ref().unwrap().items.clone();
@@ -2246,8 +2300,10 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         (cards, holding)
     };
     for (n, tag) in used.iter().enumerate() {
-        press(window, Key::RightArrow);
-        assert_eq!(ui.get_focused(), 201 + n as i32);
+        if n > 0 {
+            press(window, Key::RightArrow);
+        }
+        assert_eq!(ui.get_focused(), 200 + n as i32);
         assert_eq!(selected_chip(ui), tag.label);
         let (mut cards, mut holding) = tag_cards(&tag.id);
         cards.sort_unstable();
@@ -2268,7 +2324,11 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     ui.invoke_action(12);
     assert_eq!(selected_chip(ui), "Favorites");
     ui.invoke_action(12);
-    assert_eq!(selected_chip(ui), "All", "R2 wraps at the end");
+    assert_eq!(
+        selected_chip(ui),
+        used[0].label,
+        "R2 wraps at the end to the first specific category"
+    );
     ui.invoke_action(11);
     assert_eq!(selected_chip(ui), "Favorites", "L2 wraps at the beginning");
     assert_eq!(
@@ -2284,12 +2344,18 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             .iter()
             .any(|n| n.label.contains("press X to keep it here"))
     );
-    assert_eq!(ui.get_focused(), 200 + used.len() as i32 + 1);
+    assert_eq!(ui.get_focused(), 200 + used.len() as i32);
     capture(window, "015-discover-favorites-empty.png");
     press(window, Key::DownArrow);
     assert_eq!(ui.get_focused(), 230);
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.id == 230 && n.label == "Browse mapsets"),
+        "accurate copy for the way out of empty Favorites"
+    );
     press(window, Key::Return);
-    assert_eq!(selected_chip(ui), "All");
+    assert_eq!(selected_chip(ui), used[0].label);
     assert_eq!(ui.get_focused(), card_ids(ui)[0]);
 
     // Right reaches another card; favorite a non-first recipe with multiple tags
@@ -2339,9 +2405,8 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(first_card, (12., 84.), "favorites sort first");
     assert_eq!(ui.get_nodes().iter().filter(|n| n.kind == 12).count(), 1);
     assert_eq!(ui.get_favorite_label(), "Unfavorite");
-    capture(window, "015-discover-all-favorite.png");
+    capture(window, "015-discover-specific-favorite.png");
     // The Favorites category now shows exactly that mapset.
-    ui.invoke_action(12);
     assert_eq!(selected_chip(ui), used[0].label);
     for _ in 0..used.len() {
         ui.invoke_action(12);
@@ -2406,6 +2471,109 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         selected_chip(ui),
         "Favorites",
         "last category kept for the session"
+    );
+
+    // Spec 072 R2: a category that disappears after a refresh falls back to the
+    // first available specific category, and focus never points at a hidden card.
+    {
+        let mut r = state.borrow_mut();
+        r.choose_category(crate::runtime::Category::Tag("removed-category".into()));
+        r.sync(ui);
+    }
+    assert_eq!(selected_chip(ui), used[0].label);
+    assert_eq!(
+        state.borrow().chosen_category(),
+        &crate::runtime::Category::Tag(used[0].id.clone())
+    );
+    assert!(
+        card_ids(ui).contains(&ui.get_focused()),
+        "fallback lands focus on a shown card"
+    );
+
+    // An empty catalog keeps Favorites selectable, with no empty-strip indexing
+    // and no action to a removed All view.
+    {
+        let mut r = state.borrow_mut();
+        let saved = r.snapshot.clone();
+        r.snapshot.as_mut().unwrap().items.clear();
+        r.choose_category(crate::runtime::Category::Tag("removed-category".into()));
+        r.sync(ui);
+        assert_eq!(selected_chip(ui), "Favorites");
+        assert_eq!(ui.get_focused(), 200, "the only chip holds focus");
+        assert!(card_ids(ui).is_empty());
+        assert!(
+            !ui.get_nodes().iter().any(|n| n.id == 230),
+            "no browse action without a specific category"
+        );
+        r.snapshot = saved;
+        r.sync(ui);
+    }
+}
+
+/// Spec 072 R4: with a 90+ recipe catalog, the last card (id above 100) is still
+/// drawn, classified as a card and opens its own mapset.
+pub(super) fn catalog_92_journey(ui: &AppWindow) {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+        (key == "HOME").then(|| home.display().to_string())
+    })
+    .unwrap();
+    let env = Environment {
+        paths,
+        home,
+        screen: None,
+        test: None,
+    }
+    .without_catalog_auto_updates();
+    let state = crate::runtime::attach_environment(ui, env);
+    idle(&state);
+    let last;
+    {
+        let mut r = state.borrow_mut();
+        let snapshot = r.snapshot.as_mut().unwrap();
+        // The shipped catalog is already large; two more entries push the last
+        // card id past 100, the old activation/focus boundary.
+        while snapshot.items.len() < 92 {
+            let index = snapshot.items.len();
+            let mut item = snapshot.items[0].clone();
+            item.recipe.id = format!("synthetic-card-{index}");
+            item.recipe.title = format!("Synthetic card {index}");
+            item.recipe.tags = vec!["classics".into()];
+            item.favorite = false;
+            snapshot.items.push(item);
+        }
+        last = snapshot.items.len() - 1;
+    }
+    assert!(last >= 91, "at least 92 catalog entries");
+    let last_id = crate::runtime::CARD + last as i32;
+    assert!(last_id > 99, "the regression covers ids above 99");
+    assert!(last_id <= crate::runtime::CARD_LAST);
+    let expected = state.borrow().snapshot.as_ref().unwrap().items[last]
+        .recipe
+        .id
+        .clone();
+    let mut r = state.borrow_mut();
+    r.choose_category(crate::runtime::Category::Tag("classics".into()));
+    r.screen = Screen::Discover;
+    r.focus = last_id;
+    r.sync(ui);
+    assert_eq!(r.focus, last_id, "focus stays on the last card");
+    assert!(
+        card_ids(ui).contains(&last_id),
+        "the last card is drawn and actionable"
+    );
+    assert!(
+        ui.get_favorite_hint(),
+        "the focus guard still classifies the last card as a card"
+    );
+    r.action(ui, Action::Confirm);
+    assert_eq!(r.screen, Screen::Detail, "the last card opens its mapset");
+    assert_eq!(r.selected, last);
+    assert_eq!(
+        r.snapshot.as_ref().unwrap().items[r.selected].recipe.id,
+        expected
     );
 }
 

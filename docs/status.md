@@ -1,35 +1,40 @@
 # Status
 
-## Integration checkpoint — 2026-10-21
+## Current checkpoint — 2026-10-21
 
-The owner resumed the original OpenCode conversations after shutdown. Both feature workers
-completed and their review fixes are accepted. Their branches were combined on
-`verify/soundfonts-sigil-20261021`. Integrated fmt, clippy with warnings denied and all **870**
-workspace tests passed (200 app, 628 core, 39 integration and 3 doctests). The verified result
-was pushed to `main` at `3f65893`. Linux CI (`39607816657`), Flatpak artifact build
-(`39607816207`) and Linux e2e (`39607814060`) are running; their results are not yet confirmed.
-Both workers were released and their clean, merged worktrees removed; remote task branches
-remain available. No new Flatpak repository publication or release tag was created. The [pause checkpoint](orchestration-pause-2026-10-21.md) is historical.
+**Available for Deck testing:** [v0.0.10-audio](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.10-audio)
+ships the Linux tarball and the signed Flatpak update at
+[the project site](https://www.vitormach.dev/Doom-Deck-Launcher/). Release run `39609918963` and
+signed repository publication `39609918709` succeeded. Canonical site identifies app v0.0.10.
 
-- **Audio:** Settings → Audio offers Default and an optional verified Arachno download. Choice
-  persists globally and applies on the next launch across all launch routes; custom engine
-  settings remain untouched until an explicit choice. Missing fonts fall back with a reinstall
-  warning; real config failures abort with an actionable error. Review corrected baseline
-  preservation, clipped Terms action and installer error classification. Worker: `9b754da`.
-- **SIGIL:** verified the owner's native REG/MP3 and COMPAT/SHREDS hashes. Enabling the paid E3
-  soundtrack activates the free COMPAT maps, orders maps before music, and switching editions
-  clears dependents. Imported rows support On/Off and replacement, including missing-file
-  recovery. A real controller-flow headless regression covers the replacement sheet. Worker:
-  `12ffe84`. No purchased media is committed or downloaded by DDL.
-- **Already integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian
-  Reliquary including the MAP31 performance warning (066), signed self-hosted Flatpak (062–063),
-  and the launcher-themed website (065).
-- **Website:** live at `https://www.vitormach.dev/Doom-Deck-Launcher/`. Compact official Buy Me a
-  Coffee Donate button in the header, yellow #FD0 and Cookie font; independent website workflow
-  deploys without an app build. Last website-only deployment `39552405595` passed, including
-  Cloudflare prefix purge and canonical-file verification.
-- **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls and managed SF2
-  access inside the Flatpak; see the new audio/SIGIL checks in `deck-testing.md`.
+- **Integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian Reliquary
+  with MAP31 performance warning (066), Default/Arachno Audio settings (067), and verified SIGIL
+  native REG/MP3 and COMPAT/SHREDS support (068). Combined fmt/clippy and **870** workspace tests
+  passed (200 app, 628 core, 39 integration, 3 doctests); source CI `39607816657`, Flatpak artifact
+  `39607816207` and real-network Linux e2e `39607814060` passed.
+- **Website/README:** five current screenshots (including Audio), explicit content-hashed favicon
+  on both pages, app DDL artwork plus product subtitle in the header (069). Owner corrected its
+  alignment/spacing after first publication; the centered compact revision is live. Independent
+  website run `39612160906` passed Pages deployment, Cloudflare project-prefix purge and canonical
+  verification. Coordinator also compared live CSS/icon/logo/all five images with source bytes.
+- **Release-state guard:** real serializer-generated fixtures now cover all six release tags
+  through v0.0.10-audio (070), including explicit Default audio preferences. Focused integrated
+  guard, fmt and clippy passed. No application behavior changed in this follow-up.
+- **Under integration review:** compact application branding and specific ordered Discover
+  categories (071/072), verified Memento Mori I/II and dedicated Doomer Boards membership
+  (073). Combined checks are running on a verification branch; these are not yet released.
+- **Next fixes, in owner priority order:** card/base-game padding and art clear of frames (074);
+  investigate and optimize Pistol start latency (075 audit); normal versus COMPAT SIGIL music
+  copy (076); check the independent GitHub catalog at every startup and show its effective
+  source timestamp in Discover (077). The existing daily check is the baseline, not completion
+  of the new request. Refresh the five shared README/site screenshots after all visual changes,
+  including a Discover capture with the specific-category strip visible.
+- **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
+  and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
+  self-hosted signed installation and Discover update path rather than the older Flathub plan.
+
+The old shutdown checkpoint is historical; both original feature workers completed and their
+merged worktrees were removed. Subsequent 069/070 workers also completed and were cleaned up.
 
 The milestone tables below describe earlier release checkpoints; this section records newer work.
 
