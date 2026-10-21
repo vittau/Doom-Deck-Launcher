@@ -7,7 +7,7 @@ release = "2020-11-01"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_29"
 description = "DOOM II: MAP01–MAP10 (10 maps). Gloomy castles amidst falling leaves, a poetic scene cloaked in the sorrow of autumn."
 permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/morbid-autumn/ with source and credit in SOURCES.toml

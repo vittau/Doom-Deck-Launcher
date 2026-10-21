@@ -7,7 +7,7 @@ release = "2023-07-03"
 page = "https://doomer.boards.net/thread/3272/zeppelin-armada"
 description = "DOOM II: MAP01–MAP18 (18 maps). Play as Dexter Hornbuckle on his steampunk time travelling adventure."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/zeppelin-armada/ with source and credit in SOURCES.toml

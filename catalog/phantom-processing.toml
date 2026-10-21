@@ -7,7 +7,7 @@ release = "2025-07-02"
 page = "https://doomer.boards.net/thread/4043/phantom-processing"
 description = "DOOM II: MAP01–MAP08 (8 maps). A trespasser explores the chilling remnants of a processing plant channeling ancient spirits."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects", "episode"]
+tags = ["community-projects", "doomer-boards", "episode"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/phantom-processing/ with source and credit in SOURCES.toml

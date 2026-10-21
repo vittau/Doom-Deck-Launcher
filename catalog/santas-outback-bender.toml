@@ -7,7 +7,7 @@ release = "2020-12-24"
 page = "https://www.doomworld.com/idgames/themes/xmas/dbp31"
 description = "DOOM II: MAP01–MAP17 (16 maps). It’s almost Christmas Eve, but no one’s seen Santa since he left to go party with demons in Australia!."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 [base_game]
 game = "doom2"

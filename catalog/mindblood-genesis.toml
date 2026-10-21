@@ -7,7 +7,7 @@ release = "2019-02-01"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp8_mbg"
 description = "DOOM II: MAP01–MAP09 (9 maps). Nightmarish creations breed a chilling atmosphere in this interactive horror tale, deep into the twisted mind of supercupcaketactics."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
-tags = ["community-projects", "episode"]
+tags = ["community-projects", "doomer-boards", "episode"]
 
 [base_game]
 game = "doom2"

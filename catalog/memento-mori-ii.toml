@@ -1,0 +1,112 @@
+# Confirmed bytes and release metadata: docs/research/reference-memento-mori.md §1–§8; gathered 2026-10-21.
+schema_version = 1
+id = "memento-mori-ii"
+title = "Memento Mori II"
+authors = [
+  "MM2 Crew (Denis Moeller and Thomas Moeller, coordinators)",
+  "Andy Badorek",
+  "Alden Bates",
+  "Sean Birkel",
+  "David Davidson",
+  "Orin Flaharty",
+  "Florian Helmberger",
+  "Rhys Hughes",
+  "Mark Klem",
+  "David Kuykendall",
+  "Jens Nielsen",
+  "Paul Noble",
+  "Michael Rapp",
+  "Eric Sargent",
+  "Jeremy Statz",
+  "Steve Towle",
+  "Stephen Watson",
+  "Adam Williamson",
+  "Adam Windsor",
+  "Matthias Worch",
+  "Jim Wraith",
+  "David P. Shaw (music)",
+]
+release = "1996-07-27"
+page = "https://www.doomworld.com/idgames/themes/mm/mm2"
+description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) by 23 authors with new graphics, plus Mark Klem and David Shaw's original MIDI soundtrack loaded after the maps."
+permission = "Released free to everyone. Commercial distribution (putting MM2 on a CD and selling it) requires the crew's written permission first. The songs in MM2MUS.WAD are original compositions and may not be extracted or reproduced without the two composers' consent. DDL downloads the unmodified archive and keeps the bundled readme and credits; the DOS MM2.BAT launcher is never extracted or executed."
+tags = ["classics", "community-projects", "megawad"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-21"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-memento-mori.md §1–§8", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "WAD lump directory read as data: 572 lumps, MAP01–MAP32, no DEHACKED, COMPLVL, UMAPINFO or MAPINFO lump; MM2MUS.WAD holds the 35 D_* music lumps", "MM2.BAT: \"doom2 -file mm2.wad mm2mus.wad\" (music WAD second)", "MM2.TXT: Doom 2 add-on, mission briefings, musical score credits and copyright section quoted in the recipe permission field"]
+notes = "Confirmed archive/member identities (exact size and SHA-256) by downloading the archive from four allowlisted idgames mirrors and reading its member list; nothing from the archive was executed. The bundled readme and its MM2.BAT launcher both start Doom II with mm2.wad then mm2mus.wad, so the music WAD is the second member of the required main component and loads after the maps. No DEHACKED, COMPLVL or UMAPINFO lump exists, so complevel vanilla (2 on Doom II) is declared by the recipe from the release's Doom II target. No gameplay test was performed. Tags: classics = released 1996-07-27 and listed second in Doomworld's Top 100 WADs of All Time 1996 feature per DoomWiki (secondary, doomworld.com 403s from this host); community-projects = 23 credited map authors plus two composers; megawad = 32 maps. Not tagged cacowards: that feature began in 2004 and no Cacoward exists for this release. No screenshot: the archive ships text-only credits and no verifiable licensed in-game image was found. The top-secret outtake levels live in the separate DOS infopack mm2info.zip, not in this archive, so they are out of scope."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order (maps then music), gameplay, audio and map selection.", "The MM2MUS.WAD soundtrack may not be extracted or reproduced; DDL only loads the unmodified WAD from the official archive."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/themes/mm/mm2"
+urls = ["https://www.gamers.org/pub/idgames/themes/mm/mm2.zip", "https://youfailit.net/pub/idgames/themes/mm/mm2.zip", "https://ftp.fu-berlin.de/pc/games/idgames/themes/mm/mm2.zip", "https://mirrors.lug.mtu.edu/idgames/themes/mm/mm2.zip"]
+size = 4061135
+sha256 = "f4e7a10b035b123647f631348d63fc46392d8d8e21fab8a5158cd9ef35027451"
+kind = "zip"
+idgames_path = "themes/mm/mm2.zip"
+
+[[packages.members]]
+id = "mm2-maps"
+path = "MM2.WAD"
+size = 11453000
+sha256 = "810c3eb9eb38cd86a5b6ba0bc032d8a9a7a29a58072acbb68d4bb824a8de859b"
+keep = false
+
+[[packages.members]]
+id = "mm2-music"
+path = "MM2MUS.WAD"
+size = 1075404
+sha256 = "d09350612e953c1dc7055dbcb05228c698f7267bdf38d6cb1de11966c7b922d5"
+keep = false
+
+[[packages.members]]
+id = "mm2-readme"
+path = "MM2.TXT"
+size = 42580
+sha256 = "8706785377fb8be6e832c745952c8ab9ecec58736d57667d717329e5b1c354e5"
+keep = true
+
+[[packages.members]]
+id = "mm2-file-id"
+path = "FILE_ID.DIZ"
+size = 440
+sha256 = "c3994fdd553a22c86b8261a2bdd475b42d8387ce4611ccfce3725dee75781d7e"
+keep = true
+
+[[components]]
+id = "main"
+label = "Memento Mori II"
+description = "Main 32-map vanilla megawad: MAP01–MAP32 with the release's new graphics, and the separate soundtrack WAD loaded after the maps as MM2.BAT does."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "mm2-maps"
+role = "maps"
+
+[[components.members]]
+package = "free"
+member = "mm2-music"
+role = "music"

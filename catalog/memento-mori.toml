@@ -1,0 +1,132 @@
+# Confirmed bytes and release metadata: docs/research/reference-memento-mori.md §1–§8; gathered 2026-10-21.
+schema_version = 1
+id = "memento-mori"
+title = "Memento Mori"
+authors = [
+  "The Memento Mori Crew (Denis Moeller and Thomas Moeller, coordinators)",
+  "Michiel Rutting",
+  "David Davidson",
+  "Tom Mustaine",
+  "Jens Nielsen",
+  "Orin Flaharty",
+  "Eric Sargent",
+  "Alden Bates",
+  "Eric Reuter",
+  "Mackey McCandlish",
+  "Florian Helmberger",
+  "Kurt Schmid",
+  "Eric Sambach",
+  "Henrik Rathje",
+  "Michael Rapp",
+  "Scott Lampert",
+  "Andy Badorek",
+  "Milo Casali",
+  "Dario Casali",
+  "William Sullivan",
+  "Mark Klem",
+]
+release = "Updated version, February 1996 (idgames file dated 1996-02-21; first release 1995-12-10)"
+page = "https://www.doomworld.com/idgames/themes/mm/mm_allup"
+description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) built for co-op by 21 authors, with Mark Klem's original MIDI soundtrack loaded after the maps."
+permission = "Authors may not use these levels as a base without contacting the original author of each map, and the set is not to be split. Redistribution is permitted provided MM.TXT travels with the file, unmodified and intact; commercial use requires the crew's agreement, and the text also excludes Microsoft Network from redistributing it. DDL downloads the unmodified archive and keeps the bundled texts."
+tags = ["classics", "community-projects", "megawad"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-21"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-memento-mori.md §1–§8", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "WAD lump directory read as data: 450 lumps, MAP01–MAP32, no DEHACKED, COMPLVL, UMAPINFO or MAPINFO lump; MMMUS.WAD holds the 35 D_* music lumps", "MMHELP.TXT Q4: \"doom2 -file mm.wad mmmus.wad\" (music WAD second)", "MMHELP.TXT Q1/Q6 and MM.TXT: Doom II, version 1.9 needed", "MM.TXT copyright section quoted in the recipe permission field"]
+notes = "Confirmed archive/member identities (exact size and SHA-256) by downloading the archive from four allowlisted idgames mirrors and reading its member list; nothing from the archive was executed. The bundled help file prescribes \"doom2 -file mm.wad mmmus.wad\", so the music WAD is the second member of the required main component and loads after the map WAD, matching the authors' default. No DEHACKED, COMPLVL or UMAPINFO lump exists, so complevel vanilla (2 on Doom II) comes from the authors' Doom II v1.9 target and must be declared by the recipe. No gameplay test was performed. Tags: classics = first released 1995-12-10 and named in Doomworld's Top 100 WADs of All Time 1996 feature per DoomWiki (secondary, doomworld.com 403s from this host); community-projects = 21 map authors credited in AUTHORS.TXT; megawad = 32 maps. Not tagged cacowards: that feature began in 2004 and no Cacoward exists for this release. No screenshot: the archive ships text-only credits and no verifiable licensed in-game image was found."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order (maps then music), gameplay, audio and map selection."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/themes/mm/mm_allup"
+urls = ["https://www.gamers.org/pub/idgames/themes/mm/mm_allup.zip", "https://youfailit.net/pub/idgames/themes/mm/mm_allup.zip", "https://ftp.fu-berlin.de/pc/games/idgames/themes/mm/mm_allup.zip", "https://mirrors.lug.mtu.edu/idgames/themes/mm/mm_allup.zip"]
+size = 2950178
+sha256 = "c8607a7a32d4f6547d492e0f734324320b955e2b11691b02b107de09ac2e7bfb"
+kind = "zip"
+idgames_path = "themes/mm/mm_allup.zip"
+
+[[packages.members]]
+id = "mm-maps"
+path = "MM.WAD"
+size = 7825282
+sha256 = "3e34522f61e40e508fbbcf1f32c3de3f9dc9ec5749e2a411bbe646d7ae35a22e"
+keep = false
+
+[[packages.members]]
+id = "mm-music"
+path = "MMMUS.WAD"
+size = 885387
+sha256 = "3e1618f79d6e045ce18f7f72f8a329595e475b1d61b19264bc6b73d615345e73"
+keep = false
+
+[[packages.members]]
+id = "mm-readme"
+path = "MM.TXT"
+size = 2893
+sha256 = "33f67e460161ae8153fe0c06735d9c6d827736b716ace24a3519db0f0da45bee"
+keep = true
+
+[[packages.members]]
+id = "mm-authors"
+path = "AUTHORS.TXT"
+size = 3018
+sha256 = "0b74c28fc556094dfa4a62a97440a7eb244ec9933f10211e861c05507e734e44"
+keep = true
+
+[[packages.members]]
+id = "mm-help"
+path = "MMHELP.TXT"
+size = 4868
+sha256 = "19e2cba7843b9fcf37dd5f3de46cd2f80a17a4ba5ba92dbc5a1f782d0b89bc51"
+keep = true
+
+[[packages.members]]
+id = "mm-changes"
+path = "CHANGES.TXT"
+size = 1149
+sha256 = "e3627920cbda386da7317b5299ee28db380301c9c8439b8ba5087c1e1917e82e"
+keep = true
+
+[[packages.members]]
+id = "mm-file-id"
+path = "FILE_ID.DIZ"
+size = 507
+sha256 = "c82c6d59343dfbb966c34adfed5289f3b10b5bde8fb26b24b17ec8a5e8771b12"
+keep = true
+
+[[components]]
+id = "main"
+label = "Memento Mori"
+description = "Main 32-map vanilla megawad: MAP01–MAP32, with Mark Klem's separate soundtrack WAD loaded after the maps as the authors' help file does."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "mm-maps"
+role = "maps"
+
+[[components.members]]
+package = "free"
+member = "mm-music"
+role = "music"
