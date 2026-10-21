@@ -5,12 +5,17 @@
 - **062:** Flatpak packaging and artifact workflow merged; first Linux runs exposed packaging
   issues being corrected. Artifact run 39537960702 failed because its Python venv lacked PyYAML.
 - **063 / D-035:** signed self-hosted repository merged under direct owner supervision. Publish
-  run 39537960687 is building; publication and Deck install have not yet been confirmed.
+  run 39537960687 passed; Pages enabled and homepage/repository summary respond HTTP 200.
+  Public ref app ID, URL and embedded key checked with cache-busting (earlier 404 cached by CDN).
+  Review fixes for artifact Python dependencies, client signature checks and later Pages deployments
+  remain in progress; Deck install has not yet been confirmed.
   Approved site: `https://www.vitormach.dev/Doom-Deck-Launcher/`.
 - **064 / D-036:** `button-actions` worker implements the owner's direct Play, visual/copy and
   detected engine-resolution requests. No integration yet; headless review/checks remain.
 - **065:** launcher-themed project/download page planned after the current work stabilizes.
   Its primary download is a signed `.flatpakref`, not a desktop entry.
+- **066:** Antaresian Reliquary recipe/research/screenshots worker started; description must warn
+  that MAP31 performs poorly on Deck because of its massive enemy count (owner request).
 
 The milestone tables below describe the last release; the checkpoint above records newer work.
 
