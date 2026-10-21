@@ -1,0 +1,83 @@
+# Confirmed bytes and release metadata: docs/research/reference-antaresian-reliquary.md §1–§6; gathered 2026-10-21.
+schema_version = 1
+id = "antaresian-reliquary"
+title = "Antaresian Reliquary"
+authors = ["Seongbae Park (antares031)"]
+release = "2020-08-24"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/a-c/anta_req"
+description = "DOOM II: nine Boom-compatible map slots (MAP01–MAP07, MAP31–MAP32) compiled from community projects, with new weapons and monsters from an embedded DEHACKED patch. MAP31 contains a massive number of enemies and performs poorly on Steam Deck."
+permission = "Released under the Creative Commons Attribution-NonCommercial 4.0 International License (https://creativecommons.org/licenses/by-nc/4.0/); the bundled credits text names every contributor and resource. DDL downloads the unmodified archive and keeps that text alongside the maps; the material may not be used commercially."
+tags = ["classics", "cacowards", "episode"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/antaresian-reliquary/ with source, credit and
+# permission text in SOURCES.toml beside them; the build embeds them for card,
+# detail and band.
+[[screenshots]]
+asset = "antaresian-reliquary/01.jpg"
+credit = "antares031"
+[[screenshots]]
+asset = "antaresian-reliquary/02.jpg"
+credit = "antares031"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# The author states every level has a death exit and starts with a forced pistol
+# start; a profile suggestion only.
+pistol_start = true
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-21"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-antaresian-reliquary.md §1–§7", "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)", "Bundled ANTA_REQ.txt: release 2020/08/24, author antares031, Boom, Doom 2, 7 maps, Dehacked/BEX Patch: Yes, CC BY-NC 4.0", "WAD lump listing: 1,499 lumps, nine map markers, DEHACKED (24,232 bytes), ZMAPINFO/DECORATE/LANGUAGE, no COMPLVL and no UMAPINFO", "Cacowards 2020 Top Ten page 1: https://www.doomworld.com/cacowards/2020/best1/", "DoomWiki (archived): https://web.archive.org/web/20251119110641/https://doomwiki.org/wiki/Antaresian_Reliquary"]
+notes = "Confirmed archive and member identities by downloading the archive from three byte-identical mirrors and reading its member list; nothing from the archive was executed. The archive has exactly two root members, ANTA_REQ.txt and ANTA_REQ.wad. The WAD is a PWAD with 1,499 lumps and nine map markers (MAP01–MAP07, MAP31, MAP32); the separate DEHACKED lump (24,232 bytes) holds the weapon/monster changes and is loaded automatically with the WAD, so no -deh entry is needed. No COMPLVL or UMAPINFO lump exists; the ZMAPINFO/DECORATE/LANGUAGE lumps are ZDoom-only and inert under DSDA-Doom v0.30.1 (ZDoom MAPINFO support was removed in v0.30.0), so the recipe declares complevel boom from the author's Boom-compatible text. The author notes a death exit on every level and recommends forced pistol starts. No gameplay test was performed. Tags: cacowards = 2020 Top Ten page 1 (https://www.doomworld.com/cacowards/2020/best1/); episode = nine maps, matching DoomWiki's nine-level description and the tag's nine-or-fewer rule; classics = released 2020-08-24, over five years before this review. The Cacowards page and the author's TXT say '7 maps', while the WAD and DoomWiki list nine map slots; the seven compilation maps are MAP01–MAP06 and MAP31, with MAP07 and MAP32 as the two added levels. The MAP31 performance warning is an explicit owner request (2026-10-21) based on the owner's knowledge, not a DDL measurement of FPS or enemy count."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay and audio.", "DSDA-Doom ignores the bundled ZMAPINFO, so the author's ZDoom map names/next-map links and MAP31 ending text do not appear; MAP31/MAP32 are bonus slots that need -warp or IDCLEV until DDL exposes level selection. Confirm progression and the MAP07/MAP32 endings on the Deck."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/a-c/anta_req"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/a-c/anta_req.zip", "https://dsdarchive.com/files/wads/doom2/4089/anta_req.zip", "https://youfailit.net/pub/idgames/levels/doom2/Ports/a-c/anta_req.zip"]
+size = 12793564
+sha256 = "f81e4a3e818b308438d322a1a716c53c43327ffa8e1ed04ab880a5221ea37f2e"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/a-c/anta_req.zip"
+
+[[packages.members]]
+id = "maps"
+path = "ANTA_REQ.wad"
+size = 46829703
+sha256 = "a34447b2aeb021f09fdad4d153fe8177833b0dbf41fb74e6b8266f02959f3ab9"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "ANTA_REQ.txt"
+size = 10216
+sha256 = "adfa6a1e6dfae70a499eef4342e6c554d3cd87fd079c1ab38303580153dec754"
+keep = true
+
+[[components]]
+id = "main"
+label = "Antaresian Reliquary"
+description = "Main nine-map Boom episode (MAP01–MAP07, MAP31–MAP32) with the embedded DEHACKED changes."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
