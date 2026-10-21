@@ -43,11 +43,14 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
    subject> --body=<sha>` ties the OSTree commit to the tagged source instead of the run clock; a
    re-run of the same tag is usually a no-op.
 6. **Signature verification before publication.** The exported repository is verified the way a
-   client would: the committed `repo-key.gpg` is imported into a fresh keyring and required to verify
-   `summary.sig`, then a throwaway remote is added with `--gpg-import=packaging/flatpak/repo-key.gpg`
-   and the app is installed **with verification on** (no `--no-gpg-verify`). `ddl --version` is
-   checked against `Cargo.toml`. A build that cannot start, or whose signature the committed key
-   rejects, never reaches the site.
+   client would: the committed `repo-key.gpg` is imported into a throwaway remote and the app is
+   installed **with GPG verification on** (no `--no-gpg-verify`), so Flatpak/OSTree verify the
+   summary and the commit signatures. `repo/summary.sig` is not fed to `gpg` directly: OSTree stores
+   it as a GVariant map (the `ostree.gpgsigs` key, confirmed by inspecting the published file), not
+   as a raw OpenPGP signature. `ddl --version` is checked against `Cargo.toml`.
+7. **Pages deployment is explicit.** Pushes made with `GITHUB_TOKEN` do not trigger a Pages build,
+   so the workflow requests one through `POST /repos/{owner}/{repo}/pages/builds` (permission
+   `pages: write`), waits for the build of the pushed commit and then checks the served files.
 7. **Runtimes stay on Flathub.** `RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo`;
    only the app comes from this remote.
 8. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
@@ -58,7 +61,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | Requirement | Evidence |
 | --- | --- |
 | R1 signed repository | `build-export --gpg-sign`, `build-update-repo --gpg-sign`, `GPGKey` in both generated ref files, and a smoke test that imports `packaging/flatpak/repo-key.gpg`, verifies `summary.sig` and installs with GPG verification enabled |
-| R2 tag + manual pipeline | `on: push: tags: v*` and `workflow_dispatch` with a `ref` input; build → verify → sign → export → smoke → render → push |
+| R2 tag + manual pipeline | `on: push: tags: v*` and `workflow_dispatch` with a `ref` input; build → verify → sign → export → smoke → render → push → explicit Pages build request → served-file check. `pages: write` is declared for the REST build request |
 | R3 stable URLs | Render step writes `<app-id>.flatpakref`, `ddl.flatpakrepo`, `index.html`, `.nojekyll`; `repo/` comes from `build-export`; paths verified by dry-running the render block locally |
 | R4 key handling | `scripts/flatpak/make-signing-key.sh`: isolated `GNUPGHOME`, `umask 077`, refuses to overwrite, never prints private material; workflow fails early without the secret and imports into `$RUNNER_TEMP/gnupg` |
 | R5 documentation | `docs/flatpak-remote.md` covers install/update/remove, setup, security, rotation, rollback and the Flathub path |
@@ -84,6 +87,10 @@ runner. Pages was enabled afterwards: the homepage and `repo/summary` are served
 `.flatpakref` is served with a cache-busting query, with key, URL and app id checked. The bare
 `.flatpakref` URL was still returning 404 from a Cloudflare negative cache at the time of writing.
 
+The two review fixes (Flatpak-side signature verification and the explicit Pages build request)
+have not run in CI yet. The Pages endpoint itself was exercised against this repository: `POST
+/pages/builds` returned `queued` and the build for the `gh-pages` head `953ccd5` reached `built`.
+
 ## Execution log (2026-10-21)
 
 The owner authorised the channel, the signing key and the Pages setup, so the work moved from
@@ -94,8 +101,10 @@ implementation to execution. No private key material is reproduced here.
 | Repository key | Generated with `scripts/flatpak/make-signing-key.sh`; fingerprint `EF50C91A6703B13327AEAF00962CEACA8DE90556`; public half committed as `packaging/flatpak/repo-key.gpg`; secret stored as the `FLATPAK_GPG_PRIVATE_KEY` repository secret, fingerprint as `FLATPAK_GPG_KEY_ID`; backup kept outside the repository |
 | Integration | Spec 062 and this branch merged into `main` (`cfb7b36`, `c7efd6c`) and pushed to `origin/main`; later manifest fixes merged as `2e76897` and `9808e6b` |
 | First publish run | [39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687) — success: build, signed export, smoke test, site render and push to `gh-pages` |
-| Pages | Enabled by the coordinator on the `gh-pages` root; the homepage and `repo/summary` return HTTP 200, and the `.flatpakref` returns 200 with a cache-busting query (key, URL and app id checked). The bare URL still returns 404 from a Cloudflare negative cache; that is transient |
-| Signature smoke test | Review follow-up: the throwaway remote now imports `packaging/flatpak/repo-key.gpg` and installs with GPG verification on, plus an explicit `gpg --verify summary.sig summary` |
+| Pages | Enabled by the coordinator on the `gh-pages` root (`build_type: legacy`, source `gh-pages`); the homepage and `repo/summary` return HTTP 200, and the `.flatpakref` returns 200 with a cache-busting query (key, URL and app id checked). The bare URL still returns 404 from a Cloudflare negative cache; that is transient |
+| Pages trigger | Confirmed that `POST /repos/…/pages/builds` returns `queued` and the build for `953ccd5` (the `gh-pages` head) reached `built` in about 20 s. The workflow now requests this build explicitly, because a `GITHUB_TOKEN` push does not trigger Pages |
+| `summary.sig` format | Downloaded the published file: it starts with `ostree.gpgsigs`, an OSTree GVariant map, not a raw OpenPGP signature. The `gpg --verify` approach was removed; verification goes through Flatpak/OSTree with `--gpg-import` and normal GPG verification |
+| Signature smoke test | Review follow-up: the throwaway remote imports `packaging/flatpak/repo-key.gpg`, runs `remote-modify --gpg-verify` (which also enables summary verification for a remote without a collection ID) and installs with verification on |
 
 CI history while getting there:
 

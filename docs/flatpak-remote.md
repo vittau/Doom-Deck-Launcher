@@ -73,10 +73,14 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
 5. exports the build as a **signed** commit on branch `stable` with
    `flatpak build-export --timestamp=<tag date>`, then signs the summary and generates static deltas
    with `flatpak build-update-repo --generate-static-deltas --prune --prune-depth=2`;
-6. imports `packaging/flatpak/repo-key.gpg`, verifies `summary.sig`, installs the export from a
-   throwaway remote with GPG verification enabled and runs `ddl --version`;
+6. imports `packaging/flatpak/repo-key.gpg` into a throwaway remote with GPG verification enabled,
+   then lists and installs from it (Flatpak/OSTree verify the summary and commit signatures; the
+   `repo/summary.sig` file itself is an OSTree GVariant map, not a raw OpenPGP signature);
 7. renders `index.html`, `<app-id>.flatpakref`, `ddl.flatpakrepo` and `.nojekyll`, and pushes them
-   plus `repo/` to the `gh-pages` branch with the workflow's `GITHUB_TOKEN`.
+   plus `repo/` to the `gh-pages` branch with the workflow's `GITHUB_TOKEN`;
+8. requests a GitHub Pages build through the REST API (`pages: write`) — a `GITHUB_TOKEN` push alone
+   does not trigger one — waits for the build of the pushed commit, and checks the served
+   `.flatpakref` and `repo/summary`.
 
 Published layout:
 
