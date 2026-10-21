@@ -142,3 +142,7 @@ build, GPG private key or new dependency is required. `render-site.py --refresh`
 when existing release metadata is missing, invalid or ambiguous. Seven offline tests pass,
 including refresh metadata/signature preservation and rejected-input checks; actionlint passes.
 Application release publication still renders the page with its new version as before.
+
+Build CI and artifact-only Flatpak path filters now exclude page-only templates/assets, the
+page renderer and (for CI) the website workflow. Application/build inputs retain their checks.
+The website job owns the offline renderer checks.
