@@ -616,7 +616,13 @@ impl Command {
     fn mutates_state(&self) -> bool {
         !matches!(
             self,
-            Self::Play(_) | Self::Browse(..) | Self::Updates | Self::RefreshCatalog
+            Self::Play(_)
+                | Self::Browse(..)
+                | Self::Updates
+                | Self::RefreshCatalog
+                // Spec 077, R1: the manual check takes its own short lock around
+                // publication, after the network, never during it.
+                | Self::CatalogCheck
         )
     }
 }
@@ -819,12 +825,15 @@ impl Services {
             .map_err(|e| logged(Problem::State, e))?
         {
             Some(profile) => profile,
-            // First press before any Save: the UI shows an unsaved default, so
-            // materialise it instead of refusing the toggle.
+            // First press before any Save: the UI shows the recipe's default
+            // profile, so materialise exactly that identity. Any other id is
+            // refused rather than creating an arbitrary profile (spec 075 review).
             None => {
-                let mut profile = default_profile(&recipe);
-                profile.id = profile_id.to_owned();
-                profile
+                let default = default_profile(&recipe);
+                if default.id != profile_id {
+                    return Err(Problem::State);
+                }
+                default
             }
         };
         if profile.recipe_id != recipe_id {
@@ -853,16 +862,22 @@ impl Services {
             .load_optional(profile_id)
             .map_err(|e| logged(Problem::State, e))?;
         let bases = iwads::base_games::list(&self.registry);
-        // A first press before any Save has no recipe_id to read, so resolve the
-        // base from the profile id: the default is `base-doom2` and a copy is
-        // `base-doom2-profile-2`, while `BaseGame::id()` is `base:doom2`.
         let base = match &existing {
             Some(profile) => bases
                 .into_iter()
                 .find(|base| base.id() == profile.recipe_id)
                 .ok_or(Problem::State)?,
+            // A first press before any Save has no recipe_id to read. Only the
+            // identity `fresh_base_profile` mints (`base-<game>-profile-N`) is
+            // accepted; `BaseGame::id()` is `base:<game>`, so an arbitrary id is
+            // refused instead of creating a suffixed profile.
             None => {
-                let stem = profile_id.split("-profile-").next().unwrap_or(profile_id);
+                let Some((stem, number)) = profile_id.rsplit_once("-profile-") else {
+                    return Err(Problem::State);
+                };
+                if number.is_empty() || !number.bytes().all(|b| b.is_ascii_digit()) {
+                    return Err(Problem::State);
+                }
                 let game = stem.strip_prefix("base-").ok_or(Problem::State)?;
                 bases
                     .into_iter()
@@ -1917,15 +1932,14 @@ impl Services {
         ))
     }
 
-    /// The manual "Check for updates" (spec 019, R5): always runs, surfaces
-    /// failures and records the attempt before touching the network.
+    /// The manual "Check for updates" (spec 019, R5): always runs and surfaces
+    /// failures. The network runs unlocked; publication and the attempt record
+    /// happen afterwards under one short lock (spec 077, R1 review).
     fn catalog_check(&mut self, cancel: &CancellationToken) -> Result<CatalogOutcome, Problem> {
         let now = now_unix_secs();
         if cancel.is_cancelled() {
             return Err(Problem::Cancelled);
         }
-        self.state.catalog_last_check = Some(now);
-        self.save()?;
         self.fetch_and_accept_catalog(now, cancel)
     }
 
@@ -1950,29 +1964,19 @@ impl Services {
         }
         let now = now_unix_secs();
         match self.fetch_and_accept_catalog(now, cancel) {
-            Ok(CatalogOutcome::Updated {
-                serial,
-                source_commit,
-                dropped,
-            }) => {
-                tracing::info!(serial, dropped, "catalog updated at startup");
-                let _ = source_commit;
-                self.record_catalog_attempt(now)?;
+            Ok(CatalogOutcome::Updated { serial, .. }) => {
+                tracing::info!(serial, "catalog updated at startup");
                 Ok(StartupCatalog {
                     updated: Some(serial),
                 })
             }
-            // Current (not newer) and an unusable bundle both keep the catalog.
-            Ok(_) => {
-                self.record_catalog_attempt(now)?;
-                Ok(StartupCatalog::default())
-            }
+            // Current (not newer) and an unusable bundle both keep the catalog;
+            // the shared helper already recorded the attempt.
+            Ok(_) => Ok(StartupCatalog::default()),
             Err(problem) => {
-                // Silent on failure: keep the cached/built-in catalog.
+                // Silent on failure: keep the cached/built-in catalog. The
+                // helper recorded the attempt before returning the error.
                 tracing::warn!(?problem, "startup catalog check failed");
-                if self.record_catalog_attempt(now).is_err() {
-                    tracing::warn!("could not record the catalog check attempt");
-                }
                 Ok(StartupCatalog::default())
             }
         }
@@ -1986,6 +1990,11 @@ impl Services {
     /// `iwads.json` is never rewritten from a background instance.
     fn record_catalog_attempt(&mut self, now: u64) -> Result<(), Problem> {
         let _state_lock = self.lock_state()?;
+        self.record_catalog_attempt_locked(now)
+    }
+
+    /// The attempt record itself; the caller holds the cross-process lock.
+    fn record_catalog_attempt_locked(&mut self, now: u64) -> Result<(), Problem> {
         let path = self.env.paths.config.join("app.json");
         match fs::read(&path) {
             Ok(bytes) if bytes.len() <= 4 * 1024 * 1024 => match AppState::parse(&bytes) {
@@ -2044,15 +2053,18 @@ impl Services {
                     tracing::warn!(
                         "catalog bundle carried no usable recipe; keeping the current catalog"
                     );
+                    self.record_catalog_attempt(now)?;
                     return Ok(CatalogOutcome::Current {
                         serial: self.catalog_origin.serial,
                     });
                 }
-                // Spec 077, R1 review: a slower automatic response must never
-                // roll back a newer catalog adopted while it was in flight — not
-                // even by another process. Compare with the serial effective on
-                // disk right now (cached bundle, this instance and the embedded
-                // fallback), not only with this instance's origin.
+                // Spec 077, R1 review: every publisher (automatic or manual, in
+                // this process or another) shares one short lock around the
+                // actual publication, after the network. The anti-rollback
+                // comparison and the cache write are inside it, so two checks
+                // cannot interleave read/compare/store, and a delayed older
+                // response can never overwrite a newer publish.
+                let _state_lock = self.lock_state()?;
                 let cached = ddl_core::catalog::load_cache(&self.env.paths.data)
                     .map(|loaded| loaded.bundle.catalog_serial)
                     .unwrap_or(0);
@@ -2062,9 +2074,10 @@ impl Services {
                 if accepted.serial() <= effective {
                     tracing::info!(
                         serial = accepted.serial(),
-                        effective = self.catalog_origin.serial,
+                        effective,
                         "ignoring a catalog bundle older than the one in use"
                     );
+                    self.record_catalog_attempt_locked(now)?;
                     return Ok(CatalogOutcome::Current { serial: effective });
                 }
                 ddl_core::catalog::store_cache(&self.env.paths.data, &accepted.bundle, now)
@@ -2079,6 +2092,7 @@ impl Services {
                     source_commit: source_commit.clone(),
                     fetched_at: Some(now),
                 };
+                self.record_catalog_attempt_locked(now)?;
                 Ok(CatalogOutcome::Updated {
                     serial,
                     source_commit,
@@ -2091,7 +2105,12 @@ impl Services {
             )) => Ok(CatalogOutcome::Current {
                 serial: self.catalog_origin.serial,
             }),
-            Err(error) => Err(logged(Problem::Catalog, error)),
+            Err(error) => {
+                if self.record_catalog_attempt(now).is_err() {
+                    tracing::warn!("could not record the catalog check attempt");
+                }
+                Err(logged(Problem::Catalog, error))
+            }
         }
     }
 
@@ -4674,6 +4693,21 @@ mod tests {
         }
         assert_eq!(s.counters().snapshots(), snapshots, "no snapshot built");
         assert!(s.profiles.load(&profile.id).unwrap().pistol_start);
+
+        // An arbitrary id is refused instead of minting a profile.
+        assert!(
+            s.execute(
+                Command::SetPistolStart {
+                    recipe_id: "sigil".into(),
+                    profile_id: "sigil-arbitrary".into(),
+                    value: true,
+                },
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .is_err()
+        );
+        assert!(!s.profiles.path("sigil-arbitrary").unwrap().exists());
     }
 
     /// Spec 075, R2 review: a real positive base-game first press with no
@@ -4724,34 +4758,47 @@ mod tests {
             .into_iter()
             .find(|base| base.id() == "base:doom2")
             .expect("the fixture identifies Doom II");
-        for profile_id in [
-            format!("{}-profile-9", base.id().replace(':', "-")),
-            "base-doom2".to_owned(),
-        ] {
+        let profile_id = format!("{}-profile-9", base.id().replace(':', "-"));
+        assert!(
+            !s.profiles.path(&profile_id).unwrap().is_file(),
+            "no profile JSON exists yet: {profile_id}"
+        );
+        match s
+            .execute(
+                Command::Local(LocalCommand::BasePistolStart {
+                    profile_id: profile_id.clone(),
+                    value: true,
+                }),
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .expect("the first base press succeeds")
+        {
+            Refresh::Profile(saved) => {
+                assert!(saved.pistol_start);
+                assert_eq!(saved.recipe_id, base.id());
+            }
+            Refresh::Full => panic!("the base toggle must not rebuild the snapshot"),
+        }
+        let stored = s.profiles.load(&profile_id).unwrap();
+        assert!(stored.pistol_start);
+        assert_eq!(stored.recipe_id, base.id());
+        // Anything else — including the bare `base-doom2` — is refused, because
+        // `fresh_base_profile` only ever mints `base-<game>-profile-N`.
+        for profile_id in ["base-doom2", "base-doom2-profile-x", "nonsense"] {
             assert!(
-                !s.profiles.path(&profile_id).unwrap().is_file(),
-                "no profile JSON exists yet: {profile_id}"
-            );
-            match s
-                .execute(
+                s.execute(
                     Command::Local(LocalCommand::BasePistolStart {
-                        profile_id: profile_id.clone(),
+                        profile_id: profile_id.into(),
                         value: true,
                     }),
                     &CancellationToken::new(),
                     &mut |_| {},
                 )
-                .expect("the first base press succeeds")
-            {
-                Refresh::Profile(saved) => {
-                    assert!(saved.pistol_start);
-                    assert_eq!(saved.recipe_id, base.id());
-                }
-                Refresh::Full => panic!("the base toggle must not rebuild the snapshot"),
-            }
-            let stored = s.profiles.load(&profile_id).unwrap();
-            assert!(stored.pistol_start);
-            assert_eq!(stored.recipe_id, base.id());
+                .is_err(),
+                "{profile_id} must be refused"
+            );
+            assert!(!s.profiles.path(profile_id).unwrap().exists());
         }
     }
 
@@ -5438,6 +5485,47 @@ mod catalog_tests {
                 .iter()
                 .any(|item| item.recipe.id == "sigil" && item.favorite),
             "the view the UI adopts shows the state saved meanwhile"
+        );
+    }
+
+    /// Spec 077, R1 review: a *delayed* automatic response cannot overwrite a
+    /// newer catalog published while its request was in flight (the comparison
+    /// and the cache write share one short lock at publication time).
+    #[test]
+    fn a_delayed_automatic_response_cannot_overwrite_a_newer_publish() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let (release, wait) = std::sync::mpsc::channel::<()>();
+        let wait = std::sync::Mutex::new(wait);
+        let server = Server::start(move |_r| {
+            let _ = wait.lock().unwrap().recv();
+            Response::ok(served.clone())
+        });
+        let env = environment(temp.path(), server.url("/catalog.json"));
+
+        // The automatic check opens and stalls inside the request…
+        let thread_env = env.clone();
+        let handle = std::thread::spawn(move || {
+            let mut checking = Services::open(thread_env).unwrap();
+            checking
+                .startup_catalog_check(&CancellationToken::new())
+                .unwrap()
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        // …while another publisher adopts serial 900.
+        let newer: ddl_core::catalog::Bundle = serde_json::from_slice(&bundle_json(900)).unwrap();
+        ddl_core::catalog::store_cache(&env.paths.data, &newer, 1).unwrap();
+
+        release.send(()).unwrap();
+        let outcome = handle.join().unwrap();
+        assert_eq!(
+            outcome.updated, None,
+            "the delayed older response is refused"
+        );
+        let cached = ddl_core::catalog::load_cache(&env.paths.data).expect("cache");
+        assert_eq!(
+            cached.bundle.catalog_serial, 900,
+            "the newer publish survives the delayed response"
         );
     }
 
