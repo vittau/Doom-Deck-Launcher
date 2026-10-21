@@ -44,15 +44,13 @@ slot.
 
 ## Verification
 
-- `catalog::tests::sigil_editions_use_plain_names_and_keep_filenames` (new,
-  `ddl-core`): asserts each plain label and the normal/COMPAT wording, rejects
-  `REG`/`E3` in labels, keeps both exact filenames in the obtain notes, and
-  re-asserts the replacement/`requires` fields and both load orders.
 - `headless::journeys::sigil_editions_name_the_normal_and_compat_editions`
   (new): renders SIGIL Setup with advanced options and an imported paid
   soundtrack, asserts the four labels are fitted and stay at or above the 20 px
   floor within the 30 px row, captures the options and the import sheet, and
-  checks the sheet actions.
+  checks the sheet actions. This is the meaningful end-to-end check; the
+  intermediate core copy test was removed because it only re-read the TOML
+  fields already exercised here and in the recipe parser tests.
 - `DDL_TITLE_RECIPE=sigil title_fit_setup_and_components_first`: production
   fitter pixel audit of every SIGIL screen and component row; passes.
 - `cargo test -p ddl-core catalog::`: 107 passed.
@@ -61,8 +59,7 @@ slot.
 
 ## Limits
 
-Physical Deck legibility is owner validation. The five shared screenshots were
-not regenerated: spec 074 R3 and the coordinator ask for one final refresh after
-the integrated catalog and any further visual changes, with Discover at scroll
-top showing the category strip. No visible window was opened and no screen was
-captured. No push, tag, release or coordinator-document change was made.
+Physical Deck legibility is owner validation. The five shared screenshots are
+owned by the final 074/077 refresh; this copy-only change does not alter any of
+their captured states. No visible window was opened and no screen was captured.
+No push, tag, release or coordinator-document change was made.

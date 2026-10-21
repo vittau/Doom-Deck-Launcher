@@ -18,8 +18,8 @@ instead of touching the 20 px ornamental frame:
 
 Game and readiness are joined with the same `·` separator the Home screen already
 uses; the information is unchanged and the line is 18 px so the longest label
-(`Ultimate DOOM · Base game missing`) still fits instead of eliding. No card,
-grid, focus-ring, controller-target or sorting behaviour changed.
+(`Ultimate DOOM · Base game missing`) still fits instead of eliding. No mapset
+card, grid, focus-ring, controller-target or sorting behaviour changed.
 
 The bug this fixes is visible in the before render: a Doomer Boards recipe shows
 two wide chips, so the second row was drawn at `y+488…518` — past the card's
@@ -39,7 +39,7 @@ so the full game name wraps instead of eliding:
 | --- | --- | --- |
 | Card | 282×84 at `y=152` | 282×108 at `y=148` |
 | Art | `x+10, y+164`, 96×60 | `x+24, y+24`, 80×60 (4:3, inside the frame) |
-| Title | `x+116, y+162`, 156×64; one line at this height | `x+112, y+24`, 146×60; two lines, full names |
+| Title | `x+116, y+162`, 156×64; drawn over the top frame | `x+112, y+24`, 146×60; two lines, full names |
 | Section heading | `y=252` | `y=280`, clear of the focused outline |
 | First mapset row | shifted `+202` | shifted `+226` |
 
@@ -52,8 +52,8 @@ outline still extends 16 px outside the card; the first content is 24 px in.
 Discover's existing header status line (the small muted line under the heading)
 now shows the effective catalog's source date, built from
 `snapshot.catalog.serial` with `ddl_core::catalog::serial_datetime`. The format
-is exactly `October 21, 2026 at 13:39 (UTC)`. Serial `0` or an unparseable value
-shows `Catalog date unavailable`; the line never substitutes today's date. It is
+is exactly `October 21, 2026 at 13:39 (UTC)`. Serial `0` (unknown) shows
+`Catalog date unavailable`; the line never substitutes today's date. It is
 recomputed on every sync, so a newer active catalog updates it without moving
 the category strip or grid. The heading keeps its place and moves up 20 px only
 as it already does whenever a status line is present; card space is unchanged.
