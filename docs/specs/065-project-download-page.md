@@ -25,6 +25,11 @@ necessary setup honestly and do not advertise unmeasured performance claims.
 - **R4:** Preserve signed remote URLs/key handling and publication workflow behavior. Render
   the actual version rather than inventing a release. Support desktop/mobile/Deck-sized
   viewports with readable contrast, visible keyboard focus and accessible link/button labels.
+- **R5:** Make the page discoverable and shareable with a descriptive document title, concise
+  search description, canonical approved URL and social preview using existing licensed assets.
+  Explain that it helps Steam DOOM owners play community modifications on Deck; do not imply
+  official Valve/id affiliation. The primary install path should use the graphical handler for
+  `.flatpakref`, with CLI details secondary and actual Deck validation clearly distinguished.
 
 ## Acceptance
 
