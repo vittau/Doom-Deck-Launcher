@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.vittau.Doom-Deck-Launcher</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>DoomDeckLauncher</name>
+  <summary>Controller-first DOOM mapset launcher</summary>
+
+  <developer id="io.github.vittau">
+    <name>The DoomDeckLauncher contributors</name>
+  </developer>
+
+  <description>
+    <p>
+      DoomDeckLauncher is a controller-first launcher for classic DOOM and curated
+      community mapsets. It keeps the official DSDA-Doom engine, your IWADs and your
+      mapset library together, and starts the game without a terminal.
+    </p>
+    <p>
+      Browse the bundled catalog, install mapsets from reviewed sources with SHA-256
+      checks, let DDL identify and arrange your IWADs, and keep per-mapset profiles for
+      difficulty, load order and compatibility level. The interface is designed for a
+      gamepad and can be added to Steam as a non-Steam shortcut.
+    </p>
+    <p>
+      The DSDA-Doom engine is downloaded at runtime from its official upstream release
+      and is never bundled or mirrored by this package. IWADs are never downloaded.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.vittau.Doom-Deck-Launcher.desktop</launchable>
+  <provides>
+    <binary>ddl</binary>
+  </provides>
+
+  <categories>
+    <category>Game</category>
+  </categories>
+
+  <keywords>
+    <keyword>doom</keyword>
+    <keyword>wad</keyword>
+    <keyword>launcher</keyword>
+    <keyword>mapset</keyword>
+    <keyword>gamepad</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/vittau/Doom-Deck-Launcher</url>
+  <url type="bugtracker">https://github.com/vittau/Doom-Deck-Launcher/issues</url>
+  <url type="vcs-browser">https://github.com/vittau/Doom-Deck-Launcher</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The Home screen with recently played mapsets</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/home.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Discover with categories, tags and favorites</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/discover.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Mapset detail with tags and favorite state</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/mapset-detail.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Play setup with component choices and load order</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/play-setup.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.0.9" date="2026-10-20">
+      <description>
+        <p>Focus clarity, a Library focus-scroll fix and sandbox-ready Flatpak behaviour.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">moderate</content_attribute>
+    <content_attribute id="violence-fantasy">moderate</content_attribute>
+    <content_attribute id="violence-realistic">moderate</content_attribute>
+    <content_attribute id="violence-bloodshed">moderate</content_attribute>
+  </content_rating>
+</component>

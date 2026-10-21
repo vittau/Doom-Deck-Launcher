@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=DoomDeckLauncher
+GenericName=DOOM Mapset Launcher
+Comment=Controller-first launcher for curated DOOM mapsets
+Exec=ddl
+Icon=io.github.vittau.Doom-Deck-Launcher
+Terminal=false
+Categories=Game;
+Keywords=doom;wad;launcher;mapset;
+StartupNotify=true

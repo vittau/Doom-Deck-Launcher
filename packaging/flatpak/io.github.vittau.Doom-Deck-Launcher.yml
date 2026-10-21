@@ -1,0 +1,116 @@
+# Experimental Flatpak packaging for DoomDeckLauncher (spec 062).
+#
+# Provenance: written by an AI agent at the owner's request. D-034 records the
+# exception to the human-only file-authoring rule. This manifest is NOT a
+# Flathub submission and is not eligible for Flathub under its current
+# Generative AI policy. Do not submit it as-is.
+#
+# The application sources come from the checked-out tree (`type: dir`), so CI
+# always builds the commit it checked out. There is deliberately no git commit
+# pin that would exclude new packaging files or require a manifest commit.
+#
+# x86_64 only: the Rust toolchain source and the CI job are both restricted to
+# x86_64. Steam Deck is x86_64 and the release tarball is x86_64 too.
+app-id: io.github.vittau.Doom-Deck-Launcher
+runtime: org.freedesktop.Platform
+runtime-version: "26.08"
+sdk: org.freedesktop.Sdk
+command: ddl
+# The UI and metadata are English-only (D-008); no locale extension is built.
+separate-locales: false
+
+finish-args:
+  # Flatpak 1.16 introduced `--device=input`, used below.
+  - --require-version=1.16.0
+  # X11 clipboard/selection and the Wayland/X11 display connection.
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Catalog/engine downloads and the once-a-day catalog bundle check.
+  - --share=network
+  # Audio through PipeWire's PulseAudio compatibility layer (DSDA-Doom).
+  - --socket=pulseaudio
+  # OpenGL for Slint's femtovg renderer and the extracted engine.
+  - --device=dri
+  # Gamepad evdev nodes. `--device=input` exposes /dev/input only, not all of
+  # /dev; Steam Input's virtual pad appears there.
+  - --device=input
+  # gilrs reads controller metadata (ID_INPUT_*, vendor/product) from udev.
+  - --filesystem=/run/udev:ro
+  # Read-only IWAD/mapset discovery under $HOME. DDL never writes outside its
+  # own XDG directories (D-026); the controller-first picker needs stable in-
+  # place paths, which a document-portal path cannot provide.
+  - --filesystem=home:ro
+  # Steam libraries on SD cards and removable drives.
+  - --filesystem=/run/media:ro
+  # IWAD discovery when Steam or Heroic is installed as a Flatpak. `home`
+  # access excludes ~/.var/app, so these two need explicit grants.
+  - --filesystem=~/.var/app/com.valvesoftware.Steam:ro
+  - --filesystem=~/.var/app/com.heroicgameslauncher.hgl:ro
+
+cleanup:
+  # The pinned compiler is build-time only; keep it out of the app bundle.
+  - /rust
+
+modules:
+  # The Flathub `org.freedesktop.Sdk.Extension.rust-stable//26.08` extension
+  # was available on 2026-10-20 but shipped Rust 1.98.0, older than this
+  # repository's pinned 1.99.1 / rust-version 1.99. Installing it would fail
+  # the MSRV check. This module installs the exact official toolchain named in
+  # `rust-toolchain.toml` instead. The archive is fetched by flatpak-builder
+  # before the build sandbox starts, so the build itself stays offline.
+  - name: rust-toolchain
+    buildsystem: simple
+    build-commands:
+      - cd rust-x86_64-unknown-linux-gnu && ./install.sh --prefix="${FLATPAK_DEST}/rust" --disable-ldconfig --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu
+      - ${FLATPAK_DEST}/rust/bin/rustc --version
+      - ${FLATPAK_DEST}/rust/bin/cargo --version
+    sources:
+      - type: archive
+        url: https://static.rust-lang.org/dist/2026-10-15/rust-1.99.1-x86_64-unknown-linux-gnu.tar.xz
+        sha256: 231fcae47ee950621374725b5fc3b5441d2fbda2955ac45dd7dc816d8876cfe7
+        only-arches:
+          - x86_64
+
+  - name: ddl
+    buildsystem: simple
+    build-options:
+      # Use the pinned toolchain, not a host or extension compiler.
+      prepend-path: /app/rust/bin
+      env:
+        CARGO_HOME: /run/build/ddl/cargo
+        CARGO_NET_OFFLINE: "true"
+        CARGO_INCREMENTAL: "0"
+    build-commands:
+      # Prove the compiler still satisfies the repository pin before building.
+      - test "$(rustc --version | cut -d ' ' -f2)" = "1.99.1"
+      - cargo --version
+      # The serial is the source commit's UTC time. CI writes it from
+      # `git log -1 --format=%ct`; the checked-in 0 is a sentinel that fails
+      # loudly instead of baking serial 0 into a build.
+      - serial="$(cat packaging/flatpak/catalog-serial)"; test "$serial" -gt 0
+      # `--locked` keeps Cargo.lock unchanged; `--offline` forbids network access.
+      - serial="$(cat packaging/flatpak/catalog-serial)"; DDL_CATALOG_SERIAL="$serial" cargo build --release --locked --offline -p ddl
+      - install -Dm0755 target/release/ddl "${FLATPAK_DEST}/bin/ddl"
+      - install -Dm0644 packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop "${FLATPAK_DEST}/share/applications/io.github.vittau.Doom-Deck-Launcher.desktop"
+      - install -Dm0644 packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml "${FLATPAK_DEST}/share/metainfo/io.github.vittau.Doom-Deck-Launcher.metainfo.xml"
+      # Reuse the production window icon: 256 px PNG plus the scalable emblem.
+      - install -Dm0644 crates/ddl/ui/assets/logo/icon.png "${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.vittau.Doom-Deck-Launcher.png"
+      - install -Dm0644 crates/ddl/ui/assets/logo/emblem.svg "${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.vittau.Doom-Deck-Launcher.svg"
+      - install -Dm0644 LICENSE "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/LICENSE"
+      - install -Dm0644 crates/ddl/ui/assets/Inter-LICENSE.txt "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/Inter-LICENSE.txt"
+      - install -Dm0644 crates/ddl/ui/assets/Barlow-OFL.txt "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/Barlow-OFL.txt"
+      - install -Dm0644 crates/ddl/ui/assets/PirataOne-OFL.txt "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/PirataOne-OFL.txt"
+    sources:
+      # Exact checked-out tree. `.git` and build outputs are skipped because
+      # the build does not need history; the manifest itself is in the tree.
+      - type: dir
+        path: ../..
+        skip:
+          - .git
+          - .scratch
+          - target
+          - packaging/flatpak/_build
+          - packaging/flatpak/_repo
+          - packaging/flatpak/flatpak-build.log
+      - cargo-sources.json

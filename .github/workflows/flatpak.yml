@@ -1,0 +1,316 @@
+# Experimental Flatpak packaging for DoomDeckLauncher (spec 062).
+#
+# This is an artifact-only CI job. It does not publish a GitHub Release, push
+# to a Flatpak repository or submit anything to Flathub. The package is
+# AI-assisted and experimental; see docs/flatpak-build.md and D-034.
+#
+# Build environment: the plain GitHub-hosted Ubuntu runner plus Flatpak and
+# flatpak-builder from Ubuntu's archive. It deliberately does not use the Steam
+# Linux Runtime tarball job from ci.yml/release.yml: this job proves the Flatpak
+# manifest, not the Deck tarball.
+#
+# External references:
+#   * actions/checkout v4, pinned by commit.
+#   * actions/upload-artifact v4, pinned by commit.
+#   * flatpak-cargo-generator at commit 74697c7 (2026-09-30), plus its SHA-256.
+#   * Runtime/SDK branch org.freedesktop.*//26.08 from Flathub.
+#   * Rust 1.99.1 from static.rust-lang.org, pinned by SHA-256 in the manifest.
+name: Flatpak
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "crates/**"
+      - "catalog/**"
+      - "scripts/flatpak/**"
+      - "LICENSE"
+  pull_request:
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "crates/**"
+      - "catalog/**"
+      - "scripts/flatpak/**"
+      - "LICENSE"
+
+# Read-only everywhere. The artifact upload needs no repository write access.
+permissions:
+  contents: read
+
+# A newer run for the same ref supersedes an older one; never build the same
+# ref twice concurrently (the Flatpak runtime download is large).
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  APP_ID: io.github.vittau.Doom-Deck-Launcher
+  MANIFEST: packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml
+  GENERATOR_COMMIT: 74697c75b630d7330e77250fc13cb5ea688d9479
+  GENERATOR_SHA256: 0a2db6be87d75910facef28ab46d4d6460802e8419ab850d0caa6a364d26b380
+
+jobs:
+  flatpak:
+    name: Build Flatpak bundle
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # `git log -1` only needs the checked-out commit.
+          fetch-depth: 1
+
+      - name: Install Flatpak tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            flatpak flatpak-builder desktop-file-utils appstream
+          flatpak --version
+          flatpak-builder --version
+          appstreamcli --version
+          desktop-file-validate --version || true
+          # finish-args use --device=input and --require-version=1.16.0.
+          version="$(flatpak --version | awk '{print $2}')"
+          printf '%s\n' "$version"
+          test "$(printf '1.16.0\n%s\n' "$version" | sort -V | head -1)" = "1.16.0"
+
+      - name: Add Flathub and install the 26.08 SDK/runtime
+        run: |
+          set -euo pipefail
+          flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub \
+            org.freedesktop.Platform//26.08 \
+            org.freedesktop.Sdk//26.08
+          # Record what the runtime branch resolved to. The Rust extension is
+          # verified but deliberately not used: 26.08 shipped 1.98.0 on
+          # 2026-10-20, below the repository's 1.99 MSRV. The manifest pins the
+          # official 1.99.1 toolchain instead. A missing extension is a warning,
+          # not a build failure, because the pinned toolchain does not need it.
+          { flatpak remote-info --user flathub \
+              org.freedesktop.Sdk.Extension.rust-stable//26.08 \
+              || echo "org.freedesktop.Sdk.Extension.rust-stable//26.08 is unavailable"; } \
+            | tee "$RUNNER_TEMP/rust-extension.txt"
+          flatpak info --user org.freedesktop.Sdk//26.08 | tee "$RUNNER_TEMP/sdk-info.txt"
+
+      - name: Check the pinned Rust compiler against the repository MSRV
+        run: |
+          set -euo pipefail
+          toolchain="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
+          msrv="$(sed -n 's/^rust-version *= *"\([^"]*\)"/\1/p' Cargo.toml)"
+          manifest_rust="$(grep -o 'dist/[^/]*/rust-[0-9][0-9.]*' "$MANIFEST" \
+            | head -n 1 | sed 's#.*rust-##')"
+          test -n "$toolchain"
+          test -n "$msrv"
+          test -n "$manifest_rust"
+          echo "toolchain=$toolchain msrv=$msrv manifest=$manifest_rust"
+          # The manifest must use the exact compiler the repository pins.
+          test "$manifest_rust" = "$toolchain"
+          # The pinned compiler must satisfy the declared MSRV.
+          test "$(printf '%s\n%s\n' "$msrv" "$toolchain" | sort -V | head -1)" = "$msrv"
+
+      - name: Generate and verify cargo-sources.json
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/generator-venv"
+          "$RUNNER_TEMP/generator-venv/bin/pip" install --quiet --disable-pip-version-check \
+            --no-cache-dir 'aiohttp==3.14.5' 'tomlkit==0.15.2'
+          generator="$RUNNER_TEMP/flatpak-cargo-generator.py"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/${GENERATOR_COMMIT}/cargo/flatpak-cargo-generator.py" \
+            -o "$generator"
+          echo "$GENERATOR_SHA256  $generator" | sha256sum -c -
+          # Regenerate from the checked-out Cargo.lock, not from a stale copy.
+          "$RUNNER_TEMP/generator-venv/bin/python" "$generator" Cargo.lock \
+            -o "$RUNNER_TEMP/cargo-sources.json"
+          if ! cmp -s packaging/flatpak/cargo-sources.json "$RUNNER_TEMP/cargo-sources.json"; then
+            echo "::error::packaging/flatpak/cargo-sources.json is stale; regenerate it from Cargo.lock"
+            diff -u packaging/flatpak/cargo-sources.json "$RUNNER_TEMP/cargo-sources.json" | head -200 || true
+            exit 1
+          fi
+          echo "cargo-sources.json matches Cargo.lock"
+
+      - name: Parse and check the manifest inputs
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/generator-venv/bin/python" - <<'PY'
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as ET
+
+          import yaml
+
+          manifest_path = pathlib.Path("packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml")
+          manifest = yaml.safe_load(manifest_path.read_text())
+          assert manifest["app-id"] == "io.github.vittau.Doom-Deck-Launcher"
+          assert manifest["runtime"] == "org.freedesktop.Platform"
+          assert manifest["runtime-version"] == "26.08"
+          assert manifest["sdk"] == "org.freedesktop.Sdk"
+          assert manifest["command"] == "ddl"
+          assert any("--device=input" == arg for arg in manifest["finish-args"])
+
+          # Every local source must exist, and every installed repository file
+          # must be there for flatpak-builder to copy.
+          for module in manifest["modules"]:
+              for source in module.get("sources", []):
+                  if isinstance(source, str):
+                      path = (manifest_path.parent / source).resolve()
+                      assert path.is_file(), f"missing source list {path}"
+                  elif source["type"] == "dir":
+                      path = (manifest_path.parent / source["path"]).resolve()
+                      assert path.is_dir(), f"missing dir source {path}"
+                  elif source["type"] == "file":
+                      path = (manifest_path.parent / source["path"]).resolve()
+                      assert path.is_file(), f"missing file source {path}"
+
+          for relative in [
+              "packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop",
+              "packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml",
+              "crates/ddl/ui/assets/logo/icon.png",
+              "crates/ddl/ui/assets/logo/emblem.svg",
+              "LICENSE",
+              "crates/ddl/ui/assets/Inter-LICENSE.txt",
+              "crates/ddl/ui/assets/Barlow-OFL.txt",
+              "crates/ddl/ui/assets/PirataOne-OFL.txt",
+          ]:
+              assert pathlib.Path(relative).is_file(), f"missing {relative}"
+
+          desktop = pathlib.Path("packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop").read_text()
+          assert "Exec=ddl\n" in desktop
+          assert "Icon=io.github.vittau.Doom-Deck-Launcher\n" in desktop
+
+          metainfo = pathlib.Path("packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml")
+          root = ET.parse(metainfo).getroot()
+          assert root.tag == "component"
+          assert root.findtext("id") == "io.github.vittau.Doom-Deck-Launcher"
+          assert root.findtext("launchable") == "io.github.vittau.Doom-Deck-Launcher.desktop"
+          print("manifest and metadata inputs OK")
+          PY
+
+      - name: Validate desktop entry and AppStream metainfo
+        run: |
+          set -euo pipefail
+          desktop-file-validate packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop
+          appstreamcli validate --no-net --explain \
+            packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml
+
+      - name: Build the Flatpak
+        run: |
+          set -euo pipefail
+          serial="$(git log -1 --format=%ct "${GITHUB_SHA}")"
+          test "$serial" -gt 0
+          printf '%s\n' "$serial" > packaging/flatpak/catalog-serial
+          echo "catalog serial: $serial"
+          mkdir -p "$RUNNER_TEMP/xdg"
+          chmod 700 "$RUNNER_TEMP/xdg"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
+          build_dir="$RUNNER_TEMP/ddl-flatpak-build"
+          repo="$RUNNER_TEMP/ddl-flatpak-repo"
+          flatpak-builder --user --arch=x86_64 --force-clean --disable-rofiles-fuse \
+            --repo="$repo" "$build_dir" "$MANIFEST" 2>&1 | tee "$RUNNER_TEMP/flatpak-build.log"
+
+      - name: Prepare headless sandbox paths
+        run: |
+          set -euo pipefail
+          # The runner VM has no GPU and may have no input devices. The grants
+          # below are directory bind mounts; empty directories are enough for a
+          # `--version`/`--help` smoke test and keep the real finish-args in
+          # place. Nothing here changes the packaged metadata.
+          sudo mkdir -p /dev/dri /dev/input /run/udev /run/media
+          mkdir -p "$HOME/.var/app/com.valvesoftware.Steam" \
+            "$HOME/.var/app/com.heroicgameslauncher.hgl"
+          mkdir -p "$RUNNER_TEMP/xdg"
+          chmod 700 "$RUNNER_TEMP/xdg"
+
+      - name: Smoke-test and bundle
+        run: |
+          set -euo pipefail
+          build_dir="$RUNNER_TEMP/ddl-flatpak-build"
+          repo="$RUNNER_TEMP/ddl-flatpak-repo"
+          bundle="ddl-flatpak-x86_64.flatpak"
+          serial="$(cat packaging/flatpak/catalog-serial)"
+          mkdir -p "$RUNNER_TEMP/xdg"
+          chmod 700 "$RUNNER_TEMP/xdg"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
+
+          flatpak build-export --arch=x86_64 "$repo" "$build_dir" master
+          flatpak --user remote-add --if-not-exists --no-gpg-verify ddl-ci "$repo"
+          flatpak --user install -y --noninteractive ddl-ci "${APP_ID}//master"
+          flatpak info --user --show-metadata "${APP_ID}//master" | tee "$RUNNER_TEMP/installed-metadata.txt"
+
+          # Both flags exit before a window is created, so this is headless.
+          flatpak run --command=ddl "${APP_ID}//master" --version | tee "$RUNNER_TEMP/version.txt"
+          flatpak run --command=ddl "${APP_ID}//master" --help > "$RUNNER_TEMP/help.txt"
+          version="$(sed -n 's/^version = "\([0-9][^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+          test -n "$version"
+          grep -Fx "ddl $version" "$RUNNER_TEMP/version.txt" >/dev/null || {
+            echo "unexpected --version output:"; cat "$RUNNER_TEMP/version.txt"; exit 1;
+          }
+          grep -F -- "--version" "$RUNNER_TEMP/help.txt" >/dev/null
+
+          flatpak build-bundle --arch=x86_64 \
+            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo \
+            "$repo" "$bundle" "$APP_ID" master
+          sha256sum "$bundle" > "$bundle.sha256"
+          cat "$bundle.sha256"
+          ls -lh "$bundle"
+
+          # Prove the artifact itself installs and starts, not just the repo.
+          flatpak --user uninstall -y "${APP_ID}//master"
+          flatpak --user install -y --noninteractive "./$bundle"
+          flatpak run --command=ddl "${APP_ID}//master" --version
+
+          {
+            echo "### Experimental Flatpak build"
+            echo
+            echo "- App id: \`$APP_ID\`"
+            echo "- Catalog serial baked into the binary: \`$serial\`"
+            echo "- Bundle: \`$bundle\`"
+            echo "- Bundle SHA-256: \`$(cut -d ' ' -f1 "$bundle.sha256")\`"
+            echo "- Flatpak: \`$(flatpak --version)\`"
+            echo "- Runtime branch: \`org.freedesktop.Platform//26.08\`"
+            echo "- Rust: \`1.99.1\` (official archive, pinned in the manifest)"
+            echo
+            echo "Not published. Download the workflow artifact and follow \`docs/flatpak-build.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the Flatpak bundle and checksum
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ddl-flatpak-x86_64
+          path: |
+            ddl-flatpak-x86_64.flatpak
+            ddl-flatpak-x86_64.flatpak.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload the build log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ddl-flatpak-build-log
+          path: |
+            ${{ runner.temp }}/flatpak-build.log
+            ${{ runner.temp }}/installed-metadata.txt
+            ${{ runner.temp }}/rust-extension.txt
+            ${{ runner.temp }}/sdk-info.txt
+          if-no-files-found: warn
+          retention-days: 14
