@@ -4,8 +4,10 @@
 work until the owner asks. On return, resume these same OpenCode conversations; do not create
 fresh agents, switch providers/models, redo research, or dispatch unrelated work.**
 
-Both OpenCode API interrupts returned `interrupted: true`; session records report outcome
-`interrupted`. No worker was marked complete or abandoned. The Run/Dispatches remain available
+The shared-service API reported interrupted sessions, but the standalone workers used their
+own private servers and continued running. The coordinator verified their exact worktree
+process ownership and stopped both private server/tool trees. The shared service was left
+untouched. No worker was marked complete or abandoned. The Run/Dispatches remain available
 for continuation. Health monitoring and the local GUI guard were stopped. No local test or
 build was left running. Remote GitHub jobs may finish while the Mac is off.
 
@@ -34,7 +36,7 @@ build was left running. Remote GitHub jobs may finish while the Mac is off.
 - Model: `opencode-go/deepseek-v4.1-flash`, high; approximately 29% of its 1M context used.
 - Terminal: `term_e4823573-a0e4-4f28-ab60-7eccc43a8a79`.
 - Task: `task_6c8e3dd0e89a`; active Dispatch: `ctx_a46cde9e10f6`.
-- Saved WIP HEAD: **`3a61e99b19e1846a2406ce4280ad4a1b3411100b`**.
+- Saved WIP HEAD: **`6bb3610`** (late audio error-copy wiring saved after `3a61e99`).
 - Additional tracked snapshot: `refs/keep/pause-2026-10-21-midi-soundfonts`.
 
 Completed: verified optional Arachno storage/download, hashes, safe extraction, preferences,
@@ -51,7 +53,7 @@ WIP commit saves changes in `dsda_config/manager.rs` and `services.rs`:
    tests were added to preserve unrelated user edits across audio changes and migration;
    **20 config-manager tests passed** after this fix.
 2. `prepare_audio` was being changed from log-and-continue to `Result<(), Problem>` so real
-   config/path write failures abort launch with an actionable error. Changes are saved, but the
+   config/path write failures abort launch with an actionable error. Changes and late runtime/string wiring are saved, but the
    final service changes were **not compiled/tested after interruption**. Inspect call sites and
    complete this correction, preserving intentional missing-font Default fallback.
 3. Audio Terms action was partially clipped at 1280×800. Layout correction and visible-bounds
@@ -118,12 +120,21 @@ Full OpenCode conversation exports (private local backups, valid JSON, outside G
 - `/Users/vitor/Backups/ddl-agent-pause-2026-10-21/sigil-edition-hashes.json`
 
 WIP task branches are pushed as additional backup; original worktrees are clean and retained.
-After an explicit owner resume, bind this Run if needed and inspect existing terminals. If the
-same TUI survives, send one concise continuation referencing this checkpoint and resume it.
-If a process must be restored after shutdown, restore the **same conversation** with
+After an explicit owner resume, bind this Run if needed and inspect existing terminals. The old terminal UI may survive while disconnected; its private server was stopped.
+Restore the **same conversation** with
 `opencode --standalone --session <exact-session-id>` in its original worktree and model config.
 Do not launch without `--session`, and do not use ambiguous `--continue`.
 If Orca dispatch/terminal ownership changed after restart, follow its recovery guide using
 positive process-exit evidence and the same Task; rebind/retry as necessary without creating a
 new conversation. Check pending messages and make the latest owner pause/resume preference
 explicit. Re-arm the GUI guard and health monitor only when work resumes.
+
+## Final shutdown addendum
+
+Site support link moved into the first viewport with a compact secondary hero action
+(owner revision). Source commit `b99d559`; publication run `39550620509`.
+Both standalone worker server trees were stopped after discovering that shared-service API
+interrupts did not reach those private servers. Subsequent SIGIL tests were interrupted too,
+so they are not a successful full-check result. Soundfont late error-copy wiring is saved
+and pushed at `6bb3610`; review and validation remain pending. Conversation backups were
+re-exported after stopping the private servers. Do not restart workers until the owner asks.
