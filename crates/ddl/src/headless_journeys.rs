@@ -279,6 +279,16 @@ fn sigil_editions_name_the_normal_and_compat_editions() {
     production::sigil_edition_copy(&window, &ui);
 }
 
+/// Spec 077 R3: Discover's catalog date subtitle, including the unknown case.
+#[test]
+fn discover_shows_the_catalog_source_date() {
+    if isolated(module_path!(), "discover_shows_the_catalog_source_date") {
+        return;
+    }
+    let (window, ui) = setup();
+    production::discover_catalog_subtitle(&window, &ui);
+}
+
 /// Spec 072 R4: a 90+ recipe catalog keeps the last card reachable.
 #[test]
 fn catalog_card_ids_beyond_99_stay_reachable() {

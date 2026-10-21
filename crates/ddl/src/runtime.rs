@@ -1777,7 +1777,15 @@ impl Runtime {
                 _ => None,
             }
         };
-        ui.set_status(status.map_or_else(Default::default, |key| text(ui, key)));
+        if self.screen == Screen::Discover {
+            // Spec 077 R3: the subtitle is the effective catalog's source
+            // serial, never the last check time; an unknown serial is honest.
+            ui.set_status(catalog_subtitle(
+                self.snapshot.as_ref().map_or(0, |s| s.catalog.serial),
+            ));
+        } else {
+            ui.set_status(status.map_or_else(Default::default, |key| text(ui, key)));
+        }
         let mut b = Nodes::new(ui);
         if self.playing {
             b.panel(12., 12., 1200., 478.);
@@ -4159,6 +4167,14 @@ fn catalog_summary(ui: &AppWindow, info: &services::CatalogInfo) -> SharedString
         }
         None => value(ui, T::CatalogSummarySimple, state),
     }
+}
+
+/// Spec 077 R3: Discover's header subtitle is the effective catalog date/time.
+/// An unknown serial must not borrow today's date.
+fn catalog_subtitle(serial: u64) -> SharedString {
+    ddl_core::catalog::serial_datetime(serial)
+        .unwrap_or_else(|| "Catalog date unavailable".into())
+        .into()
 }
 
 /// The download row's fill fraction and resume state (spec 040, R6).

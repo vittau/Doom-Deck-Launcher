@@ -8,7 +8,7 @@ instead of touching the 20 px ornamental frame:
 
 | Element | Before | After |
 | --- | --- | --- |
-| Art (base-game screenshot) | `x+20, y+20`, 344×142, flush with the frame | `x+28, y+28`, 328×128, 8 px inside the frame |
+| Art (mapset screenshot) | `x+20, y+20`, 344×142, flush with the frame | `x+28, y+28`, 328×128, 8 px inside the frame |
 | Favorite mark | `x+312, y+28` | `x+316, y+36`, inside the art |
 | Title | `x+24, y+174`, 336×68 | `x+28, y+164`, 328×60 |
 | Author | `x+24, y+244` | `x+28, y+230` |
@@ -28,6 +28,36 @@ two wide chips, so the second row was drawn at `y+488…518` — past the card's
 frame and 28 px to the card edge, for focused and unfocused, installed and
 uninstalled cards.
 
+### Base-game Library cards
+
+The four original-game cards in Library were a separate, equally cramped
+layout; `a648137` only changed the mapset cards. They now use a 24 px inset
+(the frame is 20 px, so every element stays inside it) and a taller title slot
+so the full game name wraps instead of eliding:
+
+| Element | Before | After |
+| --- | --- | --- |
+| Card | 282×84 at `y=152` | 282×108 at `y=148` |
+| Art | `x+10, y+164`, 96×60 | `x+24, y+24`, 80×60 (4:3, inside the frame) |
+| Title | `x+116, y+162`, 156×64; one line at this height | `x+112, y+24`, 146×60; two lines, full names |
+| Section heading | `y=252` | `y=280`, clear of the focused outline |
+| First mapset row | shifted `+202` | shifted `+226` |
+
+`The Plutonia Experiment` now renders on two lines and `Ultimate Doom`, `DOOM II`
+and `TNT: Evilution` stay on one, all at the readable fitted size. The focused
+outline still extends 16 px outside the card; the first content is 24 px in.
+
+### Discover catalog date (077 UI follow-up)
+
+Discover's existing header status line (the small muted line under the heading)
+now shows the effective catalog's source date, built from
+`snapshot.catalog.serial` with `ddl_core::catalog::serial_datetime`. The format
+is exactly `October 21, 2026 at 13:39 (UTC)`. Serial `0` or an unparseable value
+shows `Catalog date unavailable`; the line never substitutes today's date. It is
+recomputed on every sync, so a newer active catalog updates it without moving
+the category strip or grid. The heading keeps its place and moves up 20 px only
+as it already does whenever a status line is present; card space is unchanged.
+
 ## Evidence
 
 Headless 1280×800 software renders, Discover at scroll top, focused Doomer Boards
@@ -46,6 +76,18 @@ edge (`494`).
 The focused card's gold ring extends 16 px beyond the card; the first content is
 28 px in, so neither the art nor the chips can cover the focus treatment.
 
+Base-game evidence: the focused `Ultimate Doom` card with the four original
+games and the `Mapsets and custom setups` heading:
+`target/headless/base_games_library_page_setup_sources_and_recent_history/032-library-base-games.png`.
+All four titles are complete and the art is clear of the frame on every card.
+
+Discover date evidence:
+`target/headless/discover_shows_the_catalog_source_date/077-discover-catalog-date.png`
+shows the sample serial `1_792_589_940` as `October 21, 2026 at 13:39 (UTC)`.
+The shared `docs/screenshots/discover.png` is captured from the same sample
+state at scroll top with the category strip and first card row visible; the
+sample serial is disclosed here and is not a live fetch time.
+
 ## Verification
 
 - `headless::journeys::cards_keep_roomy_insets_and_two_tag_rows`: production
@@ -54,16 +96,25 @@ The focused card's gold ring extends 16 px beyond the card; the first content is
   chip rows and the 28 px inset for every content node of the focused card; then
   repeats the inset assertion for every drawn card (unfocused, installed and
   uninstalled) and writes `074-card-after.png`.
+- `runtime::local_ui::tests::base_games_library_page_setup_sources_and_recent_history`:
+  asserts the four base-game cards are 282×108, each art is 80×60 at the 24 px
+  inset, each title uses the 60 px multiline slot, and no content node enters the
+  20 px frame; writes `032-library-base-games.png`.
+- `headless::journeys::discover_shows_the_catalog_source_date`: sample serial
+  `1_792_589_940` gives the exact UTC line, serial `0` gives
+  `Catalog date unavailable`, and a newer serial updates the same line; writes
+  `077-discover-catalog-date.png`.
 - `headless::journeys::categories_favorites_and_screenshots`: full category,
-  focus, favorites and screenshot journey still passes with the new layout.
+  focus, favorites and screenshot journey still passes with the new layout and
+  the sample catalog serial, and produces the scroll-top category capture.
 - `cargo fmt --all --check` and
   `cargo clippy --workspace --all-targets -- -D warnings`: clean.
 
 ## Limits
 
-Physical Deck readability of the 18 px game/readiness line and the 28 px inset is
-owner validation. Screenshots were deliberately not regenerated: spec 074 R3
-requires the final refresh after the integrated catalog and any further visual
-changes, at a scroll-top Discover state that shows the category strip. No visible
+Physical Deck readability of the 18 px game/readiness line and the 24/28 px
+insets is owner validation. The shared screenshot state uses a deterministic
+sample catalog serial (`1_792_589_940`) so the date subtitle is visible; a real
+build with an unknown serial shows the honest fallback instead. No visible
 window was opened and no screen was captured. No push, tag, release or
 coordinator-document change was made.
