@@ -20,11 +20,15 @@ signed repository publication `39609918709` succeeded. Canonical site identifies
 - **Release-state guard:** real serializer-generated fixtures now cover all six release tags
   through v0.0.10-audio (070), including explicit Default audio preferences. Focused integrated
   guard, fmt and clippy passed. No application behavior changed in this follow-up.
-- **In progress:** match the application header to the corrected site logo (071); remove All and
-  Featured and apply the requested Discover order (072); add Memento Mori and Memento Mori II to
-  Classics, verify existing Scythe, and create a dedicated Doomer Boards category (073). UI and
-  catalog workers coordinate before the next screenshot refresh. These refinements are not yet
-  in v0.0.10-audio.
+- **Under integration review:** compact application branding and specific ordered Discover
+  categories (071/072), verified Memento Mori I/II and dedicated Doomer Boards membership
+  (073). Combined checks are running on a verification branch; these are not yet released.
+- **Next fixes, in owner priority order:** card/base-game padding and art clear of frames (074);
+  investigate and optimize Pistol start latency (075 audit); normal versus COMPAT SIGIL music
+  copy (076); check the independent GitHub catalog at every startup and show its effective
+  source timestamp in Discover (077). The existing daily check is the baseline, not completion
+  of the new request. Refresh the five shared README/site screenshots after all visual changes,
+  including a Discover capture with the specific-category strip visible.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.
