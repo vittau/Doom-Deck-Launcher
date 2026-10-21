@@ -36,9 +36,9 @@ status = "inspected"
 tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
-inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source"]
-notes = "Confirmed archive/member identities and source inspection. Complevel vanilla; no gameplay test performed. Tags: episode = nine maps E6M1–E6M9 (docs/research/reference-sigil.md); challenging = the romero.com release page calls it \"some hardcore classic DOOM punishment\" (docs/research/reference-sigil.md, Confirmed); featured = D-010 reference recipe. No Cacoward found for SIGIL II, so it is not tagged cacowards. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_II_V1_0.WAD replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
-limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
+inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source", "Owner-supplied SIGIL II registered v1.0 directory inspected read-only 2026-10-21: docs/research/reference-sigil.md §2.1 and docs/reports/068-sigil-purchased-editions.md"]
+notes = "Confirmed archive/member identities and source inspection. The owner-supplied registered v1.0 directory confirms SIGIL_II_MP3_V1_0.WAD is a complete 171-lump E6M1–E6M9 mapset carrying 11 MP3 lumps; every non-music lump is byte-identical to the free WAD, so it replaces rather than augments it. Complevel vanilla; no gameplay or audio test performed. Tags: episode = nine maps E6M1–E6M9 (docs/research/reference-sigil.md); challenging = the romero.com release page calls it \"some hardcore classic DOOM punishment\" (docs/research/reference-sigil.md, Confirmed); featured = D-010 reference recipe. No Cacoward found for SIGIL II, so it is not tagged cacowards. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_II_V1_0.WAD replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "SIGIL_II_MP3_V1_0.WAD MP3 playback is supported by DSDA-Doom v0.30.1's SDL_mixer path per source inspection but was not played; remains Needs Deck Validation."]
 
 [[packages]]
 id = "free"
@@ -84,16 +84,16 @@ role = "maps"
 
 [[components]]
 id = "soundtrack"
-label = "THORR soundtrack"
-description = "Proposed paid soundtrack replacement; user supplied and unvalidated."
+label = "THORR soundtrack (MP3 WAD)"
+description = "Paid SIGIL_II_MP3_V1_0.WAD: the complete E6M1–E6M9 episode with THORR's MP3 music embedded. Replaces SIGIL_II_V1_0.WAD; never load both."
 optional = true
 default = false
 position = 1
 replaces = "main"
 exclusive_group = "edition"
 user_supplied = true
-obtain = "Purchase the THORR soundtrack version through romero.com/sigil and import your purchased WAD. Filename/hash are unconfirmed; validate the replacement before play."
-known_sha256 = []
+obtain = "Purchase the SIGIL II MP3/THORR edition from romero.com/sigil, then import SIGIL_II_MP3_V1_0.WAD (146,563,690 bytes). It is the paid replacement for the free MIDI WAD."
+known_sha256 = ["8a803f5425d4bf31ddfe537b659d794acdff0631316f51b9ed45311b5ed059dc"]
 
 [[components.members]]
 role = "maps"

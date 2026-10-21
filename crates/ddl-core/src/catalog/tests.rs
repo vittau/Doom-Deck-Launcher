@@ -130,6 +130,110 @@ fn reference_combinations_have_explicit_order_and_replacements() {
 }
 
 #[test]
+fn purchased_sigil_editions_are_known_complete_replacements() {
+    // Read-only identities from the owner's supplied media (spec 068); these
+    // are metadata only and stand in for the paid binary content.
+    const SIGIL_REG_SHA256: &str =
+        "46fcc22fba47fff3872d9d294ee07bdbab4b0ec9feaab277f83836f5aed80bd0";
+    const SIGIL_II_MP3_SHA256: &str =
+        "8a803f5425d4bf31ddfe537b659d794acdff0631316f51b9ed45311b5ed059dc";
+
+    let sigil = recipe("sigil");
+    let soundtrack = sigil
+        .components
+        .iter()
+        .find(|component| component.id == "soundtrack")
+        .unwrap();
+    assert!(soundtrack.user_supplied);
+    assert_eq!(soundtrack.known_sha256, [SIGIL_REG_SHA256]);
+    assert_eq!(soundtrack.replaces.as_deref(), Some("main"));
+    assert_eq!(soundtrack.exclusive_group.as_deref(), Some("edition"));
+    assert!(
+        soundtrack
+            .obtain
+            .as_deref()
+            .unwrap()
+            .contains("SIGIL_V1_23_REG.wad")
+    );
+
+    // The paid REG WAD is a complete replacement: exactly one imported file in
+    // the main position, not a music add-on after the free WAD.
+    let order = sigil.load_order(&["soundtrack"]).unwrap();
+    assert_eq!(order.files.len(), 1);
+    assert!(order.files[0].package.is_none());
+    assert!(order.files[0].member.is_none());
+    assert_eq!(order.files[0].role, Role::Maps);
+
+    // The free MIDI WAD has a different identity, so importing it for the paid
+    // component is an unrecognized mismatch under D-014.
+    let free_maps = sigil
+        .packages
+        .iter()
+        .find(|package| package.id == "free")
+        .unwrap()
+        .members
+        .iter()
+        .find(|member| member.id == "maps")
+        .unwrap();
+    assert!(
+        !soundtrack
+            .known_sha256
+            .iter()
+            .any(|known| known == &free_maps.sha256)
+    );
+
+    // SIGIL_SHREDS_COMPAT.wad is music-only and only valid after the compat
+    // WAD; the schema has no "requires compat" relation, so it stays out of the
+    // recipe rather than being offered as an unsafe add-on.
+    assert!(
+        sigil
+            .components
+            .iter()
+            .all(|component| component.id != "soundtrack-compat")
+    );
+
+    let sigil_ii = recipe("sigil-ii");
+    let soundtrack_ii = sigil_ii
+        .components
+        .iter()
+        .find(|component| component.id == "soundtrack")
+        .unwrap();
+    assert!(soundtrack_ii.user_supplied);
+    assert_eq!(soundtrack_ii.known_sha256, [SIGIL_II_MP3_SHA256]);
+    assert_eq!(soundtrack_ii.replaces.as_deref(), Some("main"));
+    assert_eq!(soundtrack_ii.exclusive_group.as_deref(), Some("edition"));
+    assert!(
+        soundtrack_ii
+            .obtain
+            .as_deref()
+            .unwrap()
+            .contains("SIGIL_II_MP3_V1_0.WAD")
+    );
+
+    let order = sigil_ii.load_order(&["soundtrack"]).unwrap();
+    assert_eq!(order.files.len(), 1);
+    assert!(order.files[0].package.is_none());
+    assert!(order.files[0].member.is_none());
+    assert_eq!(order.files[0].role, Role::Maps);
+
+    let free_maps = sigil_ii
+        .packages
+        .iter()
+        .find(|package| package.id == "free")
+        .unwrap()
+        .members
+        .iter()
+        .find(|member| member.id == "maps")
+        .unwrap();
+    assert!(
+        !soundtrack_ii
+            .known_sha256
+            .iter()
+            .any(|known| known == &free_maps.sha256)
+    );
+}
+
+#[test]
 fn every_semantic_rule_rejects_a_bad_recipe() {
     type Mutation = fn(&mut Recipe);
     let cases: &[(&str, Mutation)] = &[
