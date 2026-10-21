@@ -50,6 +50,18 @@ def readme_logo(ink=BONE):
 for theme, ink in [('dark', BONE), ('light', DARK)]:
     save(f'readme-logo-{theme}.svg', 760, 200, readme_logo(ink), full[0])
 
+# README compact header (spec 081): the website header's small-tier emblem, DDL
+# wordmark and Barlow subtitle, composed from the same masters. Geometry is the
+# header lock-up (emblem at 128, DDL at 152,30); the theme only swaps fills.
+README_HEADER = {'dark': (BONE, '#A8302A', BONE), 'light': (DARK, '#A8302A', DARK)}
+def readme_header(theme):
+    face, depth, ink = README_HEADER[theme]
+    subtitle, _ = lettering('DoomDeckLauncher', 22, ink)
+    content = group(small[1], 0, 0, .5) + group(v3.wordmark(face, depth), 152, 30) + group(subtitle, 152, 112)
+    return group(content, 12, 12)
+for theme in README_HEADER:
+    save(f'readme-header-{theme}.svg', 370, 160, readme_header(theme), lock[0])
+
 # Steam compositions (spec 054): the lettering sits directly on the Ember Cathedral
 # scenes from scene.py, which shade the areas it uses; the hero has no mark or text.
 lib, wide, hero = steam.library_capsule(), steam.wide_capsule(), steam.hero()
@@ -84,8 +96,8 @@ def sheet():
         if row == 0:
             b += v3.label('stacked 240×200', 900, y0 + 24, 18, ink)
             b += group(stacked, 880, y0 + 60, .5)
-        b += v3.label(f'README {"dark" if row == 0 else "light"} theme 380×100', 40, y0 + 462, 18, ink)
-        b += group(readme_logo(BONE if row == 0 else DARK), 40, y0 + 490, .5)
+        b += v3.label(f'README header {"dark" if row == 0 else "light"} theme 370×160 (shown at 1/2)', 40, y0 + 462, 18, ink)
+        b += group(readme_header('dark' if row == 0 else 'light'), 40, y0 + 490, .5)
     # Steam art, each in a nested viewport that clips its scene to the frame.
     def framed(composition, w, h, x, y, scale):
         return group(f'<svg width="{num(w * scale)}" height="{num(h * scale)}" viewBox="0 0 {w} {h}">{composition}</svg>', x, y)

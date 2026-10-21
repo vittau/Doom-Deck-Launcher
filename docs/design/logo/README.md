@@ -20,17 +20,21 @@ The previous D-023 production masters are kept as history in
 | `horizontal.svg` | Lock-up (small-tier emblem + DDL on a dark tablet), 330×128. Header slot: 154×56, **144 px minimum width**. |
 | `stacked.svg` | Full-tier emblem over DDL and the name, 480×400; **240 px minimum width**. Loading screen. |
 | `full-name.svg` | Full-tier emblem beside the name, 700×160; **350 px minimum width**. Settings → About. |
-| `readme-logo-dark.svg` | Transparent full-name lock-up (760×200), bone name for GitHub's dark theme. |
-| `readme-logo-light.svg` | Same transparent lock-up, dark ink (`#120C0D`) name for GitHub's light theme. |
+| `readme-header-dark.svg` | README header (370×160, displayed at 1:1): small-tier emblem + DDL wordmark + Barlow subtitle, bone ink for GitHub's dark theme. Matches the website header composition (spec 081). |
+| `readme-header-light.svg` | Same compact header, dark ink (`#120C0D`) and the same ruby carved side, for GitHub's light theme. |
+| `readme-logo-dark.svg` | Superseded full-name lock-up (760×200), bone name; kept as a reference mark, no longer used by README. |
+| `readme-logo-light.svg` | Same reference lock-up with dark ink (`#120C0D`) for light grounds. |
 
 Never use the full tier below 64 px or the small tier above 64 px. Leave at least one eighth
 of the emblem's height clear on every side. Preserve proportions and colours. The dark outer
 silhouette separates the emblem from light grounds; `horizontal.svg` carries its own dark
 tablet for the lettering. `stacked.svg`, `full-name.svg` and the Steam `logo.png` set the
 name in bone on a transparent ground, so use them on near-black or give them a dark plate
-or use the matching transparent `readme-logo-dark.svg` / `readme-logo-light.svg` variant.
-The README uses a `<picture>` with a dark-theme `<source>` and the light variant as its
-fallback `<img>`; both retain the same emblem and layout without a background tablet.
+or use a matching transparent variant. The README uses the compact
+`readme-header-dark.svg` / `readme-header-light.svg` pair from the website header
+composition, in a `<picture>` with a dark-theme `<source>` and the light variant as its
+fallback `<img>`. Both keep the same small-tier emblem, DDL contours and Barlow subtitle
+without a background tablet; only the fills change between themes.
 Busy art needs a dark plaque, or a scene composed to shade the lettering as the Steam
 capsules are (see Steam artwork).
 
@@ -48,8 +52,10 @@ references. `export.py --check` enforces the allowlist and the D-023 outer silho
 masters and the Steam compositions, and compiles `emblem`, `emblem-small`, `horizontal`,
 `stacked` and `full-name` into `crates/ddl/ui/assets/logo/`. `emblem`, `emblem-small`
 and `horizontal` are byte-identical to `../logo-v3/stained-glass/`; `export.py --check`
-asserts it. The Steam scenery comes from `scene.py` (next section), which `author.py`
-calls; nothing in the three Steam SVGs is edited by hand.
+asserts it. The README header composes the same small-tier emblem, DDL contours and an
+outlined Barlow subtitle; only its theme fills are specific to it. The Steam scenery comes
+from `scene.py` (next section), which `author.py` calls; nothing in the three Steam SVGs is
+edited by hand.
 
 ## Steam artwork
 
@@ -92,8 +98,10 @@ and two-decimal coordinates make every rebuild byte-identical.
 | `steam/wide-capsule.png` | `wide-capsule.svg` | 920×430 |
 | `steam/hero.png` (no mark, no text) | `hero.svg` | 3840×1240 |
 | `steam/logo.png` (transparent) | `steam-logo.svg` | 1280×720 |
-| `readme-logo-dark.png` (README, dark theme) | `readme-logo-dark.svg` | 1520×400 |
-| `readme-logo-light.png` (README, light theme / fallback) | `readme-logo-light.svg` | 1520×400 |
+| `readme-header-dark.png` (README, dark theme) | `readme-header-dark.svg` | 740×320 (displayed 370×160) |
+| `readme-header-light.png` (README, light theme / fallback) | `readme-header-light.svg` | 740×320 (displayed 370×160) |
+| `readme-logo-dark.png` (reference mark) | `readme-logo-dark.svg` | 1520×400 |
+| `readme-logo-light.png` (reference mark) | `readme-logo-light.svg` | 1520×400 |
 | `social-preview.png` | `social-preview.svg` | 1280×640 |
 | `contact-sheet.png` (masters and Steam art) | `contact-sheet.svg` | 1200×2020 |
 | `social-preview-variants/{threshold,atlas}.png` | matching SVGs | 1280×640 |

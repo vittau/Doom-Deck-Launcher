@@ -34,6 +34,8 @@ JOBS=[('emblem-small.svg', ASSETS/'logo/icon.png',256,256),
       ('social-preview-variants/atlas.svg',HERE/'social-preview-variants/atlas.png',1280,640),
       ('readme-logo-dark.svg',HERE/'readme-logo-dark.png',1520,400),
       ('readme-logo-light.svg',HERE/'readme-logo-light.png',1520,400),
+      ('readme-header-dark.svg',HERE/'readme-header-dark.png',740,320),
+      ('readme-header-light.svg',HERE/'readme-header-light.png',740,320),
       ('contact-sheet.svg',HERE/'contact-sheet.png',1200,2020)]
 SOCIAL={'social-preview.svg','social-preview-variants/threshold.svg','social-preview-variants/atlas.svg'}
 BRAND_COLORS=['F8EAD5','B88960','52272B','FFD078','120C0D']
@@ -46,6 +48,7 @@ STEAM={'library-capsule.svg':((600,900),'translate(132.48 620)',(128,620,472,666
 # (docs/research/steam-shortcuts.md section 5.4): grids 15 MB, heroes 24 MB, logos 15 MB.
 SGDB_LIMITS={'library-capsule.png':15_000_000,'wide-capsule.png':15_000_000,'hero.png':24_000_000,'logo.png':15_000_000}
 README_THEMES={'dark':('#F8EAD5','#0d1117'), 'light':('#120C0D','#ffffff')}
+README_HEADER={'dark':('#F8EAD5','#A8302A','#0d1117'), 'light':('#120C0D','#A8302A','#ffffff')}
 
 def validate_readme(master, rendered):
     theme=master.stem.removeprefix('readme-logo-')
@@ -84,6 +87,50 @@ def validate_readme(master, rendered):
 def luminance(rgb):
     linear=[(v/255)/12.92 if v/255<=.04045 else ((v/255+.055)/1.055)**2.4 for v in rgb]
     return sum(a*b for a,b in zip(linear,(.2126,.7152,.0722)))
+
+def validate_readme_header(master, rendered):
+    theme=master.stem.removeprefix('readme-header-')
+    ink,depth,background=README_HEADER[theme]
+    root=ET.parse(master).getroot()
+    assert (int(root.get('width')),int(root.get('height')))==(370,160),master
+    content=root[-1]
+    assert content.get('transform')=='translate(12 12)'
+    emblem,wordmark,name=content
+    # The compact header keeps the website header's small-tier emblem untouched.
+    assert emblem.get('transform')=='translate(0 0) scale(0.5)'
+    small=[el for el in ET.parse(HERE/'emblem-small.svg').getroot() if el.tag.endswith('path')]
+    assert len(emblem)==len(small)==18
+    for actual,source in zip(emblem,small):
+        assert ET.tostring(actual)==ET.tostring(source),'README header emblem changed'
+    # The DDL contours are the horizontal master's; only the theme fills change.
+    assert wordmark.get('transform')=='translate(152 30)'
+    reference=list(ET.parse(HERE/'horizontal.svg').getroot())[-1]
+    assert reference.get('transform')=='translate(152 30)'
+    assert len(wordmark)==len(reference)==6
+    for actual,source in zip(wordmark,reference):
+        assert actual.tag==source.tag
+        assert {k:v for k,v in actual.attrib.items() if k!='fill'}=={k:v for k,v in source.attrib.items() if k!='fill'},'README header DDL contours changed'
+    assert [el.get('fill') for el in wordmark]==[ '#120C0D','#120C0D',depth,depth,ink,ink ],'README header theme fills changed'
+    # The subtitle is the same Barlow face outlined at 22 units (site header 11 px at 2×).
+    assert name.get('transform')=='translate(152 112)'
+    assert len(name)==1 and name[0].get('fill')==ink,'README header subtitle fill changed'
+    im=Image.open(rendered).convert('RGBA')
+    assert im.size==(740,320),im.size
+    alpha=im.getchannel('A')
+    edges=[alpha.crop(box).getextrema() for box in
+           [(0,0,im.width,1),(0,im.height-1,im.width,im.height),
+            (0,0,1,im.height),(im.width-1,0,im.width,im.height)]]
+    assert all(edge==(0,0) for edge in edges),'README header edges must be fully transparent'
+    corners=[alpha.getpixel(point) for point in
+             [(0,0),(im.width-1,0),(0,im.height-1),(im.width-1,im.height-1)]]
+    rgb=tuple(bytes.fromhex(ink[1:]))
+    assert any(pixel==(*rgb,255) for pixel in im.get_flattened_data()),'README header ink missing'
+    l1,l2=sorted([luminance(rgb),luminance(tuple(bytes.fromhex(background[1:])))])
+    contrast=(l2+.05)/(l1+.05)
+    assert contrast>=4.5,'README header contrast below 4.5:1'
+    print(f'{master.name}: compact header, small-tier emblem and DDL contours unchanged; corners alpha={corners}; '
+          f'all edges alpha=0; ink {ink} on {background} contrast={contrast:.2f}:1')
+
 
 def validate_steam(master,resvg,scratch):
     size,name_at,name_box=STEAM[master.name]
@@ -200,6 +247,8 @@ def main():
             data=out.read_bytes();assert struct.unpack('>II',data[16:24])==(w,h)
             if src.startswith('readme-logo-'):
                 validate_readme(HERE/src,out)
+            if src.startswith('readme-header-'):
+                validate_readme_header(HERE/src,out)
             if src in SOCIAL:
                 assert len(data)<=1_000_000,'social preview exceeds 1 MB'
                 assert data[25]==3,'indexed social export expected'
