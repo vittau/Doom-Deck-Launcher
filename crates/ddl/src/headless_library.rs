@@ -142,7 +142,7 @@ fn library_owner_scene_renders() {
     );
     let cards: Vec<_> = nodes
         .iter()
-        .filter(|n| n.actionable && n.kind == 1 && n.y == 298.)
+        .filter(|n| n.actionable && n.kind == 1 && n.y == 322.)
         .collect();
     assert_eq!(cards.len(), 3, "three full-width columns");
     assert_eq!(

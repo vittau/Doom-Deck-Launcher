@@ -109,6 +109,15 @@ sample serial is disclosed here and is not a live fetch time.
   the sample catalog serial, and produces the scroll-top category capture.
 - `cargo fmt --all --check` and
   `cargo clippy --workspace --all-targets -- -D warnings`: clean.
+- `cargo test --workspace -- --test-threads=2` passes every visual, card,
+  SIGIL and date journey, including the updated `library_owner_scene_renders`
+  contract (`y=322` for the shifted mapset row). Two failures are pre-existing
+  on the merged checkpoint `7e2add0` and reproduce there without these commits:
+  `headless::journeys::recipe_changes_update_keep_and_removed` (merged Library
+  update label) and
+  `services::release_state_tests::release_state_trees_remain_readable` (its
+  release fixture predates the `doomer-boards` tag). They are backend/release
+  fixture follow-ups, not caused by this UI change.
 
 ## Limits
 

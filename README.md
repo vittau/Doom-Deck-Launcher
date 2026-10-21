@@ -16,7 +16,7 @@ Built in Rust and [Slint](https://slint.dev).
 
 | Home | Discover |
 | --- | --- |
-| ![Home with recently played mapsets](docs/screenshots/home.png) | ![Discover with categories, tags and a favorite](docs/screenshots/discover.png) |
+| ![Home with recently played mapsets](docs/screenshots/home.png) | ![Discover with categories, tags and the catalog date](docs/screenshots/discover.png) |
 | Play setup | Mapset detail |
 | ![Play setup with component choices and load order](docs/screenshots/play-setup.png) | ![Mapset detail with tags and favorite](docs/screenshots/mapset-detail.png) |
 
