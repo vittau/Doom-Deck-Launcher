@@ -529,6 +529,43 @@ pub fn serial_date(serial: u64) -> Option<String> {
     Some(format!("{year:04}-{month:02}-{day:02}"))
 }
 
+/// English month names, 1-based by index (spec 077, R3).
+const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+/// The catalog source date and time in UTC, e.g.
+/// `October 21, 2026 at 13:39 (UTC)`; `None` for serial `0` ("unknown"), so the
+/// caller can say so instead of showing today's date (spec 077, R3).
+///
+/// This is the **catalog source** time: the bundle's serial is the UTC time of
+/// the catalog change it was published from, never a fetch or check time.
+#[must_use]
+pub fn serial_datetime(serial: u64) -> Option<String> {
+    if serial == 0 {
+        return None;
+    }
+    let days = (serial / 86_400) as i64;
+    let (year, month, day) = civil_from_days(days);
+    let seconds = serial % 86_400;
+    let (hour, minute) = (seconds / 3_600, (seconds % 3_600) / 60);
+    let name = MONTHS[(month - 1) as usize];
+    Some(format!(
+        "{name} {day}, {year} at {hour:02}:{minute:02} (UTC)"
+    ))
+}
+
 /// Days since 1970-01-01 → (year, month, day), Howard Hinnant's
 /// `civil_from_days` (public domain algorithm, exact for the whole range).
 fn civil_from_days(days: i64) -> (i64, u32, u32) {
@@ -913,6 +950,39 @@ limitations = []
         assert!(
             !catalog_check_due(Some(2_000), 1_000),
             "a backwards clock is not due"
+        );
+    }
+
+    /// Spec 077, R3: the Discover subtitle format, in UTC, with an honest
+    /// unknown.
+    #[test]
+    fn serials_format_as_utc_date_and_time_for_the_header() {
+        assert_eq!(serial_datetime(0), None, "unknown serial is None");
+        assert_eq!(
+            serial_datetime(1_792_589_940).as_deref(),
+            Some("October 21, 2026 at 13:39 (UTC)")
+        );
+        // Year boundary: the last minute of 2026 and the first of 2027.
+        assert_eq!(
+            serial_datetime(1_798_761_540).as_deref(),
+            Some("December 31, 2026 at 23:59 (UTC)")
+        );
+        assert_eq!(
+            serial_datetime(1_798_761_600).as_deref(),
+            Some("January 1, 2027 at 00:00 (UTC)")
+        );
+        // Leap day and month boundary.
+        assert_eq!(
+            serial_datetime(1_772_323_140).as_deref(),
+            Some("February 28, 2026 at 23:59 (UTC)")
+        );
+        assert_eq!(
+            serial_datetime(1_835_395_200).as_deref(),
+            Some("February 29, 2028 at 00:00 (UTC)")
+        );
+        assert_eq!(
+            serial_datetime(1).as_deref(),
+            Some("January 1, 1970 at 00:00 (UTC)")
         );
     }
 
