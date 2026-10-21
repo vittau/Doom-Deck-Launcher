@@ -100,18 +100,36 @@ h3 {
 }
 .brand {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
+  align-items: center;
+  gap: 12px;
   text-decoration: none;
   font-size: 23px;
 }
 .brand img {
   flex-shrink: 0;
 }
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.brand-wordmark {
+  position: relative;
+  display: block;
+  width: 88px;
+  height: 36px;
+  overflow: hidden;
+}
+/* Reuse the app's outlined DDL lettering from its 330×128 horizontal master. */
+.brand-wordmark img {
+  position: absolute;
+  width: 165px;
+  height: 64px;
+  max-width: none;
+  left: -75px;
+  top: -14px;
+}
 .brand-subtitle {
-  margin-left: 75px;
-  margin-top: -4px;
   font-size: 11px;
   line-height: 1.4;
 }
