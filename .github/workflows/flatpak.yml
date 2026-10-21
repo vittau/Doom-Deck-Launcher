@@ -223,7 +223,7 @@ jobs:
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
           build_dir="$RUNNER_TEMP/ddl-flatpak-build"
           repo="$RUNNER_TEMP/ddl-flatpak-repo"
-          flatpak-builder --user --arch=x86_64 --force-clean \
+          flatpak-builder --user --arch=x86_64 --force-clean --disable-rofiles-fuse \
             --repo="$repo" "$build_dir" "$MANIFEST" 2>&1 | tee "$RUNNER_TEMP/flatpak-build.log"
 
       - name: Prepare headless sandbox paths

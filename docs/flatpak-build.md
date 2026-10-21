@@ -95,7 +95,7 @@ desktop-file-validate packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desk
 appstreamcli validate --no-net --explain packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml
 
 # 5. Build, export and install
-flatpak-builder --user --arch=x86_64 --force-clean \
+flatpak-builder --user --arch=x86_64 --force-clean --disable-rofiles-fuse \
   --repo=/tmp/ddl-flatpak-repo /tmp/ddl-flatpak-build \
   packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml
 flatpak build-export --arch=x86_64 /tmp/ddl-flatpak-repo /tmp/ddl-flatpak-build master
