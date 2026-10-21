@@ -54,23 +54,28 @@
   <screenshots>
     <screenshot type="default">
       <caption>The Home screen with recently played mapsets</caption>
-      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/home.png</image>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/bd948ea9c7d17fd269a04fc644f423dd71f66c48/docs/screenshots/home.png</image>
     </screenshot>
     <screenshot>
       <caption>Discover with categories, tags and favorites</caption>
-      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/discover.png</image>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/bd948ea9c7d17fd269a04fc644f423dd71f66c48/docs/screenshots/discover.png</image>
     </screenshot>
     <screenshot>
       <caption>Mapset detail with tags and favorite state</caption>
-      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/mapset-detail.png</image>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/bd948ea9c7d17fd269a04fc644f423dd71f66c48/docs/screenshots/mapset-detail.png</image>
     </screenshot>
     <screenshot>
       <caption>Play setup with component choices and load order</caption>
-      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/v0.0.9-focus/docs/screenshots/play-setup.png</image>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/vittau/Doom-Deck-Launcher/bd948ea9c7d17fd269a04fc644f423dd71f66c48/docs/screenshots/play-setup.png</image>
     </screenshot>
   </screenshots>
 
   <releases>
+    <release version="0.0.11" date="2026-10-21">
+      <description>
+        <p>Roomier cards, clearer SIGIL edition choices, responsive Pistol start changes and automatic catalog updates at startup.</p>
+      </description>
+    </release>
     <release version="0.0.9" date="2026-10-20">
       <description>
         <p>Focus clarity, a Library focus-scroll fix and sandbox-ready Flatpak behaviour.</p>
