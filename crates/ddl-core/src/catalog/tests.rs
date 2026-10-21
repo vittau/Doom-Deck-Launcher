@@ -32,6 +32,8 @@ fn reference_recipes_round_trip_and_lint_offline() {
         "eviternity",
         "eviternity-ii",
         "going-down",
+        "memento-mori",
+        "memento-mori-ii",
         "scythe",
         "sigil",
         "sigil-ii",
@@ -1333,6 +1335,8 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
             "lunar-strain",
             "marble-hill",
             "mausoleum-nefarium",
+            "memento-mori",
+            "memento-mori-ii",
             "mindblood-genesis",
             "monuments-of-mars",
             "monuments-of-mars-2",
@@ -1383,6 +1387,8 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
         "eviternity",
         "eviternity-ii",
         "going-down",
+        "memento-mori",
+        "memento-mori-ii",
         "scythe",
         "sigil",
         "sigil-ii",
@@ -1489,17 +1495,361 @@ fn shipped_vocabulary_is_valid_and_has_the_spec_015_tags() {
     assert_eq!(
         ids,
         [
-            "featured",
-            "beginner-friendly",
-            "classics",
             "cacowards",
-            "community-projects",
             "megawad",
+            "community-projects",
+            "doomer-boards",
+            "classics",
             "episode",
-            "challenging"
+            "challenging",
+            "featured",
+            "beginner-friendly"
         ]
     );
     assert_eq!(Catalog::embedded().tags, vocabulary);
+}
+
+/// Spec 073, R5: the owner's Discover sequence is the vocabulary's prefix, and
+/// Featured/Beginner Friendly keep their vocabulary outside it.
+#[test]
+fn requested_discover_sequence_leads_the_vocabulary() {
+    let vocabulary = vocabulary();
+    let ordered: Vec<_> = vocabulary.ordered().iter().map(|t| t.id.as_str()).collect();
+    assert_eq!(
+        &ordered[..7],
+        [
+            "cacowards",
+            "megawad",
+            "community-projects",
+            "doomer-boards",
+            "classics",
+            "episode",
+            "challenging"
+        ],
+        "the requested category sequence, in order"
+    );
+    let outside = &ordered[7..];
+    assert!(
+        outside.contains(&"featured") && outside.contains(&"beginner-friendly"),
+        "metadata tags stay in the vocabulary but out of the sequence: {outside:?}"
+    );
+    let doomer_boards = vocabulary.get("doomer-boards").expect("new tag");
+    assert_eq!(doomer_boards.label, "Doomer Boards");
+    assert!(!doomer_boards.description.trim().is_empty());
+}
+
+/// Spec 073, R5: every recipe named by the verified DBP inventory
+/// (`docs/research/doomer-boards-projects.md`) carries `doomer-boards`, and it
+/// keeps its general `community-projects` membership.
+#[test]
+fn doomer_boards_covers_every_researched_dbp_recipe() {
+    let catalog = Catalog::embedded();
+    let mut tagged = Vec::new();
+    for held in &catalog.recipes {
+        if held.recipe.tags.iter().any(|t| t == "doomer-boards") {
+            tagged.push(held.recipe.id.as_str());
+        }
+    }
+    tagged.sort_unstable();
+    let mut expected = dbp_recipe_ids();
+    expected.sort_unstable();
+    assert_eq!(tagged, expected, "every DBP recipe, and nothing else");
+    assert_eq!(expected.len(), 77, "DBP 01–77 in the inventory");
+    for id in expected {
+        let recipe = catalog.recipe(id).expect(id);
+        assert!(
+            recipe.tags.iter().any(|t| t == "community-projects"),
+            "{id} keeps its community-projects membership"
+        );
+    }
+}
+
+/// Spec 073, R5: multi-author projects that are not Doomer Boards Projects keep
+/// `community-projects` and must never be relabelled.
+#[test]
+fn non_dbp_community_projects_stay_out_of_doomer_boards() {
+    let catalog = Catalog::embedded();
+    for id in [
+        "alien-vendetta",
+        "back-to-saturn-x-e1",
+        "back-to-saturn-x-e2",
+        "eviternity",
+        "eviternity-ii",
+        "memento-mori",
+        "memento-mori-ii",
+    ] {
+        let recipe = catalog.recipe(id).expect(id);
+        assert!(
+            recipe.tags.iter().any(|t| t == "community-projects"),
+            "{id} is a multi-author project"
+        );
+        assert!(
+            !recipe.tags.iter().any(|t| t == "doomer-boards"),
+            "{id} is not a Doomer Boards Project"
+        );
+    }
+}
+
+/// Spec 073, R1/R2: the two new Classics freeze their verified source identity,
+/// composition and category reachability, plus Scythe's existing membership.
+#[test]
+fn memento_mori_recipes_keep_their_source_identity() {
+    let catalog = Catalog::embedded();
+    for (id, package_sha, size, maps, music, readme) in [
+        (
+            "memento-mori",
+            "c8607a7a32d4f6547d492e0f734324320b955e2b11691b02b107de09ac2e7bfb",
+            2_950_178,
+            (
+                "3e34522f61e40e508fbbcf1f32c3de3f9dc9ec5749e2a411bbe646d7ae35a22e",
+                7_825_282,
+            ),
+            (
+                "3e1618f79d6e045ce18f7f72f8a329595e475b1d61b19264bc6b73d615345e73",
+                885_387,
+            ),
+            (
+                "33f67e460161ae8153fe0c06735d9c6d827736b716ace24a3519db0f0da45bee",
+                2_893,
+            ),
+        ),
+        (
+            "memento-mori-ii",
+            "f4e7a10b035b123647f631348d63fc46392d8d8e21fab8a5158cd9ef35027451",
+            4_061_135,
+            (
+                "810c3eb9eb38cd86a5b6ba0bc032d8a9a7a29a58072acbb68d4bb824a8de859b",
+                11_453_000,
+            ),
+            (
+                "d09350612e953c1dc7055dbcb05228c698f7267bdf38d6cb1de11966c7b922d5",
+                1_075_404,
+            ),
+            (
+                "8706785377fb8be6e832c745952c8ab9ecec58736d57667d717329e5b1c354e5",
+                42_580,
+            ),
+        ),
+    ] {
+        let r = catalog.recipe(id).expect(id);
+        assert!(
+            r.tags.iter().any(|t| t == "classics"),
+            "{id} under Classics"
+        );
+        assert!(r.tags.iter().any(|t| t == "megawad"), "{id}: 32 maps");
+        assert_eq!(r.base_game.game, Game::Doom2);
+        assert_eq!(r.compatibility.family, PortFamily::Vanilla);
+        assert_eq!(
+            r.compatibility.complevel,
+            Complevel::Alias(ComplevelAlias::Vanilla)
+        );
+        assert_eq!(r.packages.len(), 1);
+        let package = &r.packages[0];
+        assert_eq!((package.size, package.sha256.as_str()), (size, package_sha));
+        assert_eq!(package.kind, PackageKind::Zip);
+        // One required component: the maps, then the separate music WAD, in the
+        // order the release's own launch line uses.
+        assert_eq!(
+            r.components.len(),
+            1,
+            "{id}: only the required main component"
+        );
+        let main = r.components.iter().find(|c| c.id == "main").expect("main");
+        assert!(!main.optional && main.default);
+        let roles: Vec<_> = main.members.iter().map(|m| m.role).collect();
+        assert_eq!(roles, [Role::Maps, Role::Music], "{id}: maps then music");
+        let order = r.load_order(&[]).expect("a valid default selection");
+        assert_eq!(
+            order
+                .files
+                .iter()
+                .filter_map(|member| member.member.as_ref())
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            [maps_member(id), music_member(id)],
+            "{id}: load order"
+        );
+        let loaded: Vec<_> = r
+            .components
+            .iter()
+            .flat_map(|c| c.members.iter())
+            .map(|m| {
+                let member = r.packages[0]
+                    .members
+                    .iter()
+                    .find(|candidate| Some(&candidate.id) == m.member.as_ref())
+                    .expect("declared member");
+                (
+                    member.path.as_str(),
+                    m.role,
+                    member.size,
+                    member.sha256.as_str(),
+                )
+            })
+            .collect();
+        let by_path = |wanted: &str| {
+            loaded
+                .iter()
+                .find(|(path, ..)| *path == wanted)
+                .copied()
+                .unwrap_or_else(|| panic!("{id}: {wanted} loaded"))
+        };
+        assert_eq!(
+            by_path(maps_path(id)),
+            (maps_path(id), Role::Maps, maps.1, maps.0)
+        );
+        assert_eq!(
+            by_path(music_path(id)),
+            (music_path(id), Role::Music, music.1, music.0)
+        );
+        let readme_member = r.packages[0]
+            .members
+            .iter()
+            .find(|m| m.path == readme_path(id))
+            .expect("readme member");
+        assert_eq!(
+            (readme_member.size, readme_member.sha256.as_str()),
+            (readme.1, readme.0)
+        );
+        assert!(readme_member.keep, "{id}: the credits text is kept");
+    }
+    // R2: Scythe already exists once and is already a Classic.
+    let scythe: Vec<_> = catalog
+        .recipes
+        .iter()
+        .filter(|held| held.recipe.id == "scythe")
+        .collect();
+    assert_eq!(scythe.len(), 1, "no duplicate Scythe recipe");
+    let scythe = &scythe[0].recipe;
+    assert!(scythe.tags.iter().any(|t| t == "classics"));
+    assert!(!scythe.tags.iter().any(|t| t == "doomer-boards"));
+    assert_eq!(scythe.packages[0].size, 2_086_863);
+}
+
+fn maps_path(id: &str) -> &'static str {
+    if id == "memento-mori" {
+        "MM.WAD"
+    } else {
+        "MM2.WAD"
+    }
+}
+
+fn maps_member(id: &str) -> &'static str {
+    if id == "memento-mori" {
+        "mm-maps"
+    } else {
+        "mm2-maps"
+    }
+}
+
+fn music_member(id: &str) -> &'static str {
+    if id == "memento-mori" {
+        "mm-music"
+    } else {
+        "mm2-music"
+    }
+}
+
+fn music_path(id: &str) -> &'static str {
+    if id == "memento-mori" {
+        "MMMUS.WAD"
+    } else {
+        "MM2MUS.WAD"
+    }
+}
+
+fn readme_path(id: &str) -> &'static str {
+    if id == "memento-mori" {
+        "MM.TXT"
+    } else {
+        "MM2.TXT"
+    }
+}
+
+/// The recipe ids of DBP 01–77, from the verified inventory table in
+/// `docs/research/doomer-boards-projects.md` (one row per published project).
+fn dbp_recipe_ids() -> Vec<&'static str> {
+    [
+        "monuments-of-mars",
+        "circle-of-caina",
+        "forest-swords",
+        "xenomorph-base",
+        "coffin-curse",
+        "vicarious-reality",
+        "the-merry-christmassy-doom-project",
+        "mindblood-genesis",
+        "legend-of-the-hidden-tech",
+        "earth-ends",
+        "lilywhite-lilith",
+        "into-the-storm",
+        "alien-bastards",
+        "after-the-fall",
+        "fuck-global-warming-this-is-hell",
+        "cybs-freaky-colonoscopy",
+        "alone",
+        "umbral-platinum",
+        "a-doomer-boards-christmas-carol",
+        "dungeons-and-demons",
+        "occult-secrets-of-the-third-reich-on-mars",
+        "biotech-is-godzilla",
+        "evil-egypt",
+        "spaceballs-the-quest-for-more-dbp-maps",
+        "dead-but-dreaming",
+        "the-city-of-damned-children",
+        "ten-day-vacation",
+        "fear-and-loathing",
+        "morbid-autumn",
+        "the-magnificent-five",
+        "santas-outback-bender",
+        "tomatomania",
+        "rainy-days-in-casablanca",
+        "luminous-gloom",
+        "stroggmans-tundra",
+        "aquatic-wonder",
+        "auger-zenith",
+        "chronicles-of-ghost-town",
+        "carnage-oasis",
+        "funnelcake-apparitions",
+        "hell-revealed-3-pt-1",
+        "slime-on-earth",
+        "christmas-in-inferno",
+        "japanese-valentines",
+        "vrack-botanicals",
+        "monuments-of-mars-2",
+        "dreamcatcher-apparatus",
+        "avpvtvjvvhvss",
+        "mausoleum-nefarium",
+        "emerald-city",
+        "deadly-ritual",
+        "havoc-in-creation",
+        "plutonian-sunrise",
+        "steamy-bathhouse",
+        "jolly-junkyard",
+        "augustland-barrens",
+        "shatter-realm",
+        "immortal-warfare",
+        "zeppelin-armada",
+        "eldritch-voyage",
+        "tempest-enterprise",
+        "haunting-hollow",
+        "terminal-voltage",
+        "the-vast-silence",
+        "sanguine-holy-land",
+        "lunar-strain",
+        "marble-hill",
+        "outposts-of-the-wasteland",
+        "caustic-industry",
+        "forgotten-psychedelics",
+        "grief-arbiter",
+        "wretched-morrow",
+        "narcoleptic-strata",
+        "phantom-processing",
+        "patagonian-pilgrimage",
+        "stagnant-weather",
+        "the-economy-of-the-dead",
+    ]
+    .into_iter()
+    .collect()
 }
 
 #[test]
