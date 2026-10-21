@@ -8,11 +8,17 @@ Read this before taking over as orchestrator. Workers only need `AGENTS.md` and 
 - **Owner** (human): sets direction, tests release builds on a physical Steam Deck LCD. Wants an
   autonomous end-to-end flow: escalate only questions that change the project's direction
   (scope, platform or engine, legal/licensing risk, conflict with an explicit owner request).
-  Decide everything else, record it, and report it in the next status update. When the owner's
-  input is needed: play `afplay /System/Library/Sounds/Ping.aiff`, mark the ask in the reply with
-  `> 🔴 **PRECISO DE VOCÊ** — <one-line ask>`, and notify them on Telegram through the Make MCP
-  scenario "Integration Telegram Bot" (inputs `question`, `context`, `options`, `request_id`).
-  Talk to the owner in Brazilian Portuguese; repository text stays English.
+  Decide everything else, record it (`docs/decisions.md`, `docs/journal.yml`), and report it in
+  the next status update. Talk to the owner in Brazilian Portuguese; repository text stays English.
+  State decisions in plain language (spec/decision ids after the statement, never instead of it).
+  - **Asking for input:** play `afplay /System/Library/Sounds/Ping.aiff`, mark the ask in the reply
+    with `> 🔴 **PRECISO DE VOCÊ** — <one-line ask>` (where things stand, the ask with a
+    recommendation, what proceeds without them), and — when the ask arises during autonomous work
+    while the owner may be away — send it on Telegram through the Make MCP connector: scenario
+    "Integration Telegram Bot", id `6660765` (team 3207272, zone us2), `scenarios_run` with
+    `responsive: true` and data `{question, context, options, request_id}` (Portuguese). Skip
+    Telegram when answering a question the owner just asked in chat. Never use it for routine status.
+  - When the owner says they are away, keep working autonomously and use Telegram only for real asks.
 - **Orchestrator** (Claude Opus 5.5, effort high, running in an Orca terminal): turns research
   into specs, writes task briefs, dispatches and monitors workers, reviews and merges their
   branches, pushes, tags pre-releases, and owns `docs/status.md`, `docs/journal.yml`,
@@ -23,16 +29,25 @@ Read this before taking over as orchestrator. Workers only need `AGENTS.md` and 
 
 | Work | Agent | Launch |
 | --- | --- | --- |
-| Default development and research | opencode, DeepSeek V4.1 Flash, effort high | see *Launching opencode* |
+| Default development and research, bounded | opencode, **DeepSeek V4.1 Flash Free** (`opencode/deepseek-v4.1-flash-free`), effort high — 200k context | see *Launching opencode* |
+| Default work that is long or wide, or when Free credits/endpoint fail | opencode, DeepSeek V4.1 Flash (`opencode-go/deepseek-v4.1-flash`, 1M context), effort high | see *Launching opencode* |
 | Wide-context work; **all UI design and implementation** (it generates raster mockups) | Codex, GPT-6.1-Sol, effort medium | `worker-start … --agent codex --model gpt-6.1-sol --effort medium` |
-| Fallback when Codex's budget runs low | Claude Code, Sonnet 5.5, effort high | `worker-start … --agent claude --model claude-sonnet-5-5 --effort high` |
+| Fallback when Codex's budget is out | opencode (Flash, paid) — **not Claude** (see below) | see *Launching opencode* |
 
-Switch rules: Codex above ~85 % of its 5-hour window or ~90 % weekly → route by the default
-table (opencode) until it resets; Sonnet takes Codex-only work (UI) that cannot wait. The owner
-may override routing for a day (2026-10-17: "Codex first"); such overrides end with the day.
-A worker above ~80 % context → its next task goes to a fresh worker. An opencode usage limit →
-replace the worker on the same worktree. Read Codex usage from the health monitor line or the
-`⚠ 5h limit: N% left · resets at HH:MM` hint in a Codex footer.
+**Claude workers are paused** (owner, 2026-10-20: "Não use mais Sonnet 5.5 por enquanto, tokens
+Claude próximos de acabar. Use apenas OpenCode como fallback"). Do not start Claude Code workers
+until the owner lifts this; the orchestrator itself also runs on the owner's Claude quota, so keep
+coordinator turns lean (no idle polling loops, short reports). Before the pause the fallback was
+Claude Code Sonnet 5.5, effort high.
+
+Switch rules: Codex above ~85 % of its 5-hour window or ~90 % weekly → route new work to opencode
+until it resets (two Codex workers can burn a fresh 5-hour window in about 35 minutes). A worker
+that hits a usage limit mid-task → snapshot its tree, interrupt it, close its terminal, and start a
+replacement on the **same Task and worktree**, then type a continuation note into the new terminal
+(what is committed, what is uncommitted, decisions already given). The owner may override routing
+for a day (2026-10-17: "Codex first"); such overrides end with the day. A worker above ~80 %
+context → its next task goes to a fresh worker. Read Codex usage from the health monitor line, the
+`rate_limits` field in `~/.codex/sessions/**/*.jsonl`, or the Codex footer.
 
 **No context rot:** every new task gets a **fresh agent**. Only post-review fixes to the *same*
 task may reuse that task's terminal. After settlement: release the worker, close its terminal.
@@ -105,7 +120,13 @@ orca orchestration worker-start --run <run> --spec "$(cat brief.md)" --task-titl
   --terminal <handle> --worktree path:<worktree> --json
 ```
 
-Close the fallback shell that a bare `worktree create` opens, after confirming it is idle.
+Use `opencode/deepseek-v4.1-flash-free` in place of `opencode-go/deepseek-v4.1-flash` for bounded
+tasks (footer: "DeepSeek V4.1 Flash Free OpenCode · high"). The Free endpoint sometimes answers
+"Upstream request failed: Endpoint is unavailable" and retries by itself; if it keeps failing,
+relaunch on the paid model. Close the fallback shell that a bare `worktree create` opens, after
+confirming it is idle. When an opencode task is settled: `worker-release` (it stays `retained`),
+`opencode api session.list` → `opencode api session.interrupt --param sessionID=<id>` for its
+session, then close the terminal.
 
 ## Known stalls
 
@@ -146,14 +167,69 @@ The orchestrator may push `main` and task branches and create pre-release tags w
 Ask the owner first before a force-push, before deleting remote refs, and before any
 non-prerelease release.
 
+## Product direction the orchestrator must keep
+
+These come from the owner and are recorded in `OVERVIEW.md` / `docs/decisions.md`; the points
+below are the ones most easily lost between sessions.
+
+- **Platform order:** everything working and fully validated on the Steam Deck first; then
+  Windows; macOS last (owner, 2026-10-19). Do not start port work or port research before the Deck
+  validation is done, but keep new code portable (OS specifics behind `cfg`/traits).
+- **Distribution:** GitHub pre-releases now; Flatpak on Flathub next (D-034). Flathub's AI policy
+  means the **owner** writes the manifest, AppStream metainfo, desktop entry and every Flathub
+  text; agents never create those files or post to Flathub.
+- **UI:** unmistakably DOOM, tasteful and detailed (D-020), better than UZDeck; UI work goes to
+  Codex, and large visual changes are shown to the owner as headless renders before merging.
+  Amber means focus only; primary actions are ember red (spec 060).
+- **Catalog:** community-contributable TOML recipes via PR (D-010); AUGER;ZENITH (with add-on),
+  SIGIL and SIGIL II are reference mapsets.
+- **Tracking** lives only in `docs/` (no Linear, no GitHub Issues except the automated
+  `catalog-health` / `idgames-crawl` issues opened by workflows).
+
+## Operational lessons (Orca 1.4.232, Codex 0.162, opencode 2.0.x)
+
+- `orca worktree rm` **deletes the local task branch**: push the branch (or merge it) first.
+- A task worktree may contain nested `git worktree`s a worker made (e.g. tag checkouts under
+  `.scratch/` or its scratchpad): `git worktree remove --force` them, then `orca worktree rm`;
+  finish with `git worktree prune`.
+- Closing a worker-started terminal whose Dispatch is still running turns the Dispatch `failed`
+  and the Task back to `ready`: restart it with `worker-start --task <id> --worktree path:<wt>`
+  **without** `--retry-of`. `worker-start --terminal <h>` with `--spec` on a settled opencode
+  terminal is how to dispatch a post-review fix to the same agent.
+- Orca self-updates mid-run; afterwards a worker's heartbeat can be rejected ("not the exact
+  process owning the dispatch") — later messages usually work again; keep the worker going.
+- The typed inbox wait also returns heartbeats on this Orca version: read every message's `type`,
+  ack the batch, re-arm.
+- Running workers' typed inputs land mid-turn: for urgent corrections use
+  `orca terminal send --text … --enter` on the worker's terminal, plus an `orchestration send` to
+  `dispatch:<id>` for the record.
+- `git ls-remote --heads origin <name>` matches by suffix (it found `vittau/idgames-index` for
+  `idgames-index`); always use `refs/heads/<name>`.
+- Never start a background `cargo test` on a tree with unresolved merge conflicts; resolve, commit,
+  then verify.
+
+## Open follow-ups (keep this list current)
+
+- Add saved-state fixture trees for `v0.0.8-upgrade` and `v0.0.9-focus` to
+  `tests/fixtures/state/` and the release guard test (spec 055 R4; small opencode task).
+- Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; write the Flathub manifest,
+  metainfo and desktop entry (D-034), then a local `flatpak-builder` build for spec 059's
+  Needs Deck Validation items.
+- Next backlog: specs 051–053 (/idgames browse on top of the published index); the
+  "Advanced" card subtitle touching its bottom edge (cosmetic, pre-existing).
+
 ## Where state lives
 
 `docs/status.md` (now), `docs/journal.yml` (history), `docs/decisions.md` (decisions in force),
-`docs/specs/` (contracts), `docs/research/` (evidence), `docs/reports/` (worker reports). An
-orchestrator taking over starts by reading these, then `orca orchestration run-use --id <run>`
-and `orca orchestration worker-list --run <id> --json` for any live workers, and
-`orca worktree list --repo id:<repo-id> --json` for leftover worktrees.
+`docs/specs/` (contracts), `docs/research/` (evidence), `docs/reports/` (worker reports),
+`docs/deck-testing.md` (owner's Deck checklist and results). An orchestrator taking over starts by
+reading these and this file, then `orca orchestration run-use --id <run>` (needed whenever the
+coordinator runs in a new terminal) and `orca orchestration worker-list --run <id> --json` for live
+workers, and `orca worktree list --repo id:<repo-id> --json` for leftover worktrees.
 
 Current identifiers: repo id `7bde2174-d352-4dd8-9057-f2b433ecbbf2`; Run `run_005c6aad7366`
-(holds every task since 2026-10-16). The orchestrator's long-lived monitors (inbox, health, GUI
-guard) are Claude Code Monitors that expire every 30 minutes and must be re-armed.
+(holds every task since 2026-10-16). Monitors (inbox wait, `worker_health.py`, `gui_guard.sh`)
+are Claude Code Monitors that expire every 30 minutes and must be re-armed while workers run;
+stop them when no worker is active. Published branches written by CI: `catalog` (catalog bundle,
+spec 019) and `idgames-index` (daily /idgames index, spec 050; first publish 2026-10-20, 10,885
+entries).
