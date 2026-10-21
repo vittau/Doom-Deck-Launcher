@@ -226,7 +226,7 @@ below are the ones most easily lost between sessions.
 - Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
   from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
 - Current integration 2026-10-21: 067 Audio/soundfonts and 068 verified SIGIL editions,
-  including COMPAT + SHREDS, have accepted worker reports and are under combined verification.
+  including COMPAT + SHREDS, are reviewed and merged after combined fmt/clippy and 870 passing tests.
   Specs 062–066 and independent website deployment are complete; the old shutdown pause record
   is historical. See `docs/status.md` for the final integration and CI results.
 - Next backlog: specs 051–053 (/idgames browse on top of the published index); the

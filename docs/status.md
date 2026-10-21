@@ -6,7 +6,10 @@ The owner resumed the original OpenCode conversations after shutdown. Both featu
 completed and their review fixes are accepted. Their branches were combined on
 `verify/soundfonts-sigil-20261021`. Integrated fmt, clippy with warnings denied and all **870**
 workspace tests passed (200 app, 628 core, 39 integration and 3 doctests). The verified result
-is ready to advance `main`; Linux CI/e2e results will follow. The [pause checkpoint](orchestration-pause-2026-10-21.md) is historical.
+was pushed to `main` at `3f65893`. Linux CI (`39607816657`), Flatpak artifact build
+(`39607816207`) and Linux e2e (`39607814060`) are running; their results are not yet confirmed.
+Both workers were released and their clean, merged worktrees removed; remote task branches
+remain available. No new Flatpak repository publication or release tag was created. The [pause checkpoint](orchestration-pause-2026-10-21.md) is historical.
 
 - **Audio:** Settings → Audio offers Default and an optional verified Arachno download. Choice
   persists globally and applies on the next launch across all launch routes; custom engine
