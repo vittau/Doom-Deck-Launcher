@@ -10,8 +10,8 @@
 # manifest, not the Deck tarball.
 #
 # External references:
-#   * actions/checkout v7.0.1, pinned by commit.
-#   * actions/upload-artifact v7.0.2, pinned by commit.
+#   * actions/checkout v4, pinned by commit.
+#   * actions/upload-artifact v4, pinned by commit.
 #   * flatpak-cargo-generator at commit 74697c7 (2026-09-30), plus its SHA-256.
 #   * Runtime/SDK branch org.freedesktop.*//26.08 from Flathub.
 #   * Rust 1.99.1 from static.rust-lang.org, pinned by SHA-256 in the manifest.
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # `git log -1` only needs the checked-out commit.
           fetch-depth: 1
@@ -293,7 +293,7 @@ jobs:
 
       - name: Upload the Flatpak bundle and checksum
         if: success()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ddl-flatpak-x86_64
           path: |
@@ -304,7 +304,7 @@ jobs:
 
       - name: Upload the build log
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ddl-flatpak-build-log
           path: |
