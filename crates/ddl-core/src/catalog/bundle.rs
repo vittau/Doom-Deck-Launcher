@@ -43,10 +43,15 @@ pub const BUNDLE_SCHEMA: u32 = 1;
 /// the bundle: if it tracked `Cargo.toml`, bumping the workspace version on
 /// `main` would make every installed DDL reject every published bundle and
 /// defeat the whole feature. Raise it only when a bundle genuinely needs a newer
-/// client (a new bundle/recipe schema); an individual recipe that a client
-/// cannot understand is already dropped per recipe, with a diagnostic, by
-/// [`accept_bundle`].
-pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.4";
+/// client (a new bundle/recipe schema or a reachability fix); an individual
+/// recipe that a client cannot understand is already dropped per recipe, with a
+/// diagnostic, by [`accept_bundle`].
+///
+/// Raised from `0.0.4` to `0.0.11` for spec 077, R6: the catalog now holds 92
+/// recipes, and clients before 0.0.11 only accept card ids `10..=99`, so the
+/// global list's last cards would be unreachable for them. Future recipe-only
+/// updates keep `0.0.11` until they genuinely need a new client capability.
+pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.11";
 
 /// Largest bundle DDL accepts, matching spec 019 R3's ≤ 2 MiB bound.
 pub const MAX_BUNDLE_BYTES: u64 = 2 * 1024 * 1024;
@@ -825,6 +830,38 @@ limitations = []
         assert!(load_cache(dir.path()).is_none());
     }
 
+    /// Spec 077, R6: the published catalog's stable minimum client is the
+    /// 0.0.11 release that can reach every card of a 92-recipe list; an older
+    /// client rejects the bundle offline instead of showing an unreachable tail.
+    #[test]
+    fn the_stable_minimum_client_is_the_card_reachability_release() {
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.11");
+        let bundle = bundle_with(
+            900,
+            DEFAULT_MIN_DDL_VERSION,
+            &[("good.toml", &recipe("good", "www.gamers.org"))],
+        );
+        assert_eq!(
+            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.10").unwrap_err(),
+            BundleRejection::TooNew {
+                min: "0.0.11".into(),
+                running: "0.0.10".into(),
+            },
+            "an older client is refused whole, offline"
+        );
+        assert!(
+            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.11").is_ok(),
+            "the reachability release accepts it"
+        );
+        // A later recipe-only bundle keeps the same stable minimum.
+        let later = bundle_with(
+            901,
+            DEFAULT_MIN_DDL_VERSION,
+            &[("good.toml", &recipe("good", "www.gamers.org"))],
+        );
+        assert_eq!(later.min_ddl_version, "0.0.11");
+    }
+
     #[test]
     fn build_refuses_a_catalog_that_does_not_lint() {
         let dir = tempfile::tempdir().unwrap();
@@ -863,7 +900,9 @@ limitations = []
         // Spec 019 review fix: the minimum is a deliberate constant, not the
         // building binary's version, so a Cargo.toml bump cannot make installed
         // DDLs reject every published bundle.
-        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.4");
+        // Spec 077, R6 raised it to 0.0.11 for the card-reachability fix; it
+        // stays a deliberate constant, not the building binary's version.
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.11");
         assert!(semver::Version::parse(DEFAULT_MIN_DDL_VERSION).is_ok());
         let bundle = bundle_with(
             200,
@@ -871,7 +910,11 @@ limitations = []
             &[("good.toml", &recipe("good", "www.gamers.org"))],
         );
         assert!(accept_bundle(&bundle, HOSTS, 100, DEFAULT_MIN_DDL_VERSION).is_ok());
-        assert!(accept_bundle(&bundle, HOSTS, 100, "0.0.5").is_ok());
+        // Anything older than the stable minimum is refused whole.
+        assert!(matches!(
+            accept_bundle(&bundle, HOSTS, 100, "0.0.10"),
+            Err(BundleRejection::TooNew { .. })
+        ));
         assert!(matches!(
             accept_bundle(&bundle, HOSTS, 100, "0.0.3"),
             Err(BundleRejection::TooNew { .. })
@@ -900,7 +943,9 @@ limitations = []
     #[test]
     fn an_old_schema_reader_drops_every_recipe_of_a_bundle_without_complevel_status() {
         let catalog = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog");
-        let bundle = build_bundle(&catalog, 200, "abc1234", DEFAULT_MIN_DDL_VERSION)
+        // This test is about the recipe schema, not the stable minimum, so it
+        // builds with the older minimum an old reader was published with.
+        let bundle = build_bundle(&catalog, 200, "abc1234", "0.0.6")
             .expect("the shipped catalog lints and bundles");
         let recipes = bundle.recipe_files();
         assert!(recipes.len() >= 80, "{} recipes", recipes.len());
