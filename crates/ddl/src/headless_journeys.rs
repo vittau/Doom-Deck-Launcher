@@ -256,6 +256,16 @@ fn categories_favorites_and_screenshots() {
     production::categories_journey(&window, &ui);
 }
 
+/// Spec 074: card insets, frame clearance and two tag rows in Discover.
+#[test]
+fn cards_keep_roomy_insets_and_two_tag_rows() {
+    if isolated(module_path!(), "cards_keep_roomy_insets_and_two_tag_rows") {
+        return;
+    }
+    let (window, ui) = setup();
+    production::card_padding_after(&window, &ui);
+}
+
 /// Spec 072 R4: a 90+ recipe catalog keeps the last card reachable.
 #[test]
 fn catalog_card_ids_beyond_99_stay_reachable() {
