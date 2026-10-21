@@ -11,7 +11,8 @@ import zlib
 ROOT = Path(__file__).resolve().parents[1]
 IMAGES = {
     '010-home-continue.png': 'home.png',
-    '015-discover-specific-favorite.png': 'discover.png',
+    # Scroll-top Discover state: category strip and the first card row visible.
+    '015-discover-category.png': 'discover.png',
     '010-play-setup-auger.png': 'play-setup.png',
     '015-detail-tags.png': 'mapset-detail.png',
     '067-audio-settings.png': 'audio-settings.png',

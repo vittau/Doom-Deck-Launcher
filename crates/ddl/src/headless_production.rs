@@ -2012,6 +2012,9 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert!(used.len() >= 2, "the shipped recipes use several tags");
     {
         let mut r = state.borrow_mut();
+        // The captured Discover state discloses a deterministic sample source
+        // date (2026-10-21 13:39 UTC); it is not "today" from the dev machine.
+        r.snapshot.as_mut().unwrap().catalog.serial = SAMPLE_CATALOG_SERIAL;
         r.screen = Screen::Discover;
         r.focus = 10;
         r.sync(ui);
@@ -2533,8 +2536,9 @@ pub(super) fn catalog_92_journey(ui: &AppWindow) {
     {
         let mut r = state.borrow_mut();
         let snapshot = r.snapshot.as_mut().unwrap();
-        // The shipped catalog is already large; two more entries push the last
-        // card id past 100, the old activation/focus boundary.
+        // The shipped catalog is already large; the deterministic final entry
+        // guarantees the last card is a Classics card even when no padding was
+        // needed and pushes its id past 100, the old activation/focus boundary.
         while snapshot.items.len() < 92 {
             let index = snapshot.items.len();
             let mut item = snapshot.items[0].clone();
@@ -2544,6 +2548,15 @@ pub(super) fn catalog_92_journey(ui: &AppWindow) {
             item.favorite = false;
             snapshot.items.push(item);
         }
+        let mut item = snapshot.items[0].clone();
+        item.recipe.id = "synthetic-last-card".into();
+        item.recipe.title = "Synthetic last card".into();
+        item.recipe.tags = vec!["classics".into()];
+        item.manifest = None;
+        item.last_played = None;
+        item.favorite = false;
+        item.profiles.clear();
+        snapshot.items.push(item);
         last = snapshot.items.len() - 1;
     }
     assert!(last >= 91, "at least 92 catalog entries");
@@ -2721,6 +2734,175 @@ pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow)
         }
     }
     write_png("074-card-after.png", &render(window));
+}
+
+/// Spec 076: SIGIL's advanced options and import sheet name the normal episode
+/// and COMPAT edition plainly and render without clipping at 1280×800.
+pub(super) fn sigil_edition_copy(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+        (key == "HOME").then(|| home.display().to_string())
+    })
+    .unwrap();
+    let env = Environment {
+        paths,
+        home: home.clone(),
+        screen: None,
+        test: None,
+    }
+    .without_catalog_auto_updates();
+    let state = crate::runtime::attach_environment(ui, env);
+    idle(&state);
+    let imported = home.join("SIGIL_V1_23_REG.wad");
+    std::fs::write(&imported, b"WAD").unwrap();
+    {
+        let mut r = state.borrow_mut();
+        let index = r
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .position(|item| item.recipe.id == "sigil")
+            .unwrap();
+        let item = &mut r.snapshot.as_mut().unwrap().items[index];
+        item.manifest = Some(ddl_core::library::InstallManifest {
+            schema_version: 1,
+            recipe_id: "sigil".into(),
+            release: item.recipe.release.clone(),
+            recipe_sha256: "a".repeat(64),
+            installed_at: 0,
+            packages: vec![],
+            members: vec![ddl_core::library::InstalledMember {
+                package: None,
+                member: None,
+                component: Some("soundtrack".into()),
+                path: imported,
+                size: 3,
+                sha256: "a".repeat(64),
+                keep: false,
+            }],
+        });
+        r.selected = index;
+        r.screen = Screen::Setup;
+        r.title_fit_advanced();
+        r.focus = 102;
+        r.sync(ui);
+    }
+    assert_eq!(ui.get_heading(), "Play setup / SIGIL");
+    let nodes: Vec<_> = ui.get_nodes().iter().collect();
+    for label in [
+        "Normal episode (MIDI)",
+        "COMPAT edition maps (older ports)",
+        "Normal episode with Buckethead music (paid)",
+        "COMPAT edition soundtrack (Buckethead, paid)",
+    ] {
+        let node = nodes
+            .iter()
+            .find(|node| node.label == label)
+            .unwrap_or_else(|| panic!("missing option row: {label}"));
+        assert!(node.fitted_label, "{label} must use the fitted label");
+        assert!(
+            !node.label.contains("REG") && !node.label.contains("E3"),
+            "{label} keeps a plain edition name"
+        );
+        // The production fitter's floor is 20 px; the row height is 30 px.
+        ui.set_fit_label(node.label.clone());
+        ui.set_fit_width(node.w - if node.kind == 16 { 72. } else { 32. });
+        ui.set_fit_height(30.);
+        ui.set_fit_size(node.size);
+        ui.set_fit_smaller(20.);
+        ui.set_fit_display(false);
+        ui.set_fit_strong(false);
+        ui.set_fit_multiline(false);
+        ui.set_fit_full(false);
+        assert!(
+            ui.get_fit_content_height() <= 30.5,
+            "{label} needs {:.1} px of row height",
+            ui.get_fit_content_height()
+        );
+        assert!(
+            ui.get_fit_chosen_size() >= 20.,
+            "{label} falls below the 20 px floor"
+        );
+    }
+    write_png("076-sigil-options.png", &render(window));
+
+    // The imported paid soundtrack row opens the shared import sheet with its
+    // two actions on one line; the sheet copy is part of the same review.
+    ui.invoke_clicked(102);
+    assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_sheet_title().as_str(), "Imported component");
+    let sheet: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    let import_button = sheet
+        .iter()
+        .find(|node| node.id == 900)
+        .expect("import action");
+    let on_button = sheet.iter().find(|node| node.id == 901).expect("on action");
+    assert_eq!(import_button.label, "Import");
+    assert!(import_button.actionable && on_button.actionable);
+    assert_eq!(import_button.y, on_button.y);
+    write_png("076-sigil-import-sheet.png", &render(window));
+}
+
+/// Disclosed deterministic sample source serial used by the captured Discover
+/// states (2026-10-21 13:39 UTC). It is sample state, never a live fetch time.
+pub(super) const SAMPLE_CATALOG_SERIAL: u64 = 1_792_589_940;
+
+/// Spec 077 R3: Discover's subtitle uses the effective catalog serial, never a
+/// fetch time or today's date, and updates when a newer catalog becomes active.
+pub(super) fn discover_catalog_subtitle(window: &MinimalSoftwareWindow, ui: &AppWindow) {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+        (key == "HOME").then(|| home.display().to_string())
+    })
+    .unwrap();
+    let env = Environment {
+        paths,
+        home,
+        screen: None,
+        test: None,
+    }
+    .without_catalog_auto_updates();
+    let state = crate::runtime::attach_environment(ui, env);
+    idle(&state);
+    {
+        let mut r = state.borrow_mut();
+        r.snapshot.as_mut().unwrap().catalog.serial = SAMPLE_CATALOG_SERIAL;
+        r.screen = Screen::Discover;
+        r.focus = 10;
+        r.sync(ui);
+    }
+    assert_eq!(
+        ui.get_status().as_str(),
+        "October 21, 2026 at 13:39 (UTC)",
+        "the subtitle formats the catalog source serial in UTC"
+    );
+    write_png("077-discover-catalog-date.png", &render(window));
+    {
+        let mut r = state.borrow_mut();
+        r.snapshot.as_mut().unwrap().catalog.serial = 0;
+        r.sync(ui);
+    }
+    assert_eq!(
+        ui.get_status().as_str(),
+        "Catalog date unavailable",
+        "an unknown serial never shows today's date"
+    );
+    {
+        let mut r = state.borrow_mut();
+        r.snapshot.as_mut().unwrap().catalog.serial = 1_798_761_600;
+        r.sync(ui);
+    }
+    assert_eq!(
+        ui.get_status().as_str(),
+        "January 1, 2027 at 00:00 (UTC)",
+        "a newer active catalog updates the subtitle"
+    );
 }
 
 fn commercial_wad() -> Vec<u8> {
