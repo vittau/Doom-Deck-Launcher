@@ -137,6 +137,8 @@ fn purchased_sigil_editions_are_known_complete_replacements() {
         "46fcc22fba47fff3872d9d294ee07bdbab4b0ec9feaab277f83836f5aed80bd0";
     const SIGIL_II_MP3_SHA256: &str =
         "8a803f5425d4bf31ddfe537b659d794acdff0631316f51b9ed45311b5ed059dc";
+    const SIGIL_SHREDS_COMPAT_SHA256: &str =
+        "e5592bc76951a63d8647c5dc7004378ca4d7fcecfda3ab73acc6c220f1193ab7";
 
     let sigil = recipe("sigil");
     let soundtrack = sigil
@@ -182,14 +184,35 @@ fn purchased_sigil_editions_are_known_complete_replacements() {
             .any(|known| known == &free_maps.sha256)
     );
 
-    // SIGIL_SHREDS_COMPAT.wad is music-only and only valid after the compat
-    // WAD; the schema has no "requires compat" relation, so it stays out of the
-    // recipe rather than being offered as an unsafe add-on.
+    // SIGIL_SHREDS_COMPAT.wad is a music-only paid add-on that requires the
+    // free E3 map component. It is never a native E5 replacement.
+    let compat_soundtrack = sigil
+        .components
+        .iter()
+        .find(|component| component.id == "compat-soundtrack")
+        .unwrap();
+    assert!(compat_soundtrack.user_supplied);
+    assert_eq!(compat_soundtrack.known_sha256, [SIGIL_SHREDS_COMPAT_SHA256]);
+    assert_eq!(compat_soundtrack.replaces, None);
+    assert_eq!(compat_soundtrack.requires.as_deref(), Some("compat"));
+    assert!(
+        compat_soundtrack
+            .obtain
+            .as_deref()
+            .unwrap()
+            .contains("SIGIL_SHREDS_COMPAT.wad")
+    );
+    let order = sigil.load_order(&["compat", "compat-soundtrack"]).unwrap();
+    assert_eq!(order.files.len(), 2);
+    assert_eq!(order.files[0].member.as_deref(), Some("compat"));
+    assert_eq!(order.files[1].role, Role::Music);
+
+    // The dependent music never loads alone or with a native replacement.
+    assert!(sigil.load_order(&["compat-soundtrack"]).is_err());
     assert!(
         sigil
-            .components
-            .iter()
-            .all(|component| component.id != "soundtrack-compat")
+            .load_order(&["soundtrack", "compat-soundtrack"])
+            .is_err()
     );
 
     let sigil_ii = recipe("sigil-ii");
@@ -231,6 +254,69 @@ fn purchased_sigil_editions_are_known_complete_replacements() {
             .iter()
             .any(|known| known == &free_maps.sha256)
     );
+}
+
+#[test]
+fn compatibility_music_activates_maps_and_switching_keeps_the_selection_legal() {
+    let sigil = recipe("sigil");
+    let apply = |selected: &[String], id: &str, enabled: bool| {
+        sigil.apply_component_choice(selected, id, enabled).unwrap()
+    };
+    let mut selected = apply(&[], "compat-soundtrack", true);
+    assert_eq!(selected, ["compat", "compat-soundtrack"]);
+    assert_eq!(
+        sigil
+            .load_order(&["compat", "compat-soundtrack"])
+            .unwrap()
+            .files
+            .len(),
+        2
+    );
+
+    // Switching to the native paid replacement removes the COMPAT maps and
+    // their dependent music instead of leaving an orphan.
+    selected = apply(&selected, "soundtrack", true);
+    assert_eq!(selected, ["soundtrack"]);
+
+    // Choosing the free/native path also clears the COMPAT pair.
+    selected = apply(&selected, "compat", true);
+    assert_eq!(selected, ["compat"]);
+    selected = apply(&selected, "compat-soundtrack", true);
+    assert_eq!(selected, ["compat", "compat-soundtrack"]);
+    selected = apply(&selected, "compat", false);
+    assert!(selected.is_empty());
+
+    // Explicit CLI-style selections reject contradictions independently of order.
+    for requested in [
+        vec!["compat".to_owned(), "soundtrack".to_owned()],
+        vec!["soundtrack".to_owned(), "compat".to_owned()],
+        vec!["soundtrack".to_owned(), "compat-soundtrack".to_owned()],
+        vec!["compat-soundtrack".to_owned(), "soundtrack".to_owned()],
+    ] {
+        let error = sigil.explicit_selection(&requested).unwrap_err();
+        assert!(
+            error.contains("replacement") || error.contains("requires"),
+            "{requested:?}: {error}"
+        );
+    }
+    assert_eq!(
+        sigil
+            .explicit_selection(&["compat-soundtrack".to_owned()])
+            .unwrap(),
+        ["compat", "compat-soundtrack"]
+    );
+
+    let mut profile = crate::profiles::Profile::new("p1", "Play", "sigil");
+    profile.components = vec!["compat-soundtrack".to_owned()];
+    assert!(profile.validate(&sigil).is_err());
+    profile.components = vec!["compat".to_owned(), "compat-soundtrack".to_owned()];
+    assert!(profile.validate(&sigil).is_ok());
+
+    // Runtime validation rejects a bad hand-built recipe even when the broken
+    // dependency is not selected.
+    let mut broken = sigil.clone();
+    broken.components[1].requires = Some("compat-soundtrack".to_owned());
+    assert!(broken.active_components(&[]).is_err());
 }
 
 #[test]
@@ -312,6 +398,21 @@ fn every_semantic_rule_rejects_a_bad_recipe() {
         }),
         ("exclusive group", |r| {
             r.components[1].exclusive_group = Some("?".into())
+        }),
+        ("invalid component dependency", |r| {
+            r.components[3].requires = Some("?".into())
+        }),
+        ("unknown or self-referential component dependency", |r| {
+            r.components[3].requires = Some("missing".into())
+        }),
+        ("unknown or self-referential component dependency", |r| {
+            r.components[3].requires = Some("compat-soundtrack".into())
+        }),
+        ("unsupported dependency chain", |r| {
+            r.components[1].requires = Some("compat-soundtrack".into())
+        }),
+        ("dependency loads at the wrong position", |r| {
+            r.components[3].position = 1
         }),
         ("no members", |r| r.components[0].members.clear()),
         ("user-supplied source", |r| r.components[2].obtain = None),
@@ -1078,6 +1179,7 @@ fn lint_fetch_rejects_a_status_bar_component_that_is_not_cosmetic() {
                 position: 1,
                 exclusive_group: None,
                 replaces: None,
+                requires: None,
                 user_supplied: false,
                 obtain: None,
                 known_sha256: vec![],
@@ -1096,6 +1198,7 @@ fn lint_fetch_rejects_a_status_bar_component_that_is_not_cosmetic() {
                 position: 2,
                 exclusive_group: None,
                 replaces: None,
+                requires: None,
                 user_supplied: false,
                 obtain: None,
                 known_sha256: vec![],

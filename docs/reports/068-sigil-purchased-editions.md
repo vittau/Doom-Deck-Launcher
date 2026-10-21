@@ -1,7 +1,8 @@
 # 068 — Verify purchased SIGIL editions
 
-**Status:** Metadata/research handoff complete. R5 (COMPAT/SHREDS composition) is specified on
-`main` but intentionally not implemented here; see “Left open”.
+**Status:** Complete. R1–R5 are implemented: the paid SIGIL/SIGIL II identities are recorded, and
+the SIGIL COMPAT + SHREDS composition is modeled, validated, switchable from the controller and
+resolved in map-before-music order. Deck playback remains **Needs Deck Validation**.
 
 ## What was inspected (R1)
 
@@ -104,6 +105,34 @@ Audio playback is **Needs Deck Validation**; only source support and file identi
   (native UMAPINFO versus COMPAT on DSDA v0.30.1), corrected the paid variant/composition tables,
   and updated the open questions.
 
+### R5 — COMPAT + SHREDS composition
+
+- Added an optional, backward-compatible `Component.requires` field (serde default) and one-level
+  dependency validation. Chains, cycles, unknown/self prerequisites, replacement-plus-dependency
+  and a prerequisite at an equal or later load position are rejected by lint and by runtime
+  `active_components`, including for hand-built recipes and inactive components.
+- `catalog/sigil.toml` now has a paid `compat-soundtrack` component for
+  `SIGIL_SHREDS_COMPAT.wad` (known SHA-256, one music member, `requires = "compat"`, position 2).
+  The existing free `compat` remains the E3 map replacement at position 1; the wide status bar moved
+  to position 3. Legal SIGIL orders are now:
+  - native/free: `main`, then optional wide bar;
+  - paid native: `SIGIL_V1_23_REG.wad` alone, then optional wide bar;
+  - COMPAT: `compat`, then optional `compat-soundtrack`, then optional wide bar.
+- Central selection helpers in `Recipe` expand a lone dependent enable (SHREDS adds `compat`), clear
+  exclusive peers and their dependents (choosing REG/native removes the COMPAT pair), and remove
+  dependents when the prerequisite is disabled. Persisted orphan selections still fail profile and
+  resolver validation instead of being silently repaired.
+- Explicit CLI `--with` selections use order-independent validation: contradictory ids such as
+  `--with compat --with soundtrack` fail with an actionable error; `--with compat-soundtrack` adds
+  the free maps and then reports the missing paid import if needed.
+- Imported user-supplied rows now show On/Off once imported. Confirming toggles the component;
+  the safe action opens the existing file picker to replace/re-import it. The import path enables an
+  initial import without toggling an already-enabled replacement off, and stages the required free
+  COMPAT maps before importing SHREDS. No audio, config or launch integration was changed; those
+  sections remain owned by task 067.
+- No paid bytes, download URL, rehosting or binary fixture was added. The only paid identity is the
+  supplied SHA-256 metadata.
+
 ### Why the current import issue is fixed
 
 Before this change both user-supplied components had `known_sha256 = []`. The importer therefore
@@ -114,31 +143,34 @@ resolver code change was needed.
 
 ## Tests (R4)
 
-- Added `catalog::tests::purchased_sigil_editions_are_known_complete_replacements`: freezes the two
-  paid hashes, asserts `user_supplied`, `replaces = main`, the exclusive edition group, the exact
-  filename in `obtain`, and that each selection resolves to exactly one package-less map WAD. It
-  also asserts the free WAD hash is not accepted as the paid identity and that
-  `SHREDS_COMPAT` is not offered as an unsafe standalone component.
+- Added `catalog::tests::purchased_sigil_editions_are_known_complete_replacements`: freezes the
+  three paid hashes, asserts `user_supplied`, `replaces = main` or `requires = "compat"`, the
+  exclusive edition group, the exact filenames in `obtain`, and the map/music load order. It also
+  asserts the free WAD hash is not accepted as a paid identity and that SHREDS never loads alone.
+- Added `catalog::tests::compatibility_music_activates_maps_and_switching_keeps_the_selection_legal`:
+  dependency activation, order-independent contradictory explicit selections, orphan rejection and
+  runtime rejection of a hand-built broken dependency.
+- Added `resolver::tests::sigil_compat_soundtrack_requires_maps_and_loads_after_them`: persisted
+  orphan blocker, missing-import blocker, exact `compat` → `compat-soundtrack` → wide-bar file
+  order, summary positions, and missing free-map blocker.
+- Added service and CLI tests for controller-style switching, exclusive clearing, idempotent
+  re-import enablement, and `ddl launch --with` contradiction/auto-prerequisite behavior.
 - The existing synthetic-fixture test
   `library::tests::imports_known_and_unknown_user_files_and_never_rejects_unknown_hashes` covers
   positive hash recognition and unmatched-file behavior without touching the owner's assets.
-- `cargo fmt --all --check` and the targeted catalog test pass. Final workspace checks are run after
-  merging `main`; no UI test was added because this is metadata-only (no Settings/audio or launch
-  UI change).
+- `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and
+  `cargo test --workspace` pass on the merged tree with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`.
+  The headless setup journey and UI-string tests also pass; no visible window or screenshot was
+  opened.
 
-## Left open / handoff
+## Left open
 
-- **R5 was added to the spec on `main` during this task** (“Include COMPAT and SHREDS support”):
-  after the checkpoint request I did not start the required schema/selection/UI work. The verified
-  facts needed for it are above: `SIGIL_SHREDS_COMPAT.wad` is music-only, must load after
-  `SIGIL_COMPAT_V1_23.wad`, and must never be a native E5 replacement. A safe model needs a
-  `requires = "compat"`-style relation (or equivalent) plus selection/CLI/UI handling, which is
-  broader than this metadata handoff.
-- `SIGIL_COMPAT_V1_23.wad` itself is already a valid optional replacement component; the missing
-  piece is only the dependent paid music component and its switching behavior.
 - Both recipes still accept only `doom-1.9ud` (Ultimate Doom), while the bundled texts also allow
   registered Doom 1.9. This is pre-existing and was not changed here; it needs a separate decision
   and Deck validation (registered `doom.wad` has only three IWAD episodes, but the WAD supplies its
   own `M_EPI5`/`M_EPI6` graphics).
 - Audio playback and the episode menu under cl3 remain **Needs Deck Validation**; no engine was
-  launched.
+  launched and no owner media was played.
+- SHREDS is intentionally offered only as the paid COMPAT companion. Whether the advanced COMPAT
+  path should be hidden further in the basic UI is a product decision, not a blocker: native E5
+  remains the default and the recipe description states the dependency.

@@ -188,28 +188,40 @@ replacing the IWAD's own E3 episode.
 
 ## 4. Composition (candidate recipe data — **Proposed**)
 
-Components and load positions. The schema does not exist yet, so this is illustrative TOML shaped
-around D-006/D-010, not a final schema.
+Components and load positions in the implemented recipe (`catalog/sigil.toml`; the actual schema
+uses `replaces`, `exclusive_group` and `requires`):
 
 ```toml
-# ILLUSTRATIVE — not a final schema, not a catalog entry
+# Implemented shape, abbreviated; see catalog/sigil.toml for the verified members.
 id = "sigil"
 release = "1.23"
-requirements = { iwad = "doom", iwad_variants = ["doom-1.9-registered", "doom-1.9ud-ultimate"],
-                 compatibility = { family = "vanilla-limit-removing", complevel = 3 } }
-packages = [
-  { id = "sigil-free", url = "https://romero.com/s/SIGIL_V1_23-8fh4.zip",
-    sha256 = "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105" },
-]
-components = [
-  { id = "main",      file = "SIGIL_V1_23.wad",        load_position = 1, default = true },
-  { id = "compat",    file = "SIGIL_COMPAT_V1_23.wad", load_position = 1, default = false,
-    exclusive_with = "main" },                        # E3 replacement alternative
-  { id = "soundtrack", file = "SIGIL_V1_23_REG.wad",   load_position = 1, optional = true,
-    source = "user-provided", exclusive_with = "main" }, # paid; DDL must not download
-  { id = "soundtrack-compat", file = "SIGIL_SHREDS_COMPAT.wad", load_position = 2,
-    optional = true, source = "user-provided", requires = "compat" },
-]
+[[components]]
+id = "main"
+optional = false
+position = 1
+[[components]]
+id = "compat"
+optional = true
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+[[components]]
+id = "soundtrack"
+optional = true
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+user_supplied = true
+[[components]]
+id = "compat-soundtrack"
+optional = true
+position = 2
+requires = "compat"
+user_supplied = true
+[[components]]
+id = "wide-status-bar"
+optional = true
+position = 3
 ```
 
 - **(a) Standard play:** `SIGIL_V1_23.wad` (position 1).
@@ -545,14 +557,11 @@ compat equivalent.
    the bundled SIGIL/SIGIL II are available as files.
 9. **Compat variant exposure.** Whether DDL should ever surface `SIGIL_COMPAT_V1_23.wad` (DSDA-Doom
    does not need it) as an advanced option, or hide it entirely.
-10. **SHREDS_COMPAT composition.** Modelling `SIGIL_SHREDS_COMPAT.wad` safely needs a component that
-    is music-only and requires `compat`, but the current recipe schema has no `requires` relation.
-    It is deliberately not offered rather than risk loading music alone with the main WAD; adding
-    that relation is a schema change for the coordinator to schedule.
-10. **SHREDS_COMPAT composition.** `SIGIL_SHREDS_COMPAT.wad` is music-only and valid only after
-    `SIGIL_COMPAT_V1_23.wad`. The current recipe schema has no `requires compat` relation, so it is
-    not modeled rather than offered as an unsafe add-on. Adding that relation is a composition/schema
-    change for the coordinator to decide.
+10. **SHREDS_COMPAT composition — implemented for the supplied v1.23 media.** The recipe models
+    `SIGIL_SHREDS_COMPAT.wad` as a user-supplied, music-only component with `requires = "compat"` and
+    position 2, after the free E3 map WAD. Enabling it also selects the compat maps; disabling or
+    choosing the native/paid replacement removes it. Loading music alone or mixing editions is
+    rejected. Deck playback remains **Needs Deck Validation**.
 
 
 ## Screenshots (spec 023, D-024)

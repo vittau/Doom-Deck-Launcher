@@ -1985,9 +1985,13 @@ impl Services {
             }
             Command::Import(id, component, path) => {
                 let recipe = self.recipe(&id)?;
+                // Select the component before staging so an initial SHREDS
+                // import also fetches its required free COMPAT maps. The profile
+                // is saved only after the import succeeds.
+                let mut profile = self.profile(&recipe)?;
+                enable_component(&recipe, &mut profile, &component);
                 let outcome = if let Some(mut active) = self.active(&id)? {
                     let previous = active.manifest.clone();
-                    let profile = self.profile(&recipe)?;
                     let mut staged = self
                         .installer
                         .stage_update(
@@ -2055,8 +2059,6 @@ impl Services {
                     tracing::warn!(sha256=%outcome.sha256,component,"unrecognized imported component was stored but not enabled");
                     return Err(Problem::UnknownFile);
                 }
-                let mut profile = self.profile(&recipe)?;
-                select_component(&recipe, &mut profile, &component);
                 self.profiles
                     .save(&profile)
                     .map_err(|e| logged(Problem::Storage, e))?;
@@ -2591,7 +2593,6 @@ impl Services {
             .profile(&recipe)
             .map_err(|problem| CliFailure::message(problem.to_string()))?;
         if !components.is_empty() {
-            profile.components.clear();
             for component in components {
                 let Some(held) = recipe
                     .components
@@ -2612,15 +2613,10 @@ impl Services {
                         "component `{component}` is user-supplied; import it from the UI, DDL never downloads it"
                     )));
                 }
-                if let Some(group) = &held.exclusive_group {
-                    profile.components.retain(|enabled| {
-                        !recipe.components.iter().any(|other| {
-                            &other.id == enabled && other.exclusive_group.as_ref() == Some(group)
-                        })
-                    });
-                }
-                profile.set_component(component, true);
             }
+            profile.components = recipe.explicit_selection(components).map_err(|error| {
+                CliFailure::message(format!("invalid component selection: {error}"))
+            })?;
         }
         profile.validate(&recipe).map_err(|error| {
             CliFailure::message(format!("invalid component selection: {error}"))
@@ -2687,29 +2683,26 @@ impl Services {
             };
         }
         if !overrides.components.is_empty() {
-            profile.components.clear();
             for component in &overrides.components {
-                let Some(held) = recipe
+                if !recipe
                     .components
                     .iter()
-                    .find(|candidate| &candidate.id == component && candidate.optional)
-                else {
+                    .any(|candidate| &candidate.id == component && candidate.optional)
+                {
                     return Err(CliFailure::message(format!(
                         "`{}` has no optional component `{component}`",
                         recipe.id
                     )));
-                };
+                }
                 // A user_supplied component is allowed here: it may have been
                 // imported already, and the resolver reports it if not.
-                if let Some(group) = &held.exclusive_group {
-                    profile.components.retain(|enabled| {
-                        !recipe.components.iter().any(|other| {
-                            &other.id == enabled && other.exclusive_group.as_ref() == Some(group)
-                        })
-                    });
-                }
-                profile.set_component(component, true);
             }
+            profile.components =
+                recipe
+                    .explicit_selection(&overrides.components)
+                    .map_err(|error| {
+                        CliFailure::message(format!("invalid launch selection: {error}"))
+                    })?;
         }
         if let Some(skill) = overrides.skill {
             profile.skill = skill;
@@ -3721,19 +3714,25 @@ fn default_profile(recipe: &Recipe) -> Profile {
 }
 
 pub fn select_component(recipe: &Recipe, profile: &mut Profile, id: &str) {
-    let Some(c) = recipe.components.iter().find(|c| c.id == id) else {
-        return;
-    };
     let enabled = !profile.components.iter().any(|held| held == id);
-    if enabled && let Some(group) = &c.exclusive_group {
-        profile.components.retain(|id| {
-            !recipe
-                .components
-                .iter()
-                .any(|other| other.id == *id && other.exclusive_group.as_ref() == Some(group))
-        });
+    match recipe.apply_component_choice(&profile.components, id, enabled) {
+        Ok(components) => profile.components = components,
+        Err(error) => {
+            tracing::warn!(%error, component = id, "could not change component selection");
+        }
     }
-    profile.set_component(id, enabled);
+}
+
+/// Enables an imported component without toggling an existing selection off.
+/// The import flow uses this for an initial import; replacing the file keeps the
+/// row enabled.
+fn enable_component(recipe: &Recipe, profile: &mut Profile, id: &str) {
+    match recipe.apply_component_choice(&profile.components, id, true) {
+        Ok(components) => profile.components = components,
+        Err(error) => {
+            tracing::warn!(%error, component = id, "could not enable imported component");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -3990,6 +3989,71 @@ mod tests {
         let active = sigil.active_components(&["compat"]).unwrap();
         assert!(active.iter().all(|c| c.id != "main"));
     }
+    #[test]
+    fn compatibility_music_switches_maps_and_clears_orphans() {
+        let catalog = Catalog::embedded();
+        let sigil = catalog.recipe("sigil").unwrap().clone();
+        let mut profile = default_profile(&sigil);
+
+        select_component(&sigil, &mut profile, "compat-soundtrack");
+        assert!(profile.components.iter().any(|id| id == "compat"));
+        assert!(
+            profile
+                .components
+                .iter()
+                .any(|id| id == "compat-soundtrack")
+        );
+        let enabled: Vec<_> = profile.components.iter().map(String::as_str).collect();
+        let active = sigil.active_components(&enabled).unwrap();
+        assert_eq!(
+            active
+                .iter()
+                .map(|component| component.id.as_str())
+                .collect::<Vec<_>>(),
+            ["compat", "compat-soundtrack", "wide-status-bar"]
+        );
+
+        // Replacing an imported file must not toggle an enabled row off.
+        let enabled = profile.components.clone();
+        enable_component(&sigil, &mut profile, "compat-soundtrack");
+        assert_eq!(profile.components, enabled);
+
+        // Switching to the native paid replacement drops the COMPAT maps and
+        // their dependent music in one action.
+        select_component(&sigil, &mut profile, "soundtrack");
+        assert_eq!(
+            profile.components,
+            ["wide-status-bar", "soundtrack"],
+            "native replacement must not leave compatibility music behind"
+        );
+
+        // Choosing no exclusive member leaves only the default wide bar.
+        profile.components = vec![
+            "compat".to_owned(),
+            "compat-soundtrack".to_owned(),
+            "wide-status-bar".to_owned(),
+        ];
+        choose_exclusive_component(&sigil, &mut profile, "edition", None);
+        assert_eq!(profile.components, ["wide-status-bar"]);
+
+        // Persisted orphan state is rejected, not silently repaired at launch.
+        profile.components = vec!["compat-soundtrack".to_owned()];
+        assert!(profile.validate(&sigil).is_err());
+
+        // Explicit contradictory CLI-style ids fail, not last-one-wins.
+        let error = sigil
+            .explicit_selection(&["compat".to_owned(), "soundtrack".to_owned()])
+            .unwrap_err();
+        assert!(error.contains("replacement"), "{error}");
+        let error = sigil
+            .explicit_selection(&["soundtrack".to_owned(), "compat-soundtrack".to_owned()])
+            .unwrap_err();
+        assert!(
+            error.contains("replacement") || error.contains("requires"),
+            "{error}"
+        );
+    }
+
     #[test]
     fn a_new_profile_enables_default_on_components_like_the_widescreen_bar() {
         let r = Catalog::embedded().recipe("eviternity").unwrap().clone();
@@ -4387,15 +4451,30 @@ pub fn choose_exclusive_component(
     }) {
         return;
     }
-    profile.components.retain(|id| {
-        !recipe
-            .components
-            .iter()
-            .any(|c| c.id == *id && c.exclusive_group.as_deref() == Some(group))
-    });
     if let Some(id) = choice {
-        profile.set_component(id, true);
+        match recipe.apply_component_choice(&profile.components, id, true) {
+            Ok(components) => profile.components = components,
+            Err(error) => {
+                tracing::warn!(%error, component = id, "could not choose exclusive component");
+            }
+        }
+        return;
     }
+    let mut components = profile.components.clone();
+    for component in recipe
+        .components
+        .iter()
+        .filter(|component| component.exclusive_group.as_deref() == Some(group))
+    {
+        match recipe.apply_component_choice(&components, &component.id, false) {
+            Ok(next) => components = next,
+            Err(error) => {
+                tracing::warn!(%error, component = component.id, "could not clear exclusive group");
+                return;
+            }
+        }
+    }
+    profile.components = components;
 }
 
 #[cfg(test)]
