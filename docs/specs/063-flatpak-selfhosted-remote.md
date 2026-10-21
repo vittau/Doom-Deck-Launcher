@@ -48,6 +48,18 @@ Flathub submission, a GitHub Release, a public announcement, and any change to a
 - **R5 — Documentation and report.** Document setup, publishing, installing on a Deck, updating,
   uninstalling, key rotation and the Flathub migration path. Record what was verified statically
   and what still needs a real run.
+- **R6 — Scoped Cloudflare purge (owner, 2026-10-21).** After a successful Pages deployment,
+  optionally purge the single prefix `www.vitormach.dev/Doom-Deck-Launcher/`
+  using `CLOUDFLARE_CACHE_PURGE_TOKEN` (Actions secret) and `CLOUDFLARE_ZONE_ID` (repository
+  variable). Owner supplied both for this purpose and explicitly requested prefix invalidation
+  rather than enumerating files. Use the official Cloudflare `prefixes` purge API payload,
+  without URL scheme/query/fragment, bounded requests/retries and success checking; never purge
+  the whole zone, other site paths or unrelated domains. Do not expose credentials in source, argv,
+  logs or reports. Missing both settings leaves publication functional with an explicit skipped
+  purge; a partial setup or API rejection must be reported as failed, not silently successful.
+  Run served-file validation after invalidation and verify the page and install artifacts.
+  Keep the signed repository behavior intact; add offline tests for exact prefix scope and failure
+  handling, and document permission `Zone → Cache Purge` restricted to this zone.
 
 ## Acceptance
 
@@ -58,5 +70,8 @@ Flathub submission, a GitHub Release, a public announcement, and any change to a
 - **A3 (R5):** docs match the workflow behaviour, including the tag caveat (a tag created before
   this change has no packaging files) and the fact that no run has happened yet.
 - **A4:** report at `docs/reports/063-flatpak-selfhosted-remote.md`.
+- **A5 (R6):** offline request tests prove prefix scope, secret-safe failures and bounded API calls;
+  a real publication records successful Cloudflare acceptance and subsequent served content,
+  without claiming that an accepted purge alone proves fresh content.
 
 Never open visible windows or capture the screen; verification is static plus CI.

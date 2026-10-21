@@ -50,7 +50,9 @@ installed soundfonts; the engine's built-in soundfont is labeled Default.
 
 ## Ownership and verification
 
-One fresh Codex UI worker owns this feature; core implementation is allowed
+One worker owns this feature; the owner switched all worker routing to OpenCode on 2026-10-21,
+so continue from the committed Codex standalone-module checkpoint in a fresh OpenCode worker.
+Core implementation is allowed
 in the same task to keep state/config/UI semantics consistent. While 064 is active, start only
 the standalone soundfonts module/research/tests; wait for the coordinator's integration checkpoint
 before editing existing Settings/config/launch files, then merge main with 064. It may edit a small soundfonts
