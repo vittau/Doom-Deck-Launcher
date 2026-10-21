@@ -44,6 +44,7 @@ fn environment() -> Result<Environment, CliFailure> {
     Ok(Environment {
         paths,
         home,
+        screen: None,
         #[cfg(test)]
         test: None,
     })
@@ -1441,6 +1442,7 @@ exit 1
             env: Environment {
                 paths,
                 home,
+                screen: None,
                 test: Some(test),
             },
             _temp: temp,
@@ -2218,6 +2220,7 @@ exit 1
         let env = Environment {
             paths,
             home,
+            screen: None,
             test: None,
         };
 
@@ -2387,6 +2390,7 @@ exit 1
             Environment {
                 paths,
                 home,
+                screen: None,
                 test: None,
             },
             &mut out,

@@ -31,6 +31,11 @@ necessary setup honestly and do not advertise unmeasured performance claims.
   official Valve/id affiliation. The primary install path should use the graphical handler for
   `.flatpakref`, with CLI details secondary and actual Deck validation clearly distinguished.
 
+- **R6 (owner's direct worker request, 2026-10-21):** include a visible, responsive support link
+  to `https://buymeacoffee.com/vittau` in a secondary section before the footer. Keep install
+  as the primary action. Use a local inline icon and neutral support copy; no external widget,
+  script, tracking or invented claims about how contributions are spent.
+
 ## Acceptance
 
 Validate static HTML and links, inspect headless renders at desktop and narrow widths and

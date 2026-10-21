@@ -99,6 +99,8 @@ fn write_screenshot_index() -> PathBuf {
     code.push_str("];\n");
     code.push_str(
         "/// Distinct screenshot credits from every bundled `SOURCES.toml` (spec 033, R4).\n\
+         /// Test-only provenance; About no longer lists them (spec 064 R5).\n\
+         #[allow(dead_code)]\n\
          pub static SCREENSHOT_CREDITS: &[&str] = &[\n",
     );
     for credit in &credits {

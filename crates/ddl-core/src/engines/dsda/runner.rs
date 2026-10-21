@@ -383,6 +383,7 @@ mod tests {
             data_dir: PathBuf::from("/opt/ddl/data"),
             shot_dir: PathBuf::from("/opt/ddl/shots"),
             working_dir: PathBuf::from("/opt/ddl/run"),
+            screen: None,
             assigns: Vec::new(),
         }
     }

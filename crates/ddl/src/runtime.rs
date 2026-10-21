@@ -286,6 +286,7 @@ impl Runtime {
             None
         };
         let sandbox = self.sandbox.clone();
+        self.env.screen = drawable_screen(ui);
         let env = self.env.clone();
         let cancel = self.cancel.clone();
         let weak = ui.as_weak();
@@ -463,8 +464,10 @@ impl Runtime {
                                     }
                                 }
                                 Some(Command::Play(_)) => {
-                                    self.screen = Screen::Setup;
-                                    self.focus = 50;
+                                    // Direct Play returns to the screen that started
+                                    // it; a run begun from Play setup returns there.
+                                    self.screen = self.return_to.0;
+                                    self.focus = self.return_to.1;
                                 }
                                 Some(Command::Import(..)) => {
                                     self.screen = Screen::Setup;
@@ -830,20 +833,32 @@ impl Runtime {
                 self.focus = 1;
             }
             (Screen::Home, 1) => {
-                if let Some(snapshot) = &self.snapshot {
-                    if let Some((i, _)) = snapshot
-                        .items
+                let latest = self.snapshot.as_ref().and_then(|s| {
+                    s.items
                         .iter()
                         .enumerate()
-                        .filter(|(_, i)| i.last_played.is_some())
-                        .max_by_key(|(_, i)| i.last_played)
-                    {
-                        self.selected = i;
-                        self.enter(Screen::Setup, 50);
+                        .filter(|(_, item)| item.last_played.is_some())
+                        .max_by_key(|(_, item)| item.last_played)
+                        .map(|(index, item)| {
+                            (
+                                index,
+                                item.recipe.id.clone(),
+                                item.launch.is_ok() && s.config_usable && s.engine.is_some(),
+                            )
+                        })
+                });
+                if let Some((index, id, ready)) = latest {
+                    self.selected = index;
+                    if ready {
+                        // Spec 064 R1: Continue is the remembered game/profile,
+                        // launched through the same validation as Play setup.
+                        self.start(ui, Command::Play(id));
                     } else {
-                        self.screen = Screen::Discover;
-                        self.focus = 10;
+                        self.enter(Screen::Setup, 50);
                     }
+                } else {
+                    self.screen = Screen::Discover;
+                    self.focus = 10;
                 }
             }
             (Screen::Home, 2) => {
@@ -880,11 +895,29 @@ impl Runtime {
                 }
             }
             (Screen::Detail, 1) => {
-                if let Some(item) = self.item() {
-                    if item.manifest.is_some() {
-                        self.enter(Screen::Setup, 50);
+                let action = self.item().map(|item| {
+                    (
+                        item.recipe.id.clone(),
+                        item.manifest.is_some(),
+                        item.launch.is_ok(),
+                    )
+                });
+                if let Some((id, installed, launchable)) = action {
+                    if !installed {
+                        self.start(ui, Command::Install(id));
                     } else {
-                        self.start(ui, Command::Install(item.recipe.id.clone()));
+                        let ready = launchable
+                            && self
+                                .snapshot
+                                .as_ref()
+                                .is_some_and(|s| s.config_usable && s.engine.is_some());
+                        if ready {
+                            // Spec 064 R1: the main action plays directly; Edit
+                            // still opens Play setup.
+                            self.start(ui, Command::Play(id));
+                        } else {
+                            self.enter(Screen::Setup, 50);
+                        }
                     }
                 }
             }
@@ -1352,7 +1385,7 @@ impl Runtime {
             // Invisible navigation anchor forwards controller focus to TextInput.
             b.button(918, 32., 140., 656., "".into(), false);
             b.nodes.last_mut().unwrap().kind = 0;
-            b.button(917, 32., 360., 304., text(ui, T::SaveProfileName), true);
+            b.button(917, 32., 360., 304., text(ui, T::SaveProfileName), false);
             b.button(916, 368., 360., 304., text(ui, T::Cancel), false);
         } else {
             let Some(item) = self.item() else { return };
@@ -1663,7 +1696,7 @@ impl Runtime {
                         24.,
                     );
                     b.label(36., 112., 1152., height - 100., files.into(), 22.);
-                    b.button(800, 36., height + 32., 348., text(ui, T::Retry), true);
+                    b.button(800, 36., height + 32., 348., text(ui, T::Retry), false);
                     b.button(
                         802,
                         408.,
@@ -1695,11 +1728,11 @@ impl Runtime {
                         22.,
                     );
                     if !ready {
-                        b.button(1, 36., 220., 536., text(ui, T::InstallEngine), true);
+                        b.button(1, 36., 220., 536., text(ui, T::InstallEngine), false);
                     }
                     b.label(652., 36., 536., 44., text(ui, T::BaseGames), 30.);
                     b.label(652., 96., 536., 84., text(ui, T::ScanHelp), 22.);
-                    b.button(2, 652., 208., 536., text(ui, T::AddFolder), ready);
+                    b.button(2, 652., 208., 536., text(ui, T::AddFolder), false);
                     b.button(3, 652., 284., 536., text(ui, T::FindIwads), false);
                     b.button(4, 36., 402., 536., text(ui, T::BrowseWithout), false);
                     b.button(5, 652., 402., 536., text(ui, T::Finish), false);
@@ -1747,29 +1780,9 @@ impl Runtime {
                         b.button(1, 308., 252., 448., text(ui, T::Continue), true);
                     } else {
                         b.label(36., 42., 720., 100., text(ui, T::NoHistory), 36.);
-                        b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), true);
+                        b.button(1, 36., 252., 720., text(ui, T::DiscoverAction), false);
                     }
-                    b.label(36., 356., 720., 32., text(ui, T::Recent), 26.);
                     if let Some(s) = &self.snapshot {
-                        let mut recent: Vec<_> =
-                            s.items.iter().filter(|i| i.last_played.is_some()).collect();
-                        recent.sort_by_key(|i| std::cmp::Reverse(i.last_played));
-                        if recent.is_empty() {
-                            b.label(36., 402., 720., 54., text(ui, T::NoRecent), 22.);
-                        }
-                        for (n, i) in recent.into_iter().take(2).enumerate() {
-                            let x = 36. + n as f32 * 360.;
-                            b.recipe_art(x, 400., 56., 66., &i.recipe);
-                            b.title(
-                                x + 72.,
-                                400.,
-                                270.,
-                                34.,
-                                display_title(&i.recipe).into(),
-                                26.,
-                            );
-                            b.label(x + 72., 436., 270., 30., i.profile.name.clone().into(), 20.);
-                        }
                         b.label(852., 36., 336., 48., text(ui, T::ReadyChecks), 30.);
                         b.check(
                             852.,
@@ -1819,38 +1832,38 @@ impl Runtime {
                             let x = 12. + 408. * (visible % 3) as f32;
                             let y = 12. + top + 438. * (visible / 3) as f32;
                             b.card(10 + i as i32, x, y, 384., 410.);
-                            b.recipe_art(x + 16., y + 16., 352., 142., &item.recipe);
+                            b.recipe_art(x + 20., y + 20., 344., 142., &item.recipe);
                             if item.favorite {
-                                b.favorite(x + 316., y + 26.);
+                                b.favorite(x + 312., y + 28.);
                             }
                             b.title(
-                                x + 20.,
+                                x + 24.,
                                 y + 174.,
-                                344.,
+                                336.,
                                 68.,
                                 display_title(&item.recipe).into(),
                                 26.,
                             );
                             b.author(
-                                x + 20.,
+                                x + 24.,
                                 y + 244.,
-                                344.,
+                                336.,
                                 26.,
                                 item.recipe.authors.join(", ").into(),
                                 20.,
                             );
                             b.label(
-                                x + 20.,
+                                x + 24.,
                                 y + 270.,
-                                344.,
+                                336.,
                                 28.,
                                 game(ui, item.recipe.base_game.game),
                                 22.,
                             );
                             b.label(
-                                x + 20.,
+                                x + 24.,
                                 y + 300.,
-                                344.,
+                                336.,
                                 28.,
                                 text(
                                     ui,
@@ -1870,9 +1883,9 @@ impl Runtime {
                                 20.,
                             );
                             b.label(
-                                x + 20.,
+                                x + 24.,
                                 y + 330.,
-                                344.,
+                                336.,
                                 28.,
                                 if discover {
                                     text(
@@ -1894,9 +1907,9 @@ impl Runtime {
                             };
                             b.chips(
                                 &tag_labels(s, &item.recipe, 2, lead),
-                                x + 20.,
+                                x + 24.,
                                 y + 366.,
-                                344.,
+                                336.,
                             );
                         }
                         if discover && self.category == Category::Favorites && shown.is_empty() {
@@ -1910,11 +1923,11 @@ impl Runtime {
                                 text(ui, T::NoFavoritesHelp),
                                 22.,
                             );
-                            b.button(SHOW_ALL, 36., 204. + top, 400., text(ui, T::ShowAll), true);
+                            b.button(SHOW_ALL, 36., 204. + top, 400., text(ui, T::ShowAll), false);
                         } else if shown.is_empty() {
                             b.panel(12., 12., 1200., 300.);
                             b.label(36., 60., 1100., 70., text(ui, T::NoInstalled), 30.);
-                            b.button(10, 36., 180., 400., text(ui, T::DiscoverAction), true);
+                            b.button(10, 36., 180., 400., text(ui, T::DiscoverAction), false);
                         }
                         if discover {
                             // After the cards, so the first actionable node stays a card.
@@ -1957,8 +1970,10 @@ impl Runtime {
                             12.,
                             action_y,
                             360.,
-                            text(ui, if installed { T::Setup } else { T::Install }),
-                            true,
+                            // Spec 064 R1: installed mapsets play directly; the
+                            // Edit action opens Play setup.
+                            text(ui, if installed { T::Play } else { T::Install }),
+                            installed,
                         );
                         action_y += 68.;
                         // The second action is only the spec 020 update; the
@@ -2404,7 +2419,7 @@ impl Runtime {
                             );
                             if !usable {
                                 b.nodes.last_mut().unwrap().actionable = false;
-                                b.button(1, 740., 402., 448., text(ui, T::Reset), true);
+                                b.button(1, 740., 402., 448., text(ui, T::Reset), false);
                                 if self.focus == 50 {
                                     self.focus = 1;
                                 }
@@ -2419,7 +2434,7 @@ impl Runtime {
                                 blocker,
                                 Blocker::NotInstalled | Blocker::IntegrityFailed { .. }
                             ) {
-                                b.button(2, 740., 282., 448., text(ui, T::InstallMore), true);
+                                b.button(2, 740., 282., 448., text(ui, T::InstallMore), false);
                             } else {
                                 b.button(
                                     1,
@@ -2434,7 +2449,7 @@ impl Runtime {
                                             action
                                         },
                                     ),
-                                    true,
+                                    false,
                                 );
                             }
                             b.button(50, 740., 402., 448., text(ui, T::Unavailable), false);
@@ -2653,7 +2668,7 @@ impl Runtime {
                                 20.,
                             );
                         }
-                        b.button(1, 836., 390., 352., text(ui, T::UseGame), true);
+                        b.button(1, 836., 390., 352., text(ui, T::UseGame), false);
                     }
                 }
                 Screen::Browser => {
@@ -2707,19 +2722,13 @@ impl Runtime {
                 }
                 Screen::Settings => {
                     b.panel(12., 12., 312., 360.);
-                    // Spec 033, R4: About lists every screenshot credit as plain text,
-                    // about 85 characters to a 20 px line.
-                    let credits = value(
-                        ui,
-                        T::ScreenshotsCredit,
-                        crate::screenshots::all_credits().join(", "),
-                    );
-                    let credit_height = credits.chars().count().div_ceil(85).max(1) as f32 * 28.;
+                    // Spec 064 R5: About keeps author, repository and asset
+                    // licences, not the long screenshot-credit list.
                     // Spec 059: the engine version, the sandbox line and, under
-                    // Flatpak, the update-source note push the credits down.
-                    let about_extra = 88. + if self.sandbox.is_flatpak() { 64. } else { 0. };
+                    // Flatpak, the update-source note push later lines down.
+                    let about_extra: f32 = 88. + if self.sandbox.is_flatpak() { 64. } else { 0. };
                     let hidden = self.snapshot.as_ref().map_or(0, |s| s.hidden_paths.len());
-                    let height = match self.settings_section {
+                    let height: f32 = match self.settings_section {
                         0 => 700.,
                         1 => self.snapshot.as_ref().map_or(316., |s| {
                             (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
@@ -2739,9 +2748,9 @@ impl Runtime {
                                 .sum::<usize>() as f32
                                 * 30.
                         }
-                        // Tall enough for the spec 017 R6 widescreen status-bar credit and
-                        // the spec 033 screenshot credits under the version block.
-                        _ => (384. + about_extra + credit_height + 12.).max(478.),
+                        // Tall enough for the spec 017 R6 widescreen status-bar
+                        // credit and the author/repository lines (spec 064 R5).
+                        _ => (384. + about_extra + 80.).max(478.0_f32),
                     };
                     b.panel(348., 12., 864., height);
                     for (i, label) in [T::Engine, T::Folders, T::Config, T::Diagnostics]
@@ -2754,7 +2763,7 @@ impl Runtime {
                             36. + i as f32 * 80.,
                             280.,
                             text(ui, *label),
-                            i == self.settings_section,
+                            false,
                         );
                     }
                     if self.snapshot.is_none() {
@@ -2763,7 +2772,7 @@ impl Runtime {
                             b.label(372., 36., 816., height - 48., diagnostics.into(), 22.);
                         } else {
                             b.label(372., 36., 816., 120., text(ui, T::StateNeeded), 22.);
-                            b.button(801, 372., 180., 816., text(ui, T::Diagnostics), true);
+                            b.button(801, 372., 180., 816., text(ui, T::Diagnostics), false);
                         }
                     }
                     if let Some(s) = &self.snapshot {
@@ -2796,7 +2805,7 @@ impl Runtime {
                                         20.,
                                     );
                                 }
-                                b.button(70, 372., 240., 380., text(ui, T::CheckUpdates), true);
+                                b.button(70, 372., 240., 380., text(ui, T::CheckUpdates), false);
                                 b.row(
                                     71,
                                     372.,
@@ -2854,7 +2863,7 @@ impl Runtime {
                                     534.,
                                     380.,
                                     text(ui, T::CheckCatalogUpdates),
-                                    true,
+                                    false,
                                 );
                                 b.row(
                                     74,
@@ -2885,7 +2894,7 @@ impl Runtime {
                                     ),
                                     true,
                                 );
-                                b.button(70, 372., 128., 380., text(ui, T::AddFolder), true);
+                                b.button(70, 372., 128., 380., text(ui, T::AddFolder), false);
                                 b.button(71, 776., 128., 412., text(ui, T::Rescan), false);
                                 for (i, folder) in s.automatic_folders.iter().enumerate() {
                                     b.row(
@@ -2996,7 +3005,7 @@ impl Runtime {
                                     value(ui, T::ConfigSchema, &s.config_version),
                                     22.,
                                 );
-                                b.button(70, 372., 200., 816., text(ui, T::Reset), true);
+                                b.button(70, 372., 200., 816., text(ui, T::Reset), false);
                             }
                             _ => {
                                 b.label(372., 36., 816., 44., text(ui, T::Logs), 30.);
@@ -3011,12 +3020,17 @@ impl Runtime {
                                 b.logo(372., 170., 560., 128., false);
                                 b.label(960., 202., 228., 44., text(ui, T::AppVersion), 26.);
                                 b.label(960., 264., 228., 44., crate::cli::VERSION.into(), 22.);
+                                // Spec 064 R5: attribution and repository link stay
+                                // above the longer licence text, so they are visible
+                                // without scrolling a tall About panel.
+                                b.label(372., 306., 816., 32., text(ui, T::MadeBy), 20.);
+                                b.label(372., 342., 816., 32., text(ui, T::Repository), 20.);
                                 // Spec 059: the engine version is its own line,
                                 // then the sandbox state and, under Flatpak,
                                 // where DDL's updates come from (R1, R7).
                                 b.label(
                                     372.,
-                                    316.,
+                                    378.,
                                     816.,
                                     40.,
                                     s.engine.as_ref().map_or_else(
@@ -3027,20 +3041,19 @@ impl Runtime {
                                 );
                                 b.label(
                                     372.,
-                                    360.,
+                                    418.,
                                     816.,
                                     40.,
                                     sandbox_text(ui, &self.sandbox),
                                     22.,
                                 );
-                                let mut y = 404.;
+                                let mut y = 462.;
                                 if self.sandbox.is_flatpak() {
                                     b.label(372., y, 816., 56., text(ui, T::StoreUpdates), 20.);
                                     y += 64.;
                                 }
                                 // Spec 017, R6: credit the widescreen status bars.
                                 b.label(372., y, 816., 56., text(ui, T::StatusBarCredit), 20.);
-                                b.label(372., y + 68., 816., credit_height, credits.clone(), 20.);
                             }
                         }
                     }
@@ -3050,7 +3063,7 @@ impl Runtime {
         if let Some(problem) = &self.problem {
             b.panel(12., 510., 1200., 222.);
             b.label(36., 530., 1152., 88., problem_text(ui, problem), 22.);
-            b.button(800, 36., 638., 552., text(ui, T::Retry), true);
+            b.button(800, 36., 638., 552., text(ui, T::Retry), false);
             b.button(801, 612., 638., 576., text(ui, T::Diagnostics), false);
         }
         self.local_nodes(ui, &mut b);
@@ -3756,12 +3769,41 @@ impl Nodes {
         );
     }
 }
+/// The drawable size of DDL's fullscreen window (spec 064, R6).
+///
+/// Slint reports physical pixels, which is what DSDA-Doom needs; gamescope makes
+/// that the output resolution of the Deck panel or an attached TV. A windowed UI
+/// has no display-sized drawable, so the template's `screen_resolution` stays the
+/// fallback. Sizes outside DSDA's accepted range are ignored rather than guessed.
+fn drawable_screen(ui: &AppWindow) -> Option<ddl_core::engines::dsda::ScreenSize> {
+    let window = ui.window();
+    screen_for_drawable(
+        window.is_fullscreen(),
+        window.size().width,
+        window.size().height,
+    )
+}
+
+/// The fullscreen/drawable decision behind [`drawable_screen`], testable without
+/// a backend (spec 064, R6). Windowed measurements keep the config fallback.
+fn screen_for_drawable(
+    fullscreen: bool,
+    width: u32,
+    height: u32,
+) -> Option<ddl_core::engines::dsda::ScreenSize> {
+    if !fullscreen {
+        return None;
+    }
+    ddl_core::engines::dsda::ScreenSize::new(width, height).ok()
+}
+
 pub fn attach(ui: &AppWindow) -> Result<Rc<RefCell<Runtime>>, Box<dyn std::error::Error>> {
     let paths = ddl_core::platform::paths::resolve(&|key: &str| std::env::var(key).ok())?;
     let home = PathBuf::from(std::env::var_os("HOME").ok_or("HOME is missing")?);
     let env = Environment {
         paths,
         home,
+        screen: None,
         #[cfg(test)]
         test: None,
     };
@@ -3925,6 +3967,18 @@ fn elide_path_start(path: &str, limit: usize) -> String {
 mod visual_copy_tests {
     use super::*;
     use ddl_core::downloads::Progress;
+    /// R6 (spec 064): only a fullscreen drawable size is used; windowed or
+    /// invalid measurements keep the template fallback.
+    #[test]
+    fn the_drawable_screen_only_comes_from_a_fullscreen_window() {
+        assert_eq!(screen_for_drawable(false, 1280, 800), None);
+        assert_eq!(
+            screen_for_drawable(true, 1920, 1080).map(|s| (s.width(), s.height())),
+            Some((1920, 1080))
+        );
+        assert_eq!(screen_for_drawable(true, 240, 160), None);
+        assert_eq!(screen_for_drawable(true, 0, 0), None);
+    }
     #[test]
     fn recipe_art_selects_bundled_covers_and_generic_fallback() {
         assert_eq!(art("sigil"), 0);

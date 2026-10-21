@@ -44,8 +44,8 @@ pub use install::{
 };
 pub use manager::{Attribution, ENGINE_LICENSE, EngineDirs, EngineManager, Error};
 pub use plan::{
-    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, PathField, Skill,
-    ValidationError, ValueRangeError, Warp,
+    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, PathField, ScreenSize,
+    Skill, ValidationError, ValueRangeError, Warp,
 };
 pub use reviewed::{
     EMBEDDED_LIST, ListError, RELEASE_DOWNLOAD_BASE, RELEASE_TAG_BASE, ReviewedList,
