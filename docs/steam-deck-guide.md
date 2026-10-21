@@ -109,13 +109,13 @@ Repository owners can upload [social-preview.png](design/logo/social-preview.png
 
 ## Flatpak (Discover)
 
-> **This section applies once DDL is on Flathub.** Until then, install from the GitHub
-> tarball above. Everything here is **Proposed** until the first Flatpak build has run on a
-> Deck (**Needs Deck Validation**); the facts it relies on are in the
-> [Flatpak research](research/flatpak.md).
+DDL currently uses its own signed Flatpak repository. Physical Deck installation and migration
+remain **Needs Deck Validation**; publication and signed installation checks pass in CI.
 
-**Install.** In Desktop Mode open **Discover**, search for **DoomDeckLauncher** and install it.
-Updates to DDL itself come through Discover (Flathub); DDL has no self-update of its own.
+**Install.** In Desktop Mode open the [DDL download page](https://www.vitormach.dev/Doom-Deck-Launcher/),
+choose **Install on Steam Deck**, and open the downloaded `.flatpakref` in Discover to install.
+It adds the signed DDL repository, so later launcher updates come through Discover; DDL has no
+self-update of its own. You do not need to download the `.flatpakref` again for each update.
 DSDA-Doom engine updates and the mapset catalog still update inside DDL (Settings → Engine).
 
 **Add it to Steam.** **Confirmed (source inspection):** Discover has no "Add to Steam" action, so
@@ -164,7 +164,7 @@ Flatpak only sees what it has been given access to. When a folder that a Steam o
 say so in one line, for example `/run/media/deck/SD/SteamLibrary is not visible to the Flatpak
 — see the guide`. Grant read access to that location (for example with Flatseal, or
 `flatpak override --user --filesystem=<path>:ro io.github.vittau.Doom-Deck-Launcher`), then
-use **Rescan**. **Needs Deck Validation:** which locations the first Flathub build can read.
+use **Rescan**. **Needs Deck Validation:** which locations the published Flatpak can read on your Deck.
 
 **Importing a tarball setup.** If you used the tarball before, the first start of the Flatpak
 (with no data of its own yet) offers **Import your existing setup?** It *copies* your settings,
