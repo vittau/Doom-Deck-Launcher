@@ -1,7 +1,7 @@
 //! Optional reviewed MIDI fonts (spec 067). No font bytes ship with DDL.
 //! Installed generations are immutable; an atomic pointer publishes all three
 //! reviewed files together. HTML notices are retained as inert data only.
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -182,10 +182,9 @@ impl Soundfonts {
     /// Snapshot-only verification cache. Launches use `verified_font` to hash
     /// again on the services worker. Metadata changes invalidate this cache.
     pub fn cached_font(&self) -> Result<PathBuf, Error> {
-        use std::collections::HashMap;
+        type StampCache = HashMap<PathBuf, (Vec<FileStamp>, PathBuf)>;
         use std::sync::{Mutex, OnceLock};
-        static CACHE: OnceLock<Mutex<HashMap<PathBuf, (Vec<FileStamp>, PathBuf)>>> =
-            OnceLock::new();
+        static CACHE: OnceLock<Mutex<StampCache>> = OnceLock::new();
         let stamp = self.file_stamps()?;
         let cache = CACHE.get_or_init(Mutex::default);
         if let Some((previous, path)) = cache
