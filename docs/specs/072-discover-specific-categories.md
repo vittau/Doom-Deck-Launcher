@@ -20,6 +20,9 @@ refreshing the screenshots.
 - R4: Every currently embedded mapset remains reachable through at least one specific category.
   Test current recipe coverage, omitted strip labels, initial/fallback selection, wrapping,
   favorites-empty recovery and focused controller journeys. Use synthetic/offline state.
+  With the two new recipes the catalog has 92 items: ensure Discover/Library card IDs beyond
+  the old 90-item activation range remain reachable, without collisions with chips or root
+  actions. Cover activation/focus on the final entry using a synthetic large catalog.
 - R5: Complete this together with the header branding change before regenerating the five
   website/README images. Update the existing screenshot producer/reference if it names the
   removed All view; captures must show current actual UI, with honest sample-state credits.
