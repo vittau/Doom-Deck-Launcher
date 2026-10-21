@@ -65,12 +65,15 @@ pub fn merge(base: &Document, active: &Document, template: &Template) -> MergeRe
                 template.upstream_value(key).map(Value::Int),
             )
         })
-        .chain(
-            template
-                .strings
-                .iter()
-                .map(|(key, value)| (key.clone(), Value::Str(value.clone()), None)),
-        )
+        .chain(template.strings.iter().map(|(key, value)| {
+            (
+                key.clone(),
+                Value::Str(value.clone()),
+                template
+                    .upstream_string(key)
+                    .map(|default| Value::Str(default.to_owned())),
+            )
+        }))
         .chain(template.bindings.iter().map(|binding| {
             (
                 binding.action.clone(),
@@ -139,6 +142,7 @@ mod tests {
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
             upstream_values: Vec::new(),
+            upstream_strings: Vec::new(),
             strings: Vec::new(),
             bindings: Vec::new(),
         }
@@ -253,6 +257,58 @@ mod tests {
         );
         assert_eq!(result.conflicts.len(), 1);
         assert_eq!(result.conflicts[0].key, "mouse_sensitivity_vert");
+    }
+
+    /// R7 (spec 064): a new string key still holding DSDA's own default takes
+    /// the template value; a renderer the player chose is kept.
+    #[test]
+    fn an_untouched_new_string_takes_the_template_value() {
+        let base = document("sensitivity 10\n");
+        let active = document("sensitivity 10\nvideomode \"Software\"\n");
+        let mut template = template("5", &[]);
+        template
+            .strings
+            .push(("videomode".to_owned(), "OpenGL".to_owned()));
+        template
+            .upstream_strings
+            .push(("videomode".to_owned(), "Software".to_owned()));
+        let result = merge(&base, &active, &template);
+        assert_eq!(
+            result.document.get("videomode"),
+            Some(&Value::Str("OpenGL".to_owned()))
+        );
+        assert!(result.conflicts.is_empty());
+        assert_eq!(result.updated, vec!["videomode"]);
+    }
+
+    #[test]
+    fn a_new_string_the_player_changed_is_kept_and_reported() {
+        let base = document("sensitivity 10\n");
+        let active = document("sensitivity 10\nvideomode \"OpenGL\"\n");
+        let mut template = template("5", &[]);
+        template
+            .strings
+            .push(("videomode".to_owned(), "OpenGL".to_owned()));
+        template
+            .upstream_strings
+            .push(("videomode".to_owned(), "Software".to_owned()));
+        let result = merge(&base, &active, &template);
+        assert_eq!(
+            result.document.get("videomode"),
+            Some(&Value::Str("OpenGL".to_owned())),
+            "the player already chose the template value"
+        );
+        assert!(result.conflicts.is_empty());
+
+        let active = document("sensitivity 10\nvideomode \"gl\"\n");
+        let result = merge(&base, &active, &template);
+        assert_eq!(
+            result.document.get("videomode"),
+            Some(&Value::Str("gl".to_owned())),
+            "an explicit player value that differs is kept"
+        );
+        assert_eq!(result.conflicts.len(), 1);
+        assert_eq!(result.conflicts[0].key, "videomode");
     }
 
     #[test]

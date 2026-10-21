@@ -32,6 +32,7 @@ pub(crate) fn sandbox_env(root: &Path) -> Environment {
     Environment {
         paths,
         home,
+        screen: None,
         test: None,
     }
 }

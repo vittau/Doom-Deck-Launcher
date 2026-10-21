@@ -71,6 +71,10 @@ pub struct Template {
     /// sorted by key (spec 056, R3). The migration uses them to recognise an
     /// untouched new key exactly like a binding's `upstream` triple.
     pub upstream_values: Vec<(String, i64)>,
+    /// DSDA-Doom upstream defaults for string keys that are new to the template
+    /// (spec 064, R7), sorted by key. Same purpose as [`Self::upstream_values`]
+    /// for keys such as `videomode`.
+    pub upstream_strings: Vec<(String, String)>,
     /// The scalar string keys DDL owns, in template order (spec 029, R4).
     pub strings: Vec<(String, String)>,
     /// The `input_*` bindings DDL owns, in template order (spec 034, R2).
@@ -136,6 +140,14 @@ impl Template {
                 )));
             }
         }
+        let strings = file.strings.into_entries();
+        for key in file.upstream_strings.keys() {
+            if !strings.iter().any(|(owned, _)| owned == key) {
+                return Err(TemplateError::Invalid(format!(
+                    "upstream string default `{key}` is not a string DDL owns"
+                )));
+            }
+        }
         let bindings = file
             .bindings
             .into_iter()
@@ -158,7 +170,8 @@ impl Template {
             dsda_version_max: file.dsda_version_max,
             values,
             upstream_values: file.upstream_values.into_iter().collect(),
-            strings: file.strings.into_entries(),
+            upstream_strings: file.upstream_strings.into_iter().collect(),
+            strings,
             bindings,
         })
     }
@@ -211,6 +224,16 @@ impl Template {
             .iter()
             .find(|(key, _)| key == name)
             .map(|(_, value)| *value)
+    }
+
+    /// The DSDA-Doom upstream default recorded for string key `name`, if the
+    /// template records one (spec 064, R7).
+    #[must_use]
+    pub fn upstream_string(&self, name: &str) -> Option<&str> {
+        self.upstream_strings
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.as_str())
     }
 
     /// The template's binding for `action`, if it owns that key.
@@ -288,6 +311,8 @@ struct TemplateFile {
     #[serde(default)]
     upstream_values: BTreeMap<String, i64>,
     #[serde(default)]
+    upstream_strings: BTreeMap<String, String>,
+    #[serde(default)]
     strings: Strings,
     #[serde(default)]
     bindings: Vec<TemplateBindingFile>,
@@ -323,21 +348,29 @@ struct Values {
     uncapped_framerate: i64,
 }
 
-/// Exactly the string keys DDL owns (spec 029, R4). Optional so a template
-/// without any string key still parses.
+/// Exactly the string keys DDL owns (spec 029, R4; spec 064, R7). Optional so a
+/// template without any string key still parses.
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Strings {
     screen_resolution: String,
+    /// DSDA's renderer selector: `"Software"` (upstream default) or
+    /// `"OpenGL"` ([`i_video.c:1003-1013`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1003-L1013);
+    /// menu labels in [`m_menu.c:3463-3468`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3463-L3468)).
+    #[serde(default)]
+    videomode: String,
 }
 
 impl Strings {
     fn into_entries(self) -> Vec<(String, String)> {
-        if self.screen_resolution.is_empty() {
-            Vec::new()
-        } else {
-            vec![("screen_resolution".to_owned(), self.screen_resolution)]
+        let mut entries = Vec::new();
+        if !self.screen_resolution.is_empty() {
+            entries.push(("screen_resolution".to_owned(), self.screen_resolution));
         }
+        if !self.videomode.is_empty() {
+            entries.push(("videomode".to_owned(), self.videomode));
+        }
+        entries
     }
 }
 
@@ -496,7 +529,7 @@ mod tests {
     #[test]
     fn embedded_template_parses_with_the_expected_version() {
         let template = Template::embedded().expect("embedded template must be valid");
-        assert_eq!(template.template_version, "4");
+        assert_eq!(template.template_version, "5");
         assert_eq!(
             template.version_range().to_string(),
             "0.30.1",
@@ -559,7 +592,7 @@ mod tests {
         "invert_analog_look = 0\n",
         "use_fullscreen = 1\n",
         "exclusive_fullscreen = 0\n",
-        "render_aspect = 2\n",
+        "render_aspect = 0\n",
         "render_stretch_hud = 2\n",
         "render_vsync = 0\n",
         "uncapped_framerate = 1\n",
@@ -567,7 +600,7 @@ mod tests {
 
     fn minimal_template(extra: &str) -> String {
         format!(
-            "template_version = \"4\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}{extra}",
+            "template_version = \"5\"\ndsda_version_min = \"0.30.1\"\ndsda_version_max = \"0.30.1\"\n[values]\n{MINIMAL_VALUES}{extra}",
         )
     }
 
@@ -585,6 +618,34 @@ mod tests {
         let template = Template::from_toml(&minimal_template("")).expect("parses");
         assert!(template.strings.is_empty());
         assert_eq!(template.get_str("screen_resolution"), None);
+        assert_eq!(template.get_str("videomode"), None);
+    }
+
+    /// R7 (spec 064): the string upstream table is optional, must name an owned
+    /// string, and records the renderer's own default.
+    #[test]
+    fn upstream_string_defaults_are_optional_but_validated() {
+        let template = Template::from_toml(&minimal_template("")).expect("parses");
+        assert!(template.upstream_strings.is_empty());
+        assert_eq!(template.upstream_string("videomode"), None);
+
+        let with_string = format!(
+            "{}\n[strings]\nscreen_resolution = \"1280x800\"\nvideomode = \"OpenGL\"\n\n[upstream_strings]\nvideomode = \"Software\"\n",
+            minimal_template("")
+        );
+        let template = Template::from_toml(&with_string).expect("parses");
+        assert_eq!(template.get_str("videomode"), Some("OpenGL"));
+        assert_eq!(template.upstream_string("videomode"), Some("Software"));
+
+        let error = Template::from_toml(&format!(
+            "{}\n[strings]\nscreen_resolution = \"1280x800\"\n\n[upstream_strings]\nvideomode = \"Software\"\n",
+            minimal_template("")
+        ))
+        .expect_err("an upstream string key the template does not own must fail");
+        assert!(
+            error.to_string().contains("videomode"),
+            "the error names the key: {error}"
+        );
     }
 
     /// R3 (spec 056): upstream defaults are optional, and when present they must
@@ -638,7 +699,11 @@ mod tests {
             Some(0),
             "exclusive fullscreen would fight gamescope"
         );
-        assert_eq!(template.get("render_aspect"), Some(2), "16:10 widescreen");
+        assert_eq!(
+            template.get("render_aspect"),
+            Some(0),
+            "Auto follows the display DDL detects"
+        );
         assert_eq!(
             template.get("render_stretch_hud"),
             Some(2),
@@ -647,8 +712,14 @@ mod tests {
         assert_eq!(
             template.get_str("screen_resolution"),
             Some("1280x800"),
-            "the Deck panel native resolution"
+            "the config fallback is still the Deck panel native resolution"
         );
+        assert_eq!(
+            template.get_str("videomode"),
+            Some("OpenGL"),
+            "hardware rendering is the default (D-037)"
+        );
+        assert_eq!(template.upstream_string("videomode"), Some("Software"));
     }
 
     /// R1 (spec 056): VSync is on, uncapped interpolation stays on, and no FPS
@@ -733,6 +804,7 @@ mod tests {
         );
         assert!(text.contains("use_game_controller 1\n"));
         assert!(text.contains("screen_resolution \"1280x800\"\n"));
+        assert!(text.contains("videomode \"OpenGL\"\n"));
         assert!(
             text.contains("input_map 9 -1 4 | 9 -1 4 | 9 -1 4\n"),
             "bindings are written for all three profiles:\n{text}"

@@ -185,6 +185,7 @@ mod tests {
         Environment {
             paths,
             home: root.into(),
+            screen: None,
             test: None,
         }
     }
@@ -262,6 +263,7 @@ mod surviving_content_tests {
                 state: temp.path().join("state"),
             },
             home: temp.path().into(),
+            screen: None,
             test: None,
         };
         fs::write(env.paths.config.join("app.json"), b"unreadable app state").unwrap();

@@ -1,0 +1,14 @@
+# Bundled base-game menu art (spec 064, R3).
+# The owner explicitly allowed the original games' menu/title art as a narrow
+# exception to D-020's no-id-assets rule. Source, credit and provenance are kept
+# beside the image; the art is removed on the rights holder's request.
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://doomwiki.org/w/images/5/51/Doom2_title.png"
+source_page = "https://doomwiki.org/wiki/Doom_II"
+credit = "id Software"
+original_size = "320x240"
+retrieved = "2026-10-21"
+permission = "Main-menu/title art from Doom II, sourced from the Doom Wiki (doomwiki.org). The wiki is Cloudflare-protected for automation, so the file was read from its Wayback Machine snapshot. Bundled under the owner's explicit spec-064 exception to D-020; removed on the rights holder's request."

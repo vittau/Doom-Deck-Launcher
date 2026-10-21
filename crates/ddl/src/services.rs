@@ -575,6 +575,9 @@ pub enum CatalogOutcome {
 pub struct Environment {
     pub paths: Paths,
     pub home: PathBuf,
+    /// The drawable size of DDL's fullscreen window for this launch (spec 064,
+    /// R6). `None` keeps the template's `screen_resolution` fallback.
+    pub screen: Option<dsda::ScreenSize>,
     #[cfg(test)]
     pub test: Option<std::sync::Arc<TestEnvironment>>,
 }
@@ -2119,6 +2122,7 @@ impl Services {
             Some(&engine),
             &self.config,
         )
+        .map(|resolution| resolution.with_screen(self.env.screen))
     }
 
     /// Prepares, validates and runs an already-resolved launch.
@@ -2953,6 +2957,7 @@ impl Services {
             &self.config,
         )
         .map_err(|e| CliFailure::message(e.to_string()))?;
+        let plan = plan_with_screen(plan, self.env.screen);
         plan.prepare_dirs()
             .map_err(|e| CliFailure::message(e.to_string()))?;
         plan.validate(&local::assign_allowlist())
@@ -3304,6 +3309,7 @@ impl Services {
             &self.config,
         )
         .map_err(|error| CliFailure::message(error.to_string()))?;
+        let plan = plan_with_screen(plan, self.env.screen);
         plan.prepare_dirs()
             .map_err(|error| CliFailure::message(error.to_string()))?;
         plan.validate(&local::assign_allowlist())
@@ -3678,6 +3684,15 @@ fn selected_profile(profiles: &[Profile], remembered: Option<&String>) -> Profil
         .clone()
 }
 /// The registry source for a GOG candidate's launcher (spec 021, R2).
+/// Attaches the detected drawable size to a locally built plan (spec 064, R6).
+fn plan_with_screen(
+    mut plan: dsda::LaunchPlan,
+    screen: Option<dsda::ScreenSize>,
+) -> dsda::LaunchPlan {
+    plan.screen = screen;
+    plan
+}
+
 fn store_source(launcher: iwads::GogLauncher) -> iwads::Source {
     match launcher {
         iwads::GogLauncher::Heroic => iwads::Source::GogHeroic,
@@ -3734,6 +3749,7 @@ mod tests {
         Environment {
             paths,
             home,
+            screen: None,
             test: None,
         }
         .without_catalog_auto_updates()
@@ -4205,6 +4221,7 @@ mod steam_wiring_tests {
             Environment {
                 paths,
                 home: home.clone(),
+                screen: None,
                 test: None,
             }
             .without_catalog_auto_updates(),
@@ -4258,6 +4275,7 @@ mod store_wiring_tests {
         Environment {
             paths,
             home,
+            screen: None,
             test: None,
         }
         .without_catalog_auto_updates()
@@ -4417,6 +4435,7 @@ mod catalog_tests {
         Environment {
             paths,
             home,
+            screen: None,
             test: Some(Arc::new(TestEnvironment {
                 api: Arc::new(dsda::CannedApi::new()),
                 catalog,
@@ -4579,6 +4598,7 @@ mod release_state_tests {
                     state: tree.join("state"),
                 },
                 home: "/ddl-fixture".into(),
+                screen: None,
                 test: None,
             };
             // This is the production open and snapshot path, not a fixture-only parser.
