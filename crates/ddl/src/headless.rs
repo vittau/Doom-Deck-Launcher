@@ -594,6 +594,96 @@ fn shell_navigation_and_focus_render_headlessly() {
     let _ = ui.window(); // ComponentHandle methods are available without showing a window.
 }
 
+/// Spec 071: the compact website brand arrangement in the app header, with the
+/// existing tab bounds, focus ring and controller tab keys unchanged.
+#[test]
+fn app_header_brand_matches_the_compact_site_layout() {
+    if isolated(
+        module_path!(),
+        "app_header_brand_matches_the_compact_site_layout",
+    ) {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.set_active_tab(3);
+    let frame = render(&window);
+    write_png("header-brand.png", &frame);
+    let pixel = |x: usize, y: usize| {
+        let p = frame.as_slice()[y * WIDTH as usize + x];
+        (p.r, p.g, p.b)
+    };
+    let deep = (0x12, 0x0c, 0x0d);
+    let bbox = |x0: u32, x1: u32, y0: u32, y1: u32| {
+        let mut found: Option<(u32, u32, u32, u32)> = None;
+        for y in y0..y1 {
+            for x in x0..x1 {
+                let p = pixel(x as usize, y as usize);
+                if p != deep {
+                    found = Some(match found {
+                        None => (x, y, x, y),
+                        Some((minx, miny, maxx, maxy)) => {
+                            (minx.min(x), miny.min(y), maxx.max(x), maxy.max(y))
+                        }
+                    });
+                }
+            }
+        }
+        found.expect("the header brand must draw visible pixels")
+    };
+    let emblem = bbox(30, 101, 10, 90);
+    let copy = bbox(101, 206, 10, 90);
+    // The approved SVG has a 2 px transparent bearing inside its 56 px box.
+    assert_eq!(
+        (emblem.0, emblem.1),
+        (42, 26),
+        "emblem keeps its x40 y24 56 px box"
+    );
+    assert!(
+        (52..=54).contains(&(emblem.2 - emblem.0)) && (52..=54).contains(&(emblem.3 - emblem.1)),
+        "emblem keeps its 56 px header height: {emblem:?}"
+    );
+    assert!(
+        copy.0 >= emblem.2 + 8 && copy.0 <= emblem.2 + 14,
+        "compact site gap between emblem and copy: {emblem:?} {copy:?}"
+    );
+    assert!(copy.2 < 206, "brand stays clear of the tab focus ring");
+    let wordmark = bbox(101, 206, 10, 62);
+    let subtitle = bbox(101, 206, 62, 90);
+    assert!(
+        wordmark.0.abs_diff(subtitle.0) <= 2,
+        "DDL and subtitle share a left edge: {wordmark:?} {subtitle:?}"
+    );
+    assert!(
+        subtitle.1.saturating_sub(wordmark.3) <= 8,
+        "the site's compact ~2 px line gap: {wordmark:?} {subtitle:?}"
+    );
+    let center = |b: (u32, u32, u32, u32)| (b.1 + b.3) as i32;
+    assert!(
+        (center(copy) - center(emblem)).abs() <= 6,
+        "the text block is vertically centered against the emblem: {emblem:?} {copy:?}"
+    );
+
+    // The controller tab keys and their geometry are independent of the brand.
+    let codes = Rc::new(std::cell::RefCell::new(Vec::new()));
+    let seen = codes.clone();
+    ui.on_action(move |code| seen.borrow_mut().push(code));
+    for key in [Key::F1, Key::F2, Key::F3, Key::F4] {
+        press(&window, key);
+    }
+    assert_eq!(*codes.borrow(), [20, 21, 22, 23]);
+    ui.set_active_tab(0);
+    ui.set_focused(-1);
+    let frame = render(&window);
+    let p = |x: usize, y: usize| {
+        let p = frame.as_slice()[y * WIDTH as usize + x];
+        (p.r, p.g, p.b)
+    };
+    assert_eq!(p(208, 52), (0xff, 0xd0, 0x78), "Home tab focus ring");
+    assert_eq!(p(213, 52), deep, "tab starts where it did before");
+    assert_eq!(p(220, 52), (0x35, 0x25, 0x27), "active tab surface");
+    write_png("header-tabs.png", &frame);
+}
+
 #[path = "headless_production.rs"]
 mod production;
 
