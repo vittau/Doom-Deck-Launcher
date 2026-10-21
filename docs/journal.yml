@@ -869,3 +869,15 @@
     latency/startup audit. Final README/site captures wait for visual fixes and show the
     Discover category strip rather than a scrolled-away state.
   refs: [docs/specs/074-card-padding.md, docs/specs/076-sigil-edition-copy.md, docs/specs/077-catalog-startup-and-date.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Integrated reviewed card spacing, base-game frame clearance, normal/COMPAT SIGIL labels,
+    profile-only Pistol start updates and per-startup background catalog checks on the
+    verification branch. Reviewed the five regenerated README/site screenshots, including
+    Discover categories and the catalog source timestamp. Formatting and workspace Clippy
+    passed; combined tests and the updated recipe-notice journey remain in progress before
+    publication. Physical Deck checks remain pending.
+  refs: [docs/reports/074-card-padding.md, docs/reports/075-pistol-start-latency.md,
+    docs/reports/076-sigil-edition-copy.md, docs/reports/077-catalog-startup-and-date.md]

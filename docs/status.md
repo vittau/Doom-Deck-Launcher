@@ -20,17 +20,18 @@ signed repository publication `39609918709` succeeded. Canonical site identifies
 - **Release-state guard:** real serializer-generated fixtures now cover all six release tags
   through v0.0.10-audio (070), including explicit Default audio preferences. Focused integrated
   guard, fmt and clippy passed. No application behavior changed in this follow-up.
-- **Under integration review:** compact application branding and specific ordered Discover
-  categories (071/072), verified Memento Mori I/II and dedicated Doomer Boards membership
-  (073). Initial combined app checks passed 202 tests and exposed two test expectations to update
-  (92-card fixture category and frozen recipe versus live display tags); core/integration/doc
-  checks passed. Fixes remain on the verification/task branches and are not yet released.
-- **Next fixes, in owner priority order:** card/base-game padding and art clear of frames (074);
-  investigate and optimize Pistol start latency (075 audit); normal versus COMPAT SIGIL music
-  copy (076); check the independent GitHub catalog at every startup and show its effective
-  source timestamp in Discover (077). The existing daily check is the baseline, not completion
-  of the new request. Refresh the five shared README/site screenshots after all visual changes,
-  including a Discover capture with the specific-category strip visible.
+- **Integrated on the verification branch, not yet published:** compact application branding,
+  specific ordered Discover categories and reachable cards across the 92-recipe catalog (071/072),
+  verified Memento Mori I/II and dedicated Doomer Boards membership (073), roomier mapset and
+  base-game cards with artwork clear of frames (074), lightweight profile-only Pistol start writes
+  with rapid-input/failure handling (075), plain normal/COMPAT SIGIL edition labels (076), and
+  an independent catalog check at every startup with its English UTC source date in Discover
+  (077, D-038). Actual launch-time file verification remains intact.
+- **Current verification:** root reviewed all five refreshed shared screenshots; Discover shows
+  the full category strip, first card row and disclosed sample source date. Integrated formatting
+  and workspace Clippy passed. The combined workspace suite is running; the recipe-update
+  journey's old standalone-label assertion is being adapted to the combined game/status line
+  and will run separately. No new release, website deployment or cache purge has happened yet.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.
