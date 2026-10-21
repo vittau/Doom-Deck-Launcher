@@ -60,6 +60,9 @@ pub enum Problem {
     /// The engine could not start because the host runtime is missing something
     /// (spec 014 follow-up).
     EngineRuntime(dsda::RuntimeError),
+    /// Spec 067 R5: the explicit Audio choice could not be applied to the DSDA
+    /// config, so the launch must not silently use a different font/backend.
+    Audio,
     Local(String),
     LocalFile(PathBuf, bool),
     /// Spec 059 R4: the host has this path but the Flatpak cannot open it.
@@ -104,6 +107,9 @@ impl fmt::Display for Problem {
                 f.write_str("another DDL process is changing DDL's state; close it and try again")
             }
             Self::EngineRuntime(runtime) => write!(f, "{runtime}"),
+            Self::Audio => f.write_str(
+                "the MIDI soundfont setting could not be applied; check Settings → Audio and try again",
+            ),
         }
     }
 }
@@ -222,6 +228,33 @@ fn identity_issue(issue: local::IdentityError) -> (PathBuf, bool) {
             (path, false)
         }
         local::IdentityError::Changed { path } => (path, true),
+    }
+}
+
+/// Why a launch could not enter the guarded engine run (spec 067, R5).
+#[derive(Debug)]
+enum RunStartError {
+    /// The explicit Audio choice could not be applied.
+    Audio(Problem),
+    /// Another engine run owns the guard.
+    Guard(ddl_core::dsda_config::GuardError),
+}
+
+impl std::fmt::Display for RunStartError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Audio(problem) => write!(f, "{problem}"),
+            Self::Guard(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl RunStartError {
+    fn into_problem(self) -> Problem {
+        match self {
+            Self::Audio(problem) => problem,
+            Self::Guard(error) => logged(Problem::Config, error),
+        }
     }
 }
 
@@ -1646,32 +1679,33 @@ impl Services {
     /// Applies the persisted Audio choice just before the run guard is acquired
     /// (spec 067, R5), so every launch route uses it and no running engine is
     /// changed. `None` preserves whatever backend/font the engine holds.
-    fn prepare_audio(&self) {
+    ///
+    /// A missing/damaged Arachno install is an intentional Default fallback
+    /// (`effective()` reports it in Settings), but a real write/path failure
+    /// must abort the launch: starting the game anyway would silently use a
+    /// different font or backend than the selection claims.
+    fn prepare_audio(&self) -> Result<(), Problem> {
         let effective = self.soundfonts.effective();
         let Some(choice) = effective.choice else {
-            return;
+            return Ok(());
         };
-        let Ok(keys) = soundfonts::engine::keys_for(choice, effective.path.as_deref()) else {
-            tracing::warn!("the selected soundfont path cannot be represented in DSDA's config");
-            return;
-        };
-        if let Err(error) = self.config.provision() {
-            tracing::warn!(%error, "could not provision the DSDA config for the Audio choice");
-            return;
-        }
-        if let Err(error) = self.config.apply_audio(&keys) {
-            tracing::warn!(%error, "could not apply the Audio choice");
-        }
+        let keys = soundfonts::engine::keys_for(choice, effective.path.as_deref())
+            .map_err(|error| logged(Problem::Audio, error))?;
+        self.config
+            .provision()
+            .map_err(|error| logged(Problem::Audio, error))?;
+        self.config
+            .apply_audio(&keys)
+            .map_err(|error| logged(Problem::Audio, error))?;
+        Ok(())
     }
 
     /// Every launch route prepares the Audio choice before taking the run guard
     /// (spec 067, R5): a running engine is never changed, and no route can skip
     /// the application.
-    fn begin_engine_run(
-        &self,
-    ) -> Result<ddl_core::dsda_config::RunGuard, ddl_core::dsda_config::GuardError> {
-        self.prepare_audio();
-        self.config.run_guard()
+    fn begin_engine_run(&self) -> Result<ddl_core::dsda_config::RunGuard, RunStartError> {
+        self.prepare_audio().map_err(RunStartError::Audio)?;
+        self.config.run_guard().map_err(RunStartError::Guard)
     }
 
     /// The catalog in use and its automatic-update settings (spec 019, R5).
@@ -2060,9 +2094,7 @@ impl Services {
                 }
                 let recipe = self.recipe(&id)?;
                 let mut profile = self.profile(&recipe)?;
-                let guard = self
-                    .begin_engine_run()
-                    .map_err(|e| logged(Problem::Config, e))?;
+                let guard = self.begin_engine_run().map_err(RunStartError::into_problem)?;
                 let r = self
                     .resolve_launch(&recipe, &profile)
                     .map_err(|blocker| logged(Problem::State, blocker))?;

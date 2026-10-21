@@ -339,6 +339,13 @@ impl DsdaConfigManager {
     /// the active file already holds the requested values nothing is written, so
     /// an unchanged choice never rotates backups. A change is backed up first.
     ///
+    /// The stored baseline is deliberately left untouched: it is the comparison
+    /// point for the template's three-way migration, and copying the active file
+    /// into it would turn the player's unrelated edits into "DDL-applied"
+    /// values that a later template version could overwrite. The two audio keys
+    /// are not template-owned, so a migration preserves the explicit choice as a
+    /// user value.
+    ///
     /// # Errors
     ///
     /// Returns [`Error::RunActive`] while an engine run is active, and
@@ -364,10 +371,6 @@ impl DsdaConfigManager {
         )?;
         let text = document.to_text();
         self.write_atomic(&active_path, text.as_bytes())?;
-        self.write_atomic(
-            &self.base_path(&self.template.template_version),
-            text.as_bytes(),
-        )?;
         Ok(AudioApply {
             changed: true,
             backup: Some(backup),
@@ -1272,7 +1275,11 @@ mod tests {
         assert!(after.contains("snd_midiplayer \"fluidsynth\"\n"), "{after}");
         assert!(after.contains("snd_soundfont \"\"\n"), "{after}");
         assert!(after.contains("unknown_key 7\n"), "{after}");
-        assert_eq!(read(&manager.base_path("1")), after);
+        assert_eq!(
+            read(&manager.base_path("1")),
+            manager.template().config_text(),
+            "the migration baseline is not replaced by the active file"
+        );
 
         let again = manager.apply_audio(&keys).expect("apply again");
         assert!(
@@ -1335,6 +1342,43 @@ mod tests {
             merged.contains("snd_soundfont \"/data/my fonts/arachno.sf2\"\n"),
             "the explicit choice is not reset by a migration:\n{merged}"
         );
+    }
+
+    /// Spec 067 review: changing Audio must not bake unrelated player edits
+    /// into the migration baseline, or the next template change would treat
+    /// them as untouched DDL values and silently overwrite them.
+    #[test]
+    fn an_audio_change_keeps_the_migration_baseline_intact() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+        let first = manager(&config, template("1", &[("use_mouse", 1)]), &clock);
+        first.provision().expect("first use");
+        let base_before = read(&first.base_path("1"));
+        let edited = "use_mouse 7\n";
+        fs::write(first.active_path(), edited).expect("player edit");
+        let keys = crate::soundfonts::engine::keys_for(crate::soundfonts::Choice::Default, None)
+            .expect("native keys");
+        first.apply_audio(&keys).expect("apply audio");
+
+        assert_eq!(
+            read(&first.base_path("1")),
+            base_before,
+            "the baseline still records what DDL actually applied before"
+        );
+        let second = manager(&config, template("2", &[("use_mouse", 2)]), &clock);
+        let migration = second.migrate().expect("migrate");
+        assert_eq!(migration.conflicts.len(), 1, "{migration:?}");
+        assert_eq!(migration.conflicts[0].key, "use_mouse");
+        let merged = read(&second.active_path());
+        assert!(
+            merged.contains("use_mouse 7\n"),
+            "the player's unrelated edit is preserved, not overwritten:\n{merged}"
+        );
+        assert!(
+            merged.contains("snd_midiplayer \"fluidsynth\"\n"),
+            "{merged}"
+        );
+        assert!(merged.contains("snd_soundfont \"\"\n"), "{merged}");
     }
 
     #[test]
