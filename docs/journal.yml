@@ -761,3 +761,12 @@
   refs: [docs/reports/050-idgames-index.md, docs/reports/059-flatpak-sandbox-ready.md,
          docs/reports/060-focus-clarity.md, docs/reports/061-library-regression.md,
          docs/decisions.md, docs/deck-testing.md]
+- date: 2026-10-20
+  type: spec
+  summary: >-
+    GPT-6.1 Sol medium takes over coordination at the owner's request. Spec 062 prepares an
+    experimental Flatpak artifact in GitHub Actions. The owner explicitly requests agent-written
+    packaging files, overriding D-034's human-only authoring restriction for this CI package;
+    its AI-assisted manifest remains ineligible for Flathub under the current policy. No
+    Flathub submission is authorized. An OpenCode worker implements packaging and CI.
+  refs: [docs/specs/062-flatpak-ci-package.md, docs/decisions.md]
