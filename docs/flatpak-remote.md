@@ -48,6 +48,9 @@ forward. There is no downgrade path from the CLI other than reinstalling an old 
 | --- | --- |
 | `error: No such ref` right after a release | GitHub Pages has not rebuilt yet. Wait a minute; the publish job retries for ~90 s and warns if it is slower. |
 | `404` on the `.flatpakref` right after the first publication | A CDN may cache the earlier negative response. Retry with a query string (`…flatpakref?v=1`) or wait for the cache to expire; the file itself is published. |
+| `Cloudflare purge skipped` in the log | Neither `CLOUDFLARE_CACHE_PURGE_TOKEN` nor `CLOUDFLARE_ZONE_ID` is set. Publication is still valid; the edge copy expires normally. |
+| `Cloudflare purge misconfigured` | Only one of the two settings exists. Set both or neither; the job fails rather than publishing with half a configuration. |
+| `Cloudflare purge failed` | The API rejected the request or all bounded retries failed. The message names the HTTP status and Cloudflare error; credentials are never printed. |
 | `GPG verification failed` | The repository key was rotated. Remove and re-add the remote (see below). |
 | `flatpak install` says the runtime is missing | Add Flathub once: `flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo`. |
 | `flatpak remote-ls ddl` is empty | The remote points at the wrong URL. Check `flatpak remotes --show-details` for `ddl`. |
@@ -79,8 +82,11 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
 7. renders `index.html`, `<app-id>.flatpakref`, `ddl.flatpakrepo` and `.nojekyll`, and pushes them
    plus `repo/` to the `gh-pages` branch with the workflow's `GITHUB_TOKEN`;
 8. requests a GitHub Pages build through the REST API (`pages: write`) — a `GITHUB_TOKEN` push alone
-   does not trigger one — waits for the build of the pushed commit, and checks the served
-   `.flatpakref` and `repo/summary`.
+   does not trigger one — and waits for the build of the pushed commit;
+9. purges the single Cloudflare prefix `www.vitormach.dev/Doom-Deck-Launcher/` after the deployment,
+   when `CLOUDFLARE_CACHE_PURGE_TOKEN` and `CLOUDFLARE_ZONE_ID` are configured, and then checks the
+   served landing page, `.flatpakref` and `repo/summary` byte-for-byte. With a purge configured the
+   canonical URLs are used; otherwise the check falls back to a cache-busting query.
 
 Published layout:
 
@@ -121,9 +127,24 @@ the `gh-pages` branch, which is why old builds consume repository size; pruning 
    Back the secret file up offline, then delete it. `FLATPAK_GPG_KEY_ID` is optional, but setting it
    keeps the workflow unambiguous if the imported keyring ever holds more than one key.
 
-3. **Publish.** Push a tag (`git tag v0.1.0 && git push origin v0.1.0`) or run
-   *Actions → Flatpak repository → Run workflow* with a ref. Tags created before the Flatpak
-   packaging existed (`v0.0.9` and older) fail the manifest check; use a newer tag.
+3. **Cloudflare cache purge (optional).** The workflow can invalidate the DDL prefix right after a
+   Pages deployment, so a stale edge copy cannot survive a release. It needs:
+
+   ```sh
+   gh secret set CLOUDFLARE_CACHE_PURGE_TOKEN -R vittau/Doom-Deck-Launcher
+   gh variable set CLOUDFLARE_ZONE_ID -R vittau/Doom-Deck-Launcher --body <zone id>
+   ```
+
+   Use an API token with **Zone → Cache Purge** restricted to this zone (`vitormach.dev`); the token
+   is read from the environment and never printed. With both settings absent the step reports a skip
+   and publication continues; with only one present it fails. The purge covers exactly one prefix,
+   `www.vitormach.dev/Doom-Deck-Launcher/` — never the zone, another host or `purge_everything` — so
+   it also invalidates immutable OSTree objects under that tree, which is what the owner asked for.
+
+4. **Publish.** Push a tag (`git tag v0.1.0 && git push origin v0.1.0`) or run
+   *Actions → Flatpak repository → Run workflow* with a tag, a branch or a full 40-character commit
+   SHA. Short SHAs are not refs and fail at checkout. Tags created before the Flatpak packaging
+   existed (`v0.0.9` and older) fail the manifest check; use a newer tag.
 
 No other secrets are required: the push to `gh-pages` uses the workflow's `GITHUB_TOKEN`, which is
 scoped to this repository and cannot touch `main` history.
@@ -137,6 +158,9 @@ scoped to this repository and cannot touch `main` history.
 - **HTTPS.** GitHub Pages terminates TLS for `www.vitormach.dev`; the OSTree remote uses that URL.
 - **No host execution.** The app still runs entirely inside the sandbox; the engine is downloaded at
   runtime and extracted, never mounted.
+- **Cloudflare token.** The purge token needs only **Zone → Cache Purge** for this zone. It is read
+  from the environment, never printed, and any API or network error text is redacted before it
+  reaches the log. The purge is one prefix under the DDL path and the API response is size-capped.
 - **Scope of the token.** `GITHUB_TOKEN` with `contents: write` can push any branch of this
   repository, including `main`, though this workflow only writes `gh-pages`. Protect `main` with a
   branch ruleset if that residual scope matters.
