@@ -146,3 +146,8 @@ Application release publication still renders the page with its new version as b
 Build CI and artifact-only Flatpak path filters now exclude page-only templates/assets, the
 page renderer and (for CI) the website workflow. Application/build inputs retain their checks.
 The website job owns the offline renderer checks.
+
+Independent deployment run `39551167942` passed end to end: page refresh/push, Pages build,
+Cloudflare prefix purge and canonical HTML/CSS/ref/summary checks. The compact hero support
+action is live. Redundant build run `39550620509` was cancelled during compilation, before
+export/publication; the previously published app repository remains intact.

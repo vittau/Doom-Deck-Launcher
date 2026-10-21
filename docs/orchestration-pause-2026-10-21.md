@@ -132,7 +132,12 @@ explicit. Re-arm the GUI guard and health monitor only when work resumes.
 ## Final shutdown addendum
 
 Site support link moved into the first viewport with a compact secondary hero action
-(owner revision). Source commit `b99d559`; publication run `39550620509`.
+(owner revision). Source commit `b99d559`. The redundant full-build publication `39550620509` was cancelled
+before any publication write. Owner requested independent website deployment: added
+`project-site.yml` at `6a26ada` and excluded page-only changes from app build triggers at
+`4a746cb`. Website-only run `39551167942` completed successfully, including Pages deployment,
+Cloudflare prefix purge and canonical HTML/CSS/ref/summary verification. The compact first-fold
+support action is live. No app build is required for subsequent page-only edits.
 Both standalone worker server trees were stopped after discovering that shared-service API
 interrupts did not reach those private servers. Subsequent SIGIL tests were interrupted too,
 so they are not a successful full-check result. Soundfont late error-copy wiring is saved
