@@ -162,3 +162,8 @@ The owner's screenshot showed an unstyled underlined link; the served stylesheet
 browser cache lifetime. Added a CSS content hash to its URL so browser caches cannot retain
 an earlier stylesheet under the same asset URL. Eight offline renderer tests pass, including
 verification that the rendered stylesheet URL matches its content hash. No dependencies added.
+
+Owner follow-up: changed the compact header donation button to Buy Me a Coffee yellow
+(`#ffdd00`) with dark text/icon, slightly rounded corners and a lighter hover state, using
+the supplied visual reference. Placement and size remain unchanged. Eight renderer checks
+pass; headless desktop/narrow layout and computed colors checked. No dependencies added.

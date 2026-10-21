@@ -464,19 +464,19 @@ summary {
   gap: 8px;
   min-height: 44px;
   padding: 8px 10px;
-  border: 1px solid #b88e605c;
-  border-radius: 4px;
-  background: #251913b3;
-  color: #dfb987;
+  border: 1px solid #ffdd00;
+  border-radius: 8px;
+  background: #ffdd00;
+  color: #17130a;
   font-size: 14px;
   line-height: 1.3;
   text-decoration: none;
   white-space: nowrap;
 }
 .coffee-button:hover {
-  background: #3a261c;
-  border-color: #dfb987;
-  color: #f5d8ad;
+  background: #ffe84d;
+  border-color: #ffe84d;
+  color: #17130a;
 }
 .coffee-button svg {
   width: 20px;
