@@ -31,10 +31,18 @@ necessary setup honestly and do not advertise unmeasured performance claims.
   official Valve/id affiliation. The primary install path should use the graphical handler for
   `.flatpakref`, with CLI details secondary and actual Deck validation clearly distinguished.
 
-- **R6 (owner's direct worker request, 2026-10-21):** include a visible, responsive support link
-  to `https://buymeacoffee.com/vittau` in a secondary section before the footer. Keep install
-  as the primary action. Use a local inline icon and neutral support copy; no external widget,
-  script, tracking or invented claims about how contributions are spent.
+- **R6 (owner's latest revision, 2026-10-21):** include a compact support button in the
+  header using the owner-supplied official Buy Me a Coffee embed: slug `vittau`, text `Donate`,
+  Cookie font, yellow `#FD0`, black text/outline and white coffee. Retain the official logo and
+  font, overriding only dimensions to fit the header. This explicitly permits the official
+  external button script and its Google Fonts stylesheet, superseding the earlier local-only
+  constraint. Include a no-JavaScript donation link. Version the local stylesheet by content
+  to avoid stale browser styling. Keep install as the primary page action.
+
+- **R7 (owner, 2026-10-21):** Publish page-only edits independently of the Flatpak build.
+  Automatically deploy relevant main-branch page/assets changes, with a manual trigger too.
+  Preserve the published app version/date, signed repository, descriptors and key. Serialize
+  both writers to the same Pages branch; retain deployment verification and prefix cache purge.
 
 ## Acceptance
 

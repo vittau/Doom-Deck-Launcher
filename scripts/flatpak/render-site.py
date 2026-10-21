@@ -6,6 +6,7 @@ publish date, application ID and site base; asset sources stay in their existing
 repository homes so their provenance and licenses remain attached.
 """
 import argparse
+import hashlib
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -43,7 +44,8 @@ def render(output, version, published, app_id, site_base):
     if url.scheme != "https" or not url.netloc or url.query or url.fragment or url.username:
         raise ValueError("site base must be an absolute HTTPS URL without query or fragment")
     html = (SITE / "index.html").read_text()
-    values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base)
+    values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base,
+                  STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16])
     for key, value in values.items():
         html = html.replace(f"@@{key}@@", escape(value, quote=True))
     if re.search(r"@@[A-Z_]+@@", html):
@@ -57,15 +59,38 @@ def render(output, version, published, app_id, site_base):
     (output / "index.html").write_text(html)
 
 
+def refresh(output, app_id, site_base):
+    """Refresh page assets while retaining the already published app release."""
+    page = Path(output) / "index.html"
+    if page.stat().st_size > 1024 * 1024:
+        raise ValueError("published page exceeds metadata size limit")
+    releases = re.findall(
+        r'<p class="release">.*?v([0-9][A-Za-z0-9.+-]*)\s*·\s*Published\s*'
+        r'<time datetime="([^"]+)">', page.read_text(), re.DOTALL)
+    if len(releases) != 1:
+        raise ValueError("expected exactly one published release; publish Flatpak first")
+    version, published = releases[0]
+    render(output, version, published, app_id, site_base)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--version", required=True)
-    parser.add_argument("--date", required=True)
+    parser.add_argument("--version")
+    parser.add_argument("--refresh", action="store_true",
+                        help="retain the app release from the existing published page")
+    parser.add_argument("--date")
     parser.add_argument("--app-id", required=True)
     parser.add_argument("--site-base", required=True)
     args = parser.parse_args()
-    render(args.output, args.version, args.date, args.app_id, args.site_base)
+    if args.refresh:
+        if args.version or args.date:
+            parser.error("--refresh cannot be combined with --version/--date")
+        refresh(args.output, args.app_id, args.site_base)
+    else:
+        if not args.version or not args.date:
+            parser.error("--version and --date are required unless --refresh is used")
+        render(args.output, args.version, args.date, args.app_id, args.site_base)
 
 
 if __name__ == "__main__":

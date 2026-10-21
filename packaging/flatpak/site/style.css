@@ -457,68 +457,26 @@ summary {
   color: var(--muted);
   max-width: 100%;
 }
-.support-band {
-  background: linear-gradient(110deg, #2b1a13, #191110);
-  border-top: 1px solid var(--line);
-  padding-block: 46px;
-}
-.support-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
-}
-.support-copy {
-  max-width: 640px;
-}
-.support-copy h2 {
-  font-size: clamp(30px, 3vw, 42px);
-  color: var(--bone);
-}
-.support-copy p:not(.eyebrow) {
-  color: var(--muted);
-  margin: 10px 0 0;
-}
-.coffee-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 58px;
-  padding: 14px 26px;
-  background: #ffdd00;
-  color: #14100c;
-  border: 1px solid #ffe45c;
-  font-size: 19px;
-  line-height: 1.2;
-  text-decoration: none;
-  white-space: nowrap;
-  box-shadow:
-    0 6px 24px #0006,
-    inset 0 0 0 3px #ffffff4d;
-  transition:
-    background 120ms ease,
-    transform 120ms ease;
-}
-.coffee-button:hover {
-  background: #fff06a;
-  color: #14100c;
-  transform: translateY(-1px);
-}
-.coffee-button svg {
-  width: 26px;
-  height: 26px;
+.coffee-widget {
   flex: none;
+  min-height: 44px;
 }
-@media (max-width: 760px) {
-  .support-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 24px;
-  }
-  .coffee-button {
-    width: 100%;
-    justify-content: center;
-  }
+.site-header .bmc-btn {
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 28px;
+}
+.site-header .bmc-btn svg {
+  height: 26px !important;
+  width: 19px;
+}
+.site-header .bmc-btn-text {
+  width: auto;
+}
+.site-header .bmc-btn:hover {
+  filter: brightness(1.06);
 }
 footer {
   border-top: 1px solid var(--line);
@@ -609,7 +567,8 @@ footer > p {
     height: 40px;
   }
   .site-header nav {
-    gap: 18px;
+    gap: 4px 12px;
+    flex-wrap: wrap;
   }
   .site-header nav a {
     font-size: 16px;

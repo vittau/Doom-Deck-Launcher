@@ -23,6 +23,7 @@ on:
     branches: [main]
     paths:
       - "packaging/flatpak/**"
+      - "!packaging/flatpak/site/**"
       - ".github/workflows/flatpak.yml"
       - "Cargo.toml"
       - "Cargo.lock"
@@ -30,10 +31,12 @@ on:
       - "crates/**"
       - "catalog/**"
       - "scripts/flatpak/**"
+      - "!scripts/flatpak/render-site.py"
       - "LICENSE"
   pull_request:
     paths:
       - "packaging/flatpak/**"
+      - "!packaging/flatpak/site/**"
       - ".github/workflows/flatpak.yml"
       - "Cargo.toml"
       - "Cargo.lock"
@@ -41,6 +44,7 @@ on:
       - "crates/**"
       - "catalog/**"
       - "scripts/flatpak/**"
+      - "!scripts/flatpak/render-site.py"
       - "LICENSE"
 
 # Read-only everywhere. The artifact upload needs no repository write access.

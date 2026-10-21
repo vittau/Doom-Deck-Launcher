@@ -1,5 +1,6 @@
 """Offline acceptance checks: python3 -m unittest discover -s packaging/flatpak/site."""
 import importlib.util
+import hashlib
 from html.parser import HTMLParser
 from pathlib import Path
 import re
@@ -102,6 +103,52 @@ class RenderTests(unittest.TestCase):
             with self.subTest(args=args), self.assertRaises(ValueError):
                 self.render(**args)
         self.assertEqual(list(self.out.iterdir()), [])
+
+    def test_refresh_preserves_published_release_and_signed_files(self):
+        text = self.render(version="0.0.9-focus", published="2026-10-20")
+        artifact = self.out / "repo/summary.sig"
+        artifact.parent.mkdir()
+        artifact.write_bytes(b"signed summary")
+        # Simulate an older page layout without changing its release metadata.
+        (self.out / "index.html").write_text(text.replace("Your DOOM.", "Old heading"))
+        renderer.refresh(self.out, APP_ID, BASE)
+        result = (self.out / "index.html").read_text()
+        self.assertIn("Your DOOM.", result)
+        self.assertIn("v0.0.9-focus", result)
+        self.assertIn('datetime="2026-10-20"', result)
+        self.assertEqual(artifact.read_bytes(), b"signed summary")
+
+    def test_refresh_rejects_missing_ambiguous_or_invalid_release(self):
+        original = self.render()
+        for text in ("no release", original + original,
+                     original.replace('datetime="2026-10-21"', 'datetime="invalid"')):
+            with self.subTest(text=text[:30]):
+                (self.out / "index.html").write_text(text)
+                with self.assertRaises(ValueError):
+                    renderer.refresh(self.out, APP_ID, BASE)
+                self.assertEqual((self.out / "index.html").read_text(), text)
+
+    def test_official_donation_embed_matches_owner_configuration(self):
+        doc = Document(self.render())
+        embeds = [a for tag, a in doc.elements
+                  if tag == "script" and a.get("data-name") == "bmc-button"]
+        self.assertEqual(len(embeds), 1)
+        embed = embeds[0]
+        self.assertEqual(embed["src"], "https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js")
+        for key, value in {"slug": "vittau", "font": "Cookie", "text": "Donate",
+                           "color": "#FFDD00", "font-color": "#000000",
+                           "outline-color": "#000000", "coffee-color": "#ffffff"}.items():
+            self.assertEqual(embed[f"data-{key}"], value)
+        self.assertTrue(any(tag == "a" and a.get("href") == "https://buymeacoffee.com/vittau"
+                            for tag, a in doc.elements))
+
+    def test_stylesheet_url_tracks_css_content(self):
+        text = self.render()
+        digest = hashlib.sha256((self.out / "assets/style.css").read_bytes()).hexdigest()[:16]
+        doc = Document(text)
+        styles = [a["href"] for tag, a in doc.elements
+                  if tag == "link" and a.get("rel") == "stylesheet"]
+        self.assertEqual(styles, [f"assets/style.css?v={digest}"])
 
     def test_url_attribute_is_escaped(self):
         text = self.render(site_base='https://example.com/a"quoted')

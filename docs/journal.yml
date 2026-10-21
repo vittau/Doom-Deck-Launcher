@@ -821,3 +821,14 @@
     Owner requires OpenCode workers only due Codex quota. Soundfont core handoff preserves
     commits d6c3010/4dd7776 and 13 passing offline tests; OpenCode continues Settings integration.
   refs: [docs/status.md, docs/specs/063-flatpak-selfhosted-remote.md, docs/specs/065-project-download-page.md, docs/specs/067-midi-soundfonts.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Owner paused both OpenCode workers before machine shutdown and requested continuation of
+    these same conversations on return. API interrupts confirmed; original worktrees retained,
+    WIP commits 3a61e99 (soundfonts) and 7c6b4b8 (SIGIL) saved with keep refs and task-branch backups.
+    Private full conversation exports retained outside Git. Main 1152859 had integrated 064/066
+    and the support link after fmt/clippy and 819 passing tests. Completed worktrees removed.
+    Exact resume instructions, review fixes and latest COMPAT/SHREDS scope are in the pause record.
+  refs: [docs/orchestration-pause-2026-10-21.md, docs/status.md]

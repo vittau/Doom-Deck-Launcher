@@ -121,3 +121,64 @@ points players to this page for the current self-hosted remote; changing the gui
 this worker’s ownership. No spec implementation items remain open, and visual direction is
 owner-approved. Publication remains gated on the concurrent 063 workflow fixes (coordinator
 reported the OSTree refs/remotes roundtrip failure), passing deployment checks and root review.
+
+## Owner revision — compact hero support action (2026-10-21)
+
+Moved the donation link into the hero action row and removed the oversized footer support
+band. The secondary bronze treatment is approximately 157 × 44 px; the install action stays
+visually primary. Explicit SVG width/height also prevent intrinsic sizing before CSS loads.
+No dependencies added. Five offline renderer tests pass. Headless Chromium renders at
+1280×800, 1280×720 and 390×844 confirm the support action is fully inside the first viewport,
+with no horizontal overflow. Desktop render inspected visually. No application code changed.
+The two paused OpenCode conversations remain paused.
+
+## Independent website publication (owner revision, 2026-10-21)
+
+Added `project-site.yml`: automatic page/asset changes on main and manual dispatch now refresh
+only page-owned files. The job reuses the already published app version/date, rejects changes
+outside index.html/assets, and shares the existing publication lock. Deployment wait, Cloudflare
+prefix purge and canonical HTML/CSS/ref/summary verification remain in place. No SDK, Rust
+build, GPG private key or new dependency is required. `render-site.py --refresh` fails closed
+when existing release metadata is missing, invalid or ambiguous. Seven offline tests pass,
+including refresh metadata/signature preservation and rejected-input checks; actionlint passes.
+Application release publication still renders the page with its new version as before.
+
+Build CI and artifact-only Flatpak path filters now exclude page-only templates/assets, the
+page renderer and (for CI) the website workflow. Application/build inputs retain their checks.
+The website job owns the offline renderer checks.
+
+Independent deployment run `39551167942` passed end to end: page refresh/push, Pages build,
+Cloudflare prefix purge and canonical HTML/CSS/ref/summary checks. The compact hero support
+action is live. Redundant build run `39550620509` was cancelled during compilation, before
+export/publication; the previously published app repository remains intact.
+
+## Header placement and browser cache correction (owner revision, 2026-10-21)
+
+Moved the compact donation action to the header navigation, labelled Donate with an explicit
+Buy Me a Coffee accessible name. The hero again contains only the install action. Desktop
+button bounds are approximately 93×44 px. Headless 1280×800, 390×844 and 320×740 checks show
+no horizontal overflow and the donation action remains in the header. Desktop render inspected.
+The owner's screenshot showed an unstyled underlined link; the served stylesheet has a one-day
+browser cache lifetime. Added a CSS content hash to its URL so browser caches cannot retain
+an earlier stylesheet under the same asset URL. Eight offline renderer tests pass, including
+verification that the rendered stylesheet URL matches its content hash. No dependencies added.
+
+Owner follow-up: changed the compact header donation button to Buy Me a Coffee yellow
+(`#ffdd00`) with dark text/icon, slightly rounded corners and a lighter hover state, using
+the supplied visual reference. Placement and size remain unchanged. Eight renderer checks
+pass; headless desktop/narrow layout and computed colors checked. No dependencies added.
+
+## Official donation branding (owner revision, 2026-10-21)
+
+Replaced the custom cup icon/font with the exact owner-supplied official button embed from
+https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js. Uses slug vittau, Cookie font, Donate,
+yellow #FFDD00, black font/outline and white coffee. Header CSS overrides dimensions only
+(approximately 114×44 px) and tightens narrow navigation spacing. Includes a no-JavaScript
+link. This owner request supersedes the earlier no-external-script constraint: the button now
+loads the official external script and Cookie via its Google Fonts stylesheet. No package
+or build dependency was added; other page content remains static.
+
+Nine offline renderer tests pass, including the exact embed settings. Temporary headless
+Chromium checks at 1280, 390 and 320 px confirm no horizontal overflow, the Cookie family is
+loaded, and the button is yellow with 44 px height. Desktop render inspected visually. Both
+paused feature workers remain stopped. Publication uses the independent website workflow.
