@@ -357,6 +357,7 @@ pub(super) fn scene() -> Scene {
     let env = Environment {
         paths: paths.clone(),
         home: home.clone(),
+        screen: None,
         test: Some(test),
     };
     let state = crate::runtime::attach_environment(&ui, env.clone());
@@ -1699,6 +1700,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     let env = Environment {
         paths,
         home,
+        screen: None,
         test: None,
     }
     .without_catalog_auto_updates();

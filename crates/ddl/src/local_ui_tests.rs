@@ -22,6 +22,7 @@ fn environment(home: &Path) -> Environment {
     Environment {
         paths,
         home: home.into(),
+        screen: None,
         test: None,
     }
     .without_catalog_auto_updates()

@@ -47,6 +47,8 @@ promise that every accepted input is meaningful for a mapset.
 | `-data directory` | One string; overrides `DOOMDATADIR` only if existing directory, otherwise logs error and falls back. Adds its own `dsda_doom_data` subtree (see §6). | [prboom2/src/dsda/data_organizer.c:42–81](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/data_organizer.c#L42-L81) |
 | `-save directory` | One string; existing-directory requirement and fallback as for `-data`, with `DOOMSAVEDIR`. Explicit flag bypasses organized-save redirection. | [prboom2/src/dsda/save.c:258–275](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/save.c#L258-L275); [prboom2/src/dsda/data_organizer.c:42–67](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/data_organizer.c#L42-L67) |
 | `-shotdir directory` | One string; writable-directory check and fallback (see §6). | [prboom2/src/dsda/args.c:401–405](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L401-L405); [prboom2/src/m_misc.c:902–914](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_misc.c#L902-L914) |
+| `-width n` | One integer, at least 320; temporarily overrides the resolution width for this session. Applied after the config's `screen_resolution`, only when the SDL window is first initialized. | [prboom2/src/dsda/args.c:536–540](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L536-L540); [prboom2/src/SDL/i_video.c:1050–1062](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1050-L1062) |
+| `-height n` | One integer, at least 200; temporarily overrides the resolution height. Behaviour and application point are as `-width`. | [prboom2/src/dsda/args.c:541–545](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L541-L545); [prboom2/src/SDL/i_video.c:1050–1062](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1050-L1062) |
 | `-noautoload`, alias `-noload` | Zero values; skips directory autoload WAD/ZIP/patch phases, **not** embedded DEHACKED in explicitly loaded WADs. `-nodeh` separately skips embedded DEHACKED. | [prboom2/src/dsda/args.c:491–505](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L491-L505); [prboom2/src/d_main.c:2059–2070](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L2059-L2070); [prboom2/src/d_main.c:2108–2170](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L2108-L2170) |
 | `-record name` | One string; records demo, with naming described in §6; explicit skill and compatibility required by demo initialization. | [prboom2/src/dsda/args.c:101–105](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L101-L105); [prboom2/src/dsda/demo.c:271–300](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/demo.c#L271-L300) |
 | `-playdemo path`, `-playlump name` | One string each; external demo playback versus internal demo lump. | [prboom2/src/dsda/args.c:81–90](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L81-L90) |
@@ -912,6 +914,14 @@ display aspect from the window and `aspect_ratio_correction`, then a user
 `0` = keep the derived ratio (Auto), `1` = 16:9, `2` = **16:10**, `3` = 4:3,
 `4` = 5:4. Any other value logs an error and is ignored.
 [v_video.c:1357–1376](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1357-L1376).
+
+**Confirmed — `videomode` values.** The persisted string selects the renderer:
+`"gl"` and `"OpenGL"` (case-insensitive) select the OpenGL path; every other
+string, including DSDA's `"Software"` default, selects the software path. The
+Video Settings menu offers exactly `Software` and `OpenGL`.
+[prboom2/src/SDL/i_video.c:1003–1013](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1003-L1013);
+[prboom2/src/m_menu.c:3463–3468](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/m_menu.c#L3463-L3468);
+[prboom2/src/dsda/configuration.c:1165–1168](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/configuration.c#L1165-L1168).
 `WIDE_SCREENWIDTH`/`WIDE_SCREENHEIGHT` are then the wider virtual screen the
 renderer draws into ([v_video.c:1420–1430](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/v_video.c#L1420-L1430)).
 
@@ -949,6 +959,30 @@ Implications for DDL (spec 029, all **Proposed** until the Deck re-check):
 - **Needs Deck Validation:** the real fullscreen mode gamescope grants, that
   `exclusive_fullscreen 0` composites correctly, and that the 16:10 bar fills the
   panel with no side texture.
+
+Implications of spec 064 (2026-10-21, **Proposed** until Deck-validated):
+
+- **Proposed:** template v5 sets `render_aspect 0` (Auto) and leaves the aspect to
+  the resolution DSDA actually receives, so the same config works on the Deck and
+  on an external TV.
+- **Proposed:** DDL passes its fullscreen window's drawable size as transient
+  `-width` / `-height` tokens; the persisted `screen_resolution "1280x800"` stays
+  the fallback when no fullscreen measurement is available. These flags change
+  only the current session, so no player config is rewritten.
+- **Proposed (D-037):** template v5 sets `videomode "OpenGL"` (hardware). The owner
+  accepted the fidelity tradeoff and reported CPU power of about 4–5 W with
+  software rendering versus about half or less with hardware, on a Steam Deck at
+  1080p/120 fps on a TV (owner-reported, 2026-10-21). That is CPU power for that
+  scenario, not total system power or a battery-life claim; frame pacing,
+  compatibility and actual power draw remain **Needs Deck Validation**.
+- **Proposed:** a v5 migration treats DSDA's saved `videomode "Software"` as the
+  untouched upstream default and switches it to `OpenGL`; any other renderer
+  spelling is kept and reported as a conflict. An explicit choice of "Software"
+  is indistinguishable from the engine default in the file, so it follows the
+  baseline (documented limitation).
+- **Needs Deck Validation:** detected resolution and Auto aspect on the internal
+  panel and an external TV, and the hardware renderer's visual/compatibility
+  behaviour across the reference mapsets.
 
 ## 10. VSync, uncapped frame rate and mouse look sensitivity
 

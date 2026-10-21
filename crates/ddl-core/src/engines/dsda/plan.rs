@@ -336,6 +336,69 @@ impl fmt::Display for Warp {
     }
 }
 
+/// A transient screen resolution for one launch (`-width` / `-height`).
+///
+/// DDL passes the drawable size of its own fullscreen window, so DSDA-Doom
+/// renders for the actual display (the Deck panel or an external TV) instead of
+/// a fixed size. Both flags are ordinary integers with the upstream ranges
+/// `-width` ≥ 320 and `-height` ≥ 200
+/// ([`args.c:536-545`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/args.c#L536-L545));
+/// they are read in `I_InitScreenResolution` and only change the current
+/// session
+/// ([`i_video.c:1050-1062`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_video.c#L1050-L1062)).
+///
+/// The constructor keeps the value bounded, so an absurd window size cannot
+/// reach the engine. A display whose drawable size is unavailable simply keeps
+/// the config-file fallback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScreenSize {
+    width: u32,
+    height: u32,
+}
+
+impl ScreenSize {
+    /// The smallest width DSDA-Doom accepts for `-width`.
+    pub const MIN_WIDTH: u32 = 320;
+    /// The smallest height DSDA-Doom accepts for `-height`.
+    pub const MIN_HEIGHT: u32 = 200;
+    /// DDL's ceiling for a plausible display dimension.
+    pub const MAX_DIMENSION: u32 = 16_384;
+
+    /// Builds a bounded screen size.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ValueRangeError::Width`] or [`ValueRangeError::Height`] when a
+    /// dimension is outside DSDA-Doom's accepted range or DDL's sane ceiling.
+    pub fn new(width: u32, height: u32) -> Result<Self, ValueRangeError> {
+        if !(Self::MIN_WIDTH..=Self::MAX_DIMENSION).contains(&width) {
+            return Err(ValueRangeError::Width(width));
+        }
+        if !(Self::MIN_HEIGHT..=Self::MAX_DIMENSION).contains(&height) {
+            return Err(ValueRangeError::Height(height));
+        }
+        Ok(Self { width, height })
+    }
+
+    /// The value sent to `-width`.
+    #[must_use]
+    pub const fn width(self) -> u32 {
+        self.width
+    }
+
+    /// The value sent to `-height`.
+    #[must_use]
+    pub const fn height(self) -> u32 {
+        self.height
+    }
+}
+
+impl fmt::Display for ScreenSize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}x{}", self.width, self.height)
+    }
+}
+
 /// A value outside the range DDL accepts for an engine option.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueRangeError {
@@ -345,6 +408,10 @@ pub enum ValueRangeError {
     Skill(u8),
     /// `-warp`: each value is `0`-`99`.
     Warp(u8),
+    /// `-width`: DSDA-Doom accepts at least `320`; DDL bounds the top too.
+    Width(u32),
+    /// `-height`: DSDA-Doom accepts at least `200`; DDL bounds the top too.
+    Height(u32),
 }
 
 impl fmt::Display for ValueRangeError {
@@ -364,6 +431,18 @@ impl fmt::Display for ValueRangeError {
                     "warp value {value} is outside DSDA-Doom's accepted range 0-99"
                 )
             }
+            Self::Width(value) => write!(
+                f,
+                "screen width {value} is outside DDL's accepted range {}-{}",
+                ScreenSize::MIN_WIDTH,
+                ScreenSize::MAX_DIMENSION
+            ),
+            Self::Height(value) => write!(
+                f,
+                "screen height {value} is outside DDL's accepted range {}-{}",
+                ScreenSize::MIN_HEIGHT,
+                ScreenSize::MAX_DIMENSION
+            ),
         }
     }
 }
@@ -652,6 +731,11 @@ pub struct LaunchPlan {
     pub shot_dir: PathBuf,
     /// The working directory the engine starts in.
     pub working_dir: PathBuf,
+    /// The transient drawable resolution (`-width` / `-height`, spec 064 R6).
+    ///
+    /// `None` keeps DSDA's config-file `screen_resolution`, which is the
+    /// fallback for a windowed UI or an unavailable measurement.
+    pub screen: Option<ScreenSize>,
     /// Ordered transient config overrides for the single `-assign` flag.
     pub assigns: Vec<AssignOverride>,
 }
@@ -660,7 +744,7 @@ impl LaunchPlan {
     /// The argv DSDA-Doom receives, in the order fixed by decision D-011:
     /// `-iwad`, `-file`, `-deh`, `-complevel`, `-skill`, `-warp`, `-pistolstart`,
     /// `-record`, `-noautoload`, `-config`, `-save`, `-data`, `-shotdir`,
-    /// `-assign`.
+    /// `-width`, `-height`, `-assign`.
     ///
     /// Each value is its own token. `-file`, `-deh` and `-assign` appear at
     /// most once, followed by all of their values, because DSDA's parser keeps
@@ -723,6 +807,16 @@ impl LaunchPlan {
         argv.push(self.data_dir.clone().into_os_string());
         argv.push(OsString::from("-shotdir"));
         argv.push(self.shot_dir.clone().into_os_string());
+
+        // Spec 064 R6: the transient drawable resolution of DDL's fullscreen
+        // window. DSDA reads both flags in I_InitScreenResolution, so the
+        // persisted `screen_resolution` remains the fallback.
+        if let Some(screen) = self.screen {
+            argv.push(OsString::from("-width"));
+            argv.push(OsString::from(screen.width().to_string()));
+            argv.push(OsString::from("-height"));
+            argv.push(OsString::from(screen.height().to_string()));
+        }
 
         if !self.assigns.is_empty() {
             argv.push(OsString::from("-assign"));
@@ -860,6 +954,13 @@ impl LaunchPlan {
         out.push_str(&format!("  save: {}\n", shorten(&self.save_dir, home)));
         out.push_str(&format!("  data: {}\n", shorten(&self.data_dir, home)));
         out.push_str(&format!("  shotdir: {}\n", shorten(&self.shot_dir, home)));
+        out.push_str(&format!(
+            "  screen: {}\n",
+            self.screen.map_or_else(
+                || String::from("(config fallback)"),
+                |screen| screen.to_string()
+            )
+        ));
         out.push_str(&format!(
             "  working dir: {}\n",
             shorten(&self.working_dir, home)
@@ -1015,6 +1116,7 @@ mod tests {
             data_dir: PathBuf::from("/home/deck/.local/share/ddl/profiles/p1/data"),
             shot_dir: PathBuf::from("/home/deck/.local/share/ddl/profiles/p1/shots"),
             working_dir: PathBuf::from("/home/deck/.local/share/ddl/profiles/p1/run"),
+            screen: None,
             assigns: Vec::new(),
         }
     }
@@ -1065,6 +1167,71 @@ mod tests {
                 "-shotdir",
                 "/home/deck/.local/share/ddl/profiles/p1/shots",
             ]
+        );
+    }
+
+    /// R6 (spec 064): a detected drawable size becomes two transient flags,
+    /// after `-shotdir` and before `-assign`, never a single `WxH` string.
+    #[test]
+    fn a_detected_screen_emits_width_and_height_after_shotdir() {
+        let plan = LaunchPlan {
+            screen: Some(ScreenSize::new(1920, 1080).expect("a display size")),
+            assigns: vec![AssignOverride::new("dsda_fps", "35")],
+            ..minimal_plan()
+        };
+        let argv = tokens(&plan.to_command());
+        let shotdir = argv
+            .iter()
+            .position(|token| token == "-shotdir")
+            .expect("shotdir");
+        assert_eq!(
+            &argv[shotdir + 2..shotdir + 6],
+            ["-width", "1920", "-height", "1080"]
+        );
+        assert_eq!(count(&argv, "-width"), 1);
+        assert_eq!(count(&argv, "-height"), 1);
+        assert_eq!(argv.last().map(String::as_str), Some("dsda_fps=35"));
+        assert!(
+            plan.describe(Path::new(HOME))
+                .contains("  screen: 1920x1080\n")
+        );
+    }
+
+    #[test]
+    fn a_config_fallback_plan_emits_no_width_or_height() {
+        let argv = tokens(&minimal_plan().to_command());
+        assert!(!argv.iter().any(|token| token == "-width"), "{argv:?}");
+        assert!(!argv.iter().any(|token| token == "-height"), "{argv:?}");
+        assert!(
+            minimal_plan()
+                .describe(Path::new(HOME))
+                .contains("  screen: (config fallback)\n")
+        );
+    }
+
+    /// R6 (spec 064): sizes outside the engine's minimum, or DDL's ceiling, are
+    /// rejected before they can reach argv.
+    #[test]
+    fn screen_sizes_are_bounded() {
+        assert!(ScreenSize::new(320, 200).is_ok());
+        assert!(ScreenSize::new(16_384, 16_384).is_ok());
+        for (width, height) in [(319, 200), (320, 199), (0, 0), (16_385, 200), (320, 16_385)] {
+            assert!(
+                ScreenSize::new(width, height).is_err(),
+                "{width}x{height} must be rejected"
+            );
+        }
+        assert_eq!(
+            ScreenSize::new(319, 200)
+                .expect_err("too narrow")
+                .to_string(),
+            "screen width 319 is outside DDL's accepted range 320-16384"
+        );
+        assert_eq!(
+            ScreenSize::new(320, 199)
+                .expect_err("too short")
+                .to_string(),
+            "screen height 199 is outside DDL's accepted range 200-16384"
         );
     }
 
@@ -1344,6 +1511,7 @@ mod tests {
             data_dir: existing_dir(),
             shot_dir: existing_dir(),
             working_dir: existing_dir(),
+            screen: None,
             assigns: Vec::new(),
         }
     }
@@ -1571,6 +1739,7 @@ Launch plan
   save: ~/.local/share/ddl/profiles/p1/save
   data: ~/.local/share/ddl/profiles/p1/data
   shotdir: ~/.local/share/ddl/profiles/p1/shots
+  screen: (config fallback)
   working dir: ~/.local/share/ddl/profiles/p1/run
   assign: (none)";
         assert_eq!(sample_plan().describe(Path::new(HOME)), expected);

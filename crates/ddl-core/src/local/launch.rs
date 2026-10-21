@@ -167,6 +167,7 @@ pub fn build_plan(
         data_dir: dirs.data,
         shot_dir: dirs.shots,
         working_dir: dirs.run,
+        screen: None,
         assigns: profile_assigns(profile)?,
     })
 }

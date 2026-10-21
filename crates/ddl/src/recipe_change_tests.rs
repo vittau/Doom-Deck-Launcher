@@ -53,6 +53,7 @@ pub(crate) fn setup() -> (tempfile::TempDir, Server, Environment, Arc<AtomicUsiz
     let env = Environment {
         paths,
         home,
+        screen: None,
         test: Some(Arc::new(TestEnvironment {
             api: Arc::new(dsda::CannedApi::new()),
             catalog,
@@ -72,6 +73,7 @@ pub(crate) fn catalog_env(env: &Environment, change: impl FnOnce(&mut Catalog)) 
     Environment {
         paths: env.paths.clone(),
         home: env.home.clone(),
+        screen: None,
         test: Some(Arc::new(TestEnvironment {
             api: previous.api.clone(),
             catalog,

@@ -428,6 +428,7 @@ mod tests {
                 .map(|(key, value)| ((*key).to_owned(), *value))
                 .collect(),
             upstream_values: Vec::new(),
+            upstream_strings: Vec::new(),
             strings: Vec::new(),
             bindings: Vec::new(),
         }
@@ -638,6 +639,7 @@ mod tests {
         }
         v1.upstream_values.clear();
         v1.strings.clear();
+        v1.upstream_strings.clear();
         v1.bindings.clear();
 
         let first = manager(&config, v1, &clock);
@@ -654,7 +656,7 @@ mod tests {
 
         assert!(migration.migrated);
         assert_eq!(migration.from_version, "1");
-        assert_eq!(migration.to_version, "4");
+        assert_eq!(migration.to_version, "5");
 
         let merged = read(&second.active_path());
         assert!(
@@ -672,7 +674,10 @@ mod tests {
         // The new defaults the player never touched are added.
         assert!(merged.contains("use_fullscreen 1\n"), "{merged}");
         assert!(merged.contains("exclusive_fullscreen 0\n"), "{merged}");
-        assert!(merged.contains("render_aspect 2\n"), "{merged}");
+        assert!(
+            merged.contains("render_aspect 0\n"),
+            "v5 switches to automatic aspect:\n{merged}"
+        );
         assert!(merged.contains("render_stretch_hud 2\n"), "{merged}");
         assert!(
             merged.contains("render_vsync 1\n"),
@@ -725,6 +730,8 @@ mod tests {
             *value = 10;
         }
         v2.upstream_values.clear();
+        v2.strings.retain(|(key, _)| key != "videomode");
+        v2.upstream_strings.clear();
         v2.bindings.clear();
 
         let first = manager(&config, v2.clone(), &clock);
@@ -762,7 +769,7 @@ mod tests {
 
         assert!(migration.migrated);
         assert_eq!(migration.from_version, "2");
-        assert_eq!(migration.to_version, "4");
+        assert_eq!(migration.to_version, "5");
 
         let merged = second.active_path();
         let document = crate::dsda_config::format::Document::parse(&read(&merged));
@@ -845,6 +852,8 @@ mod tests {
             *value = 10;
         }
         v3.upstream_values.clear();
+        v3.strings.retain(|(key, _)| key != "videomode");
+        v3.upstream_strings.clear();
 
         let first = manager(&config, v3.clone(), &clock);
         first.provision().expect("first use");
@@ -863,7 +872,7 @@ mod tests {
 
         assert!(migration.migrated);
         assert_eq!(migration.from_version, "3");
-        assert_eq!(migration.to_version, "4");
+        assert_eq!(migration.to_version, "5");
         assert!(
             migration.conflicts.is_empty(),
             "nothing was player-edited: {:?}",
@@ -880,18 +889,18 @@ mod tests {
             "the migration must not cap the frame rate:\n{merged}"
         );
         assert_eq!(
-            read(&second.base_path("4")),
+            read(&second.base_path("5")),
             merged,
             "the v4 baseline is exactly what was written"
         );
 
         // The migration is recorded like the 029/034 ones.
         let state = second.state().expect("state");
-        assert_eq!(state.template_version, "4");
+        assert_eq!(state.template_version, "5");
         assert_eq!(state.last_migration, Some(1000));
         assert_eq!(
             migration.backup.expect("a backup").file_name().unwrap(),
-            "1000-4.cfg"
+            "1000-5.cfg"
         );
     }
 
@@ -919,6 +928,8 @@ mod tests {
             *value = 10;
         }
         v3.upstream_values.clear();
+        v3.strings.retain(|(key, _)| key != "videomode");
+        v3.upstream_strings.clear();
 
         let first = manager(&config, v3.clone(), &clock);
         first.provision().expect("first use");
@@ -935,7 +946,7 @@ mod tests {
             .with_clock(Box::new(Arc::clone(&clock)));
         let migration = second.migrate().expect("migrate");
 
-        assert_eq!(migration.to_version, "4");
+        assert_eq!(migration.to_version, "5");
         let merged = read(&second.active_path());
         assert!(
             merged.contains("mouse_sensitivity_horiz 8\n"),
@@ -958,6 +969,104 @@ mod tests {
             keys,
             vec!["mouse_sensitivity_horiz", "mouse_sensitivity_vert"]
         );
+    }
+
+    /// R6/R7 (spec 064): a v4 install moves to automatic aspect and the hardware
+    /// renderer when the player never changed those settings, and DSDA's own
+    /// "Software" value in the active file counts as untouched.
+    #[test]
+    fn a_version_bump_to_v5_sets_auto_aspect_and_hardware_rendering() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        let current = Template::embedded().expect("valid template");
+        let mut v4 = current.clone();
+        v4.template_version = "4".to_owned();
+        v4.strings.retain(|(key, _)| key != "videomode");
+        v4.upstream_strings.clear();
+        if let Some((_, value)) = v4.values.iter_mut().find(|(key, _)| key == "render_aspect") {
+            *value = 2;
+        }
+
+        let first = manager(&config, v4.clone(), &clock);
+        first.provision().expect("first use");
+
+        // DSDA saves the whole configuration after a run, so the new key is
+        // present with its own default even though DDL never wrote it.
+        let mut edited = Document::parse(&v4.config_text());
+        edited.set("videomode", Value::Str("Software".to_owned()));
+        fs::write(first.active_path(), edited.to_text()).expect("simulate a DSDA save");
+
+        let second = DsdaConfigManager::with_template(&config, current.clone())
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert!(migration.migrated);
+        assert_eq!(migration.from_version, "4");
+        assert_eq!(migration.to_version, "5");
+        assert!(
+            migration.conflicts.is_empty(),
+            "nothing was player-edited: {:?}",
+            migration.conflicts
+        );
+        let merged = read(&second.active_path());
+        assert!(
+            merged.contains("render_aspect 0\n"),
+            "the layout follows the detected aspect:\n{merged}"
+        );
+        assert!(
+            merged.contains("videomode \"OpenGL\"\n"),
+            "the managed baseline uses the hardware renderer:\n{merged}"
+        );
+        assert_eq!(read(&second.base_path("5")), merged);
+        assert_eq!(second.state().expect("state").template_version, "5");
+    }
+
+    /// R6/R7 (spec 064): a player who picked 16:9 and a non-default renderer
+    /// keeps both choices; the migration reports the conflicts.
+    #[test]
+    fn a_version_bump_to_v5_keeps_player_renderer_and_aspect_choices() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+
+        let current = Template::embedded().expect("valid template");
+        let mut v4 = current.clone();
+        v4.template_version = "4".to_owned();
+        v4.strings.retain(|(key, _)| key != "videomode");
+        v4.upstream_strings.clear();
+        if let Some((_, value)) = v4.values.iter_mut().find(|(key, _)| key == "render_aspect") {
+            *value = 2;
+        }
+
+        let first = manager(&config, v4.clone(), &clock);
+        first.provision().expect("first use");
+
+        let mut edited = Document::parse(&v4.config_text());
+        edited.set("render_aspect", Value::Int(1));
+        edited.set("videomode", Value::Str("gl".to_owned()));
+        fs::write(first.active_path(), edited.to_text()).expect("simulate a DSDA save");
+
+        let second = DsdaConfigManager::with_template(&config, current)
+            .with_clock(Box::new(Arc::clone(&clock)));
+        let migration = second.migrate().expect("migrate");
+
+        assert_eq!(migration.to_version, "5");
+        let merged = read(&second.active_path());
+        assert!(
+            merged.contains("render_aspect 1\n"),
+            "the player's 16:9 choice is kept:\n{merged}"
+        );
+        assert!(
+            merged.contains("videomode \"gl\"\n"),
+            "the player's renderer spelling is kept:\n{merged}"
+        );
+        let mut keys: Vec<&str> = migration
+            .conflicts
+            .iter()
+            .map(|conflict| conflict.key.as_str())
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, vec!["render_aspect", "videomode"]);
     }
 
     #[test]
