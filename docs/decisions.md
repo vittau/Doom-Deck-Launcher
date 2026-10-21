@@ -26,6 +26,13 @@ exception to D-020's no-id-assets rule; source/credit and image limits still app
 also records UI spacing/copy changes and automatic engine aspect with detected fullscreen
 resolution; external-display behavior remains Needs Deck Validation.
 
+**D-037 — Hardware renderer default (Accepted, owner, 2026-10-21).** Use DSDA-Doom's hardware
+renderer for new/defaulted managed configurations, preserving player choices on migration.
+The owner accepts the visual-fidelity tradeoff and reports a Deck measurement at 1080p/120 fps
+on a TV: software CPU power around 4–5 W, hardware around half or less. This is owner-reported
+CPU power for that scenario, not a total-system-power or battery-life claim. Confirm the engine
+setting from pinned upstream source; implementation/tests are part of spec 064.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |

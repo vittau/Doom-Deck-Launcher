@@ -790,3 +790,11 @@
     defaults out of the box. OVERVIEW now records the complete discovery-to-play journey as
     the product criterion; spec 065 prioritizes a clear player-facing install path.
   refs: [OVERVIEW.md, docs/specs/065-project-download-page.md]
+- date: 2026-10-21
+  type: decision
+  summary: >-
+    D-037: owner requests DSDA hardware rendering by default and accepts the fidelity tradeoff.
+    In the owner's Deck test on a 1080p TV at 120 fps, software used about 4–5 W of CPU power;
+    hardware used about half or less. Spec 064 adds the renderer default with upgrade-safe
+    migration and tests. This measurement is CPU power, not total system power or autonomy.
+  refs: [docs/decisions.md, docs/specs/064-button-actions-and-display.md]

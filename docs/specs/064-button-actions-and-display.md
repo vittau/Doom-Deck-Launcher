@@ -28,6 +28,13 @@
   in research/report. Values must be positive and bounded; unavailable/windowed measurements
   keep the existing fallback. Display launch overrides are transient and passed as separate argv
   tokens, never a shell string.
+- **R7:** Use DSDA's hardware renderer by default. Confirm the persisted key and string against
+  pinned v0.30.1 source before implementation. Include it in the new managed-template version,
+  test new/defaulted profiles and migration, and preserve explicit player renderer choices.
+  This concerns the engine, not Slint's renderer. Owner measured on a Steam Deck attached to
+  a 1080p TV at 120 fps: software CPU power about 4–5 W; hardware CPU power about half or less
+  (2026-10-21, owner-reported hardware measurement). Do not present CPU power as total system
+  power or an established battery-life multiplier.
 
 ## Ownership and verification
 
@@ -39,7 +46,7 @@ final checks. No push/tag/release or direct main merge.
 
 Tests cover direct Play and validation failures, selected-profile use, red/focus styles, footer
 and Home content, padding via headless renders, template migration preserving user edits,
-resolution argv/fallback and fullscreen detection. Targeted tests while iterating, then fmt,
+resolution argv/fallback, fullscreen detection and hardware-renderer migration. Targeted tests while iterating, then fmt,
 clippy with warnings denied and full workspace tests once at the end. Report any requirement
 without a practical automated test and why. Headless UI PNGs must be reviewed before integration.
 
