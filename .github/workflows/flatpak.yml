@@ -102,9 +102,12 @@ jobs:
           # Record what the runtime branch resolved to. The Rust extension is
           # verified but deliberately not used: 26.08 shipped 1.98.0 on
           # 2026-10-20, below the repository's 1.99 MSRV. The manifest pins the
-          # official 1.99.1 toolchain instead.
-          flatpak remote-info --user flathub \
-            org.freedesktop.Sdk.Extension.rust-stable//26.08 | tee "$RUNNER_TEMP/rust-extension.txt"
+          # official 1.99.1 toolchain instead. A missing extension is a warning,
+          # not a build failure, because the pinned toolchain does not need it.
+          { flatpak remote-info --user flathub \
+              org.freedesktop.Sdk.Extension.rust-stable//26.08 \
+              || echo "org.freedesktop.Sdk.Extension.rust-stable//26.08 is unavailable"; } \
+            | tee "$RUNNER_TEMP/rust-extension.txt"
           flatpak info --user org.freedesktop.Sdk//26.08 | tee "$RUNNER_TEMP/sdk-info.txt"
 
       - name: Check the pinned Rust compiler against the repository MSRV
