@@ -644,7 +644,13 @@ impl Runtime {
                         Err(problem) => {
                             // Spec 075, R2: a failed write must not leave the
                             // optimistic value looking saved.
-                            if matches!(command, Some(Command::SetPistolStart { .. })) {
+                            if matches!(
+                                command,
+                                Some(Command::SetPistolStart { .. })
+                                    | Some(Command::Local(
+                                        services::LocalCommand::BasePistolStart { .. }
+                                    ))
+                            ) {
                                 self.revert_pistol_start();
                             }
                             self.problem = Some(problem);
@@ -666,9 +672,16 @@ impl Runtime {
         if auto_check {
             self.spawn_catalog_check(ui);
         }
-        // Spec 075, R2: a toggle pressed while a command was running is applied
-        // once it finishes, so the last requested value is never lost.
-        if !self.busy {
+        // Spec 077, R1: adopt a newer catalog through a fresh instance first;
+        // the flag is cleared only when the reload is actually dispatched, so a
+        // busy moment can never drop it.
+        if !self.busy && self.catalog_reload_pending {
+            self.catalog_reload_pending = false;
+            self.start(ui, Command::RefreshCatalog);
+        } else if !self.busy {
+            // Spec 075, R2: a toggle pressed while a command was running is
+            // applied once it finishes, so the last requested value is never
+            // lost.
             if let Some((recipe_id, profile_id, value)) = self.pistol_queue.take() {
                 self.dispatch_pistol_start(ui, recipe_id, profile_id, value);
             } else if let Some((profile_id, value)) = self.base_pistol_queue.take() {
@@ -684,10 +697,6 @@ impl Runtime {
                     ui,
                     Command::Local(services::LocalCommand::BasePistolStart { profile_id, value }),
                 );
-            }
-            if self.catalog_reload_pending {
-                self.catalog_reload_pending = false;
-                self.start(ui, Command::RefreshCatalog);
             }
         }
         self.sync(ui);

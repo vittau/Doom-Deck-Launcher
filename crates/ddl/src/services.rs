@@ -810,10 +810,23 @@ impl Services {
         value: bool,
     ) -> Result<Refresh, Problem> {
         let recipe = self.recipe(recipe_id)?;
-        let mut profile = self
+        // Read under the same lock as the write, so a concurrent profile change
+        // cannot be lost between the two.
+        let _state_lock = self.lock_state()?;
+        let mut profile = match self
             .profiles
-            .load(profile_id)
-            .map_err(|e| logged(Problem::State, e))?;
+            .load_optional(profile_id)
+            .map_err(|e| logged(Problem::State, e))?
+        {
+            Some(profile) => profile,
+            // First press before any Save: the UI shows an unsaved default, so
+            // materialise it instead of refusing the toggle.
+            None => {
+                let mut profile = default_profile(&recipe);
+                profile.id = profile_id.to_owned();
+                profile
+            }
+        };
         if profile.recipe_id != recipe_id {
             return Err(Problem::State);
         }
@@ -824,7 +837,6 @@ impl Services {
         // Profile-only atomic write: no app.json/iwads.json rewrite, so there is
         // no partial success to roll back and no way to clobber a concurrent
         // favourite/scan (spec 075, R2 review).
-        let _state_lock = self.lock_state()?;
         self.profiles
             .save(&profile)
             .map_err(|e| logged(Problem::Storage, e))?;
@@ -835,14 +847,26 @@ impl Services {
     /// path: validate the profile against its base game, save it atomically and
     /// report it, with no snapshot and no launch re-resolution.
     fn set_base_pistol_start(&mut self, profile_id: &str, value: bool) -> Result<Refresh, Problem> {
-        let mut profile = self
+        let _state_lock = self.lock_state()?;
+        let existing = self
             .profiles
-            .load(profile_id)
+            .load_optional(profile_id)
             .map_err(|e| logged(Problem::State, e))?;
-        iwads::base_games::list(&self.registry)
+        let base_id = match &existing {
+            Some(profile) => profile.recipe_id.clone(),
+            // A first press before any Save: the id names the base game, e.g.
+            // `base-doom2-profile-1`, so resolve the base from the registry.
+            None => profile_id
+                .rsplit_once("-profile-")
+                .map(|(base, _)| base.to_owned())
+                .ok_or(Problem::State)?,
+        };
+        let base = iwads::base_games::list(&self.registry)
             .into_iter()
-            .find(|base| base.id() == profile.recipe_id)
+            .find(|base| base.id() == base_id)
             .ok_or(Problem::State)?;
+        let mut profile =
+            existing.unwrap_or_else(|| Profile::new(profile_id, "Default", base.id()));
         // Base profiles have no recipe component combination to validate; keep
         // the same schema and skill rules `Profile::validate` applies.
         if profile.schema_version != ddl_core::profiles::SCHEMA_VERSION
@@ -851,8 +875,7 @@ impl Services {
             return Err(Problem::State);
         }
         profile.pistol_start = value;
-        // Profile-only atomic write, as above.
-        let _state_lock = self.lock_state()?;
+        // Profile-only atomic write, as above (the lock is already held).
         self.profiles
             .save(&profile)
             .map_err(|e| logged(Problem::Storage, e))?;
@@ -2021,18 +2044,23 @@ impl Services {
                     });
                 }
                 // Spec 077, R1 review: a slower automatic response must never
-                // roll back a newer catalog a manual check adopted while it was
-                // in flight. The floor was computed before the request; compare
-                // again against the catalog in use right now.
-                if accepted.serial() <= self.catalog_origin.serial {
+                // roll back a newer catalog adopted while it was in flight — not
+                // even by another process. Compare with the serial effective on
+                // disk right now (cached bundle, this instance and the embedded
+                // fallback), not only with this instance's origin.
+                let cached = ddl_core::catalog::load_cache(&self.env.paths.data)
+                    .map(|loaded| loaded.bundle.catalog_serial)
+                    .unwrap_or(0);
+                let effective = cached
+                    .max(self.catalog_origin.serial)
+                    .max(ddl_core::catalog::embedded_serial());
+                if accepted.serial() <= effective {
                     tracing::info!(
                         serial = accepted.serial(),
                         effective = self.catalog_origin.serial,
                         "ignoring a catalog bundle older than the one in use"
                     );
-                    return Ok(CatalogOutcome::Current {
-                        serial: self.catalog_origin.serial,
-                    });
+                    return Ok(CatalogOutcome::Current { serial: effective });
                 }
                 ddl_core::catalog::store_cache(&self.env.paths.data, &accepted.bundle, now)
                     .map_err(|error| logged(Problem::Storage, error))?;
@@ -4610,6 +4638,39 @@ mod tests {
         );
     }
 
+    /// Spec 075, R2 review: the first-ever press, before any Save wrote a
+    /// profile JSON, materialises the default profile and persists the value.
+    #[test]
+    fn the_first_pistol_press_works_without_a_saved_profile() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        let recipe = s.recipe("sigil").unwrap();
+        let profile = s.profile(&recipe).unwrap();
+        assert!(
+            !s.profiles.path(&profile.id).unwrap().is_file(),
+            "no profile JSON exists yet"
+        );
+        let snapshots = s.counters().snapshots();
+        match s
+            .execute(
+                Command::SetPistolStart {
+                    recipe_id: "sigil".into(),
+                    profile_id: profile.id.clone(),
+                    value: true,
+                },
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .expect("the first press succeeds")
+        {
+            Refresh::Profile(saved) => assert!(saved.pistol_start),
+            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+        }
+        assert_eq!(s.counters().snapshots(), snapshots, "no snapshot built");
+        assert!(s.profiles.load(&profile.id).unwrap().pistol_start);
+    }
+
     /// Spec 075, R2: a failed write is reported, never silently dropped.
     #[cfg(unix)]
     #[test]
@@ -5293,6 +5354,30 @@ mod catalog_tests {
                 .iter()
                 .any(|item| item.recipe.id == "sigil" && item.favorite),
             "the view the UI adopts shows the state saved meanwhile"
+        );
+    }
+
+    /// Spec 077, R1 review: a slower automatic response never rolls back a newer
+    /// catalog adopted (by another process) while the request was in flight.
+    #[test]
+    fn an_older_automatic_response_never_rolls_back_a_newer_catalog() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let server = Server::start(move |_r| Response::ok(served.clone()));
+        let env = environment(temp.path(), server.url("/catalog.json"));
+
+        // The background instance opens while the embedded catalog is in use…
+        let mut checking = Services::open(env.clone()).unwrap();
+        // …then another process adopts serial 900 into the cache.
+        let newer: ddl_core::catalog::Bundle = serde_json::from_slice(&bundle_json(900)).unwrap();
+        ddl_core::catalog::store_cache(&env.paths.data, &newer, 1).unwrap();
+
+        let outcome = startup(&mut checking);
+        assert_eq!(outcome.updated, None, "the older response is ignored");
+        let cached = ddl_core::catalog::load_cache(&env.paths.data).expect("cache");
+        assert_eq!(
+            cached.bundle.catalog_serial, 900,
+            "the cache keeps the newer bundle"
         );
     }
 
