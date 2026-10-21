@@ -16,6 +16,8 @@ runtime: org.freedesktop.Platform
 runtime-version: "26.08"
 sdk: org.freedesktop.Sdk
 command: ddl
+# The UI and metadata are English-only (D-008); no locale extension is built.
+separate-locales: false
 
 finish-args:
   # Flatpak 1.16 introduced `--device=input`, used below.
