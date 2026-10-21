@@ -1,4 +1,4 @@
-<p align="center"><a href="https://doomdecklauncher.com/"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/design/logo/readme-header-dark.png"><img src="docs/design/logo/readme-header-light.png" alt="DoomDeckLauncher — Rose Compass emblem, DDL wordmark and product name" width="185"></picture></a></p>
+<p align="center"><a href="https://doomdecklauncher.com/"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/design/logo/readme-header-dark.png"><img src="docs/design/logo/readme-header-light.png" alt="DoomDeckLauncher — Rose Compass emblem, DDL wordmark and product name" width="370"></picture></a></p>
 
 # DoomDeckLauncher
 

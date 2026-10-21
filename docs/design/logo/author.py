@@ -96,7 +96,7 @@ def sheet():
         if row == 0:
             b += v3.label('stacked 240×200', 900, y0 + 24, 18, ink)
             b += group(stacked, 880, y0 + 60, .5)
-        b += v3.label(f'README header {"dark" if row == 0 else "light"} theme 185×80', 40, y0 + 462, 18, ink)
+        b += v3.label(f'README header {"dark" if row == 0 else "light"} theme 370×160 (shown at 1/2)', 40, y0 + 462, 18, ink)
         b += group(readme_header('dark' if row == 0 else 'light'), 40, y0 + 490, .5)
     # Steam art, each in a nested viewport that clips its scene to the frame.
     def framed(composition, w, h, x, y, scale):

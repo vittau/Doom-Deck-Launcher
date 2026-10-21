@@ -3,22 +3,21 @@
 ## Changes
 
 - Added `readme-header-dark.svg/.png` and `readme-header-light.svg/.png`: the website
-  header composition at its native 185×80 display size, built from the existing masters
-  and fonts. It places the small-tier emblem at 128 authoring units (64 px displayed), the
-  production DDL wordmark at `152,30` and the product name outlined from the bundled Barlow
-  at 22 units (11 px displayed),
-  matching the site's `.brand` geometry. No new identity, geometry, typeface or colour
+  header composition displayed at 370×160 (twice the site's 185×80 header slot), built
+  from the existing masters and fonts. It scales the site's `.brand` geometry 2×: the
+  small-tier emblem at 128 px, the production DDL wordmark at `152,30` and the product name
+  outlined from the bundled Barlow at 22 px. No new identity, geometry, typeface or colour
   token was introduced.
 - The dark variant keeps the stained-glass wordmark's bone face and ruby carved side with a
   bone subtitle. The light variant swaps only the face and subtitle to the existing dark
   ink `#120C0D`, keeping the ruby side, so the mark reads on white without a background
   tablet.
-- `author.py` now composes both variants; `export.py` exports them at 740×320 (4× the
+- `author.py` now composes both variants; `export.py` exports them at 740×320 (2× the
   displayed size) and validates size, contours, theme fills, transparent edges and
   contrast. The production contact sheet now shows the README header in both theme rows.
 - README's first line is a centered `<picture>` linked to `https://doomdecklauncher.com/`,
   with the dark PNG in a `prefers-color-scheme: dark` source and the light PNG as fallback,
-  displayed at `width="185"`. Alt text describes the emblem, wordmark and product name.
+  displayed at `width="370"`. Alt text describes the emblem, wordmark and product name.
   All other README content is untouched.
 - `docs/design/logo/README.md` documents the new assets, their theme fills, export sizes
   and reproduction. The older `readme-logo-*` full-name lock-ups are retained as reference
@@ -59,12 +58,14 @@ Offscreen previews, inspected in this worktree (not committed, under the git-ign
   cross-theme pairings that demonstrate why the theme split is needed
 - `target/readme-brand-preview/readme-mock-light.png`
 - `target/readme-brand-preview/readme-mock-dark.png` — the image at its declared
-  185×80 beside an H1 and body copy in GitHub-like colours
+  370×160 beside an H1 and body copy in GitHub-like colours
 
 Results: the correct pairing keeps the small-tier emblem's stained glass, the DDL face and
 the subtitle legible in both themes; the cross-theme pairings visibly lose the DDL face or
 subtitle, which is why README selects by `prefers-color-scheme`. The compact lock-up reads
-as the site header and leaves the H1 as the page's first heading.
+as the site header and leaves the H1 as the page's first heading. Root visual review
+approved both theme compositions and asked for the 370×160 README display size, so the
+185×80 site-header artwork is displayed at 2× without changing its geometry.
 
 Asset resolution and existing checks:
 
