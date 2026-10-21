@@ -832,3 +832,16 @@
     and the support link after fmt/clippy and 819 passing tests. Completed worktrees removed.
     Exact resume instructions, review fixes and latest COMPAT/SHREDS scope are in the pause record.
   refs: [docs/orchestration-pause-2026-10-21.md, docs/status.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Resumed the original OpenCode conversations and completed Audio soundfont settings (067)
+    and purchased SIGIL editions with COMPAT + SHREDS dependency support (068). Review fixed
+    config-baseline preservation, visible Terms action, installer failure classification,
+    imported-row replacement dispatch and missing-import recovery. Worker checkpoints 9b754da
+    and 12ffe84 were combined on a verification branch; fmt, clippy with warnings denied and
+    all 870 workspace tests passed (200 app, 628 core, 39 integration, 3 doctests). Added Deck
+    checks for actual audio, sandbox font access and purchased-edition controller flows.
+    No paid media/font binary or new dependency is bundled. Hardware playback remains untested.
+  refs: [docs/reports/067-midi-soundfonts.md, docs/reports/068-sigil-purchased-editions.md, docs/deck-testing.md]

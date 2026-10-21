@@ -1,43 +1,34 @@
 # Status
 
-## Paused by owner — 2026-10-21
+## Integration checkpoint — 2026-10-21
 
-Both active OpenCode workers are interrupted and saved for machine shutdown. **Do not resume
-until the owner asks; then resume the same conversations.** Exact session/Task/Dispatch IDs,
-WIP commits, tests, unfinished changes and restoration commands are in
-[the pause checkpoint](orchestration-pause-2026-10-21.md).
+The owner resumed the original OpenCode conversations after shutdown. Both feature workers
+completed and their review fixes are accepted. Their branches were combined on
+`verify/soundfonts-sigil-20261021`. Integrated fmt, clippy with warnings denied and all **870**
+workspace tests passed (200 app, 628 core, 39 integration and 3 doctests). The verified result
+is ready to advance `main`; Linux CI/e2e results will follow. The [pause checkpoint](orchestration-pause-2026-10-21.md) is historical.
 
-Main `1152859` includes reviewed 064/066, signed publication/cache automation and the support
-link. Its fmt/clippy and all **819** workspace tests passed. Only 067 soundfonts and 068 SIGIL
-purchased/COMPAT support remain in retained worktrees. Earlier checkpoint details below are
-historical; the pause document is current.
+- **Audio:** Settings → Audio offers Default and an optional verified Arachno download. Choice
+  persists globally and applies on the next launch across all launch routes; custom engine
+  settings remain untouched until an explicit choice. Missing fonts fall back with a reinstall
+  warning; real config failures abort with an actionable error. Review corrected baseline
+  preservation, clipped Terms action and installer error classification. Worker: `9b754da`.
+- **SIGIL:** verified the owner's native REG/MP3 and COMPAT/SHREDS hashes. Enabling the paid E3
+  soundtrack activates the free COMPAT maps, orders maps before music, and switching editions
+  clears dependents. Imported rows support On/Off and replacement, including missing-file
+  recovery. A real controller-flow headless regression covers the replacement sheet. Worker:
+  `12ffe84`. No purchased media is committed or downloaded by DDL.
+- **Already integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian
+  Reliquary including the MAP31 performance warning (066), signed self-hosted Flatpak (062–063),
+  and the launcher-themed website (065).
+- **Website:** live at `https://www.vitormach.dev/Doom-Deck-Launcher/`. Compact official Buy Me a
+  Coffee Donate button in the header, yellow #FD0 and Cookie font; independent website workflow
+  deploys without an app build. Last website-only deployment `39552405595` passed, including
+  Cloudflare prefix purge and canonical-file verification.
+- **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls and managed SF2
+  access inside the Flatpak; see the new audio/SIGIL checks in `deck-testing.md`.
 
-## Coordination checkpoint — 2026-10-21
-
-- **062:** Flatpak packaging and artifact workflow merged; artifact run 39540926300 passed
-  after fixing the Python build environment. Main CI run 39540926348 also passed.
-- **063 / D-035:** signed self-hosted repository merged under direct owner supervision. Publish
-  run 39537960687 passed; Pages enabled and homepage/repository summary respond HTTP 200.
-  Public ref app ID, URL and embedded key checked with cache-busting (earlier 404 cached by CDN).
-  Publish run 39542532738 passed with signature verification, incremental OSTree export and
-  explicit Pages deployment. The new page is published at gh-pages commit c5462d5. Cloudflare
-  accepted a manual purge of the project prefix; canonical page returned HTTP 200 / MISS and
-  matched the origin byte for byte. Canonical flatpakref app ID, URL and embedded key checked.
-  Automatic prefix purge is merged; CI run 39543519029 is validating that path.
-  Deck install has not yet been confirmed.
-  Approved site: `https://www.vitormach.dev/Doom-Deck-Launcher/`.
-- **064 / D-036:** `button-actions` worker implements the owner's direct Play, visual/copy and
-  detected engine-resolution requests. No integration yet; headless review/checks remain.
-- **065:** owner-approved launcher-themed project/download page reviewed, merged and published.
-  Primary download is the signed `.flatpakref`; graphical Discover steps lead the installation.
-- **066:** Antaresian Reliquary recipe/research/screenshots reviewed; tests and real-fetch lint
-  passed. MAP31 warning now leads the description so it remains visible. Integration pending.
-- **067:** standalone Audio soundfont storage/preferences committed, 13 offline tests passed.
-  Continuation transferred to OpenCode under the owner's quota override. It may integrate
-  Settings/config privately atop committed 064; final checks wait for reviewed main integration.
-- **Worker routing:** OpenCode only, including UI, until the owner lifts the override.
-
-The milestone tables below describe the last release; the checkpoint above records newer work.
+The milestone tables below describe earlier release checkpoints; this section records newer work.
 
 **Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.9-focus`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-20
 

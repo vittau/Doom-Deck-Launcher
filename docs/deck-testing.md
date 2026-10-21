@@ -185,6 +185,20 @@ layout.
 | M5 | AUGER;ZENITH with AlternateBlaster add-on: new pistol sound and muzzle flash | Gaming | ⏳ | |
 | M6 | Pistol start toggle resets inventory each map | Gaming | ⏳ | |
 
+## MIDI soundfonts and purchased SIGIL editions (specs 067–068)
+
+All checks below are **Needs Deck Validation**. Offline tests verify identities, safe install,
+selection, configuration and load order; they do not establish audible playback on hardware.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| A1 | Settings → Audio: download Arachno, select it, launch MIDI music, exit and switch back to Default | Gaming | ⏳ | Download alone must not change the selection; compare audible output after each launch |
+| A2 | Restart the signed Flatpak with Arachno selected and launch again | Gaming | ⏳ | Confirm persistent choice and DSDA access to the managed SF2 inside the sandbox |
+| A3 | Remove the managed Arachno font between runs, launch, then reinstall through Audio | Desktop / Gaming | ⏳ | Default fallback, visible warning and recoverable Reinstall action; do not modify a running engine |
+| M7 | Import purchased SIGIL REG and SIGIL II MP3 WADs; launch native E5/E6 and hear their paid music | Gaming | ⏳ | Complete replacements: do not load the free map WAD alongside the paid WAD |
+| M8 | Import SIGIL SHREDS_COMPAT, launch E3, then switch to native SIGIL or REG | Gaming | ⏳ | Required COMPAT maps activate automatically, music follows maps, switching leaves no orphaned music |
+| M9 | On an imported component row, toggle On/Off, replace its file with Import, and dismiss with Back | Gaming | ⏳ | Repeat Import after removing its managed copy; original user file remains untouched |
+
 ## Input and Steam Input (manual setup)
 
 Follow the [controller layouts](steam-deck-guide.md#recommended-steam-deck-controller-setup).

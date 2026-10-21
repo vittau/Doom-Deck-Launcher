@@ -1,4 +1,9 @@
-# Paused worker checkpoint — 2026-10-21
+# Historical paused worker checkpoint — 2026-10-21
+
+> Superseded after the owner resumed both original conversations. Final reviewed checkpoints
+> are `9b754da` (067) and `12ffe84` (068), integrated and verified together with fmt, clippy and
+> 870 passing workspace tests. See `docs/status.md`; do not resume these completed tasks from
+> the older WIP instructions below.
 
 **Owner explicitly paused both workers before shutting down the machine. Do not resume any
 work until the owner asks. On return, resume these same OpenCode conversations; do not create

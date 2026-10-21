@@ -225,9 +225,10 @@ below are the ones most easily lost between sessions.
   `tests/fixtures/state/` and the release guard test (spec 055 R4; small opencode task).
 - Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
   from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
-- Active work 2026-10-21: 063 publication review fixes; 064 button-actions/config (existing
-  worker started directly by owner); 066 Antaresian Reliquary catalog, including MAP31 Deck
-  performance warning. 065 project/download page follows stabilization of current work.
+- Current integration 2026-10-21: 067 Audio/soundfonts and 068 verified SIGIL editions,
+  including COMPAT + SHREDS, have accepted worker reports and are under combined verification.
+  Specs 062–066 and independent website deployment are complete; the old shutdown pause record
+  is historical. See `docs/status.md` for the final integration and CI results.
 - Next backlog: specs 051–053 (/idgames browse on top of the published index); the
   "Advanced" card subtitle touching its bottom edge (cosmetic, pre-existing).
 
