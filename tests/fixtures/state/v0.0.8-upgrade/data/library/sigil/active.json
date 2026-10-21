@@ -1,0 +1,484 @@
+{
+  "schema_version": 1,
+  "recipe": {
+    "schema_version": 1,
+    "id": "sigil",
+    "title": "SIGIL",
+    "authors": [
+      "John Romero"
+    ],
+    "release": "1.23",
+    "page": "https://romero.com/sigil",
+    "description": "Episode 5 for DOOM, with a MIDI soundtrack and an optional Episode 3 compatibility replacement.",
+    "permission": "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits.",
+    "tags": [
+      "featured",
+      "classics",
+      "cacowards",
+      "episode"
+    ],
+    "screenshots": [
+      {
+        "asset": "sigil/01.jpg",
+        "credit": "John Romero"
+      },
+      {
+        "asset": "sigil/02.jpg",
+        "credit": "John Romero"
+      }
+    ],
+    "images": [],
+    "base_game": {
+      "game": "doom",
+      "variants": [
+        "doom-1.9ud"
+      ]
+    },
+    "packages": [
+      {
+        "id": "free",
+        "page": "https://romero.com/sigil",
+        "urls": [
+          "https://romero.com/s/SIGIL_V1_23-8fh4.zip"
+        ],
+        "size": 3270225,
+        "sha256": "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105",
+        "kind": "zip",
+        "idgames_path": null,
+        "members": [
+          {
+            "id": "maps",
+            "path": "SIGIL_V1_23.wad",
+            "size": 4640555,
+            "sha256": "29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d",
+            "keep": false
+          },
+          {
+            "id": "compat",
+            "path": "SIGIL_COMPAT_V1_23.wad",
+            "size": 4634503,
+            "sha256": "a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5",
+            "keep": false
+          },
+          {
+            "id": "credits",
+            "path": "SIGIL_V1_23.txt",
+            "size": 5001,
+            "sha256": "d1445fb883296f69dde7dbd300032bb0c8804f6a6a4b944f8fbb5231bcb79b9e",
+            "keep": true
+          },
+          {
+            "id": "readme",
+            "path": "SIGIL_README_V1_23.txt",
+            "size": 10580,
+            "sha256": "9d3877d88eb49a0475300f465b1c2771c847ac0e83550d31c74de24018fbef6c",
+            "keep": true
+          }
+        ]
+      },
+      {
+        "id": "widehud",
+        "page": "https://github.com/NightFright2k19/doom_widehud",
+        "urls": [
+          "https://raw.githubusercontent.com/NightFright2k19/doom_widehud/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/iwad/doom_uwide.wad"
+        ],
+        "size": 23652,
+        "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+        "kind": "wad",
+        "idgames_path": null,
+        "members": [
+          {
+            "id": "statusbar",
+            "path": "doom_uwide.wad",
+            "size": 23652,
+            "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+            "keep": false
+          }
+        ]
+      }
+    ],
+    "components": [
+      {
+        "id": "main",
+        "label": "SIGIL",
+        "description": "Main episode/mapset with bundled MIDI music.",
+        "optional": false,
+        "default": true,
+        "position": 1,
+        "exclusive_group": null,
+        "replaces": null,
+        "user_supplied": false,
+        "obtain": null,
+        "known_sha256": [],
+        "members": [
+          {
+            "package": "free",
+            "member": "maps",
+            "role": "maps"
+          }
+        ]
+      },
+      {
+        "id": "compat",
+        "label": "Episode 3 compatibility WAD",
+        "description": "Replaces E3 instead of adding E5; DSDA-Doom supports the main UMAPINFO episode.",
+        "optional": true,
+        "default": false,
+        "position": 1,
+        "exclusive_group": "edition",
+        "replaces": "main",
+        "user_supplied": false,
+        "obtain": null,
+        "known_sha256": [],
+        "members": [
+          {
+            "package": "free",
+            "member": "compat",
+            "role": "maps"
+          }
+        ]
+      },
+      {
+        "id": "soundtrack",
+        "label": "Buckethead soundtrack",
+        "description": "Proposed paid soundtrack replacement; user supplied and unvalidated.",
+        "optional": true,
+        "default": false,
+        "position": 1,
+        "exclusive_group": "edition",
+        "replaces": "main",
+        "user_supplied": true,
+        "obtain": "Purchase the Buckethead soundtrack version through romero.com/sigil and import your purchased WAD. Filename/hash are unconfirmed; validate the replacement before play.",
+        "known_sha256": [],
+        "members": [
+          {
+            "package": null,
+            "member": null,
+            "role": "maps"
+          }
+        ]
+      },
+      {
+        "id": "wide-status-bar",
+        "label": "Widescreen status bar",
+        "description": "Optional widescreen (wide-aspect) base-game Doom/Doom II status bar from NightFright and contributors' doom_widehud (GPL-3.0); SIGIL ships no status-bar graphics of its own. Loads after the mapset and any gameplay add-on.",
+        "optional": true,
+        "default": true,
+        "position": 2,
+        "exclusive_group": null,
+        "replaces": null,
+        "user_supplied": false,
+        "obtain": null,
+        "known_sha256": [],
+        "members": [
+          {
+            "package": "widehud",
+            "member": "statusbar",
+            "role": "graphics"
+          }
+        ]
+      }
+    ],
+    "compatibility": {
+      "family": "limit-removing",
+      "complevel": "vanilla",
+      "engine": {
+        "range": "=0.30.1",
+        "status": "inspected"
+      },
+      "runtime": {
+        "warp": null,
+        "pistol_start": null
+      }
+    },
+    "verification": {
+      "status": "inspected",
+      "tester": "DDL desk research",
+      "date": "2026-10-16",
+      "engine_version": "0.30.1",
+      "inspected": [
+        "docs/research/reference-sigil.md §1–§5",
+        "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source",
+        "Cacowards 2019 runner-up: https://www.doomworld.com/cacowards/2019/"
+      ],
+      "notes": "Confirmed archive/member identities and source inspection. Complevel vanilla; no gameplay test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_V1_23.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered.",
+      "limitations": [
+        "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.",
+        "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."
+      ]
+    }
+  },
+  "manifest": {
+    "schema_version": 1,
+    "recipe_id": "sigil",
+    "release": "1.23",
+    "recipe_sha256": "36e30ab13f8643960829af5a6d005325b4ae38b5f89792961364ccb6b4ba3d1b",
+    "installed_at": 1700000000,
+    "packages": [
+      {
+        "id": "free",
+        "sha256": "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105",
+        "size": 3270225
+      },
+      {
+        "id": "widehud",
+        "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+        "size": 23652
+      }
+    ],
+    "members": [
+      {
+        "package": "free",
+        "member": "maps",
+        "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_V1_23.wad",
+        "size": 4640555,
+        "sha256": "29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d",
+        "keep": false
+      },
+      {
+        "package": "free",
+        "member": "compat",
+        "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_COMPAT_V1_23.wad",
+        "size": 4634503,
+        "sha256": "a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5",
+        "keep": false
+      },
+      {
+        "package": "free",
+        "member": "credits",
+        "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_V1_23.txt",
+        "size": 5001,
+        "sha256": "d1445fb883296f69dde7dbd300032bb0c8804f6a6a4b944f8fbb5231bcb79b9e",
+        "keep": true
+      },
+      {
+        "package": "free",
+        "member": "readme",
+        "path": "/ddl-fixture/data/library/sigil/generations/fixture/free/SIGIL_README_V1_23.txt",
+        "size": 10580,
+        "sha256": "9d3877d88eb49a0475300f465b1c2771c847ac0e83550d31c74de24018fbef6c",
+        "keep": true
+      },
+      {
+        "package": "widehud",
+        "member": "statusbar",
+        "path": "/ddl-fixture/data/library/sigil/generations/fixture/widehud/doom_uwide.wad",
+        "size": 23652,
+        "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+        "keep": false
+      }
+    ]
+  },
+  "previous_recipe": {
+    "schema_version": 1,
+    "id": "sigil",
+    "title": "SIGIL",
+    "authors": [
+      "John Romero"
+    ],
+    "release": "1.23",
+    "page": "https://romero.com/sigil",
+    "description": "Episode 5 for DOOM, with a MIDI soundtrack and an optional Episode 3 compatibility replacement.",
+    "permission": "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits.",
+    "tags": [
+      "featured",
+      "classics",
+      "cacowards",
+      "episode"
+    ],
+    "screenshots": [
+      {
+        "asset": "sigil/01.jpg",
+        "credit": "John Romero"
+      },
+      {
+        "asset": "sigil/02.jpg",
+        "credit": "John Romero"
+      }
+    ],
+    "images": [],
+    "base_game": {
+      "game": "doom",
+      "variants": [
+        "doom-1.9ud"
+      ]
+    },
+    "packages": [
+      {
+        "id": "free",
+        "page": "https://romero.com/sigil",
+        "urls": [
+          "https://romero.com/s/SIGIL_V1_23-8fh4.zip"
+        ],
+        "size": 3270225,
+        "sha256": "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105",
+        "kind": "zip",
+        "idgames_path": null,
+        "members": [
+          {
+            "id": "maps",
+            "path": "SIGIL_V1_23.wad",
+            "size": 4640555,
+            "sha256": "29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d",
+            "keep": false
+          },
+          {
+            "id": "compat",
+            "path": "SIGIL_COMPAT_V1_23.wad",
+            "size": 4634503,
+            "sha256": "a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5",
+            "keep": false
+          },
+          {
+            "id": "credits",
+            "path": "SIGIL_V1_23.txt",
+            "size": 5001,
+            "sha256": "d1445fb883296f69dde7dbd300032bb0c8804f6a6a4b944f8fbb5231bcb79b9e",
+            "keep": true
+          },
+          {
+            "id": "readme",
+            "path": "SIGIL_README_V1_23.txt",
+            "size": 10580,
+            "sha256": "9d3877d88eb49a0475300f465b1c2771c847ac0e83550d31c74de24018fbef6c",
+            "keep": true
+          }
+        ]
+      },
+      {
+        "id": "widehud",
+        "page": "https://github.com/NightFright2k19/doom_widehud",
+        "urls": [
+          "https://raw.githubusercontent.com/NightFright2k19/doom_widehud/eb3773ce9e4563c69a092386bf2e4f8d740dfd4d/iwad/doom_uwide.wad"
+        ],
+        "size": 23652,
+        "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+        "kind": "wad",
+        "idgames_path": null,
+        "members": [
+          {
+            "id": "statusbar",
+            "path": "doom_uwide.wad",
+            "size": 23652,
+            "sha256": "e1d29d0ed7db6e7adbac97ffd34018cb35c26d8fb607ba7d57f7a1155f46d0c5",
+            "keep": false
+          }
+        ]
+      }
+    ],
+    "components": [
+      {
+        "id": "main",
+        "label": "SIGIL",
+        "description": "Main episode/mapset with bundled MIDI music.",
+        "optional": false,
+        "default": true,
+        "position": 1,
+        "exclusive_group": null,
+        "replaces": null,
+        "user_supplied": false,
+        "obtain": null,
+        "known_sha256": [],
+        "members": [
+          {
+            "package": "free",
+            "member": "maps",
+            "role": "maps"
+          }
+        ]
+      },
+      {
+        "id": "compat",
+        "label": "Episode 3 compatibility WAD",
+        "description": "Replaces E3 instead of adding E5; DSDA-Doom supports the main UMAPINFO episode.",
+        "optional": true,
+        "default": false,
+        "position": 1,
+        "exclusive_group": "edition",
+        "replaces": "main",
+        "user_supplied": false,
+        "obtain": null,
+        "known_sha256": [],
+        "members": [
+          {
+            "package": "free",
+            "member": "compat",
+            "role": "maps"
+          }
+        ]
+      },
+      {
+        "id": "soundtrack",
+        "label": "Buckethead soundtrack",
+        "description": "Proposed paid soundtrack replacement; user supplied and unvalidated.",
+        "optional": true,
+        "default": false,
+        "position": 1,
+        "exclusive_group": "edition",
+        "replaces": "main",
+        "user_supplied": true,
+        "obtain": "Purchase the Buckethead soundtrack version through romero.com/sigil and import your purchased WAD. Filename/hash are unconfirmed; validate the replacement before play.",
+        "known_sha256": [],
+        "members": [
+          {
+            "package": null,
+            "member": null,
+            "role": "maps"
+          }
+        ]
+      },
+      {
+        "id": "wide-status-bar",
+        "label": "Widescreen status bar",
+        "description": "Optional widescreen (wide-aspect) base-game Doom/Doom II status bar from NightFright and contributors' doom_widehud (GPL-3.0); SIGIL ships no status-bar graphics of its own. Loads after the mapset and any gameplay add-on.",
+        "optional": true,
+        "default": true,
+        "position": 2,
+        "exclusive_group": null,
+        "replaces": null,
+        "user_supplied": false,
+        "obtain": null,
+        "known_sha256": [],
+        "members": [
+          {
+            "package": "widehud",
+            "member": "statusbar",
+            "role": "graphics"
+          }
+        ]
+      }
+    ],
+    "compatibility": {
+      "family": "limit-removing",
+      "complevel": "vanilla",
+      "engine": {
+        "range": "=0.30.1",
+        "status": "inspected"
+      },
+      "runtime": {
+        "warp": null,
+        "pistol_start": null
+      }
+    },
+    "verification": {
+      "status": "inspected",
+      "tester": "DDL desk research",
+      "date": "2026-10-16",
+      "engine_version": "0.30.1",
+      "inspected": [
+        "docs/research/reference-sigil.md §1–§5",
+        "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source",
+        "Cacowards 2019 runner-up: https://www.doomworld.com/cacowards/2019/"
+      ],
+      "notes": "Confirmed archive/member identities and source inspection. Complevel vanilla; no gameplay test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_V1_23.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered.",
+      "limitations": [
+        "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.",
+        "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."
+      ]
+    }
+  },
+  "pending_profiles": [],
+  "notices": [],
+  "retired_dirs": [],
+  "uninstalled": false
+}

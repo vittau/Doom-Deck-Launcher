@@ -4821,7 +4821,15 @@ mod release_state_tests {
     #[test]
     fn release_state_trees_remain_readable() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/state");
-        for tag in ["v0.0.5-screens.1", "v0.0.6-local", "v0.0.7-deck"] {
+        let required_tags = [
+            "v0.0.5-screens.1",
+            "v0.0.6-local",
+            "v0.0.7-deck",
+            "v0.0.8-upgrade",
+            "v0.0.9-focus",
+            "v0.0.10-audio",
+        ];
+        for tag in required_tags {
             assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
         }
         let mut tags = fs::read_dir(&root)
@@ -4834,7 +4842,7 @@ mod release_state_tests {
             .collect::<Vec<_>>();
         tags.sort();
         assert!(
-            tags.len() >= 3,
+            tags.len() >= required_tags.len(),
             "release fixtures must never be silently removed"
         );
         for tree in tags {
@@ -4854,6 +4862,20 @@ mod release_state_tests {
             let services = Services::open(env.clone()).unwrap_or_else(|e| panic!("{tag}: {e}"));
             let snapshot = services.snapshot().unwrap_or_else(|e| panic!("{tag}: {e}"));
             assert_eq!(snapshot.engine.unwrap().version, "0.30.1", "{tag}");
+            assert!(
+                snapshot.config_usable,
+                "{tag}: provisioned DSDA config remains usable"
+            );
+            assert_eq!(
+                snapshot.config_version,
+                match tag {
+                    "v0.0.5-screens.1" | "v0.0.6-local" => "1",
+                    "v0.0.7-deck" => "3",
+                    "v0.0.8-upgrade" | "v0.0.9-focus" => "4",
+                    _ => "5",
+                },
+                "{tag}: saved DSDA baseline is preserved"
+            );
             assert_eq!(
                 services.state.folders,
                 [
@@ -4886,8 +4908,11 @@ mod release_state_tests {
                     .find(|p| p.id == "fixture-auger-zenith")
                     .unwrap()
                     .skill,
-                3,
-                "old default skill is preserved"
+                match tag {
+                    "v0.0.5-screens.1" | "v0.0.6-local" | "v0.0.7-deck" => 3,
+                    _ => 4,
+                },
+                "saved default skill is preserved for {tag}"
             );
             assert_eq!(auger.profile.components, ["alternate-blaster"]);
             assert!(auger.favorite);
@@ -4920,6 +4945,26 @@ mod release_state_tests {
             if let Some(setup) = snapshot.custom.first() {
                 assert_eq!(setup.name, "My custom setup");
             }
+            let has_audio = tag == "v0.0.10-audio";
+            assert_eq!(tree.join("config/audio.json").is_file(), has_audio, "{tag}");
+            assert_eq!(
+                services.soundfonts.preferences().unwrap().choice,
+                has_audio.then_some(Choice::Default),
+                "{tag}: explicit audio choice is preserved"
+            );
+            assert_eq!(
+                snapshot.audio.choice,
+                has_audio.then_some(Choice::Default),
+                "{tag}"
+            );
+            assert!(
+                !snapshot.audio.installed,
+                "{tag}: no font payload is bundled"
+            );
+            assert!(
+                snapshot.audio.warning.is_none(),
+                "{tag}: audio preferences readable"
+            );
             // Saving loaded state emits only the current shape and is atomic.
             let temp = tempfile::tempdir().unwrap();
             let path = temp.path().join("app.json");

@@ -4,13 +4,19 @@ These trees were serialized by the real tagged Rust code, offline, using a test
 injected into `services.rs` in detached git worktrees under this worker's
 `.scratch/`. No JSON was authored by hand. `generate.rs` is the scenario;
 `generate.py <tag>` creates the scratch checkout and invokes only that scenario.
-The original serializers and types remain unchanged.
+The original serializers and types remain unchanged. Cargo runs offline and
+locked, with two build jobs and two test threads; `CARGO_TARGET_DIR` can point
+to an existing build cache. Remove the detached `.scratch/<tag>` git worktree
+after generation (`git worktree remove --force .scratch/<tag>`).
 
 | Tag | Commit | Scenario difference |
 | --- | --- | --- |
 | v0.0.5-screens.1 | 9187df3 | No custom setups: this tag predates that feature (coordinator-approved exception). |
 | v0.0.6-local | c5c1294 | Includes one custom setup. |
 | v0.0.7-deck | 716bee5 | Includes one custom setup and this tag's DSDA baseline. |
+| v0.0.8-upgrade | 99258bb | Profile default skill 4; DSDA baseline 4. |
+| v0.0.9-focus | f452c13 | Same scenario, profile default skill 4 and DSDA baseline 4. |
+| v0.0.10-audio | d1a39cc | Profile default skill 4, DSDA baseline 5, component dependency metadata and explicit Default audio choice. |
 
 Each config/data state tree contains a registered engine, two IWAD folder
 references and registry entries, two installed recipe snapshots with active and
@@ -28,6 +34,12 @@ all `v*` directories and opens them through production `Services::open` and
 `snapshot`, then checks the preserved player choices, engine, registry,
 installed generations, and current-shape save. Resolver failures for absent
 synthetic content are expected and do not erase installed metadata.
+
+`config/audio.json` first exists in the v0.0.10 fixture. The scenario calls that
+tag's production `Soundfonts::select(Choice::Default)` serializer, so the guard
+checks an explicit choice survives loading. Earlier tags predate audio
+preferences and correctly load with no explicit choice. No soundfont is
+installed or bundled, and no download/engine/UI code is run.
 
 For a new release, review and update the generator for that tag, generate a new
 tree without changing existing ones, then run this guard. Keep the scenario's
