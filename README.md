@@ -20,7 +20,9 @@ Built in Rust and [Slint](https://slint.dev).
 | Play setup | Mapset detail |
 | ![Play setup with component choices and load order](docs/screenshots/play-setup.png) | ![Mapset detail with tags and favorite](docs/screenshots/mapset-detail.png) |
 
-*Headless renders of the real UI with sample state; artwork is original mood art.*
+![Audio settings with the default MIDI soundfont and optional Arachno download](docs/screenshots/audio-settings.png)
+
+*1280×800 off-screen renders of the real Slint UI with sample state, refreshed from the current source. Original DDL interface artwork; embedded map imagery belongs to its respective creators ([credits](packaging/flatpak/site/credits.html)). Audio shows the built-in default and optional Arachno download, not an installed soundfont.*
 Click an image to inspect it at 1280×800.
 
 ## Features

@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SITE = ROOT / "packaging/flatpak/site"
 ASSETS = {
     "style.css": SITE / "style.css",
-    "credits.html": SITE / "credits.html",
     "emblem-small.svg": ROOT / "crates/ddl/ui/assets/logo/emblem-small.svg",
+    "horizontal.svg": ROOT / "crates/ddl/ui/assets/logo/horizontal.svg",
     "icon.png": ROOT / "crates/ddl/ui/assets/logo/icon.png",
     "hero.png": ROOT / "docs/design/logo/steam/hero.png",
     "social-preview.png": ROOT / "docs/design/logo/social-preview.png",
@@ -28,7 +28,7 @@ ASSETS = {
     "Barlow-OFL.txt": ROOT / "crates/ddl/ui/assets/Barlow-OFL.txt",
     "PirataOne-OFL.txt": ROOT / "crates/ddl/ui/assets/PirataOne-OFL.txt",
     **{f"{name}.png": ROOT / f"docs/screenshots/{name}.png"
-       for name in ("home", "discover", "play-setup")},
+       for name in ("home", "discover", "play-setup", "mapset-detail", "audio-settings")},
 }
 
 
@@ -43,20 +43,29 @@ def render(output, version, published, app_id, site_base):
     url = urlsplit(site_base)
     if url.scheme != "https" or not url.netloc or url.query or url.fragment or url.username:
         raise ValueError("site base must be an absolute HTTPS URL without query or fragment")
-    html = (SITE / "index.html").read_text()
     values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base,
-                  STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16])
-    for key, value in values.items():
-        html = html.replace(f"@@{key}@@", escape(value, quote=True))
-    if re.search(r"@@[A-Z_]+@@", html):
-        raise ValueError("unresolved page template token")
+                  STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16],
+                  ICON_HASH=hashlib.sha256(ASSETS["icon.png"].read_bytes()).hexdigest()[:16])
+    values.update({name.removesuffix(".png").replace("-", "_").upper() + "_HASH":
+                   hashlib.sha256(source.read_bytes()).hexdigest()[:16]
+                   for name, source in ASSETS.items() if source.parent == ROOT / "docs/screenshots"})
+    pages = {}
+    for target, source in {"index.html": SITE / "index.html",
+                           "assets/credits.html": SITE / "credits.html"}.items():
+        html = source.read_text()
+        for key, value in values.items():
+            html = html.replace(f"@@{key}@@", escape(value, quote=True))
+        if re.search(r"@@[A-Z_]+@@", html):
+            raise ValueError("unresolved page template token")
+        pages[target] = html
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     assets = output / "assets"
     assets.mkdir(exist_ok=True)
     for name, source in ASSETS.items():
         shutil.copyfile(source, assets / name)
-    (output / "index.html").write_text(html)
+    for target, html in pages.items():
+        (output / target).write_text(html)
 
 
 def refresh(output, app_id, site_base):

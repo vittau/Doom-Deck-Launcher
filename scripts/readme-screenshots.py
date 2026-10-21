@@ -14,12 +14,14 @@ IMAGES = {
     '015-discover-all-favorite.png': 'discover.png',
     '010-play-setup-auger.png': 'play-setup.png',
     '015-detail-tags.png': 'mapset-detail.png',
+    '067-audio-settings.png': 'audio-settings.png',
 }
 # Each headless test writes under its own `DDL_HEADLESS_DIR/<case>/` (spec 027).
 PRODUCERS = (
     'headless::journeys::library_favorite_and_home',
     'headless::journeys::categories_favorites_and_screenshots',
     'headless::journeys::auger_options_and_components',
+    'headless::audio::audio_section_renders_and_selects_default',
 )
 
 
