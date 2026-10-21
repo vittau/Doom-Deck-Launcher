@@ -21,6 +21,7 @@ fn environment(home: &std::path::Path) -> Environment {
     Environment {
         paths,
         home: home.into(),
+        screen: None,
         test: None,
     }
     .without_catalog_auto_updates()

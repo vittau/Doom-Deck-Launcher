@@ -16,8 +16,8 @@ use crate::catalog::{
 };
 use crate::dsda_config::{ALLOWED_KEYS, DsdaConfigManager, Overrides};
 use crate::engines::dsda::{
-    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, Skill, ValidationError,
-    Warp,
+    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, ScreenSize, Skill,
+    ValidationError, Warp,
 };
 use crate::iwads::{CanonicalLinks, Game as IwadsGame, IwadTable, Registry, RegistryEntry};
 use crate::library::{InstallManifest, InstalledMember};
@@ -69,6 +69,14 @@ impl Resolution {
     #[must_use]
     pub fn plan(&self) -> &LaunchPlan {
         &self.plan
+    }
+
+    /// Adds the detected drawable size as the plan's transient `-width` /
+    /// `-height` (spec 064 R6); `None` keeps the config fallback.
+    #[must_use]
+    pub fn with_screen(mut self, screen: Option<ScreenSize>) -> Self {
+        self.plan.screen = screen;
+        self
     }
 
     /// The "Will launch" summary for the Play setup panel (spec 009, R6).
@@ -248,6 +256,7 @@ pub fn resolve(
         data_dir: dirs.data,
         shot_dir: dirs.shots,
         working_dir: dirs.run,
+        screen: None,
         assigns,
     };
 

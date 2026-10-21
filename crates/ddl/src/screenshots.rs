@@ -55,11 +55,33 @@ pub fn recipe_credits(recipe: &ddl_core::catalog::Recipe) -> Vec<&str> {
     credits
 }
 
-/// Every distinct credit in the bundled `SOURCES.toml` files, for About.
+/// Every distinct credit in the bundled `SOURCES.toml` files (test-only
+/// provenance: About no longer lists them, spec 064 R5).
+#[cfg(test)]
 #[must_use]
 pub fn all_credits() -> &'static [&'static str] {
     SCREENSHOT_CREDITS
 }
+
+/// The bundled menu/title art of a base game (spec 064, R3).
+///
+/// The owner allowed these original-game images as a narrow exception to
+/// D-020; the per-image `SOURCES.toml` keeps source, credit and provenance.
+/// `Nerve` is an add-on, not a launchable base game, and has no image.
+#[must_use]
+pub fn base_game(game: ddl_core::iwads::Game) -> &'static str {
+    match game {
+        ddl_core::iwads::Game::Doom => "assets/screenshots/base-doom/01.jpg",
+        ddl_core::iwads::Game::Doom2 => "assets/screenshots/base-doom2/01.jpg",
+        ddl_core::iwads::Game::Tnt => "assets/screenshots/base-tnt/01.jpg",
+        ddl_core::iwads::Game::Plutonia => "assets/screenshots/base-plutonia/01.jpg",
+        ddl_core::iwads::Game::Nerve => "",
+    }
+}
+
+/// The screenshot directory ids that belong to base games rather than recipes.
+#[cfg(test)]
+pub const BASE_GAME_IDS: &[&str] = &["base-doom", "base-doom2", "base-tnt", "base-plutonia"];
 
 #[cfg(test)]
 mod tests {
@@ -104,9 +126,27 @@ mod tests {
         }
         for (id, _) in EMBEDDED_SCREENSHOTS {
             assert!(
-                catalog.recipe(id).is_some(),
+                catalog.recipe(id).is_some() || BASE_GAME_IDS.contains(id),
                 "bundled screenshots for unknown recipe `{id}`"
             );
         }
+        // Every base game that can be launched has its menu art on disk, and
+        // the narrow D-020 exception keeps its credit beside the image.
+        for game in [
+            ddl_core::iwads::Game::Doom,
+            ddl_core::iwads::Game::Doom2,
+            ddl_core::iwads::Game::Tnt,
+            ddl_core::iwads::Game::Plutonia,
+        ] {
+            let asset = base_game(game);
+            assert!(!asset.is_empty(), "{game:?} has no base-game art");
+            assert!(ui.join(asset).is_file(), "missing asset {asset}");
+        }
+        assert_eq!(base_game(ddl_core::iwads::Game::Nerve), "");
+        assert!(
+            all_credits().contains(&"id Software"),
+            "base-game art must keep its credit: {:?}",
+            all_credits()
+        );
     }
 }

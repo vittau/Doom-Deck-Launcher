@@ -86,6 +86,7 @@ fn plan_for(tree: &TestDir, executable: &str) -> LaunchPlan {
         data_dir: tree.path().join("profile/data"),
         shot_dir: tree.path().join("profile/shots"),
         working_dir: tree.path().join("profile/run"),
+        screen: None,
         assigns: vec![AssignOverride::new("dsda_fps", "35")],
     }
 }

@@ -17,15 +17,16 @@
 # source and the first Deck test (spec 029, `docs/research/dsda-engine.md` §9).
 # The controller layout added in template v3 is the owner's own layout (spec 034);
 # its upstream defaults and button codes are transcribed in the same section.
-# Template v4 adds the owner's frame-pacing and look-sensitivity preset from the
-# first 0.0.7 Deck test (spec 056): VSync on, uncapped interpolation kept, and
-# both mouse look sensitivities at 5. Its evidence is in
-# `docs/research/dsda-engine.md` §10.
+# Template v2 added the Steam Deck video baseline (spec 029), v3 the controller
+# layout (spec 034), v4 the owner's frame-pacing and look-sensitivity preset
+# (spec 056) and v5 automatic aspect, the hardware renderer and the detected
+# launch resolution (spec 064, D-037). Their evidence is in
+# `docs/research/dsda-engine.md` §9 and §10.
 
 # Increments whenever the baseline changes; DDL uses it to detect a migration and
 # to name `<config dir>/dsda/base/<template_version>.cfg` (R3, R5). Kept as a
 # string so a future `1.1` needs no schema change.
-template_version = "4"
+template_version = "5"
 
 # DSDA-Doom versions this template was written and checked against. Pinned to the
 # one researched tagged release; see `docs/research/dsda-engine.md` (v0.30.1,
@@ -67,16 +68,18 @@ mouse_sensitivity_mlook = 10
 swap_analogs = 0
 invert_analog_look = 0
 
-# --- Steam Deck video baseline (spec 029, R4) --------------------------------
+# --- Steam Deck video baseline (spec 029, R4; spec 064, R6) ------------------
 # Desktop fullscreen on the Deck's 1280×800 panel. `use_fullscreen` is 0
 # (windowed) upstream; DDL turns it on, while `exclusive_fullscreen` stays 0 so
 # gamescope can composite it (a mode change is not wanted).
 # [configuration.c:1177-1184]
 use_fullscreen = 1
 exclusive_fullscreen = 0
-# Force 16:10 widescreen rendering (the Deck panel's aspect) so the widescreen
-# status bars of spec 017 have room; value 2 is 16:10 [v_video.c:1357-1376].
-render_aspect = 2
+# Keep the panel's derived aspect (Auto). `0` = Auto, `1` = 16:9, `2` = 16:10,
+# `3` = 4:3 and `4` = 5:4 [v_video.c:1357-1376]. Auto follows the resolution
+# DDL passes for the actual display (spec 064 R6), so the same config is correct
+# on the Deck panel and on an external TV.
+render_aspect = 0
 # Scale the status bar / HUD to the full screen width (`patch_stretch_fit_to_width`
 # = 2) so the wide STBAR fills the panel edge to edge [stretch.h:41-52].
 render_stretch_hud = 2
@@ -95,9 +98,18 @@ render_vsync = 1
 uncapped_framerate = 1
 
 # String keys: the native render resolution. DSDA parses `WIDTHxHEIGHT` and uses
-# it in fullscreen [i_video.c:736-758]; the Deck panel is 1280×800.
+# it in fullscreen [i_video.c:736-758]; the Deck panel is 1280×800. This is the
+# fallback: a detected fullscreen drawable size is passed per launch as transient
+# `-width`/`-height` tokens, so an external TV is used at its own resolution
+# (spec 064 R6).
+# The renderer is DSDA's hardware OpenGL path (`"OpenGL"`; `"Software"` is the
+# upstream default and any unrecognised string falls back to software)
+# [i_video.c:1003-1013; m_menu.c:3463-3468]. The owner accepts the fidelity
+# tradeoff for high resolutions and external displays (D-037; CPU-power
+# measurement on a Deck at 1080p/120 fps is owner-reported, 2026-10-21).
 [strings]
 screen_resolution = "1280x800"
+videomode = "OpenGL"
 
 # DSDA-Doom v0.30.1 upstream defaults for the value keys that are new in this
 # template version. The three-way merge (spec 005, R5) uses them exactly like a
@@ -109,6 +121,13 @@ screen_resolution = "1280x800"
 uncapped_framerate = 1
 mouse_sensitivity_vert = 1
 render_vsync = 0
+
+# The same rule for string keys: `videomode` is new in v5 and DSDA writes its own
+# "Software" default into the active file after a run. That is not a player
+# choice, so it migrates to the template's OpenGL; an explicit other value stays
+# and is reported (spec 064, R7).
+[upstream_strings]
+videomode = "Software"
 
 # --- Steam Deck controller layout (spec 034, R2) -----------------------------
 #
