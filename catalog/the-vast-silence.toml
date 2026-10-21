@@ -7,7 +7,7 @@ release = "2024-02-04"
 page = "https://doomer.boards.net/thread/3489/silence"
 description = "DOOM II: MAP01–MAP14 (14 maps). You're the last recon in this episode set in the DOOM64: Absolution universe."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/the-vast-silence/ with source and credit in SOURCES.toml

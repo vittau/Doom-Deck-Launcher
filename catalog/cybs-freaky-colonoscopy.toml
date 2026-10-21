@@ -7,7 +7,7 @@ release = "2019-10-05"
 page = "https://dsdarchive.com/wads/dbp16_v0_99a"
 description = "DOOM II: MAP01–MAP12 (12 maps). Did you know that Ass Demons are one of the leading causes of death for cybernetically enhanced demons over 3,000 eons of age?."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/cybs-freaky-colonoscopy/ with source and credit in SOURCES.toml

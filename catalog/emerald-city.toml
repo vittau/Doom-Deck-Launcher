@@ -7,7 +7,7 @@ release = "2022-08-01"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp50"
 description = "DOOM II: MAP01–MAP16 (16 maps). The lost remains of Emerald city have been overtaken by nature. But that's not the only inhabitants left behind."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/emerald-city/ with source and credit in SOURCES.toml

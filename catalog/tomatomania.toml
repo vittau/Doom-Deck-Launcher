@@ -7,7 +7,7 @@ release = "2021-02-24"
 page = "https://doomer.boards.net/thread/2035/dbp32-tomatomania"
 description = "DOOM II: MAP01–MAP13 (13 maps). A stressful errand sends Doomguy into a reality-destroying anxiety spiral. Old sights and familiar foes meld in a haze that can only be described as... TOMATOMANIA!."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 [base_game]
 game = "doom2"

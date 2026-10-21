@@ -7,7 +7,7 @@ release = "2020-10-01"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp28"
 description = "DOOM II: MAP01–MAP10 (10 maps). Due to a plague of photosensitivity caused by cheap gas station cheese and retinal parasites, we've had to enforce a strict low-light policy for the sake of our staff. That won't be a problem, right?."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/fear-and-loathing/ with source and credit in SOURCES.toml

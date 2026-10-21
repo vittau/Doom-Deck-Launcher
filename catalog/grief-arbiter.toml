@@ -7,7 +7,7 @@ release = "2025-03-01"
 page = "https://doomer.boards.net/thread/3908/grief-arbiter"
 description = "DOOM II: MAP01–MAP08 (8 maps). Calcified remains of the deceased formed these cold cement structures in the cosmic void."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects", "episode"]
+tags = ["community-projects", "doomer-boards", "episode"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/grief-arbiter/ with source and credit in SOURCES.toml

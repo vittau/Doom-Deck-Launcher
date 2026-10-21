@@ -7,7 +7,7 @@ release = "2023-10-01"
 page = "https://doomer.boards.net/thread/3364/haunting-hollow"
 description = "DOOM II: MAP01–MAP11 (11 maps). The lost village of Lodewood has fallen victim to the creatures of the night."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 # Bundled screenshot(s) (spec 023, D-024): the image lives under
 # crates/ddl/ui/assets/screenshots/haunting-hollow/ with source and credit in SOURCES.toml

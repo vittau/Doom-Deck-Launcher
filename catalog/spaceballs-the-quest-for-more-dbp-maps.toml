@@ -7,7 +7,7 @@ release = "2020-05-31"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp24_sb"
 description = "DOOM II: MAP01–MAP10 (10 maps). Screening now in reputable forums near you. Grab your popcorn and helmets and play it soon!."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
-tags = ["community-projects"]
+tags = ["community-projects", "doomer-boards"]
 
 [base_game]
 game = "doom2"
