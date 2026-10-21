@@ -354,6 +354,7 @@ pub(super) fn scene() -> Scene {
         // the test thread is starved under load (spec 024, R4). A longer
         // test-only timeout makes the gate — not the timer — decide the outcome.
         engine_response_timeout: Some(Duration::from_secs(120)),
+        soundfont_members: None,
     });
     let env = Environment {
         paths: paths.clone(),
@@ -1212,14 +1213,14 @@ pub(super) fn settings_rows(scene: &Scene, capture: Captures) {
         "On"
     );
     for (focus, name) in [
-        (2, "010-settings-folders.png"),
-        (3, "010-settings-config.png"),
-        (4, "010-settings-diagnostics.png"),
+        (3, "010-settings-folders.png"),
+        (4, "010-settings-config.png"),
+        (5, "010-settings-diagnostics.png"),
     ] {
         state.borrow_mut().focus = focus;
         state.borrow_mut().sync(ui);
         capture(name);
-        if focus == 4 {
+        if focus == 5 {
             assert!(ui.get_nodes().iter().any(|n| n.kind == 10));
             let credit = ui
                 .get_nodes()
@@ -1272,7 +1273,7 @@ pub(super) fn settings_rows(scene: &Scene, capture: Captures) {
     }
     // Spec 021 A3: the opt-in Settings row renders (existing Ember row) and
     // persists, defaulting off.
-    state.borrow_mut().focus = 2;
+    state.borrow_mut().focus = 3;
     state.borrow_mut().sync(ui);
     let row = ui
         .get_nodes()
@@ -1395,7 +1396,7 @@ pub(super) fn engine_updates_and_dialogs(scene: &Scene, capture: Captures) {
         "0.30.1"
     );
 
-    ui.invoke_clicked(3);
+    ui.invoke_clicked(4);
     ui.invoke_clicked(70);
     capture("010-reset-dialog.png");
     press(window, Key::Return);
@@ -1410,7 +1411,7 @@ pub(super) fn engine_updates_and_dialogs(scene: &Scene, capture: Captures) {
             .next()
             .is_some()
     );
-    ui.invoke_clicked(2);
+    ui.invoke_clicked(3);
     ui.invoke_clicked(100);
     assert!(ui.get_sheet_open());
     capture("010-remove-folder-dialog.png");

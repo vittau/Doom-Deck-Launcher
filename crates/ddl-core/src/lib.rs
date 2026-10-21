@@ -24,3 +24,4 @@ pub mod local;
 pub mod platform;
 pub mod profiles;
 pub mod resolver;
+pub mod soundfonts;

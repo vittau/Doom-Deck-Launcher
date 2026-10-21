@@ -27,6 +27,7 @@ use ddl_core::{
     },
     profiles::{Profile, ProfileStore},
     resolver::{self, Blocker, Summary},
+    soundfonts::{self, Choice, Soundfonts},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -59,6 +60,9 @@ pub enum Problem {
     /// The engine could not start because the host runtime is missing something
     /// (spec 014 follow-up).
     EngineRuntime(dsda::RuntimeError),
+    /// Spec 067 R5: the explicit Audio choice could not be applied to the DSDA
+    /// config, so the launch must not silently use a different font/backend.
+    Audio,
     Local(String),
     LocalFile(PathBuf, bool),
     /// Spec 059 R4: the host has this path but the Flatpak cannot open it.
@@ -103,6 +107,9 @@ impl fmt::Display for Problem {
                 f.write_str("another DDL process is changing DDL's state; close it and try again")
             }
             Self::EngineRuntime(runtime) => write!(f, "{runtime}"),
+            Self::Audio => f.write_str(
+                "the MIDI soundfont setting could not be applied; check Settings → Audio and try again",
+            ),
         }
     }
 }
@@ -224,6 +231,33 @@ fn identity_issue(issue: local::IdentityError) -> (PathBuf, bool) {
     }
 }
 
+/// Why a launch could not enter the guarded engine run (spec 067, R5).
+#[derive(Debug)]
+enum RunStartError {
+    /// The explicit Audio choice could not be applied.
+    Audio(Problem),
+    /// Another engine run owns the guard.
+    Guard(ddl_core::dsda_config::GuardError),
+}
+
+impl std::fmt::Display for RunStartError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Audio(problem) => write!(f, "{problem}"),
+            Self::Guard(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl RunStartError {
+    fn into_problem(self) -> Problem {
+        match self {
+            Self::Audio(problem) => problem,
+            Self::Guard(error) => logged(Problem::Config, error),
+        }
+    }
+}
+
 fn logged(kind: Problem, error: impl std::fmt::Display) -> Problem {
     tracing::warn!(%error, ?kind, "application operation failed");
     kind
@@ -246,6 +280,18 @@ fn install_error(error: ddl_core::library::InstallError) -> Problem {
         _ => Problem::State,
     };
     logged(kind, error)
+}
+/// Spec 067 R2: map the soundfont installer's failure classes onto the existing
+/// actionable problem text (cancel, network, checksum, unsafe archive, storage).
+fn soundfont_problem(kind: soundfonts::Kind) -> Problem {
+    match kind {
+        soundfonts::Kind::Cancelled => Problem::Cancelled,
+        soundfonts::Kind::Network => Problem::Network,
+        soundfonts::Kind::Checksum => Problem::Checksum,
+        soundfonts::Kind::UnsafeArchive => Problem::UnsafeArchive,
+        soundfonts::Kind::Storage => Problem::Storage,
+        soundfonts::Kind::State => Problem::State,
+    }
 }
 
 /// The wall clock, in UTC Unix seconds (spec 019 R5 throttle).
@@ -440,7 +486,22 @@ pub struct Snapshot {
     pub config_notice: bool,
     pub config_usable: bool,
     pub config_version: String,
+    /// Spec 067: the optional MIDI soundfont choice and install state.
+    pub audio: AudioState,
     pub logs: PathBuf,
+}
+/// Spec 067 R1/R2/R4: what Settings → Audio shows without hashing on every
+/// snapshot. `None` means no explicit choice, so the engine's own configuration
+/// is preserved and honestly described by [`Self::current`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AudioState {
+    pub choice: Option<Choice>,
+    /// A reviewed installation is published (cheap pointer/size/symlink check).
+    pub installed: bool,
+    /// What the engine's active configuration currently holds.
+    pub current: soundfonts::engine::Current,
+    /// Selected but missing/damaged, or unreadable audio preferences.
+    pub warning: Option<String>,
 }
 /// The catalog the app is using, for Settings and `ddl catalog status`
 /// (spec 019, R5).
@@ -518,6 +579,11 @@ pub enum Command {
     },
     /// Spec 019 R5: persist the "Automatic catalog updates" toggle.
     SetCatalogAutoUpdate(bool),
+    /// Spec 067 R2: download and verify the reviewed Arachno archive without
+    /// selecting it.
+    InstallSoundfont,
+    /// Spec 067 R4: persist an explicit Audio choice.
+    SelectSoundfont(Choice),
 }
 
 impl Command {
@@ -594,6 +660,8 @@ pub struct TestEnvironment {
     /// engine-download fixture, so a starved test thread cannot trip the
     /// production 15 s timeout. `None` keeps production behaviour.
     pub engine_response_timeout: Option<std::time::Duration>,
+    /// Spec 067: reviewed-member override for a tiny offline install fixture.
+    pub soundfont_members: Option<Vec<ddl_core::downloads::MemberRequest>>,
 }
 
 pub struct Services {
@@ -614,6 +682,8 @@ pub struct Services {
     custom: SetupStore,
     /// Spec 059: the sandbox DDL runs in; `Sandbox::none()` outside Flatpak.
     sandbox: Sandbox,
+    /// Spec 067: optional reviewed MIDI soundfonts.
+    soundfonts: Soundfonts,
 }
 /// Where the effective catalog came from (spec 019, R4).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -913,6 +983,7 @@ impl Services {
             }
             Err(e) => return Err(logged(Problem::State, e)),
         };
+        let soundfonts = Self::soundfonts_for(&env);
         Ok(Self {
             env,
             catalog,
@@ -926,7 +997,18 @@ impl Services {
             profiles,
             custom,
             sandbox,
+            soundfonts,
         })
+    }
+    /// Spec 067: production uses the reviewed author archive; test-support may
+    /// substitute a tiny verified fixture so offline UI/service tests can cover
+    /// installed and selected states.
+    fn soundfonts_for(env: &Environment) -> Soundfonts {
+        #[cfg(test)]
+        if let Some(members) = env.test.as_ref().and_then(|t| t.soundfont_members.clone()) {
+            return Soundfonts::with_members(&env.paths, members);
+        }
+        Soundfonts::new(&env.paths)
     }
     fn save(&self) -> Result<(), Problem> {
         save_json(&self.env.paths.config.join("app.json"), &self.state)?;
@@ -1554,9 +1636,76 @@ impl Services {
             config_usable: config.is_some()
                 && fs::read_to_string(self.config.active_path()).is_ok(),
             config_version: config.map_or_else(String::new, |s| s.template_version),
+            audio: self.audio_state(),
             logs: self.env.paths.state.join("logs"),
             catalog: self.catalog_info(),
         })
+    }
+
+    /// Spec 067 R1/R2/R4: the Settings snapshot without a full font hash.
+    ///
+    /// `install_present` only checks the published pointer, reviewed sizes and
+    /// symlinks. A selected Arachno font is verified through the metadata-keyed
+    /// cache so a damaged file surfaces before launch; every launch still hashes
+    /// again on the worker.
+    fn audio_state(&self) -> AudioState {
+        let preferences = self.soundfonts.preferences();
+        let (choice, mut warning) = match &preferences {
+            Ok(preferences) => (preferences.choice, None),
+            Err(_) => (
+                None,
+                Some(soundfonts::UNREADABLE_PREFERENCES_WARNING.to_owned()),
+            ),
+        };
+        if warning.is_none()
+            && choice == Some(Choice::Arachno)
+            && self.soundfonts.cached_font().is_err()
+        {
+            warning = Some(soundfonts::MISSING_FONT_WARNING.to_owned());
+        }
+        let current = fs::read_to_string(self.config.active_path())
+            .map(|text| {
+                soundfonts::engine::current(&ddl_core::dsda_config::format::Document::parse(&text))
+            })
+            .unwrap_or(soundfonts::engine::Current::Default);
+        AudioState {
+            choice,
+            installed: self.soundfonts.install_present(),
+            current,
+            warning,
+        }
+    }
+
+    /// Applies the persisted Audio choice just before the run guard is acquired
+    /// (spec 067, R5), so every launch route uses it and no running engine is
+    /// changed. `None` preserves whatever backend/font the engine holds.
+    ///
+    /// A missing/damaged Arachno install is an intentional Default fallback
+    /// (`effective()` reports it in Settings), but a real write/path failure
+    /// must abort the launch: starting the game anyway would silently use a
+    /// different font or backend than the selection claims.
+    fn prepare_audio(&self) -> Result<(), Problem> {
+        let effective = self.soundfonts.effective();
+        let Some(choice) = effective.choice else {
+            return Ok(());
+        };
+        let keys = soundfonts::engine::keys_for(choice, effective.path.as_deref())
+            .map_err(|error| logged(Problem::Audio, error))?;
+        self.config
+            .provision()
+            .map_err(|error| logged(Problem::Audio, error))?;
+        self.config
+            .apply_audio(&keys)
+            .map_err(|error| logged(Problem::Audio, error))?;
+        Ok(())
+    }
+
+    /// Every launch route prepares the Audio choice before taking the run guard
+    /// (spec 067, R5): a running engine is never changed, and no route can skip
+    /// the application.
+    fn begin_engine_run(&self) -> Result<ddl_core::dsda_config::RunGuard, RunStartError> {
+        self.prepare_audio().map_err(RunStartError::Audio)?;
+        self.config.run_guard().map_err(RunStartError::Guard)
     }
 
     /// The catalog in use and its automatic-update settings (spec 019, R5).
@@ -1770,6 +1919,18 @@ impl Services {
                 self.state.catalog_auto_update = enabled;
                 self.save()?;
             }
+            // Spec 067 R2: verification and atomic publication happen on this
+            // worker; the download never touches the current choice.
+            Command::InstallSoundfont => {
+                self.soundfonts
+                    .install(cancel, &mut |p| emit(Event::Progress(p)))
+                    .map_err(|e| logged(soundfont_problem(e.kind()), e))?;
+            }
+            Command::SelectSoundfont(choice) => {
+                self.soundfonts
+                    .select(choice)
+                    .map_err(|e| logged(soundfont_problem(e.kind()), e))?;
+            }
             Command::CatalogCheck { automatic } => {
                 match self.catalog_check(automatic, cancel) {
                     Ok(outcome) => emit(Event::Catalog(outcome)),
@@ -1934,9 +2095,8 @@ impl Services {
                 let recipe = self.recipe(&id)?;
                 let mut profile = self.profile(&recipe)?;
                 let guard = self
-                    .config
-                    .run_guard()
-                    .map_err(|e| logged(Problem::Config, e))?;
+                    .begin_engine_run()
+                    .map_err(RunStartError::into_problem)?;
                 let r = self
                     .resolve_launch(&recipe, &profile)
                     .map_err(|blocker| logged(Problem::State, blocker))?;
@@ -2767,8 +2927,7 @@ impl Services {
             .map_err(|_| CliFailure::message(format!("no catalog recipe with id `{id}`")))?;
         let profile = self.effective_profile(&recipe, overrides)?;
         let guard = self
-            .config
-            .run_guard()
+            .begin_engine_run()
             .map_err(|error| CliFailure::message(error.to_string()))?;
         let resolution = self
             .resolve_launch(&recipe, &profile)
@@ -2972,8 +3131,7 @@ impl Services {
     ) -> Result<dsda::LaunchOutcome, CliFailure> {
         let launch = self.base_resolution(id, overrides, accept_changes)?;
         let guard = self
-            .config
-            .run_guard()
+            .begin_engine_run()
             .map_err(|e| CliFailure::message(e.to_string()))?;
         {
             let _lock = self.lock_cli()?;
@@ -3332,8 +3490,7 @@ impl Services {
     ) -> Result<dsda::LaunchOutcome, CliFailure> {
         let custom = self.custom_resolution(id, profile_selector, accept_changes)?;
         let guard = self
-            .config
-            .run_guard()
+            .begin_engine_run()
             .map_err(|error| CliFailure::message(error.to_string()))?;
         {
             let _lock = self.lock_cli()?;
@@ -4407,6 +4564,10 @@ pub(crate) mod recipe_change_tests;
 pub(crate) mod uninstall_tests;
 
 #[cfg(test)]
+#[path = "audio_tests.rs"]
+mod audio_tests;
+
+#[cfg(test)]
 mod catalog_tests {
     use super::*;
     use ddl_core::catalog::Bundle;
@@ -4444,6 +4605,7 @@ mod catalog_tests {
                 reviewed: dsda::ReviewedList::embedded(),
                 runner: Arc::new(dsda::FakeEngineRunner::new(dsda::LaunchExit::Clean)),
                 engine_response_timeout: None,
+                soundfont_members: None,
             })),
         }
     }

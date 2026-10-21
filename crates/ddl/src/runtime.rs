@@ -15,6 +15,7 @@ use ddl_core::{
     downloads::{CancellationToken, InstallProgress, InstallStage},
     platform::{legacy_import::LegacyInstall, sandbox::Sandbox},
     resolver::Blocker,
+    soundfonts::{Choice, engine::Current},
 };
 use slint::{ComponentHandle, Model as _, ModelRc, SharedString, VecModel};
 use std::{
@@ -274,7 +275,10 @@ impl Runtime {
         self.retry = Some(command.clone());
         if matches!(
             command,
-            Command::InstallEngine(_) | Command::Install(_) | Command::UpdateMapset(_)
+            Command::InstallEngine(_)
+                | Command::Install(_)
+                | Command::UpdateMapset(_)
+                | Command::InstallSoundfont
         ) && self.screen != Screen::Progress
         {
             self.enter(Screen::Progress, 1);
@@ -437,6 +441,22 @@ impl Runtime {
                                     self.screen = self.return_to.0;
                                     self.focus = 2;
                                     self.history.pop();
+                                }
+                                // Spec 067 R2/R6: return to Audio with a valid
+                                // focus: Arachno once its install is published,
+                                // otherwise the Default row.
+                                Some(Command::InstallSoundfont) => {
+                                    self.screen = Screen::Settings;
+                                    self.settings_section = 1;
+                                    self.focus = if self
+                                        .snapshot
+                                        .as_ref()
+                                        .is_some_and(|s| s.audio.installed)
+                                    {
+                                        71
+                                    } else {
+                                        70
+                                    };
                                 }
                                 Some(Command::Scan(_) | Command::Choose(..)) => {
                                     self.screen = Screen::Review;
@@ -801,8 +821,8 @@ impl Runtime {
             return;
         }
         if self.focus == 801 {
-            self.enter(Screen::Settings, 4);
-            self.settings_section = 3;
+            self.enter(Screen::Settings, 5);
+            self.settings_section = 4;
             return;
         }
         if self.busy {
@@ -819,7 +839,7 @@ impl Runtime {
         match (self.screen, self.focus) {
             (Screen::FirstRun, 1) => self.start(ui, Command::InstallEngine("0.30.1".into())),
             (Screen::FirstRun, 2) | (Screen::Settings, 70)
-                if self.screen == Screen::FirstRun || self.settings_section == 1 =>
+                if self.screen == Screen::FirstRun || self.settings_section == 2 =>
             {
                 self.browse(ui, None)
             }
@@ -963,7 +983,7 @@ impl Runtime {
             (Screen::Setup, 1) => {
                 if self.snapshot.as_ref().is_some_and(|s| !s.config_usable) {
                     self.enter(Screen::Settings, 70);
-                    self.settings_section = 2;
+                    self.settings_section = 3;
                 } else if self.snapshot.as_ref().is_some_and(|s| s.engine.is_none()) {
                     self.start(ui, Command::InstallEngine("0.30.1".into()));
                 } else if let Some(Blocker::ComponentNotProvided { component, .. }) =
@@ -1110,7 +1130,7 @@ impl Runtime {
                 }
             }
             (Screen::Progress, 1) => self.show_sheet(Sheet::Cancel),
-            (Screen::Settings, 1..=4) => {
+            (Screen::Settings, 1..=5) => {
                 self.settings_section = (self.focus - 1) as usize;
                 self.focus = 70;
             }
@@ -1122,13 +1142,30 @@ impl Runtime {
                         self.start(ui, Command::Updates)
                     }
                 }
-                2 => self.show_sheet(Sheet::Reset),
+                1 => self.start(ui, Command::SelectSoundfont(Choice::Default)),
+                3 => self.show_sheet(Sheet::Reset),
                 _ => {}
             },
+            // Spec 067 R2/R4: Arachno is selectable only after a reviewed install;
+            // the action beside it downloads, reinstalls or retries without
+            // selecting automatically.
+            (Screen::Settings, 71) if self.settings_section == 1 => {
+                if self.snapshot.as_ref().is_some_and(|s| s.audio.installed) {
+                    self.start(ui, Command::SelectSoundfont(Choice::Arachno));
+                }
+            }
+            (Screen::Settings, 72) if self.settings_section == 1 => {
+                self.start(ui, Command::InstallSoundfont);
+            }
+            (Screen::Settings, 73) if self.settings_section == 1 => {
+                if osk::open_url(&osk::SystemLauncher, ddl_core::soundfonts::TERMS).is_err() {
+                    ui.invoke_show_toast(text(ui, T::AudioLinkFailed));
+                }
+            }
             (Screen::Settings, 71) if self.settings_section == 0 => {
                 self.start(ui, Command::Rollback)
             }
-            (Screen::Settings, 71) if self.settings_section == 1 => {
+            (Screen::Settings, 71) if self.settings_section == 2 => {
                 self.start(ui, Command::Scan(None))
             }
             (Screen::Settings, 72) if self.settings_section == 0 => {
@@ -1136,7 +1173,7 @@ impl Runtime {
                     self.start(ui, Command::InstallEngine(version.clone()));
                 }
             }
-            (Screen::Settings, 72) if self.settings_section == 1 => {
+            (Screen::Settings, 72) if self.settings_section == 2 => {
                 if let Some(s) = &self.snapshot {
                     self.start(
                         ui,
@@ -1153,7 +1190,7 @@ impl Runtime {
                     self.start(ui, Command::SetCatalogAutoUpdate(!s.catalog.auto_update));
                 }
             }
-            (Screen::Settings, id) if self.settings_section == 1 && id >= 1000 => {
+            (Screen::Settings, id) if self.settings_section == 2 && id >= 1000 => {
                 if let Some(folder) = self
                     .snapshot
                     .as_ref()
@@ -1165,7 +1202,7 @@ impl Runtime {
                 }
             }
             (Screen::Settings, 100..) => {
-                if self.settings_section == 1
+                if self.settings_section == 2
                     && let Some(path) = self
                         .snapshot
                         .as_ref()
@@ -1584,7 +1621,7 @@ impl Runtime {
         if !self.categories().contains(&self.category) {
             self.category = Category::All;
         }
-        if self.screen == Screen::Settings && (1..=4).contains(&self.focus) {
+        if self.screen == Screen::Settings && (1..=5).contains(&self.focus) {
             self.settings_section = (self.focus - 1) as usize;
         }
         let heading = if self.playing {
@@ -2721,7 +2758,7 @@ impl Runtime {
                     }
                 }
                 Screen::Settings => {
-                    b.panel(12., 12., 312., 360.);
+                    b.panel(12., 12., 312., 424.);
                     // Spec 064 R5: About keeps author, repository and asset
                     // licences, not the long screenshot-credit list.
                     // Spec 059: the engine version, the sandbox line and, under
@@ -2730,7 +2767,8 @@ impl Runtime {
                     let hidden = self.snapshot.as_ref().map_or(0, |s| s.hidden_paths.len());
                     let height: f32 = match self.settings_section {
                         0 => 700.,
-                        1 => self.snapshot.as_ref().map_or(316., |s| {
+                        1 => 520.,
+                        2 => self.snapshot.as_ref().map_or(316., |s| {
                             (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
                                 .max(316.)
                                 + if hidden > 0 {
@@ -2739,8 +2777,8 @@ impl Runtime {
                                     0.
                                 }
                         }),
-                        2 => 280.,
-                        3 if self.snapshot.is_none() => {
+                        3 => 280.,
+                        4 if self.snapshot.is_none() => {
                             72. + self
                                 .diagnostics_text()
                                 .lines()
@@ -2753,7 +2791,7 @@ impl Runtime {
                         _ => (384. + about_extra + 80.).max(478.0_f32),
                     };
                     b.panel(348., 12., 864., height);
-                    for (i, label) in [T::Engine, T::Folders, T::Config, T::Diagnostics]
+                    for (i, label) in [T::Engine, T::Audio, T::Folders, T::Config, T::Diagnostics]
                         .iter()
                         .enumerate()
                     {
@@ -2767,7 +2805,7 @@ impl Runtime {
                         );
                     }
                     if self.snapshot.is_none() {
-                        if self.settings_section == 3 {
+                        if self.settings_section == 4 {
                             let diagnostics = self.diagnostics_text();
                             b.label(372., 36., 816., height - 48., diagnostics.into(), 22.);
                         } else {
@@ -2876,6 +2914,103 @@ impl Runtime {
                                 );
                             }
                             1 => {
+                                // Spec 067 R1/R2/R4/R6: the two supported
+                                // choices, the optional reviewed install and the
+                                // honest custom-engine state. Default is always
+                                // available; Arachno only after a verified install.
+                                let audio = &s.audio;
+                                let selected_default = match audio.choice {
+                                    Some(Choice::Default) => true,
+                                    Some(Choice::Arachno) => false,
+                                    None => audio.current == Current::Default,
+                                };
+                                let selected_arachno = audio.choice == Some(Choice::Arachno);
+                                b.label(372., 36., 816., 44., text(ui, T::AudioTitle), 30.);
+                                b.label(372., 84., 816., 28., text(ui, T::AudioHelp), 20.);
+                                b.choice_enabled(
+                                    70,
+                                    372.,
+                                    116.,
+                                    816.,
+                                    text(ui, T::AudioDefault),
+                                    selected_default,
+                                    true,
+                                );
+                                b.label(372., 172., 816., 28., text(ui, T::AudioDefaultHelp), 20.);
+                                let state = if audio.installed {
+                                    text(ui, T::Installed)
+                                } else {
+                                    text(ui, T::AudioNotInstalled)
+                                };
+                                b.choice_enabled(
+                                    71,
+                                    372.,
+                                    206.,
+                                    816.,
+                                    text(ui, T::AudioArachno),
+                                    selected_arachno,
+                                    audio.installed,
+                                );
+                                b.label(
+                                    372.,
+                                    262.,
+                                    816.,
+                                    28.,
+                                    format!(
+                                        "{} · {} · {}",
+                                        ddl_core::soundfonts::AUTHOR,
+                                        human_bytes(ddl_core::soundfonts::DOWNLOAD_BYTES),
+                                        state
+                                    )
+                                    .into(),
+                                    20.,
+                                );
+                                if let Some(warning) = &audio.warning {
+                                    b.label(372., 296., 816., 48., warning.as_str().into(), 20.);
+                                } else if audio.choice.is_none() && audio.current == Current::Custom
+                                {
+                                    b.label(
+                                        372.,
+                                        296.,
+                                        816.,
+                                        48.,
+                                        format!(
+                                            "{} — {}",
+                                            text(ui, T::AudioCustom),
+                                            text(ui, T::AudioCustomHelp)
+                                        )
+                                        .into(),
+                                        20.,
+                                    );
+                                }
+                                if !audio.installed || audio.warning.is_some() {
+                                    b.button(
+                                        72,
+                                        372.,
+                                        352.,
+                                        380.,
+                                        text(
+                                            ui,
+                                            if audio.warning.is_some() {
+                                                T::AudioReinstall
+                                            } else {
+                                                T::AudioDownload
+                                            },
+                                        ),
+                                        false,
+                                    );
+                                }
+                                b.row(
+                                    73,
+                                    372.,
+                                    416.,
+                                    816.,
+                                    text(ui, T::AudioTerms),
+                                    "arachnosoft.com".into(),
+                                    true,
+                                );
+                            }
+                            2 => {
                                 // R4 opt-in, default off; the existing Ember
                                 // row component shows the current state.
                                 b.row(
@@ -2981,7 +3116,7 @@ impl Runtime {
                                     );
                                 }
                             }
-                            2 => {
+                            3 => {
                                 b.label(
                                     372.,
                                     36.,
@@ -3466,6 +3601,7 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Cancelled => T::ErrorCancelled,
         Problem::Engine => T::ErrorEngine,
         Problem::Config => T::ErrorConfig,
+        Problem::Audio => T::ErrorAudio,
         Problem::UnknownFile => T::UnknownFile,
         Problem::Launch => T::ErrorLaunch,
         Problem::Busy => T::ErrorBusy,
@@ -3621,6 +3757,21 @@ impl Nodes {
         self.nodes.last_mut().unwrap().art = i32::from(checked);
     }
     fn choice(&mut self, id: i32, x: f32, y: f32, w: f32, label: SharedString, selected: bool) {
+        self.choice_enabled(id, x, y, w, label, selected, true);
+    }
+    /// A choice row that can be present but not yet selectable (spec 067 R2:
+    /// Arachno before its reviewed install exists).
+    #[allow(clippy::too_many_arguments)]
+    fn choice_enabled(
+        &mut self,
+        id: i32,
+        x: f32,
+        y: f32,
+        w: f32,
+        label: SharedString,
+        selected: bool,
+        actionable: bool,
+    ) {
         self.push(
             id,
             x,
@@ -3630,7 +3781,7 @@ impl Nodes {
             8,
             label,
             Default::default(),
-            true,
+            actionable,
             selected,
         );
         self.nodes.last_mut().unwrap().size = 20.;
@@ -4139,6 +4290,12 @@ mod category_tests {
             config_notice: false,
             config_usable: true,
             config_version: String::new(),
+            audio: crate::services::AudioState {
+                choice: None,
+                installed: false,
+                current: ddl_core::soundfonts::engine::Current::Default,
+                warning: None,
+            },
             logs: PathBuf::new(),
             search_standard_folders: false,
             catalog: crate::services::CatalogInfo {

@@ -693,7 +693,7 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     // Automatic source actions show information and never offer removal.
     r.local = LocalUi::default();
     r.screen = Screen::Settings;
-    r.settings_section = 1;
+    r.settings_section = 2;
     r.focus = 70;
     r.snapshot
         .as_mut()
@@ -844,10 +844,10 @@ fn controller_057_focus_walks_every_multi_item_screen() {
     r.sync(&ui);
     walk_rows(&mut r, &ui, &[&[1], &[3]]);
     r.screen = Screen::Settings;
-    r.settings_section = 1;
+    r.settings_section = 2;
     r.sync(&ui);
-    walk_rows(&mut r, &ui, &[&[1], &[2], &[3], &[4]]);
-    r.settings_section = 1;
+    walk_rows(&mut r, &ui, &[&[1], &[2], &[3], &[4], &[5]]);
+    r.settings_section = 2;
     walk_rows(&mut r, &ui, &[&[72], &[70, 71]]);
     // Folder actions return to the preceding full-width preference row.
     for id in [70, 71] {

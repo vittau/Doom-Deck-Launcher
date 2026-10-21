@@ -607,3 +607,6 @@ mod recovery;
 mod flatpak;
 #[path = "headless_library.rs"]
 mod library;
+
+#[path = "audio_ui_tests.rs"]
+mod audio;

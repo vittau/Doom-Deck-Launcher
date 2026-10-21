@@ -45,6 +45,13 @@ pub fn focused(launcher: &dyn Launcher, sandbox: &Sandbox) -> io::Result<()> {
     let (program, args) = command(sandbox);
     launcher.launch(program, &args)
 }
+/// Opens a secondary HTTPS link in the host browser (spec 067 R6).
+///
+/// The terms/source action stays out of the player flow; under Flatpak
+/// `xdg-open` reaches the OpenURI portal like the keyboard request above.
+pub fn open_url(launcher: &dyn Launcher, url: &str) -> io::Result<()> {
+    launcher.launch("xdg-open", &[url])
+}
 
 #[cfg(test)]
 mod tests {
@@ -72,6 +79,19 @@ mod tests {
             [(
                 "xdg-open".to_owned(),
                 vec!["steam://open/keyboard".to_owned()]
+            )]
+        );
+    }
+
+    #[test]
+    fn a_secondary_link_opens_through_xdg_open_without_a_shell() {
+        let recorder = Recorder::default();
+        open_url(&recorder, "https://example.invalid/terms").unwrap();
+        assert_eq!(
+            *recorder.0.borrow(),
+            [(
+                "xdg-open".to_owned(),
+                vec!["https://example.invalid/terms".to_owned()]
             )]
         );
     }

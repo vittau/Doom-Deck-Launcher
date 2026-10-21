@@ -62,6 +62,7 @@ pub(crate) fn setup() -> (tempfile::TempDir, Server, Environment, Arc<AtomicUsiz
             reviewed: dsda::ReviewedList::embedded(),
             runner: Arc::new(dsda::FakeEngineRunner::new(dsda::LaunchExit::Clean)),
             engine_response_timeout: None,
+            soundfont_members: None,
         })),
     };
     (temp, server, env, count)
@@ -82,6 +83,7 @@ pub(crate) fn catalog_env(env: &Environment, change: impl FnOnce(&mut Catalog)) 
             reviewed: previous.reviewed.clone(),
             runner: previous.runner.clone(),
             engine_response_timeout: previous.engine_response_timeout,
+            soundfont_members: previous.soundfont_members.clone(),
         })),
     }
 }
@@ -439,6 +441,43 @@ fn removed_catalog_install_launches_through_the_fake_engine() {
             .exit_status,
         dsda::LaunchExit::Clean
     ));
+}
+
+/// Spec 067 R5: the CLI mapset route shares the guarded Audio application.
+#[test]
+fn a_cli_mapset_launch_applies_the_explicit_audio_choice() {
+    let (_temp, _server, env, _hits) = setup();
+    let mut s = installed(&env);
+    s.config.provision().unwrap();
+    s.register_fake_iwads(&env.home.join("test-iwads")).unwrap();
+    let executable = env.home.join("fake-engine");
+    fs::write(&executable, b"#!/bin/sh\necho 'dsda-doom v0.30.1'\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    s.engine.register_manual(&executable).unwrap();
+    fs::write(
+        s.config.active_path(),
+        "# player comment\nuse_mouse 1\nsnd_midiplayer \"sdl\"\nsnd_soundfont \"/opt/custom.sf2\"\n",
+    )
+    .unwrap();
+    ddl_core::soundfonts::Soundfonts::new(&env.paths)
+        .select(ddl_core::soundfonts::Choice::Default)
+        .unwrap();
+
+    s.run_mapset("auger-zenith", &LaunchOverrides::default())
+        .unwrap();
+
+    let active = fs::read_to_string(s.config.active_path()).unwrap();
+    assert!(active.contains("# player comment\n"), "{active}");
+    assert!(active.contains("use_mouse 1\n"), "{active}");
+    assert!(
+        active.contains("snd_midiplayer \"fluidsynth\"\n"),
+        "{active}"
+    );
+    assert!(active.contains("snd_soundfont \"\"\n"), "{active}");
 }
 
 #[test]
