@@ -1,6 +1,6 @@
 # 079 — Adopt doomdecklauncher.com and its Flatpak identity
 
-**Status:** Ready. **Origin:** owner bought doomdecklauncher.com and authorized changing the
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner bought doomdecklauncher.com and authorized changing the
 Flatpak ID; only the owner uses the current package and no migration is required.
 
 ## Requirements

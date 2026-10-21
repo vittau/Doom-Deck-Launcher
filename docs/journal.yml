@@ -890,3 +890,21 @@
     required because the owner is the only installed user. Record D-039 and spec 079;
     keep the existing GitHub Pages/signed repository publication and unrelated state guards.
   refs: [docs/decisions.md, docs/specs/079-domain-and-flatpak-identity.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Published v0.0.11-polish at 7772da8 with reviewed branding, category/catalog additions,
+    card padding, rapid Pistol start updates, SIGIL edition labels and per-startup catalog
+    checks with UTC source date. All 898 Rust tests passed, including full Linux CI
+    39693604865; Linux e2e 39693602559, Flatpak artifact 39693604642, tarball release
+    39693631790 and signed repository 39693631806 succeeded. Verified tarball SHA-256,
+    signed new-ID installation/execution, canonical metadata and all five served screenshot
+    bytes. Published doomdecklauncher.com with the new application identity and accepted
+    Cloudflare prefix purge; old project URL already redirects permanently. Generated the
+    immutable tagged-state fixture and passed its integrated seven-release readability guard.
+    Physical Steam Deck checks remain pending. Owner confirmed Search Console configuration;
+    website SEO audit, README branding and GA4 integration follow separately.
+  refs: [docs/reports/074-card-padding.md, docs/reports/075-pistol-start-latency.md,
+    docs/reports/077-catalog-startup-and-date.md, docs/reports/078-release-state-v011.md,
+    docs/reports/079-domain-and-flatpak-identity.md]

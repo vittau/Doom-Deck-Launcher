@@ -17,6 +17,7 @@ after generation (`git worktree remove --force .scratch/<tag>`).
 | v0.0.8-upgrade | 99258bb | Profile default skill 4; DSDA baseline 4. |
 | v0.0.9-focus | f452c13 | Same scenario, profile default skill 4 and DSDA baseline 4. |
 | v0.0.10-audio | d1a39cc | Profile default skill 4, DSDA baseline 5, component dependency metadata and explicit Default audio choice. |
+| v0.0.11-polish | 7772da8 | Same audio-capable scenario: profile default skill 4, DSDA baseline 5 and explicit Default audio choice; the domain/Flatpak identity work does not change state serializers. |
 
 Each config/data state tree contains a registered engine, two IWAD folder
 references and registry entries, two installed recipe snapshots with active and
@@ -35,12 +36,15 @@ all `v*` directories and opens them through production `Services::open` and
 installed generations, and current-shape save. Resolver failures for absent
 synthetic content are expected and do not erase installed metadata.
 
-`config/audio.json` first exists in the v0.0.10 fixture. The scenario calls that
-tag's production `Soundfonts::select(Choice::Default)` serializer, so the guard
-checks an explicit choice survives loading. Earlier tags predate audio
-preferences and correctly load with no explicit choice. No soundfont is
-installed or bundled, and no download/engine/UI code is run.
+`config/audio.json` exists only in the reviewed audio-capable fixtures
+(`v0.0.10-audio` and `v0.0.11-polish`). Each scenario calls that tag's
+production `Soundfonts::select(Choice::Default)` serializer, so the guard checks
+an explicit choice survives loading. Earlier tags predate audio preferences and
+correctly load with no explicit choice. No soundfont is installed or bundled,
+and no download/engine/UI code is run.
 
-For a new release, review and update the generator for that tag, generate a new
-tree without changing existing ones, then run this guard. Keep the scenario's
-ids and explicitly document any features that the tag predates.
+For a new release, review the tagged serializers, add the tag to the generator's
+allowlist and, only if it is audio-capable, to its explicit `AUDIO_TAGS` set;
+then generate a new tree without changing existing ones and run this guard.
+Keep the scenario's ids and explicitly document any features that the tag
+predates.

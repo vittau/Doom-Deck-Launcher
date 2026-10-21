@@ -1,6 +1,6 @@
 # 076 — Explain normal and COMPAT SIGIL music choices
 
-**Status:** Ready. **Origin:** owner finds REG and E3 labels confusing.
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner finds REG and E3 labels confusing.
 
 ## Requirements
 

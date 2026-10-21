@@ -1,6 +1,6 @@
 # 074 — Give game cards and base-game art breathing room
 
-**Status:** Ready. **Origin:** owner visual review; highest priority of the new fixes.
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner visual review; highest priority of the new fixes.
 
 ## Requirements
 

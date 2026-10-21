@@ -159,6 +159,36 @@ class RenderTests(unittest.TestCase):
                   if tag == "link" and a.get("rel") == "stylesheet"]
         self.assertEqual(styles, [f"assets/style.css?v={digest}"])
 
+    def test_google_tag_loads_and_configures_once_per_page(self):
+        self.render()
+        tag_id = "G-BTYE5G8WCM"
+        tag_url = f"https://www.googletagmanager.com/gtag/js?id={tag_id}"
+        for page, marker in (("index.html", "Install on Steam Deck"),
+                             ("assets/credits.html", "Asset credits")):
+            with self.subTest(page=page):
+                text = (self.out / page).read_text()
+                scripts = [attrs for tag, attrs in Document(text).elements if tag == "script"]
+                google = [attrs for attrs in scripts if attrs.get("src") == tag_url]
+                self.assertEqual(len(google), 1, "exactly one Google tag script per page")
+                self.assertIn("async", google[0])
+                self.assertEqual(text.count("<!-- Google tag (gtag.js)"), 1)
+                self.assertEqual(text.count(tag_id), 2, "script URL plus one config call")
+                self.assertEqual(text.count("window.dataLayer = window.dataLayer || []"), 1)
+                self.assertEqual(text.count("gtag('js', new Date())"), 1)
+                self.assertEqual(text.count(f"gtag('config', '{tag_id}')"), 1)
+                self.assertLess(text.index(tag_url), text.index("</head>"))
+                # Spec 082: one website property, no other IDs, identifiers, URL data or events.
+                self.assertEqual(set(re.findall(r"G-[A-Z0-9]{6,}", text)), {tag_id})
+                for forbidden in ("gtag('event'", "gtag('set'", "user_id",
+                                  "page_location", "send_to"):
+                    self.assertNotIn(forbidden, text)
+                # Tracking is the only JavaScript on the legal page, and content never
+                # depends on it: the page text survives with every script removed.
+                if page == "assets/credits.html":
+                    self.assertEqual(len(scripts), 2)
+                without_scripts = re.sub(r"(?is)<script\b.*?</script>", "", text)
+                self.assertIn(marker, without_scripts)
+
     def test_favicon_provenance_root_and_cache_version_on_both_pages(self):
         self.render()
         source = ROOT / "crates/ddl/ui/assets/logo/icon.png"

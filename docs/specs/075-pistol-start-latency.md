@@ -1,6 +1,6 @@
 # 075 — Make Pistol start a lightweight profile change
 
-**Status:** Ready. **Origin:** owner reports perceptible lag toggling Pistol start.
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner reports perceptible lag toggling Pistol start.
 
 ## Requirements
 
