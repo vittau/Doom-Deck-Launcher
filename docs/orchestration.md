@@ -27,11 +27,11 @@ Read this before taking over as orchestrator. Workers only need `AGENTS.md` and 
 
 ## Worker routing
 
-**Current owner override (2026-10-21): OpenCode workers only, including UI.** Codex quota is
-nearly exhausted. Do not launch Codex workers until the owner lifts this instruction; transfer
-the active soundfont task to a fresh OpenCode worker at its committed checkpoint. Use paid
-DeepSeek Flash for the wide UI/config feature and Free for bounded tasks. The default routing
-table below resumes only after this override is lifted.
+**Current owner override (2026-10-21, supersedes OpenCode-only routing): prioritize new workers
+on GPT-6.1 Sol, effort medium, for today.** Keep existing OpenCode conversations for their current
+tasks and review corrections; do not replace them solely because routing changed. OpenCode remains
+the fallback when needed. After today, use the default routing table below unless the owner updates
+this preference.
 
 | Work | Agent | Launch |
 | --- | --- | --- |
