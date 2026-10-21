@@ -177,8 +177,13 @@ runtime. The differences are procedural, not technical:
 
 ## Not verified yet
 
-No run of the publish workflow has happened: the branch that adds it has not been pushed. The
-following are therefore reasoned but untested: Pages serving `repo/` (OSTree over HTTPS), the GPG
-import/sign sequence, and the `.flatpakref` install on a Deck. See
-[`docs/reports/063-flatpak-selfhosted-remote.md`](reports/063-flatpak-selfhosted-remote.md) for the
-static checks that did run.
+The first publish run succeeded: it built the app, exported and signed the repository, smoke-tested
+the exported commit and pushed `gh-pages`. Still unverified:
+
+- GitHub Pages serving `repo/` and the generated ref files (Pages was not enabled when the run
+  finished, so the post-publish check only warned).
+- Installing the `.flatpakref` on a real Deck or Linux host and verifying the summary signature as a
+  client.
+
+See [`docs/reports/063-flatpak-selfhosted-remote.md`](reports/063-flatpak-selfhosted-remote.md) for
+the full run history.

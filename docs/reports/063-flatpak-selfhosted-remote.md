@@ -71,21 +71,41 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | Render dry run | heredoc + `sed` with sample values | `.flatpakref` key/URL lines correct, no indentation |
 | Whitespace | `git diff --check` | pass |
 
-Not run, because there is no Flatpak runtime on the macOS dev host and the branch is not pushed:
+Not run, because there is no Flatpak runtime on the macOS dev host:
 
-- `flatpak-builder` build, GPG commit/summary signing, static delta generation.
 - `flatpak install --user --from …flatpakref` on a Linux host or Deck.
 - GitHub Pages serving `repo/` and the Pages build triggered by the `gh-pages` push.
 
-## What the owner must do
+The first publish run ([39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687))
+did prove the build, the signed export, the smoke test and the `gh-pages` push on a Linux runner.
 
-1. `brew install gnupg`, then `scripts/flatpak/make-signing-key.sh` and set the two secrets it
-   prints. Back up the secret file offline and delete the local copy.
-2. Run *Actions → Flatpak repository → Run workflow* once (ref `main` after merge). This creates
-   `gh-pages` and publishes the first build.
-3. Enable Pages: *Settings → Pages → Source: Deploy from a branch → `gh-pages` / `/`*. Later runs
-   keep the site up to date; the first run before Pages is enabled ends with a warning, not a
-   failure.
+## Execution log (2026-10-21)
+
+The owner authorised the channel, the signing key and the Pages setup, so the work moved from
+implementation to execution. No private key material is reproduced here.
+
+| Step | Result |
+| --- | --- |
+| Repository key | Generated with `scripts/flatpak/make-signing-key.sh`; fingerprint `EF50C91A6703B13327AEAF00962CEACA8DE90556`; public half committed as `packaging/flatpak/repo-key.gpg`; secret stored as the `FLATPAK_GPG_PRIVATE_KEY` repository secret, fingerprint as `FLATPAK_GPG_KEY_ID`; backup kept outside the repository |
+| Integration | Spec 062 and this branch merged into `main` (`cfb7b36`, `c7efd6c`) and pushed to `origin/main`; later manifest fixes merged as `2e76897` and `9808e6b` |
+| First publish run | [39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687) — success: build, signed export, smoke test, site render and push to `gh-pages` |
+| Pages | Not enabled at the time of the run, so the post-publish check warned. Enabling Pages and confirming the public URLs is the coordinator's step |
+
+CI history while getting there:
+
+| Run | Workflow | Result | Cause and fix |
+| --- | --- | --- | --- |
+| [39537456681](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537456681) | Flatpak repository | failure | `cd rust-x86_64-unknown-linux-gnu` — flatpak-builder strips the archive's top-level directory. Fixed with `./install.sh` at the build root (`c72daf5`) |
+| [39537769632](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537769632) | Flatpak repository | failure | `eu-strip` is not in the 26.08 SDK and debuginfo extraction aborts the module. Fixed with `no-debuginfo: true` on both modules (`84ebd15`) |
+| [39537960702](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960702) | Flatpak (artifact) | failure | The manifest check imports `yaml`, but the generator venv installed only `aiohttp` and `tomlkit`. Fixed by pinning `PyYAML==6.0.3` (`2fa9dc3`) |
+| 39537765626 / 39537765603 | Flatpak / CI | failure / cancelled | Same two manifest causes as above, superseded |
+
+## What the owner still has to do
+
+1. ~~Generate the key and set the secrets.~~ Done on 2026-10-21.
+2. ~~Publish once to create `gh-pages`.~~ Done by run 39537960687.
+3. **Enable Pages** (*Settings → Pages → Deploy from a branch → `gh-pages` / `/`*) and confirm the
+   public URLs. The coordinator took this over.
 4. Publish future versions with `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 ## Open questions for the coordinator
