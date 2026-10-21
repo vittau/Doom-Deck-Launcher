@@ -882,7 +882,7 @@ fn summary_snapshot_for_the_three_reference_recipes() {
             "doom-1.9ud",
             IwadsGame::Doom,
             "doomu.wad",
-            "SIGIL",
+            "Normal episode (MIDI)",
             "vanilla (3)",
         ),
         (
