@@ -85,7 +85,8 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
    does not trigger one — and waits for the build of the pushed commit;
 9. purges the single Cloudflare prefix `www.vitormach.dev/Doom-Deck-Launcher/` after the deployment,
    when `CLOUDFLARE_CACHE_PURGE_TOKEN` and `CLOUDFLARE_ZONE_ID` are configured, and then checks the
-   served `.flatpakref` and `repo/summary`.
+   served landing page, `.flatpakref` and `repo/summary` byte-for-byte. With a purge configured the
+   canonical URLs are used; otherwise the check falls back to a cache-busting query.
 
 Published layout:
 

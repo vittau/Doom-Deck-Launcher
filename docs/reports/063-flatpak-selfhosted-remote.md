@@ -56,8 +56,9 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 7. **Pages deployment is explicit.** Pushes made with `GITHUB_TOKEN` do not trigger a Pages build,
    so the workflow requests one through `POST /repos/{owner}/{repo}/pages/builds` (permission
    `pages: write`, bounded with `--max-time`), waits for the build of the pushed commit and then
-   re-checks the served `.flatpakref` and `repo/summary` until the summary is byte-identical to the
-   exported one. A stale CDN copy is retried and fails the job on exhaustion.
+   re-checks the served landing page, `.flatpakref` and `repo/summary`. The page and the summary must
+   be byte-identical to the rendered/exported files; with a purge configured the canonical URLs are
+   used, otherwise a cache-busting query. A stale copy is retried and fails the job on exhaustion.
 8. **Runtimes stay on Flathub.** `RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo`;
    only the app comes from this remote.
 9. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
@@ -78,7 +79,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | R3 stable URLs | Render step writes `<app-id>.flatpakref`, `ddl.flatpakrepo`, `index.html`, `.nojekyll`; `repo/` comes from `build-export`; paths verified by dry-running the render block locally |
 | R4 key handling | `scripts/flatpak/make-signing-key.sh`: isolated `GNUPGHOME`, `umask 077`, refuses to overwrite, never prints private material; workflow fails early without the secret and imports into `$RUNNER_TEMP/gnupg` |
 | R5 documentation | `docs/flatpak-remote.md` covers install/update/remove, setup, security, rotation, rollback and the Flathub path |
-| R6 scoped purge | `scripts/flatpak/purge_cloudflare_cache.py` sends exactly `{"prefixes": ["www.vitormach.dev/Doom-Deck-Launcher/"]}` to `POST /zones/{id}/purge_cache`, validates the prefix and the zone id, retries only 429/5xx (three attempts), caps the response at 8 KiB and requires the literal `success: true`; 21 offline tests cover scope, skip/partial configuration, bounded retries, oversize/non-JSON responses and token redaction |
+| R6 scoped purge | `scripts/flatpak/purge_cloudflare_cache.py` sends exactly `{"prefixes": ["www.vitormach.dev/Doom-Deck-Launcher/"]}` to `POST /zones/{id}/purge_cache`, validates the prefix and the zone id, retries only 429/5xx (three attempts), caps the response at 8 KiB and requires the literal `success: true`; the post-purge check compares the landing page, descriptor and summary against the local files, using canonical URLs when a purge is configured. 21 Python tests plus 1 shell test cover scope, skip/partial configuration, bounded retries, oversize/non-JSON responses, token redaction and URL selection |
 
 ## Verification run
 
@@ -91,6 +92,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | Render dry run | heredoc + `sed` with sample values | `.flatpakref` key/URL lines correct, no indentation |
 | OSTree layout roundtrip | local git repo with `repo/{config,objects,refs/heads/…,summary}`, committed and cloned | the clone loses `tmp`, `state`, `extensions`, `refs/mirrors`, `refs/remotes` (empty directories); the restore loop recreates all of them |
 | Purge helper tests | `python3 -m unittest -v test_purge_cloudflare_cache` in `scripts/flatpak/` | 21 tests pass: one-prefix payload without scheme, rejected prefixes, skip/partial configuration, bounded retries, oversize and non-JSON responses, literal `success`, and no token in output |
+| Served URL tests | `bash scripts/flatpak/test_served_urls.sh` | canonical URLs (page first, no double slash) and cache-busting URLs match the expected shape |
 | Whitespace | `git diff --check` | pass |
 
 Not run, because there is no Flatpak runtime on the macOS dev host:

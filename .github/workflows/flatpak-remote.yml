@@ -403,20 +403,41 @@ jobs:
           # zone, another host or purge_everything. Missing both settings skip
           # the purge; a partial setup fails. The token is read from the
           # environment and is never printed.
+          if [ -n "${CLOUDFLARE_CACHE_PURGE_TOKEN}" ] && [ -n "${CLOUDFLARE_ZONE_ID}" ]; then
+            echo "PURGE_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "PURGE_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
           python3 scripts/flatpak/purge_cloudflare_cache.py --site-url "${SITE_BASE}/"
 
       - name: Verify the published files
         run: |
           set -euo pipefail
-          cache_bust="?v=${PAGES_COMMIT:0:12}"
-          ref_url="${SITE_BASE}/${APP_ID}.flatpakref${cache_bust}"
-          summary_url="${SITE_BASE}/repo/summary${cache_bust}"
+          # shellcheck source=scripts/flatpak/served_urls.sh
+          source scripts/flatpak/served_urls.sh
+          # With a successful purge the canonical URLs must already be fresh, so
+          # they are checked without a cache buster. Without purge credentials,
+          # fall back to the cache-busting query used before.
+          if [ "${PURGE_CONFIGURED:-false}" = "true" ]; then
+            echo "Cloudflare purge configured: verifying canonical URLs"
+            query=""
+          else
+            echo "Cloudflare purge not configured: verifying with a cache-busting query"
+            query="?v=${PAGES_COMMIT:0:12}"
+          fi
+          mapfile -t urls < <(served_urls "$SITE_BASE" "$APP_ID" "$query")
+          page_url="${urls[0]}"
+          ref_url="${urls[1]}"
+          summary_url="${urls[2]}"
           served=0
           for attempt in $(seq 1 12); do
-            # The served summary must be byte-identical to the one just exported;
-            # a stale CDN copy must never pass this check.
-            if curl -fsS --max-time 20 "$ref_url" -o "$RUNNER_TEMP/published.flatpakref" \
+            # Every artifact, including the landing page, must be served and
+            # byte-identical to what this run rendered; a stale page is a
+            # failure, never a green result.
+            if curl -fsS --max-time 20 "$page_url" -o "$RUNNER_TEMP/published.index.html" \
+               && curl -fsS --max-time 20 "$ref_url" -o "$RUNNER_TEMP/published.flatpakref" \
                && curl -fsS --max-time 20 "$summary_url" -o "$RUNNER_TEMP/published.summary" \
+               && cmp -s "$RUNNER_TEMP/published.index.html" "$RUNNER_TEMP/site/index.html" \
                && cmp -s "$RUNNER_TEMP/published.summary" "$RUNNER_TEMP/site/repo/summary"; then
               served=1
               break
@@ -425,14 +446,15 @@ jobs:
             sleep 10
           done
           if [ "$served" != 1 ]; then
-            echo "::error::the served .flatpakref or repo/summary did not converge to the exported files"
+            echo "::error::the served page, .flatpakref or repo/summary did not converge to the exported files"
+            sha256sum "$RUNNER_TEMP/site/index.html" "$RUNNER_TEMP/published.index.html" 2>/dev/null || true
             sha256sum "$RUNNER_TEMP/site/repo/summary" "$RUNNER_TEMP/published.summary" 2>/dev/null || true
             exit 1
           fi
           grep -Fx "Name=${APP_ID}" "$RUNNER_TEMP/published.flatpakref"
           grep -Fx "Url=${SITE_BASE}/repo/" "$RUNNER_TEMP/published.flatpakref"
           grep -q '^GPGKey=' "$RUNNER_TEMP/published.flatpakref"
-          echo "Published files are served and consistent"
+          echo "Published page, descriptor and summary are served and consistent"
 
       - name: Write the job summary
         if: always()
