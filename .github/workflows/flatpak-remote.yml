@@ -236,11 +236,14 @@ jobs:
             --timestamp="$timestamp" --subject="$subject" --body="$body" \
             --gpg-sign="$GPG_FINGERPRINT" --gpg-homedir="$GNUPGHOME" \
             "$site/repo" "$RUNNER_TEMP/build" stable
+          # One-time identity transition: retire only the old x86_64 stable
+          # loose OSTree app ref before regenerating AppStream and summary.
+          python3 scripts/flatpak/retire-old-app-ref.py "$site/repo"
           # Sign the summary, ship static deltas, keep two older versions.
           flatpak build-update-repo \
             --title="DoomDeckLauncher" \
             --comment="Experimental DoomDeckLauncher builds for Steam Deck" \
-            --homepage="https://github.com/vittau/Doom-Deck-Launcher" \
+            --homepage="${SITE_BASE}/" \
             --default-branch=stable \
             --generate-static-deltas --prune --prune-depth=2 \
             --gpg-sign="$GPG_FINGERPRINT" --gpg-homedir="$GNUPGHOME" \
@@ -262,7 +265,13 @@ jobs:
           # With no collection ID, setting GPG verification also makes Flatpak
           # write gpg-verify-summary=true for this remote (flatpak 1.18).
           flatpak --user remote-modify --gpg-verify ddl-smoke
-          flatpak --user remote-ls --app ddl-smoke
+          flatpak --user remote-ls --app --columns=application ddl-smoke \
+            | tee "$RUNNER_TEMP/published-apps.txt"
+          grep -Fx "$APP_ID" "$RUNNER_TEMP/published-apps.txt"
+          if grep -Fx 'io.github.vittau.Doom-Deck-Launcher' "$RUNNER_TEMP/published-apps.txt"; then
+            echo "::error::Obsolete application ID is still advertised by the signed repository"
+            exit 1
+          fi
 
           # A fresh client using only the committed public key must install and
           # run the export; no --no-gpg-verify path is allowed here.
