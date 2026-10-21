@@ -167,3 +167,18 @@ Owner follow-up: changed the compact header donation button to Buy Me a Coffee y
 (`#ffdd00`) with dark text/icon, slightly rounded corners and a lighter hover state, using
 the supplied visual reference. Placement and size remain unchanged. Eight renderer checks
 pass; headless desktop/narrow layout and computed colors checked. No dependencies added.
+
+## Official donation branding (owner revision, 2026-10-21)
+
+Replaced the custom cup icon/font with the exact owner-supplied official button embed from
+https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js. Uses slug vittau, Cookie font, Donate,
+yellow #FFDD00, black font/outline and white coffee. Header CSS overrides dimensions only
+(approximately 114×44 px) and tightens narrow navigation spacing. Includes a no-JavaScript
+link. This owner request supersedes the earlier no-external-script constraint: the button now
+loads the official external script and Cookie via its Google Fonts stylesheet. No package
+or build dependency was added; other page content remains static.
+
+Nine offline renderer tests pass, including the exact embed settings. Temporary headless
+Chromium checks at 1280, 390 and 320 px confirm no horizontal overflow, the Cookie family is
+loaded, and the button is yellow with 44 px height. Desktop render inspected visually. Both
+paused feature workers remain stopped. Publication uses the independent website workflow.

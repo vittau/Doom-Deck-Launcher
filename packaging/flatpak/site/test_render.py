@@ -128,6 +128,20 @@ class RenderTests(unittest.TestCase):
                     renderer.refresh(self.out, APP_ID, BASE)
                 self.assertEqual((self.out / "index.html").read_text(), text)
 
+    def test_official_donation_embed_matches_owner_configuration(self):
+        doc = Document(self.render())
+        embeds = [a for tag, a in doc.elements
+                  if tag == "script" and a.get("data-name") == "bmc-button"]
+        self.assertEqual(len(embeds), 1)
+        embed = embeds[0]
+        self.assertEqual(embed["src"], "https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js")
+        for key, value in {"slug": "vittau", "font": "Cookie", "text": "Donate",
+                           "color": "#FFDD00", "font-color": "#000000",
+                           "outline-color": "#000000", "coffee-color": "#ffffff"}.items():
+            self.assertEqual(embed[f"data-{key}"], value)
+        self.assertTrue(any(tag == "a" and a.get("href") == "https://buymeacoffee.com/vittau"
+                            for tag, a in doc.elements))
+
     def test_stylesheet_url_tracks_css_content(self):
         text = self.render()
         digest = hashlib.sha256((self.out / "assets/style.css").read_bytes()).hexdigest()[:16]
