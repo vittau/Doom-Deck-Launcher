@@ -209,7 +209,7 @@ file was accidentally touched. The meaningful validation is the Linux CI job des
    item (A2).
 2. **Rust extension is stale.** The manifest pins 1.99.1 instead of the extension. Revisit when
    `org.freedesktop.Sdk.Extension.rust-stable//26.08` ships ≥1.99; then remove the toolchain module
-   and restore `append-path: /usr/lib/sdk/rust-stable/bin` plus the standard extension env.
+   and restore `prepend-path: /usr/lib/sdk/rust-stable/bin` plus the standard extension env.
 3. **Runtime branch is not immutable.** `26.08` is the maintained branch (currently 26.08.2);
    app/Cargo/Rust inputs are pinned, but the runtime can move within the branch. A Flathub build
    would use the branch too.
