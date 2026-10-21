@@ -23,8 +23,8 @@ build was left running. Remote GitHub jobs may finish while the Mac is off.
   are closed. Only the two paused task worktrees remain alongside main.
 - Page is live at `https://www.vitormach.dev/Doom-Deck-Launcher/`. Cloudflare project-prefix
   purge was verified manually and in successful CI run `39543519029`.
-- Latest integrated publication: `39549476693`; Linux e2e: `39549474019`. Both were still running
-  at pause. Check their outcomes later; do not start replacements merely because of this pause.
+- Latest integrated publication: `39549476693`; Linux e2e: `39549474019`. Both completed successfully
+  after the pause.
 
 ## 067 — MIDI soundfonts
 
@@ -70,7 +70,7 @@ milestone updates and explicit blockers. Initial PNGs are under task `target/hea
 - Model: `opencode/deepseek-v4.1-flash-free`, high; last observed approximately 71% of 200k context.
 - Terminal: `term_46df67b4-3e3e-42f5-b7e7-cdfc70a9626e`.
 - Task: `task_9a3e2eecb642`; active Dispatch: `ctx_6adb1de59de7`.
-- Saved WIP HEAD: **`7c6b4b83a58eff41a348b1abedabbfc807f8b60b`**.
+- Saved WIP HEAD: **`aaf56031c4526449687b998d62af953b91afeda3`**.
 - Additional tracked snapshot: `refs/keep/pause-2026-10-21-sigil-edition-hashes`.
 
 Owner sources, read-only:
@@ -80,7 +80,9 @@ Owner confirmed on 2026-10-21 that both were downloaded that day from the offici
 purchase. Record as owner-confirmed provenance. Never commit or upload purchased binary data.
 
 Verified facts and native edition fixes are saved in the two SIGIL recipes, catalog tests and
-`docs/research/reference-sigil.md`. WIP saves four modified files; final tests/report are pending.
+`docs/research/reference-sigil.md`. The late report `docs/reports/068-sigil-purchased-editions.md` is committed and pushed.
+Targeted catalog checks passed; the final clippy process survived API interruption and was
+explicitly stopped with its task-local descendants. Full checks remain incomplete.
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |

@@ -121,3 +121,13 @@ points players to this page for the current self-hosted remote; changing the gui
 this worker’s ownership. No spec implementation items remain open, and visual direction is
 owner-approved. Publication remains gated on the concurrent 063 workflow fixes (coordinator
 reported the OSTree refs/remotes roundtrip failure), passing deployment checks and root review.
+
+## Owner revision — compact hero support action (2026-10-21)
+
+Moved the donation link into the hero action row and removed the oversized footer support
+band. The secondary bronze treatment is approximately 157 × 44 px; the install action stays
+visually primary. Explicit SVG width/height also prevent intrinsic sizing before CSS loads.
+No dependencies added. Five offline renderer tests pass. Headless Chromium renders at
+1280×800, 1280×720 and 390×844 confirm the support action is fully inside the first viewport,
+with no horizontal overflow. Desktop render inspected visually. No application code changed.
+The two paused OpenCode conversations remain paused.

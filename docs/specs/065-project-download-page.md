@@ -32,7 +32,8 @@ necessary setup honestly and do not advertise unmeasured performance claims.
   `.flatpakref`, with CLI details secondary and actual Deck validation clearly distinguished.
 
 - **R6 (owner's direct worker request, 2026-10-21):** include a visible, responsive support link
-  to `https://buymeacoffee.com/vittau` in a secondary section before the footer. Keep install
+  to `https://buymeacoffee.com/vittau` in the first viewport, beside the hero install action when space allows and beneath it
+  at narrow widths. Use a compact, secondary treatment and explicitly size the icon. Keep install
   as the primary action. Use a local inline icon and neutral support copy; no external widget,
   script, tracking or invented claims about how contributions are spent.
 
