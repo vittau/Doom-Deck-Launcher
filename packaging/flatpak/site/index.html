@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DoomDeckLauncher — Flatpak repository</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #12100f;
+    --panel: #1c1917;
+    --line: #322c28;
+    --text: #ece7e1;
+    --muted: #a8a09a;
+    --accent: #cc6868;
+    --code: #0d0b0a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 3rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 .25rem; letter-spacing: -.01em; }
+  .tagline { color: var(--muted); margin: 0 0 2rem; }
+  h2 { font-size: 1.05rem; margin: 2.25rem 0 .5rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre {
+    margin: 0 0 1rem;
+    padding: 1rem;
+    overflow-x: auto;
+    background: var(--code);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: .875rem;
+  }
+  .badge {
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    padding: .2rem .55rem;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: .75rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .card {
+    padding: 1.1rem 1.25rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .card p:last-child { margin-bottom: 0; }
+  .meta { margin-top: 2.5rem; color: var(--muted); font-size: .85rem; }
+  ul { padding-left: 1.2rem; }
+  li { margin-bottom: .35rem; }
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">Experimental</span>
+  <h1>DoomDeckLauncher</h1>
+  <p class="tagline">Signed Flatpak builds, served from this site. Version @@VERSION@@, published @@DATE@@.</p>
+
+  <div class="card">
+    <p><strong>Install on a Steam Deck</strong> (Desktop Mode → Konsole):</p>
+    <pre>flatpak install --user --from \
+  @@SITE_BASE@@/@@APP_ID@@.flatpakref</pre>
+    <p>The runtime comes from Flathub, which SteamOS already has configured. The Flatpak and its
+    updates are signed by this project's repository key, embedded in the <code>.flatpakref</code>;
+    no extra remote or manual key import is needed.</p>
+  </div>
+
+  <h2>Update</h2>
+  <pre>flatpak update --user @@APP_ID@@</pre>
+  <p>Discover also picks the update up on its next check. Installed mapsets, engines and profiles
+  live in <code>~/.var/app/@@APP_ID@@/</code> and survive updates.</p>
+
+  <h2>Uninstall</h2>
+  <pre>flatpak uninstall --user @@APP_ID@@</pre>
+  <p>Add <code>--delete-data</code> to remove the app's data directory as well.</p>
+
+  <h2>Add it to Steam</h2>
+  <p>In Desktop Mode, add a non-Steam shortcut pointing at <code>/usr/bin/flatpak</code> with launch
+  options <code>run @@APP_ID@@</code>, then set <strong>Compatibility tool: none</strong>. The
+  Flatpak carries its own runtime.</p>
+
+  <h2>What this is not</h2>
+  <ul>
+    <li>Not a Flathub release: there is no store page and no Flathub review.</li>
+    <li>Not validated on hardware yet: GL, audio, controller input, IWAD visibility and the
+      on-screen keyboard still need a Steam Deck pass.</li>
+    <li>The DSDA-Doom engine is downloaded at runtime from its official upstream release and is
+      never bundled here. IWADs are never downloaded.</li>
+  </ul>
+
+  <h2>Details</h2>
+  <ul>
+    <li>Repository URL: <code>@@SITE_BASE@@/repo/</code> (branch <code>stable</code>)</li>
+    <li>Full remote file: <a href="ddl.flatpakrepo">ddl.flatpakrepo</a></li>
+    <li>Source and build instructions:
+      <a href="https://github.com/vittau/Doom-Deck-Launcher">github.com/vittau/Doom-Deck-Launcher</a></li>
+    <li>Older builds are pruned after two versions; <code>flatpak update</code> always moves forward.</li>
+  </ul>
+
+  <p class="meta">Published automatically from tagged builds. If an install fails, check
+  <code>flatpak remote-ls ddl</code> and open an issue with the output.</p>
+</main>
+</body>
+</html>
