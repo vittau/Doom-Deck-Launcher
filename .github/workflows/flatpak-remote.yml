@@ -85,8 +85,9 @@ jobs:
         with:
           # Tag pushes must publish the tagged commit; manual runs pass a ref.
           ref: ${{ inputs.ref || github.sha }}
-          # `git log -1` only needs the checked-out commit.
-          fetch-depth: 1
+          # Spec 077 R3: the catalog serial is the content time of the newest
+          # commit touching `catalog/`, so the history must reach that commit.
+          fetch-depth: 0
 
       - name: Install Flatpak tooling
         run: |
@@ -182,8 +183,9 @@ jobs:
             echo "::error::$MANIFEST is missing. This ref predates the Flatpak packaging; publish a newer tag."
             exit 1
           fi
-          # The serial is the source commit's UTC time, baked into the binary.
-          serial="$(git log -1 --format=%ct)"
+          # Spec 077 R3: the serial is the catalog's content time (the newest
+          # commit touching catalog/), baked into the binary.
+          serial="$(git log -1 --format=%ct -- catalog/)"
           test "$serial" -gt 0
           printf '%s\n' "$serial" > packaging/flatpak/catalog-serial
           echo "catalog serial: $serial"

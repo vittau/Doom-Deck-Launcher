@@ -404,6 +404,15 @@ impl Runtime {
             return true;
         }
         if self.busy {
+            // Spec 075, R2: a repeated press on the base-game Pistol row keeps
+            // its intent while a command runs; the runtime queues it.
+            if action == Action::Confirm
+                && self.local.view == Some(View::BaseSetup)
+                && self.focus == 5
+                && let Some(p) = self.local_profile()
+            {
+                self.set_base_pistol_start(ui, p.id.clone(), !p.pistol_start);
+            }
             return true;
         }
         let view = self.local.view.unwrap();
@@ -542,9 +551,10 @@ impl Runtime {
                     }
                 }
                 5 => {
-                    if let Some(mut p) = self.local_profile() {
-                        p.pistol_start = !p.pistol_start;
-                        self.local_op(ui, Op::BaseSave(p));
+                    // Spec 075, R1/R2: the base-game Pistol start goes through
+                    // the light profile path, never a full snapshot rebuild.
+                    if let Some(p) = self.local_profile() {
+                        self.set_base_pistol_start(ui, p.id.clone(), !p.pistol_start);
                     }
                 }
                 6 => {

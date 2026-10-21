@@ -1487,6 +1487,36 @@ fn vocabulary() -> TagVocabulary {
     toml::from_str(&fs::read_to_string(format!("{CATALOG}/tags.toml")).unwrap()).unwrap()
 }
 
+/// Spec 075, R1: the embedded parse is memoised for the process, and each
+/// caller owns its catalog, so a mutated clone never leaks into the next
+/// command (hosts, tags and recipes stay independently mutable).
+#[test]
+fn embedded_catalog_is_reused_without_sharing_mutable_state() {
+    let fresh = Catalog::from_sources(EMBEDDED_HOSTS, EMBEDDED_TAGS, EMBEDDED_RECIPES);
+    let mut first = Catalog::embedded();
+    assert_eq!(first, fresh, "the memo holds the parsed embedded sources");
+
+    first.hosts.downloads.push("127.0.0.1".into());
+    first.tags.tags.clear();
+    first.recipes.clear();
+    first.skipped.push(SkippedRecipe {
+        file: "x.toml".into(),
+        reason: "test".into(),
+    });
+
+    let second = Catalog::embedded();
+    assert_eq!(second, fresh, "a caller's changes never enter the memo");
+    assert!(!second.recipes.is_empty(), "recipes survive");
+    assert!(
+        !second
+            .hosts
+            .downloads
+            .iter()
+            .any(|host| host == "127.0.0.1"),
+        "a widened allowlist is not shared"
+    );
+}
+
 #[test]
 fn shipped_vocabulary_is_valid_and_has_the_spec_015_tags() {
     let vocabulary = vocabulary();

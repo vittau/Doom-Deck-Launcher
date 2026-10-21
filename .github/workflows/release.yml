@@ -45,7 +45,13 @@ jobs:
     container:
       image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
     steps:
+      # Spec 077 R3: the catalog serial is the content time of the newest commit
+      # that touched `catalog/` (`git log -1 --format=%ct -- catalog/`), so the
+      # checkout needs that history; a shallow clone would see only the tip and
+      # report an empty serial when the release commit touched no catalog file.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # The SDK image is Debian 11 based and does not ship Rust, so install the
       # pinned toolchain from rustup. `rust-toolchain.toml` names the exact
@@ -68,18 +74,22 @@ jobs:
 
       # Identical to the build in `ci.yml`: whatever CI proved must be what we
       # ship. `--locked` pins the reviewed dependency versions from Cargo.lock.
-      # Spec 019, R1/R3: export the catalog serial so `build.rs` bakes a real
-      # `EMBEDDED_SERIAL` into the released binary — the same UTC commit time the
-      # `catalog` bundle is built from (see `.github/workflows/ci.yml`). Without
-      # it the serial would be 0 and a cached bundle would always win the
-      # embedded-vs-cached comparison.
+      # Spec 019 R1/R3 with spec 077 R3's correction: export the catalog serial
+      # so `build.rs` bakes a real `EMBEDDED_SERIAL` into the released binary —
+      # the catalog content time the `catalog` bundle is built from (see
+      # `.github/workflows/ci.yml`), not the app commit. Without it the serial
+      # would be 0 and a cached bundle could win over a newer embedded catalog.
       - name: Build ddl in release mode
         run: |
           set -euo pipefail
           # The container user does not own the checkout; without this git refuses it
           # ("dubious ownership") and the release build fails.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          serial="$(git log -1 --format=%ct)"
+          # Spec 077 R3: the serial is the catalog's content time, the same
+          # value the bundle job publishes, so the embedded catalog's date is
+          # honest and a newer bundle is never rejected because the app commit
+          # is later than the catalog change.
+          serial="$(git log -1 --format=%ct -- catalog/)"
           test "$serial" -gt 0
           export DDL_CATALOG_SERIAL="$serial"
           echo "catalog serial: $serial"

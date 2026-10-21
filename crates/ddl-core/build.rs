@@ -24,15 +24,18 @@ fn main() {
 
     println!("cargo:rerun-if-changed={}", catalog.display());
 
-    // Spec 019, R1/R3: the embedded catalog's serial is the UTC Unix time of
-    // the source commit the catalog was built from. CI sets
-    // `DDL_CATALOG_SERIAL` (`git log -1 --format=%ct`) for the catalog-bundle
-    // job, so the published bundle and the release built from the same commit
-    // agree; `SOURCE_DATE_EPOCH` is honoured as the reproducible-build
-    // convention. Without either (a local or developer build) the serial is
-    // `0`, meaning "unknown": every real published serial is then newer, which
-    // is the safe direction — a development binary accepts the first bundle it
-    // can reach instead of pinning itself to a serial it never learned.
+    // Spec 019, R1/R3 with spec 077 R3: the embedded catalog's serial is the
+    // UTC Unix time of the newest commit that touched `catalog/` — the
+    // catalog's content time, not the app commit — because that is what the
+    // bundle job publishes (`git log -1 --format=%ct -- catalog/`). CI sets
+    // `DDL_CATALOG_SERIAL` for every binary build (tarball release and Flatpak
+    // alike), so the embedded date is honest and a bundle built from a newer
+    // catalog is never rejected because the app commit is later;
+    // `SOURCE_DATE_EPOCH` is honoured as the reproducible-build convention.
+    // Without either (a local or developer build) the serial is `0`, meaning
+    // "unknown": every real published serial is then newer, which is the safe
+    // direction — a development binary accepts the first bundle it can reach
+    // instead of pinning itself to a serial it never learned.
     println!("cargo:rerun-if-env-changed=DDL_CATALOG_SERIAL");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
     let serial = ["DDL_CATALOG_SERIAL", "SOURCE_DATE_EPOCH"]

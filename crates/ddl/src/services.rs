@@ -542,6 +542,14 @@ pub enum LocalCommand {
     Accept(String, Option<String>),
     Play(String),
     BaseSave(Profile),
+    /// Spec 075, R1/R2: the base-game Pistol start toggle, the second
+    /// production control that must not rebuild the snapshot.
+    BasePistolStart {
+        /// The base profile to change.
+        profile_id: String,
+        /// The requested value.
+        value: bool,
+    },
     BaseNew(String, bool),
 }
 #[derive(Debug, Clone)]
@@ -572,10 +580,22 @@ pub enum Command {
     Import(String, String, PathBuf),
     /// R4: persist the "Search standard Linux folders" setting.
     SetSearchStandardFolders(bool),
-    /// Spec 019 R5: fetch a catalog update; `automatic` is the background check
-    /// (throttled, silent on failure) versus the manual Settings/CLI action.
-    CatalogCheck {
-        automatic: bool,
+    /// Spec 019 R5: fetch a catalog update, the manual Settings/CLI action
+    /// (spec 077, R1 keeps the per-startup automatic check on its own path).
+    CatalogCheck,
+    /// Spec 077, R1: rebuild the snapshot on a fresh services instance after a
+    /// background catalog adoption; writes nothing.
+    RefreshCatalog,
+    /// Spec 075, R2: set one profile's Pistol start. The value is absolute, so a
+    /// repeated toggle can never apply twice, and the command reports the saved
+    /// profile instead of a full snapshot.
+    SetPistolStart {
+        /// The recipe the profile belongs to.
+        recipe_id: String,
+        /// The profile to change.
+        profile_id: String,
+        /// The requested value.
+        value: bool,
     },
     /// Spec 019 R5: persist the "Automatic catalog updates" toggle.
     SetCatalogAutoUpdate(bool),
@@ -594,7 +614,10 @@ impl Command {
     /// whole engine run, and a two-hour game must not block CLI installs.
     #[must_use]
     fn mutates_state(&self) -> bool {
-        !matches!(self, Self::Play(_) | Self::Browse(..) | Self::Updates)
+        !matches!(
+            self,
+            Self::Play(_) | Self::Browse(..) | Self::Updates | Self::RefreshCatalog
+        )
     }
 }
 #[derive(Debug)]
@@ -611,9 +634,31 @@ pub enum Event {
     },
     /// Spec 019 R5: the result of a catalog check.
     Catalog(CatalogOutcome),
-    Finished(Result<Box<Snapshot>, Problem>),
+    /// Spec 075, R2: the profile a light command persisted, as saved on disk.
+    ProfileSaved(Profile),
+    Finished(Result<Option<Box<Snapshot>>, Problem>),
     EngineExit(dsda::LaunchOutcome),
 }
+/// How the UI refreshes after a command (spec 075, R1).
+#[derive(Debug)]
+pub enum Refresh {
+    /// Rebuild and install the whole snapshot.
+    Full,
+    /// The command reported the single value it changed, so no snapshot is
+    /// built (Pistol start): no launch re-resolution and no member re-hashing.
+    Profile(Box<Profile>),
+}
+
+/// What the per-startup catalog check produced (spec 077, R1). It deliberately
+/// carries no snapshot: the check runs on an instance that opened before the
+/// network call, so the UI adopts the new catalog through a fresh
+/// [`Command::RefreshCatalog`] instead of a possibly stale view.
+#[derive(Debug, Default)]
+pub struct StartupCatalog {
+    /// The accepted bundle's serial when a newer catalog became active.
+    pub updated: Option<u64>,
+}
+
 /// What a catalog check did (spec 019, R5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CatalogOutcome {
@@ -631,10 +676,6 @@ pub enum CatalogOutcome {
         /// The effective catalog's serial.
         serial: u64,
     },
-    /// The automatic check is switched off.
-    Disabled,
-    /// The automatic check ran less than 24 h ago.
-    NotDue,
 }
 /// Test overrides are inert unless explicitly provided by the headless tests.
 #[derive(Clone)]
@@ -684,6 +725,36 @@ pub struct Services {
     sandbox: Sandbox,
     /// Spec 067: optional reviewed MIDI soundfonts.
     soundfonts: Soundfonts,
+    /// Spec 075, R4: deterministic per-instance counters proving the light path
+    /// builds no snapshot and resolves no launch (test builds only).
+    #[cfg(test)]
+    counters: std::sync::Arc<Counters>,
+}
+
+/// Spec 075, R4: deterministic counters for the "no library-wide work" checks.
+#[cfg(test)]
+#[derive(Debug, Default)]
+pub(crate) struct Counters {
+    snapshots: std::sync::atomic::AtomicUsize,
+    resolves: std::sync::atomic::AtomicUsize,
+}
+
+#[cfg(test)]
+impl Counters {
+    pub(crate) fn snapshots(&self) -> usize {
+        self.snapshots.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    pub(crate) fn resolves(&self) -> usize {
+        self.resolves.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+#[cfg(test)]
+impl Services {
+    pub(crate) fn counters(&self) -> &Counters {
+        &self.counters
+    }
 }
 /// Where the effective catalog came from (spec 019, R4).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -725,6 +796,97 @@ impl Environment {
     }
 }
 impl Services {
+    /// Spec 075, R2: persist one profile's Pistol start.
+    ///
+    /// This is the whole toggle: validate the profile against its recipe, set
+    /// the single field, save atomically and report the saved profile. It never
+    /// resolves a launch and never rebuilds the snapshot, so installed members
+    /// are not re-read or re-hashed here (075, R1/R3); the launch-time
+    /// integrity check in `resolver` is unchanged and still runs on Play.
+    fn set_pistol_start(
+        &mut self,
+        recipe_id: &str,
+        profile_id: &str,
+        value: bool,
+    ) -> Result<Refresh, Problem> {
+        let recipe = self.recipe(recipe_id)?;
+        // Read under the same lock as the write, so a concurrent profile change
+        // cannot be lost between the two.
+        let _state_lock = self.lock_state()?;
+        let mut profile = match self
+            .profiles
+            .load_optional(profile_id)
+            .map_err(|e| logged(Problem::State, e))?
+        {
+            Some(profile) => profile,
+            // First press before any Save: the UI shows an unsaved default, so
+            // materialise it instead of refusing the toggle.
+            None => {
+                let mut profile = default_profile(&recipe);
+                profile.id = profile_id.to_owned();
+                profile
+            }
+        };
+        if profile.recipe_id != recipe_id {
+            return Err(Problem::State);
+        }
+        profile.pistol_start = value;
+        profile
+            .validate(&recipe)
+            .map_err(|e| logged(Problem::State, e))?;
+        // Profile-only atomic write: no app.json/iwads.json rewrite, so there is
+        // no partial success to roll back and no way to clobber a concurrent
+        // favourite/scan (spec 075, R2 review).
+        self.profiles
+            .save(&profile)
+            .map_err(|e| logged(Problem::Storage, e))?;
+        Ok(Refresh::Profile(Box::new(profile)))
+    }
+
+    /// Spec 075, R1/R2: the base-game Pistol start toggle through the same light
+    /// path: validate the profile against its base game, save it atomically and
+    /// report it, with no snapshot and no launch re-resolution.
+    fn set_base_pistol_start(&mut self, profile_id: &str, value: bool) -> Result<Refresh, Problem> {
+        let _state_lock = self.lock_state()?;
+        let existing = self
+            .profiles
+            .load_optional(profile_id)
+            .map_err(|e| logged(Problem::State, e))?;
+        let bases = iwads::base_games::list(&self.registry);
+        // A first press before any Save has no recipe_id to read, so resolve the
+        // base from the profile id: the default is `base-doom2` and a copy is
+        // `base-doom2-profile-2`, while `BaseGame::id()` is `base:doom2`.
+        let base = match &existing {
+            Some(profile) => bases
+                .into_iter()
+                .find(|base| base.id() == profile.recipe_id)
+                .ok_or(Problem::State)?,
+            None => {
+                let stem = profile_id.split("-profile-").next().unwrap_or(profile_id);
+                let game = stem.strip_prefix("base-").ok_or(Problem::State)?;
+                bases
+                    .into_iter()
+                    .find(|base| base.id() == format!("base:{game}"))
+                    .ok_or(Problem::State)?
+            }
+        };
+        let mut profile =
+            existing.unwrap_or_else(|| Profile::new(profile_id, "Default", base.id()));
+        // Base profiles have no recipe component combination to validate; keep
+        // the same schema and skill rules `Profile::validate` applies.
+        if profile.schema_version != ddl_core::profiles::SCHEMA_VERSION
+            || !(1..=5).contains(&profile.skill)
+        {
+            return Err(Problem::State);
+        }
+        profile.pistol_start = value;
+        // Profile-only atomic write, as above (the lock is already held).
+        self.profiles
+            .save(&profile)
+            .map_err(|e| logged(Problem::Storage, e))?;
+        Ok(Refresh::Profile(Box::new(profile)))
+    }
+
     fn execute_local(
         &mut self,
         command: LocalCommand,
@@ -821,6 +983,9 @@ impl Services {
                     } else {
                         self.accept_extra_changes(&id, profile.as_deref())?;
                     }
+                }
+                LocalCommand::BasePistolStart { .. } => {
+                    unreachable!("the light base Pistol start path returns before this match")
                 }
                 LocalCommand::BaseSave(profile) => {
                     let _lock = self.lock_cli()?;
@@ -998,6 +1163,8 @@ impl Services {
             custom,
             sandbox,
             soundfonts,
+            #[cfg(test)]
+            counters: std::sync::Arc::new(Counters::default()),
         })
     }
     /// Spec 067: production uses the reviewed author archive; test-support may
@@ -1478,6 +1645,10 @@ impl Services {
             .ok_or(Problem::State)
     }
     pub fn snapshot(&self) -> Result<Snapshot, Problem> {
+        #[cfg(test)]
+        self.counters
+            .snapshots
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let engines = self
             .engine
             .installed()
@@ -1746,32 +1917,105 @@ impl Services {
         ))
     }
 
-    /// Checks for a newer catalog bundle (spec 019, R3–R5).
-    ///
-    /// An automatic check honours the opt-out toggle and the 24 h throttle and
-    /// records the attempt before touching the network, so a failed check still
-    /// throttles; the caller swallows its error (silent on failure). A manual
-    /// check always runs.
-    fn catalog_check(
-        &mut self,
-        automatic: bool,
-        cancel: &CancellationToken,
-    ) -> Result<CatalogOutcome, Problem> {
+    /// The manual "Check for updates" (spec 019, R5): always runs, surfaces
+    /// failures and records the attempt before touching the network.
+    fn catalog_check(&mut self, cancel: &CancellationToken) -> Result<CatalogOutcome, Problem> {
         let now = now_unix_secs();
-        if automatic && !self.state.catalog_auto_update {
-            return Ok(CatalogOutcome::Disabled);
+        if cancel.is_cancelled() {
+            return Err(Problem::Cancelled);
         }
-        if automatic && !ddl_core::catalog::catalog_check_due(self.state.catalog_last_check, now) {
-            return Ok(CatalogOutcome::NotDue);
+        self.state.catalog_last_check = Some(now);
+        self.save()?;
+        self.fetch_and_accept_catalog(now, cancel)
+    }
+
+    /// Spec 077, R1: the automatic check at every application startup.
+    ///
+    /// The network wait touches **no user state and no state lock**: the bundle
+    /// is fetched and validated first, and only then is the attempt recorded
+    /// with a fresh read-merge-write of `app.json`, so a profile or favourite
+    /// saved while the request was in flight is never overwritten. A failure or
+    /// "not newer" is silent (the current catalog stays); a newer bundle is
+    /// cached and reported, and the UI adopts it through a fresh
+    /// [`Command::RefreshCatalog`].
+    pub fn startup_catalog_check(
+        &mut self,
+        cancel: &CancellationToken,
+    ) -> Result<StartupCatalog, Problem> {
+        if !self.state.catalog_auto_update {
+            return Ok(StartupCatalog::default());
         }
         if cancel.is_cancelled() {
             return Err(Problem::Cancelled);
         }
-        // Record the attempt first: "at most once per 24 h" must hold even when
-        // the check fails (offline Deck).
-        self.state.catalog_last_check = Some(now);
-        self.save()?;
+        let now = now_unix_secs();
+        match self.fetch_and_accept_catalog(now, cancel) {
+            Ok(CatalogOutcome::Updated {
+                serial,
+                source_commit,
+                dropped,
+            }) => {
+                tracing::info!(serial, dropped, "catalog updated at startup");
+                let _ = source_commit;
+                self.record_catalog_attempt(now)?;
+                Ok(StartupCatalog {
+                    updated: Some(serial),
+                })
+            }
+            // Current (not newer) and an unusable bundle both keep the catalog.
+            Ok(_) => {
+                self.record_catalog_attempt(now)?;
+                Ok(StartupCatalog::default())
+            }
+            Err(problem) => {
+                // Silent on failure: keep the cached/built-in catalog.
+                tracing::warn!(?problem, "startup catalog check failed");
+                if self.record_catalog_attempt(now).is_err() {
+                    tracing::warn!("could not record the catalog check attempt");
+                }
+                Ok(StartupCatalog::default())
+            }
+        }
+    }
 
+    /// Records the catalog attempt without clobbering newer user state
+    /// (spec 077, R1): re-read `app.json`, change only `catalog_last_check` and
+    /// write **that file only** under the short cross-process lock. A malformed
+    /// or newer-schema `app.json` is left untouched (the in-memory state is
+    /// kept) rather than being replaced by this instance's older copy, and
+    /// `iwads.json` is never rewritten from a background instance.
+    fn record_catalog_attempt(&mut self, now: u64) -> Result<(), Problem> {
+        let _state_lock = self.lock_state()?;
+        let path = self.env.paths.config.join("app.json");
+        match fs::read(&path) {
+            Ok(bytes) if bytes.len() <= 4 * 1024 * 1024 => match AppState::parse(&bytes) {
+                Ok(parsed) => {
+                    self.state = parsed;
+                    self.state.catalog_last_check = Some(now);
+                    save_json(&path, &self.state)
+                }
+                // Malformed or a newer schema: never overwrite it with this
+                // instance's older copy.
+                Err(_) => Ok(()),
+            },
+            Ok(_) => Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                self.state.catalog_last_check = Some(now);
+                save_json(&path, &self.state)
+            }
+            Err(_) => Ok(()),
+        }
+    }
+
+    /// The shared fetch/validate/accept step, with no user-state write.
+    fn fetch_and_accept_catalog(
+        &mut self,
+        now: u64,
+        cancel: &CancellationToken,
+    ) -> Result<CatalogOutcome, Problem> {
+        if cancel.is_cancelled() {
+            return Err(Problem::Cancelled);
+        }
         // Never let a bundle walk the catalog backwards: the floor is the
         // effective catalog's serial, which is at least the embedded one.
         let floor = self
@@ -1804,6 +2048,25 @@ impl Services {
                         serial: self.catalog_origin.serial,
                     });
                 }
+                // Spec 077, R1 review: a slower automatic response must never
+                // roll back a newer catalog adopted while it was in flight — not
+                // even by another process. Compare with the serial effective on
+                // disk right now (cached bundle, this instance and the embedded
+                // fallback), not only with this instance's origin.
+                let cached = ddl_core::catalog::load_cache(&self.env.paths.data)
+                    .map(|loaded| loaded.bundle.catalog_serial)
+                    .unwrap_or(0);
+                let effective = cached
+                    .max(self.catalog_origin.serial)
+                    .max(ddl_core::catalog::embedded_serial());
+                if accepted.serial() <= effective {
+                    tracing::info!(
+                        serial = accepted.serial(),
+                        effective = self.catalog_origin.serial,
+                        "ignoring a catalog bundle older than the one in use"
+                    );
+                    return Ok(CatalogOutcome::Current { serial: effective });
+                }
                 ddl_core::catalog::store_cache(&self.env.paths.data, &accepted.bundle, now)
                     .map_err(|error| logged(Problem::Storage, error))?;
                 let serial = accepted.serial();
@@ -1832,7 +2095,32 @@ impl Services {
         }
     }
 
+    /// Executes one command and reports how the UI should refresh (spec 075,
+    /// R1/R2): a full snapshot, or nothing when the command already reported
+    /// the one value that changed.
     pub fn execute(
+        &mut self,
+        command: Command,
+        cancel: &CancellationToken,
+        emit: &mut dyn FnMut(Event),
+    ) -> Result<Refresh, Problem> {
+        if let Command::SetPistolStart {
+            recipe_id,
+            profile_id,
+            value,
+        } = &command
+        {
+            return self.set_pistol_start(recipe_id, profile_id, *value);
+        }
+        if let Command::Local(LocalCommand::BasePistolStart { profile_id, value }) = &command {
+            return self.set_base_pistol_start(profile_id, *value);
+        }
+        self.execute_full(command, cancel, emit)
+            .map(|()| Refresh::Full)
+    }
+
+    /// The whole-command path: every command that needs a snapshot afterwards.
+    fn execute_full(
         &mut self,
         command: Command,
         cancel: &CancellationToken,
@@ -1931,15 +2219,14 @@ impl Services {
                     .select(choice)
                     .map_err(|e| logged(soundfont_problem(e.kind()), e))?;
             }
-            Command::CatalogCheck { automatic } => {
-                match self.catalog_check(automatic, cancel) {
-                    Ok(outcome) => emit(Event::Catalog(outcome)),
-                    // Spec 019 R5: an automatic check is silent on failure.
-                    Err(problem) if automatic => {
-                        tracing::warn!(?problem, "automatic catalog check failed");
-                    }
-                    Err(problem) => return Err(problem),
-                }
+            Command::CatalogCheck => {
+                let outcome = self.catalog_check(cancel)?;
+                emit(Event::Catalog(outcome));
+            }
+            // Spec 077, R1: a background adoption only needs the fresh view.
+            Command::RefreshCatalog => {}
+            Command::SetPistolStart { .. } => {
+                unreachable!("the light Pistol start path returns before this match")
             }
             Command::RemoveFolder(path) => {
                 self.state.folders.retain(|p| p != &path);
@@ -2266,6 +2553,10 @@ impl Services {
         recipe: &Recipe,
         profile: &Profile,
     ) -> Result<resolver::Resolution, Blocker> {
+        #[cfg(test)]
+        self.counters
+            .resolves
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let manifest = match self.manifest(recipe) {
             Ok(Some(manifest)) => manifest,
             Ok(None) => return Err(Blocker::NotInstalled),
@@ -2633,7 +2924,7 @@ impl Services {
     /// or a filesystem failure.
     pub fn catalog_update(&mut self) -> Result<CatalogOutcome, CliFailure> {
         let _lock = self.lock_cli()?;
-        self.catalog_check(false, &CancellationToken::new())
+        self.catalog_check(&CancellationToken::new())
             .map_err(|problem| CliFailure::message(problem.to_string()))
     }
 
@@ -4239,7 +4530,10 @@ mod tests {
         let cancel = CancellationToken::new();
         cancel.cancel();
         assert_eq!(
-            s.execute(Command::Startup, &cancel, &mut |_| {}),
+            s.execute(Command::Startup, &cancel, &mut |_| {})
+                .map(|refresh| {
+                    assert!(matches!(refresh, Refresh::Full));
+                }),
             Err(Problem::Cancelled)
         );
         assert!(!env.paths.config.join("app.json").exists());
@@ -4250,13 +4544,277 @@ mod tests {
         .unwrap();
         assert!(matches!(Services::open(env), Err(Problem::Unreadable(_))));
     }
+    /// Spec 075/077 tests in this module drive the full-command path.
+    fn run(s: &mut Services, command: Command) -> Result<(), Problem> {
+        s.execute(command, &CancellationToken::new(), &mut |_| {})
+            .map(|refresh| {
+                assert!(matches!(refresh, Refresh::Full));
+            })
+    }
     fn favorite(s: &mut Services, id: &str) -> Result<(), Problem> {
         s.execute(
             Command::Favorite(id.into()),
             &CancellationToken::new(),
             &mut |_| {},
         )
+        .map(|refresh| {
+            assert!(matches!(refresh, Refresh::Full));
+        })
     }
+    /// Spec 075, R2/R4: the Pistol start toggle persists one field through the
+    /// light path — both directions, repeated input, every other profile field
+    /// intact — and builds no snapshot and resolves no launch, so installed
+    /// members are never re-hashed (the counters are deterministic, not timings).
+    #[test]
+    fn pistol_start_is_a_light_atomic_profile_change() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        let recipe = s.recipe("sigil").unwrap();
+        let mut profile = s.profile(&recipe).unwrap();
+        profile.skill = 5;
+        run(&mut s, Command::Save(profile.clone())).unwrap();
+        let snapshots = s.counters().snapshots();
+        let resolves = s.counters().resolves();
+
+        let toggle = |s: &mut Services, value: bool| {
+            s.execute(
+                Command::SetPistolStart {
+                    recipe_id: "sigil".into(),
+                    profile_id: profile.id.clone(),
+                    value,
+                },
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .expect("the light path succeeds")
+        };
+
+        match toggle(&mut s, true) {
+            Refresh::Profile(saved) => {
+                assert!(saved.pistol_start);
+                assert_eq!(saved.skill, 5, "other fields are preserved");
+                assert_eq!(saved.components, profile.components);
+            }
+            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+        }
+        match toggle(&mut s, false) {
+            Refresh::Profile(saved) => assert!(!saved.pistol_start),
+            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+        }
+        match toggle(&mut s, false) {
+            Refresh::Profile(saved) => assert!(!saved.pistol_start),
+            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+        }
+        assert_eq!(
+            s.counters().snapshots(),
+            snapshots,
+            "no catalog snapshot was built"
+        );
+        assert_eq!(
+            s.counters().resolves(),
+            resolves,
+            "no launch was resolved (no member hashing)"
+        );
+
+        let reopened = Services::open(env).unwrap();
+        let stored = reopened.profiles.load(&profile.id).unwrap();
+        assert!(!stored.pistol_start);
+        assert_eq!(stored.skill, 5);
+        assert_eq!(stored.components, profile.components);
+        assert_eq!(stored.extras, profile.extras);
+
+        let mut s = reopened;
+        assert!(
+            s.execute(
+                Command::SetPistolStart {
+                    recipe_id: "eviternity".into(),
+                    profile_id: profile.id.clone(),
+                    value: true,
+                },
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .is_err()
+        );
+        assert!(
+            !s.profiles.load(&profile.id).unwrap().pistol_start,
+            "the refused request left the stored value alone"
+        );
+    }
+
+    /// Spec 075, R2 review: the first-ever press, before any Save wrote a
+    /// profile JSON, materialises the default profile and persists the value.
+    #[test]
+    fn the_first_pistol_press_works_without_a_saved_profile() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        let recipe = s.recipe("sigil").unwrap();
+        let profile = s.profile(&recipe).unwrap();
+        assert!(
+            !s.profiles.path(&profile.id).unwrap().is_file(),
+            "no profile JSON exists yet"
+        );
+        let snapshots = s.counters().snapshots();
+        match s
+            .execute(
+                Command::SetPistolStart {
+                    recipe_id: "sigil".into(),
+                    profile_id: profile.id.clone(),
+                    value: true,
+                },
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .expect("the first press succeeds")
+        {
+            Refresh::Profile(saved) => assert!(saved.pistol_start),
+            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+        }
+        assert_eq!(s.counters().snapshots(), snapshots, "no snapshot built");
+        assert!(s.profiles.load(&profile.id).unwrap().pistol_start);
+    }
+
+    /// Spec 075, R2 review: a real positive base-game first press with no
+    /// profile JSON, against the identified fixture registry (base ids are
+    /// `base:doom2` while profile ids are `base-doom2[-profile-N]`).
+    #[test]
+    fn the_first_base_pistol_press_works_without_a_saved_profile() {
+        fn copy_dir(from: &Path, to: &Path) {
+            fs::create_dir_all(to).unwrap();
+            for entry in fs::read_dir(from).unwrap().flatten() {
+                let target = to.join(entry.file_name());
+                if entry.file_type().unwrap().is_dir() {
+                    copy_dir(&entry.path(), &target);
+                } else {
+                    fs::copy(entry.path(), &target).unwrap();
+                }
+            }
+        }
+        let fixture =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/state/v0.0.10-audio");
+        let temp = tempfile::tempdir().unwrap();
+        copy_dir(&fixture, temp.path());
+        let env = Environment {
+            paths: Paths {
+                config: temp.path().join("config"),
+                data: temp.path().join("data"),
+                cache: temp.path().join("cache"),
+                state: temp.path().join("state"),
+            },
+            home: "/ddl-fixture".into(),
+            screen: None,
+            test: None,
+        };
+        let mut s = Services::open(env).unwrap();
+        // The fixture registry points at `/ddl-fixture` paths; give every entry a
+        // real file so `base_games::list` sees an identified Doom II.
+        let doom2 = temp.path().join("doom2.wad");
+        fs::write(&doom2, b"IWAD").unwrap();
+        let size = fs::metadata(&doom2).unwrap().len();
+        for mut entry in s.registry.entries().to_vec() {
+            if entry.game == Some(iwads::Game::Doom2) {
+                entry.path = doom2.clone();
+                entry.size = size;
+                s.registry.insert(entry);
+            }
+        }
+        let base = iwads::base_games::list(&s.registry)
+            .into_iter()
+            .find(|base| base.id() == "base:doom2")
+            .expect("the fixture identifies Doom II");
+        for profile_id in [
+            format!("{}-profile-9", base.id().replace(':', "-")),
+            "base-doom2".to_owned(),
+        ] {
+            assert!(
+                !s.profiles.path(&profile_id).unwrap().is_file(),
+                "no profile JSON exists yet: {profile_id}"
+            );
+            match s
+                .execute(
+                    Command::Local(LocalCommand::BasePistolStart {
+                        profile_id: profile_id.clone(),
+                        value: true,
+                    }),
+                    &CancellationToken::new(),
+                    &mut |_| {},
+                )
+                .expect("the first base press succeeds")
+            {
+                Refresh::Profile(saved) => {
+                    assert!(saved.pistol_start);
+                    assert_eq!(saved.recipe_id, base.id());
+                }
+                Refresh::Full => panic!("the base toggle must not rebuild the snapshot"),
+            }
+            let stored = s.profiles.load(&profile_id).unwrap();
+            assert!(stored.pistol_start);
+            assert_eq!(stored.recipe_id, base.id());
+        }
+    }
+
+    /// Spec 075, R2: a failed write is reported, never silently dropped.
+    #[cfg(unix)]
+    #[test]
+    fn a_failed_pistol_start_write_is_reported() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env.clone()).unwrap();
+        let recipe = s.recipe("sigil").unwrap();
+        let profile = s.profile(&recipe).unwrap();
+        run(&mut s, Command::Save(profile.clone())).unwrap();
+
+        let path = s.profiles.path(&profile.id).unwrap();
+        let parent = path.parent().unwrap().to_path_buf();
+        let mut permissions = fs::metadata(&parent).unwrap().permissions();
+        permissions.set_mode(0o500);
+        fs::set_permissions(&parent, permissions).unwrap();
+        let result = s.execute(
+            Command::SetPistolStart {
+                recipe_id: "sigil".into(),
+                profile_id: profile.id.clone(),
+                value: true,
+            },
+            &CancellationToken::new(),
+            &mut |_| {},
+        );
+        let mut restore = fs::metadata(&parent).unwrap().permissions();
+        restore.set_mode(0o700);
+        fs::set_permissions(&parent, restore).unwrap();
+
+        assert!(matches!(result, Err(Problem::Storage)), "{result:?}");
+        assert!(!s.profiles.load(&profile.id).unwrap().pistol_start);
+    }
+
+    /// Spec 075, R1/R4: the base-game Pistol start refuses an unknown base
+    /// profile without building a snapshot or resolving a launch; the positive
+    /// path is the same light routine the catalog toggle covers.
+    #[test]
+    fn base_pistol_start_is_a_light_path_and_refuses_unknown_profiles() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut s = Services::open(env).unwrap();
+        let snapshots = s.counters().snapshots();
+        let resolves = s.counters().resolves();
+        assert!(
+            s.execute(
+                Command::Local(LocalCommand::BasePistolStart {
+                    profile_id: "no-such-profile".into(),
+                    value: true,
+                }),
+                &CancellationToken::new(),
+                &mut |_| {},
+            )
+            .is_err(),
+            "an unknown profile is refused"
+        );
+        assert_eq!(s.counters().snapshots(), snapshots, "no snapshot built");
+        assert_eq!(s.counters().resolves(), resolves, "no launch resolved");
+    }
+
     fn state_file(env: &Environment) -> serde_json::Value {
         serde_json::from_slice(&fs::read(env.paths.config.join("app.json")).unwrap()).unwrap()
     }
@@ -4699,6 +5257,15 @@ mod catalog_tests {
 
     fn run(s: &mut Services, command: Command) -> Result<(), Problem> {
         s.execute(command, &CancellationToken::new(), &mut |_| {})
+            .map(|refresh| {
+                assert!(matches!(refresh, Refresh::Full));
+            })
+    }
+
+    /// Spec 077, R1: the startup check on an open services instance.
+    fn startup(s: &mut Services) -> StartupCatalog {
+        s.startup_catalog_check(&CancellationToken::new())
+            .expect("the startup check never fails the caller")
     }
 
     #[test]
@@ -4714,7 +5281,7 @@ mod catalog_tests {
         let env = environment(temp.path(), server.url("/catalog.json"));
         let mut s = Services::open(env.clone()).unwrap();
         assert!(!s.catalog_info().updated);
-        run(&mut s, Command::CatalogCheck { automatic: false }).unwrap();
+        run(&mut s, Command::CatalogCheck).unwrap();
         let info = s.catalog_info();
         assert!(info.updated, "the accepted bundle is the catalog in use");
         assert_eq!(info.serial, 500);
@@ -4731,8 +5298,10 @@ mod catalog_tests {
         assert_eq!(hits.load(Ordering::SeqCst), 1);
     }
 
+    /// Spec 077, R1/R5: two separate startups inside 24 hours both check, the
+    /// opt-out still wins, and the manual action always checks.
     #[test]
-    fn automatic_checks_are_throttled_opted_out_and_manual_always_runs() {
+    fn every_startup_checks_once_within_the_same_day() {
         let temp = tempfile::tempdir().unwrap();
         let served = bundle_json(500);
         let hits = Arc::new(AtomicUsize::new(0));
@@ -4742,37 +5311,31 @@ mod catalog_tests {
             Response::ok(served.clone())
         });
         let env = environment(temp.path(), server.url("/catalog.json"));
-        let mut s = Services::open(env).unwrap();
 
-        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
+        let mut first = Services::open(env.clone()).unwrap();
+        assert!(first.catalog_info().auto_update, "on by default");
+        assert_eq!(startup(&mut first).updated, Some(500));
+        assert!(first.catalog_info().last_check.is_some());
         assert_eq!(hits.load(Ordering::SeqCst), 1);
-        assert!(s.catalog_info().last_check.is_some());
-        assert!(s.catalog_info().auto_update, "on by default");
 
-        // Within 24 h nothing is fetched again (the attempt above is "now").
-        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
-        assert_eq!(hits.load(Ordering::SeqCst), 1, "throttled");
+        let mut second = Services::open(env.clone()).unwrap();
+        assert_eq!(startup(&mut second).updated, None);
+        assert_eq!(hits.load(Ordering::SeqCst), 2, "no daily throttle");
+        assert_eq!(second.catalog_info().serial, 500);
 
-        // Opt-out wins over the throttle.
-        run(&mut s, Command::SetCatalogAutoUpdate(false)).unwrap();
-        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
-        assert_eq!(hits.load(Ordering::SeqCst), 1, "opted out");
+        run(&mut second, Command::SetCatalogAutoUpdate(false)).unwrap();
+        let mut third = Services::open(env.clone()).unwrap();
+        assert_eq!(startup(&mut third).updated, None);
+        assert_eq!(hits.load(Ordering::SeqCst), 2, "opted out");
 
-        // A fake clock: pretend the last attempt was more than a day ago.
-        run(&mut s, Command::SetCatalogAutoUpdate(true)).unwrap();
-        s.state.catalog_last_check =
-            Some(now_unix_secs() - ddl_core::catalog::CHECK_INTERVAL_SECS - 1);
-        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
-        assert_eq!(hits.load(Ordering::SeqCst), 2, "due after 24 h");
-
-        // The manual action ignores both the toggle and the throttle.
-        run(&mut s, Command::SetCatalogAutoUpdate(false)).unwrap();
-        run(&mut s, Command::CatalogCheck { automatic: false }).unwrap();
+        run(&mut third, Command::CatalogCheck).unwrap();
         assert_eq!(hits.load(Ordering::SeqCst), 3, "manual always checks");
     }
 
+    /// Spec 077, R1/R5: a failed startup check is silent, keeps the current
+    /// catalog and does not throttle the next startup.
     #[test]
-    fn an_automatic_failure_is_silent_and_still_throttles() {
+    fn a_failed_startup_check_is_silent_and_keeps_the_catalog() {
         let temp = tempfile::tempdir().unwrap();
         let hits = Arc::new(AtomicUsize::new(0));
         let counter = hits.clone();
@@ -4781,19 +5344,125 @@ mod catalog_tests {
             Response::status(503, "offline")
         });
         let env = environment(temp.path(), server.url("/catalog.json"));
-        let mut s = Services::open(env).unwrap();
-        run(&mut s, Command::CatalogCheck { automatic: true })
-            .expect("an automatic failure is swallowed");
+        let mut s = Services::open(env.clone()).unwrap();
+        assert_eq!(startup(&mut s).updated, None, "silent, no snapshot");
+        assert!(s.catalog.recipe("sigil").is_some(), "catalog retained");
+        assert!(s.catalog_info().last_check.is_some(), "attempt recorded");
         assert_eq!(hits.load(Ordering::SeqCst), 1);
-        assert!(
-            s.catalog_info().last_check.is_some(),
-            "the attempt throttles"
-        );
-        run(&mut s, Command::CatalogCheck { automatic: true }).unwrap();
-        assert_eq!(hits.load(Ordering::SeqCst), 1, "no retry within 24 h");
 
-        // The manual action surfaces the failure instead of hiding it.
-        assert!(run(&mut s, Command::CatalogCheck { automatic: false }).is_err());
+        let mut next = Services::open(env).unwrap();
+        assert_eq!(startup(&mut next).updated, None);
+        assert_eq!(hits.load(Ordering::SeqCst), 2, "a failure never throttles");
+
+        assert!(run(&mut s, Command::CatalogCheck).is_err());
+    }
+
+    /// Spec 077, R1: the network wait must not overwrite user state saved while
+    /// it was in flight.
+    #[test]
+    fn a_startup_check_keeps_state_saved_during_the_request() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let server = Server::start(move |_r| Response::ok(served.clone()));
+        let env = environment(temp.path(), server.url("/catalog.json"));
+
+        let mut checking = Services::open(env.clone()).unwrap();
+        let mut ui = Services::open(env.clone()).unwrap();
+        run(&mut ui, Command::Favorite("sigil".into())).unwrap();
+        let profile = ui.profile(&ui.recipe("sigil").unwrap()).unwrap();
+        run(&mut ui, Command::Save(profile)).unwrap();
+
+        assert_eq!(startup(&mut checking).updated, Some(500));
+        let snapshot = Services::open(env.clone()).unwrap().snapshot().unwrap();
+        assert!(
+            snapshot
+                .items
+                .iter()
+                .any(|item| item.recipe.id == "sigil" && item.favorite),
+            "the favorite saved during the request survives"
+        );
+        let reopened = Services::open(env).unwrap();
+        assert!(reopened.state.favorites.contains("sigil"));
+        assert!(reopened.catalog_info().updated);
+    }
+
+    /// Spec 077, R1: a stalled fetch must not touch user state.
+    #[test]
+    fn a_stalled_startup_fetch_never_loses_state_saved_meanwhile() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let (release, wait) = std::sync::mpsc::channel::<()>();
+        let wait = std::sync::Mutex::new(wait);
+        let server = Server::start(move |_r| {
+            let _ = wait.lock().unwrap().recv();
+            Response::ok(served.clone())
+        });
+        let env = environment(temp.path(), server.url("/catalog.json"));
+
+        let thread_env = env.clone();
+        let handle = std::thread::spawn(move || {
+            let mut checking = Services::open(thread_env).unwrap();
+            checking
+                .startup_catalog_check(&CancellationToken::new())
+                .unwrap()
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        let mut ui = Services::open(env.clone()).unwrap();
+        run(&mut ui, Command::Favorite("sigil".into())).unwrap();
+        let profile = ui.profile(&ui.recipe("sigil").unwrap()).unwrap();
+        run(&mut ui, Command::Save(profile)).unwrap();
+        let iwads_before = fs::read(env.paths.config.join("iwads.json")).ok();
+        release.send(()).unwrap();
+
+        let outcome = handle.join().unwrap();
+        assert_eq!(outcome.updated, Some(500));
+        let reopened = Services::open(env.clone()).unwrap();
+        assert!(
+            reopened.state.favorites.contains("sigil"),
+            "favorite survives"
+        );
+        assert!(
+            reopened.catalog_info().last_check.is_some(),
+            "attempt recorded"
+        );
+        assert!(reopened.catalog_info().updated, "the new catalog is cached");
+        assert_eq!(
+            fs::read(env.paths.config.join("iwads.json")).ok(),
+            iwads_before,
+            "the background check never rewrites the IWAD registry"
+        );
+        let snapshot = reopened.snapshot().unwrap();
+        assert!(
+            snapshot
+                .items
+                .iter()
+                .any(|item| item.recipe.id == "sigil" && item.favorite),
+            "the view the UI adopts shows the state saved meanwhile"
+        );
+    }
+
+    /// Spec 077, R1 review: a slower automatic response never rolls back a newer
+    /// catalog adopted (by another process) while the request was in flight.
+    #[test]
+    fn an_older_automatic_response_never_rolls_back_a_newer_catalog() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let server = Server::start(move |_r| Response::ok(served.clone()));
+        let env = environment(temp.path(), server.url("/catalog.json"));
+
+        // The background instance opens while the embedded catalog is in use…
+        let mut checking = Services::open(env.clone()).unwrap();
+        // …then another process adopts serial 900 into the cache.
+        let newer: ddl_core::catalog::Bundle = serde_json::from_slice(&bundle_json(900)).unwrap();
+        ddl_core::catalog::store_cache(&env.paths.data, &newer, 1).unwrap();
+
+        let outcome = startup(&mut checking);
+        assert_eq!(outcome.updated, None, "the older response is ignored");
+        let cached = ddl_core::catalog::load_cache(&env.paths.data).expect("cache");
+        assert_eq!(
+            cached.bundle.catalog_serial, 900,
+            "the cache keeps the newer bundle"
+        );
     }
 
     #[test]
@@ -4922,7 +5591,36 @@ mod release_state_tests {
             );
             for item in installed {
                 let active = services.active(&item.recipe.id).unwrap().unwrap();
-                assert_eq!(active.recipe, item.recipe);
+                // The snapshot refreshes display tags from the current catalog by
+                // design; the frozen install keeps the tags it was installed
+                // with. Normalise only that display metadata, then compare every
+                // launch field, and assert both tag sources separately.
+                let mut frozen = active.recipe.clone();
+                frozen.tags.clone_from(&item.recipe.tags);
+                assert_eq!(
+                    frozen, item.recipe,
+                    "{tag}: frozen launch recipe preserved (display tags refreshed separately)"
+                );
+                assert_eq!(
+                    item.recipe.tags,
+                    services.catalog.recipe(&item.recipe.id).unwrap().tags,
+                    "{tag}: display tags follow the current catalog"
+                );
+                let stored: serde_json::Value = serde_json::from_slice(
+                    &fs::read(
+                        tree.join("data/library")
+                            .join(&item.recipe.id)
+                            .join("active.json"),
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                let stored_tags: Vec<String> =
+                    serde_json::from_value(stored["recipe"]["tags"].clone()).unwrap();
+                assert_eq!(
+                    active.recipe.tags, stored_tags,
+                    "{tag}: the frozen recipe keeps its installed tags"
+                );
                 assert!(active.previous_recipe.is_some());
                 let manifest = item.manifest.as_ref().unwrap();
                 assert!(!manifest.members.is_empty());

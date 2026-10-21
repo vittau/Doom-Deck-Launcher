@@ -729,8 +729,6 @@ fn print_catalog_outcome(
             let date = ddl_core::catalog::serial_date(*serial).unwrap_or_else(|| "unknown".into());
             writeln!(out, "Catalog is up to date ({date})").map_err(output_error)
         }
-        O::Disabled => writeln!(out, "Automatic catalog updates are off").map_err(output_error),
-        O::NotDue => writeln!(out, "Checked less than 24 h ago").map_err(output_error),
     }
 }
 

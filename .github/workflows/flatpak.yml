@@ -77,8 +77,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # `git log -1` only needs the checked-out commit.
-          fetch-depth: 1
+          # Spec 077 R3: the catalog serial is the content time of the newest
+          # commit touching `catalog/`, so the history must reach that commit.
+          fetch-depth: 0
 
       - name: Install Flatpak tooling
         run: |
@@ -218,7 +219,8 @@ jobs:
       - name: Build the Flatpak
         run: |
           set -euo pipefail
-          serial="$(git log -1 --format=%ct "${GITHUB_SHA}")"
+          # Spec 077 R3: catalog content time, not the app commit.
+          serial="$(git log -1 --format=%ct "${GITHUB_SHA}" -- catalog/)"
           test "$serial" -gt 0
           printf '%s\n' "$serial" > packaging/flatpak/catalog-serial
           echo "catalog serial: $serial"
