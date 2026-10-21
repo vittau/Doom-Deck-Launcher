@@ -125,7 +125,8 @@ scoped to this repository and cannot touch `main` history.
 
 - **Signed commits and summary.** Clients pin the public key from the `.flatpakref`; a compromised
   Pages site alone cannot push an unsigned build. The private key exists only as a repository
-  secret and in the maintainer's offline backup.
+  secret and in the maintainer's offline backup. The public half is committed at
+  `packaging/flatpak/repo-key.gpg`, and the workflow refuses to sign if the secret does not match it.
 - **HTTPS.** GitHub Pages terminates TLS for `www.vitormach.dev`; the OSTree remote uses that URL.
 - **No host execution.** The app still runs entirely inside the sandbox; the engine is downloaded at
   runtime and extracted, never mounted.
@@ -135,9 +136,9 @@ scoped to this repository and cannot touch `main` history.
 
 ## Key rotation and rollback
 
-The key has no expiry. To rotate it: generate a new key with the same script, update both secrets,
-publish once. Users then see a verification failure, because the pinned key changed, and must
-reinstall:
+The key has no expiry. To rotate it: generate a new key with the same script, replace
+`packaging/flatpak/repo-key.gpg` with the new public key, update both secrets, and publish once.
+Users then see a verification failure, because the pinned key changed, and must reinstall:
 
 ```sh
 flatpak uninstall --user io.github.vittau.Doom-Deck-Launcher

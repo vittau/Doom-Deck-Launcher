@@ -14,6 +14,7 @@ repository's `gh-pages` branch and served by GitHub Pages at
 | --- | --- |
 | `.github/workflows/flatpak-remote.yml` | Tag/manual publish job: build, sign, export, smoke-test, render, push `gh-pages` |
 | `packaging/flatpak/site/index.html` | Landing page template (`@@VERSION@@`, `@@DATE@@`, `@@APP_ID@@`, `@@SITE_BASE@@`) |
+| `packaging/flatpak/repo-key.gpg` | Public half of the repository signing key; the workflow refuses to sign if the secret differs |
 | `scripts/flatpak/make-signing-key.sh` | One-time repository key generation, prints the `gh secret set` commands |
 | `docs/flatpak-remote.md` | Player install/update/remove, maintainer setup, key rotation, Flathub path |
 | `docs/specs/063-flatpak-selfhosted-remote.md` | Requirements and acceptance criteria |

@@ -162,6 +162,13 @@ jobs:
           fi
           test -n "$fingerprint"
           gpg --batch --list-secret-keys "$fingerprint" >/dev/null
+          # The committed public half must match the secret: a wrong or rotated
+          # secret fails here instead of signing with an unexpected key.
+          gpg --batch --export "$fingerprint" > "$RUNNER_TEMP/repo-key.gpg"
+          cmp -s "$RUNNER_TEMP/repo-key.gpg" packaging/flatpak/repo-key.gpg || {
+            echo "::error::packaging/flatpak/repo-key.gpg does not match FLATPAK_GPG_PRIVATE_KEY"
+            exit 1
+          }
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
           echo "GPG_FINGERPRINT=$fingerprint" >> "$GITHUB_ENV"
           echo "Signing key: $fingerprint"
