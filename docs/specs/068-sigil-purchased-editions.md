@@ -25,6 +25,16 @@ the supplied SIGIL USB 1.23 and SIGIL II registered 1.0 directories.
   Record local read-only inspection separately from reproducible tests. Update the SIGIL research
   and report at `docs/reports/068-sigil-purchased-editions.md`, citing supplied document names
   and inspected hashes; distinguish confirmed metadata from unplayed compatibility claims.
+- **R5 — Explicit owner expansion:** also support the supplied SIGIL COMPAT map WAD and
+  SHREDS_COMPAT paid music WAD with their verified hashes. The latter is music-only and must
+  load after the COMPAT E3 maps; never accept it as a complete native E5 replacement. Preserve
+  native E5/REG and E6/MP3 choices. Extend recipe component dependency/selection behavior as
+  needed to enforce this pairing, including existing profiles, CLI validation and controller
+  toggles. Enabling compatibility music should arrange the required maps with minimal friction;
+  switching away must not leave orphaned music or mix native and COMPAT editions. The coordinator
+  approves a concrete design before broad schema/UI work; this supersedes R3's earlier deferral.
+  Tests cover valid native and COMPAT paid combinations, required map activation, switching,
+  missing imports, hash recognition, final WAD order and rejection of inconsistent state.
 
 ## Ownership and checks
 
