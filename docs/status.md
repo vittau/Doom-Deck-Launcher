@@ -38,9 +38,13 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   advertises the new ID and retires the old app ref; no installation migration was requested.
   Cloudflare accepted the exact `doomdecklauncher.com/` prefix purge, followed by successful
   canonical file validation. The tagged serializer fixture and seven-release guard are verified.
-- **Website follow-ups:** the owner confirmed Search Console configuration and supplied the GA4
-  measurement ID. A website/AI-search audit and matching README header are in review; GA4 site
-  integration is pending. No search-index coverage or Analytics event reception is claimed.
+- **Website follow-ups complete:** matching light/dark README header reviewed and integrated
+  (081); owner-confirmed Search Console configuration; GA4 `G-BTYE5G8WCM` deployed to both site
+  pages with one initialization each (082). Independent website run `39695211624` passed
+  deployment, prefix purge and served-file verification; the live tag was checked independently.
+  Analytics event reception and private index coverage remain unobserved. The reviewed SEO/AI
+  search audit is `reports/080-seo-and-ai-discovery-audit.md`; sitemap, entity metadata and image
+  optimization are recommendations, not implemented behavior.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.

@@ -908,3 +908,18 @@
   refs: [docs/reports/074-card-padding.md, docs/reports/075-pistol-start-latency.md,
     docs/reports/077-catalog-startup-and-date.md, docs/reports/078-release-state-v011.md,
     docs/reports/079-domain-and-flatpak-identity.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Completed the OpenCode SEO/AI-search audit with current primary crawler documentation
+    and before/after domain-publication evidence; corrected transient HTTPS observations,
+    distinguished actual index coverage from crawlability and recorded the owner's completed
+    Search Console setup. Added the website's compact emblem/DDL/subtitle composition to
+    README with reviewed light/dark assets at 370 px. Published the owner-supplied GA4 tag
+    on both website pages; 24 site tests and 38 documentation links passed. Independent
+    website run 39695211624 deployed, purged doomdecklauncher.com/ and verified canonical
+    bytes; the coordinator confirmed one live tag initialization per page. Real Analytics
+    reception remains for owner observation. SEO proposals remain documented recommendations.
+  refs: [docs/reports/080-seo-and-ai-discovery-audit.md, docs/reports/081-readme-brand.md,
+    docs/reports/082-site-google-analytics.md]

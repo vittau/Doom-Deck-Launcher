@@ -1,6 +1,6 @@
 # 082 — Measure website visits with GA4
 
-**Status:** Ready. **Origin:** owner supplied measurement ID `G-BTYE5G8WCM` after creating the
+**Status:** Complete — implementation and focused verification passed. **Origin:** owner supplied measurement ID `G-BTYE5G8WCM` after creating the
 website property and requests its configuration.
 
 Add the standard asynchronous Google tag for this measurement ID to the generated website

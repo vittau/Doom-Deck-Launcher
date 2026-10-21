@@ -1,6 +1,6 @@
 # 081 — Match README branding to the website
 
-**Status:** Ready. **Origin:** owner requests the README logo in the same style as the site.
+**Status:** Complete — implementation and focused verification passed. **Origin:** owner requests the README logo in the same style as the site.
 
 Use the existing emblem, DDL wordmark and compact DoomDeckLauncher subtitle composition
 from the website header for the README header. Reuse original assets and typography; do
