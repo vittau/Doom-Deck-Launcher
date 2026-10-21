@@ -37,11 +37,11 @@ Click an image to inspect it at 1280×800.
 
 ## Install on Steam Deck
 
-In Desktop Mode, open [the DDL website](https://www.vitormach.dev/Doom-Deck-Launcher/),
-choose **Install on Steam Deck**, and open the downloaded `.flatpakref` in Discover.
-Install DDL there, then follow the [Steam shortcut instructions](docs/steam-deck-guide.md#flatpak-discover)
-to launch it from Gaming Mode. This experimental signed Flatpak receives app updates through
-Discover; the mapset catalog updates inside DDL. Physical Deck installation checks are still pending.
+**Recommended: Flatpak.** Prefer the signed Flatpak on Steam Deck and follow the
+[installation instructions on the DDL website](https://www.vitormach.dev/Doom-Deck-Launcher/).
+Launcher updates arrive through Discover; the mapset catalog updates inside DDL.
+The [Steam Deck guide](docs/steam-deck-guide.md#flatpak-discover) covers adding DDL to Steam
+and troubleshooting. Physical Deck installation checks are still pending.
 
 Alternatively, use the portable Linux tarball:
 
