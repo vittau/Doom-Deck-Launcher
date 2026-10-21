@@ -158,6 +158,17 @@ fn library_favorite_and_home() {
 }
 
 #[test]
+fn direct_play_home_detail_and_edit() {
+    if isolated(module_path!(), "direct_play_home_detail_and_edit") {
+        return;
+    }
+    let scene = production::scene();
+    replay(&scene, 4);
+    let capture = |name: &str| scene.capture(name);
+    production::direct_play(&scene, &capture);
+}
+
+#[test]
 fn blocked_setup_and_settings() {
     if isolated(module_path!(), "blocked_setup_and_settings") {
         return;

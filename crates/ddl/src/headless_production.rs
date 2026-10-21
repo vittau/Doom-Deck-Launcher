@@ -1,6 +1,7 @@
 //! End-to-end production services with loopback HTTP, scratch XDG roots, fake engine runner.
 use super::*;
 use crate::{
+    input::Action,
     runtime::{Runtime, Screen},
     services::{Command, Environment, Problem, Services, TestEnvironment},
 };
@@ -656,6 +657,202 @@ pub(super) fn install_and_setup(scene: &Scene, capture: Captures) {
     state.borrow_mut().sync(ui);
 }
 
+/// Spec 064 R1/R2: Home Continue and Detail's main action start the remembered
+/// profile directly, Edit still opens Play setup, blocking falls back to setup,
+/// and only launch actions carry the red primary style.
+pub(super) fn direct_play(scene: &Scene, capture: Captures) {
+    let Scene {
+        fake, play_gate, ..
+    } = scene;
+    let ui = &scene.ui;
+    let state = scene.state.clone();
+    // A second profile becomes the remembered one for SIGIL.
+    let default_id = state.borrow().snapshot.as_ref().unwrap().items[1]
+        .profile
+        .id
+        .clone();
+    state
+        .borrow_mut()
+        .start(ui, Command::NewProfile("sigil".into(), true));
+    idle(&state);
+    // NewProfile opens the rename sheet; the remembered profile is what matters.
+    if ui.get_sheet_open() {
+        state.borrow_mut().action(ui, Action::Back);
+        state.borrow_mut().sync(ui);
+    }
+    let remembered = {
+        let r = state.borrow();
+        let item = &r.snapshot.as_ref().unwrap().items[1];
+        item.profiles
+            .iter()
+            .find(|p| p.id != default_id)
+            .expect("the copied profile")
+            .id
+            .clone()
+    };
+    state.borrow_mut().start(
+        ui,
+        Command::SelectProfile("sigil".into(), remembered.clone()),
+    );
+    idle(&state);
+    let mut profile = state.borrow().snapshot.as_ref().unwrap().items[1]
+        .profile
+        .clone();
+    profile.last_played = Some(1000);
+    state.borrow_mut().start(ui, Command::Save(profile));
+    idle(&state);
+
+    // Home Continue: the remembered profile launches without Play setup.
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Home;
+        r.focus = 1;
+        r.sync(ui);
+    }
+    let continue_button = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == 1)
+        .expect("Home Continue");
+    assert_eq!(continue_button.label, "Continue");
+    assert!(continue_button.primary, "Continue is a launch action");
+    capture("064-home-continue.png");
+    state.borrow_mut().click(ui, 1);
+    pump_events();
+    assert!(
+        state.borrow().busy,
+        "Home Continue dispatched a command (screen {:?}, playing {}, node {:?}, pending {:?})",
+        state.borrow().screen,
+        state.borrow().playing,
+        ui.get_nodes().iter().find(|n| n.id == 1),
+        state.borrow().pending
+    );
+    assert!(
+        matches!(state.borrow().pending, Some(Command::Play(_))),
+        "Home Continue dispatches Play, not setup: {:?}",
+        state.borrow().pending
+    );
+    wait(&state, |r| r.playing);
+    assert_eq!(state.borrow().screen, Screen::Home, "launch keeps Home");
+    capture("064-direct-play-running.png");
+    play_gate.release();
+    idle(&state);
+    {
+        let r = state.borrow();
+        let item = &r.snapshot.as_ref().unwrap().items[1];
+        assert_eq!(
+            item.profile.id, remembered,
+            "the remembered profile is launched"
+        );
+        assert!(
+            item.profile.last_played.is_some_and(|time| time >= 1000),
+            "the remembered profile records the session"
+        );
+        if let Some(other) = item.profiles.iter().find(|p| p.id == default_id) {
+            assert!(
+                other.last_played != item.profile.last_played,
+                "the other profile keeps its own history"
+            );
+        }
+    }
+    assert_eq!(fake.launch_count(), 1);
+
+    // Detail's main action is Play; Edit still opens Play setup.
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Detail;
+        r.selected = 1;
+        r.focus = 1;
+        r.sync(ui);
+    }
+    let play = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == 1)
+        .expect("Detail main action");
+    assert_eq!(play.label, "Play");
+    assert!(play.primary, "Play is the only red action here");
+    {
+        let r = state.borrow();
+        let item = &r.snapshot.as_ref().unwrap().items[1];
+        assert!(item.launch.is_ok(), "launch is valid: {:?}", item.launch);
+        assert!(
+            r.snapshot.as_ref().unwrap().engine.is_some(),
+            "engine present"
+        );
+        assert!(r.snapshot.as_ref().unwrap().config_usable, "config usable");
+    }
+    assert_eq!(
+        ui.get_nodes()
+            .iter()
+            .find(|n| n.id == 6)
+            .expect("Edit action")
+            .label,
+        "Edit"
+    );
+    capture("064-detail-play.png");
+    state.borrow_mut().click(ui, 1);
+    pump_events();
+    assert!(
+        matches!(state.borrow().pending, Some(Command::Play(_))),
+        "Detail's main action dispatches Play: {:?}",
+        state.borrow().pending
+    );
+    idle(&state);
+    assert_eq!(fake.launch_count(), 2);
+    assert_eq!(state.borrow().screen, Screen::Detail);
+    ui.invoke_clicked(6);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(state.borrow().focus, 60);
+    assert_eq!(fake.launch_count(), 2, "Edit never launches");
+
+    // A missing engine falls back to Play setup instead of dispatching a run.
+    let engine = state.borrow_mut().snapshot.as_mut().unwrap().engine.take();
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Detail;
+        r.selected = 1;
+        r.focus = 1;
+        r.sync(ui);
+    }
+    ui.invoke_clicked(1);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(fake.launch_count(), 2, "blocked Play does not launch");
+    state.borrow_mut().snapshot.as_mut().unwrap().engine = engine;
+
+    // R2: only a kind-2 action that starts a game is red.
+    for (screen, focus) in [
+        (Screen::Home, 1),
+        (Screen::Discover, 10),
+        (Screen::Library, 10),
+        (Screen::Settings, 1),
+        (Screen::Detail, 1),
+        (Screen::Setup, 50),
+    ] {
+        {
+            let mut r = state.borrow_mut();
+            r.screen = screen;
+            r.focus = focus;
+            r.sync(ui);
+        }
+        for node in ui.get_nodes().iter().filter(|n| n.kind == 2 && n.primary) {
+            assert!(
+                node.label == "Continue" || node.label == "Play",
+                "{screen:?} paints `{}` red",
+                node.label
+            );
+        }
+    }
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Home;
+        r.focus = 1;
+        r.sync(ui);
+    }
+}
+
 /// Specs 010/017/025: advanced-component exclusivity, the compatibility dialog,
 /// imports, scrolling, playing and the engine-exit toast.
 pub(super) fn play_setup_options(scene: &Scene, capture: Captures) {
@@ -841,6 +1038,27 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
             .filter(|n| n.kind == 4 && n.w >= 160.)
             .all(|n| !n.screenshot.is_empty())
     );
+    // Spec 064 R4: card text and tags keep an internal gutter.
+    let nodes = ui.get_nodes();
+    for card in nodes
+        .iter()
+        .filter(|n| n.kind == 1 && n.actionable && n.w >= 380.)
+    {
+        for text in nodes.iter().filter(|n| {
+            matches!(n.kind, 0 | 13 | 20 | 21)
+                && n.x >= card.x
+                && n.y >= card.y
+                && n.x < card.x + card.w
+        }) {
+            assert!(
+                text.x >= card.x + 20.,
+                "card text at {} is too close to {} ({})",
+                text.x,
+                card.x,
+                text.label
+            );
+        }
+    }
     capture("010-library.png");
     // Spec 015, R5: X marks the focused installed mapset; Library shows the star and sorts it first.
     let marks = |ui: &AppWindow| ui.get_nodes().iter().filter(|n| n.kind == 12).count();
@@ -856,7 +1074,13 @@ pub(super) fn library_home_and_favorite(scene: &Scene, capture: Captures) {
     assert_eq!(marks(ui), 0);
     press(window, Key::F1);
     assert_eq!(state.borrow().screen, Screen::Home);
-    assert!(ui.get_nodes().iter().any(|n| n.label == "Recently played"));
+    // Spec 064 R1/R5: Home keeps one latest game and has no lower recent list.
+    assert!(!ui.get_nodes().iter().any(|n| n.label == "Recently played"));
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.id == 1 && n.label == "Continue" && n.primary)
+    );
     assert!(
         ui.get_nodes()
             .iter()
@@ -890,13 +1114,19 @@ pub(super) fn blocked_setup_and_settings(scene: &Scene, capture: Captures) {
     let ui = &scene.ui;
     let state = scene.state.clone();
     let owned = scene.home.join("owned");
-    ui.invoke_clicked(1);
-    assert_eq!(state.borrow().screen, Screen::Setup);
     // Missing IWAD rechecks and gates the real resolver without changing the install.
     std::fs::remove_file(owned.join("renamed.wad")).unwrap();
     state.borrow_mut().start(ui, Command::Scan(None));
     idle(&state);
-    state.borrow_mut().screen = Screen::Setup;
+    // Spec 064 R1: Home Continue falls back to Play setup when launch is blocked,
+    // and no engine launch is dispatched.
+    state.borrow_mut().screen = Screen::Home;
+    state.borrow_mut().focus = 1;
+    state.borrow_mut().sync(ui);
+    assert_eq!(fake.launch_count(), 3);
+    ui.invoke_clicked(1);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(fake.launch_count(), 3);
     state.borrow_mut().focus = 50;
     state.borrow_mut().sync(ui);
     assert!(
@@ -1006,12 +1236,37 @@ pub(super) fn settings_rows(scene: &Scene, capture: Captures) {
                     .label
                     .contains("https://github.com/NightFright2k19/doom_widehud")
             );
+            // Spec 064 R5: no screenshot-credit list, author and repository shown.
+            assert!(
+                !ui.get_nodes()
+                    .iter()
+                    .any(|n| n.label.starts_with("Screenshots:")),
+                "About no longer lists screenshot credits"
+            );
+            let made_by = ui
+                .get_nodes()
+                .iter()
+                .find(|n| n.label == "Made by Vitor Machado")
+                .expect("About names the author");
+            let repository = ui
+                .get_nodes()
+                .iter()
+                .find(|n| n.label == "https://github.com/vittau/Doom-Deck-Launcher")
+                .expect("About links the repository");
             let panel = ui
                 .get_nodes()
                 .iter()
                 .find(|n| n.kind == 1 && n.x == 348.)
                 .unwrap();
             assert!(credit.y + credit.h + 24. <= panel.y + panel.h);
+            assert!(made_by.y < repository.y);
+            assert!(
+                repository.y + repository.h <= 518.,
+                "attribution is visible without scrolling"
+            );
+            assert!(repository.y + repository.h + 8. <= panel.y + panel.h);
+            // R4: the Start hint is Quit in both local and production copy.
+            assert_eq!(ui.global::<crate::LocalStrings>().get_quit(), "Quit");
             capture("013-about.png");
         }
     }
@@ -1544,20 +1799,18 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     assert!(ui.get_nodes().iter().any(|n| n.label.contains("Casual")));
     capture("018-home-continue.png");
     let before_continue = fake.launches().len();
-    press(window, Key::Return); // Continue opens setup, preserving the established flow.
-    assert_eq!(state.borrow().screen, Screen::Setup);
-    assert_eq!(ui.get_focused(), 50);
+    // Spec 064 R1: Home Continue launches the remembered profile directly.
+    press(window, Key::Return);
+    idle(state);
+    state.borrow_mut().neutral_poll(true);
+    assert_eq!(fake.launches().len(), before_continue + 1);
+    assert_eq!(state.borrow().screen, Screen::Home);
     assert_eq!(
         state.borrow().snapshot.as_ref().unwrap().items[0]
             .profile
             .id,
         copied.id
     );
-    assert_eq!(fake.launches().len(), before_continue);
-    press(window, Key::Return); // Play the remembered profile.
-    idle(state);
-    state.borrow_mut().neutral_poll(true);
-    assert_eq!(fake.launches().len(), before_continue + 1);
     assert_profile_dirs(fake, &store.dirs(&copied.id));
     // Library shows the count using the same snapshot.
     {
@@ -2592,7 +2845,8 @@ pub(super) fn title_fit_journey(
             assert_eq!(
                 seen,
                 match screen {
-                    Screen::Home => (2, 1),
+                    // Spec 064 R5: Home keeps only the latest game.
+                    Screen::Home => (1, 1),
                     Screen::Discover | Screen::Library | Screen::Detail => (1, 1),
                     Screen::Progress => (1, 0),
                     Screen::Setup => (0, 0),
@@ -2602,7 +2856,7 @@ pub(super) fn title_fit_journey(
                 recipe.id
             );
             ui.set_fit_label(ui.get_heading());
-            ui.set_fit_width(if ui.get_art_band() { 784. } else { 1200. });
+            ui.set_fit_width(if ui.get_art_band() { 772. } else { 1200. });
             ui.set_fit_height(48.);
             ui.set_fit_size(36.);
             ui.set_fit_smaller(26.);

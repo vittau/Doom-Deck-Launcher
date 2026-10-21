@@ -1336,7 +1336,8 @@ impl Runtime {
             for (index, item) in s.base_games.iter().enumerate() {
                 let x = 12. + index as f32 * 306.;
                 b.card(BASE + index as i32, x, 152., 282., 84.);
-                b.title(x + 22., 166., 238., 64., item.base.title().into(), 24.);
+                base_art(b, x + 10., 164., 96., 60., item.base.game);
+                b.title(x + 116., 162., 156., 64., item.base.title().into(), 22.);
             }
             b.title(
                 12.,
