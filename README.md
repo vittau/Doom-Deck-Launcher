@@ -30,11 +30,20 @@ Click an image to inspect it at 1280×800.
 - Controller-first navigation with an Ember Cathedral interface.
 - Curated mapset recipes with explicit components and load order.
 - Discover categories, tags and persistent favorites.
+- Independent catalog updates at startup, with a safe offline fallback.
 - Install the official DSDA-Doom AppImage, with an extraction fallback.
 - Find your own IWADs; keep engine settings and saves isolated.
 - Diagnose engine, IWAD and mapset problems with the same `ddl` command-line tools.
 
 ## Install on Steam Deck
+
+In Desktop Mode, open [the DDL website](https://www.vitormach.dev/Doom-Deck-Launcher/),
+choose **Install on Steam Deck**, and open the downloaded `.flatpakref` in Discover.
+Install DDL there, then follow the [Steam shortcut instructions](docs/steam-deck-guide.md#flatpak-discover)
+to launch it from Gaming Mode. This experimental signed Flatpak receives app updates through
+Discover; the mapset catalog updates inside DDL. Physical Deck installation checks are still pending.
+
+Alternatively, use the portable Linux tarball:
 
 1. In Desktop Mode, download `ddl-linux-x86_64.tar.gz` from [GitHub Releases](https://github.com/vittau/Doom-Deck-Launcher/releases) (checksum included).
 2. Extract it somewhere convenient and keep the `ddl/` directory together.
