@@ -5,9 +5,11 @@ refreshing the screenshots.
 
 ## Requirements
 
-- R1: Remove All and Featured from the Discover category strip. Preserve the remaining used
-  vocabulary categories in their existing order and keep Favorites. This is a navigation
-  change; do not remove catalog metadata or change recipe compatibility/downloads.
+- R1: Remove All and Featured from the Discover category strip. The owner specifies this order:
+  Cacowards, Megawads, Community Projects, Doomer Boards, Classics, Episodes, Challenging;
+  retain Favorites after these as the personal filter. Omit other categories from this strip;
+  preserve catalog metadata and recipe compatibility/downloads. The 073 catalog worker owns
+  the new Doomer Boards vocabulary/memberships and vocabulary ordering.
 - R2: New Discover sessions select the first available specific category. If a selected category
   disappears after a snapshot/catalog refresh, fall back to the first available remaining
   category. Handle an empty catalog safely (Favorites is still available); no empty-vector
