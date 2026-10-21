@@ -1941,6 +1941,16 @@ fn card_ids(ui: &AppWindow) -> Vec<i32> {
         .map(|n| n.id)
         .collect()
 }
+/// The combined game/status line drawn for the card with `id` (spec 074 R1).
+fn card_status(ui: &AppWindow, id: i32) -> Option<crate::ViewNode> {
+    let card = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.kind == 1 && n.actionable && n.id == id)?;
+    ui.get_nodes()
+        .iter()
+        .find(|n| n.x == card.x + 28. && n.y == card.y + 258. && n.w == 328. && n.h == 24.)
+}
 fn chip_labels(ui: &AppWindow) -> Vec<String> {
     ui.get_nodes()
         .iter()
@@ -2985,7 +2995,16 @@ pub(super) fn recipe_changes_journey(window: &MinimalSoftwareWindow, ui: &AppWin
         r.focus = 10;
         r.sync(ui);
     }
-    assert!(ui.get_nodes().iter().any(|n| n.label == "Update available"));
+    // Spec 074 R1 keeps the card information unchanged; the update notice now
+    // shares the game/readiness line instead of being its own label. Assert it
+    // on the intended installed card, at the card's status slot, and on screen.
+    let status = card_status(ui, crate::runtime::CARD)
+        .expect("the installed card's combined status line is drawn");
+    assert_eq!(status.label.as_str(), "DOOM II · Update available");
+    assert!(
+        status.y >= 0. && status.y + status.h <= 800.,
+        "the update notice is inside the visible Library viewport"
+    );
     capture(window, "020-library-update.png");
     press(window, Key::Return);
     assert_eq!(state.borrow().screen, Screen::Detail);
@@ -3029,10 +3048,12 @@ pub(super) fn recipe_changes_journey(window: &MinimalSoftwareWindow, ui: &AppWin
         r.focus = 10;
         r.sync(ui);
     }
+    let status = card_status(ui, crate::runtime::CARD)
+        .expect("the removed card's combined status line is drawn");
+    assert_eq!(status.label.as_str(), "DOOM II · No longer in the catalog");
     assert!(
-        ui.get_nodes()
-            .iter()
-            .any(|n| n.label == "No longer in the catalog")
+        status.y >= 0. && status.y + status.h <= 800.,
+        "the removal notice is inside the visible Library viewport"
     );
     capture(window, "020-library-removed.png");
     press(window, Key::Return);

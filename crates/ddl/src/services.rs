@@ -2111,11 +2111,19 @@ impl Services {
                 })
             }
             // "Not newer" is a normal outcome for a manual check, not a failure.
+            // It still counts as a check for `catalog_last_check`; record it
+            // best effort under the short lock because this path did not take
+            // the publication lock above.
             Err(ddl_core::catalog::CatalogUpdateError::Rejected(
                 ddl_core::catalog::BundleRejection::NotNewer { .. },
-            )) => Ok(CatalogOutcome::Current {
-                serial: self.catalog_origin.serial,
-            }),
+            )) => {
+                if self.record_catalog_attempt(now).is_err() {
+                    tracing::warn!("could not record the catalog check attempt");
+                }
+                Ok(CatalogOutcome::Current {
+                    serial: self.catalog_origin.serial,
+                })
+            }
             Err(error) => {
                 if self.record_catalog_attempt(now).is_err() {
                     tracing::warn!("could not record the catalog check attempt");
@@ -2953,7 +2961,9 @@ impl Services {
     /// Returns a [`CliFailure`] for a busy state lock, a fetch/rejection failure
     /// or a filesystem failure.
     pub fn catalog_update(&mut self) -> Result<CatalogOutcome, CliFailure> {
-        let _lock = self.lock_cli()?;
+        // No outer state lock: the shared publication helper takes the short
+        // cross-process lock only after the network fetch, so the CLI update
+        // cannot reject itself with Busy (spec 077 integration review).
         self.catalog_check(&CancellationToken::new())
             .map_err(|problem| CliFailure::message(problem.to_string()))
     }
