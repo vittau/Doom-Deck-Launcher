@@ -9,7 +9,7 @@ import tempfile
 import textwrap
 import unittest
 
-from test_render import APP_ID, BASE, ROOT
+from test_render import APP_ID, ROOT
 
 HELPER = ROOT / "scripts/flatpak/retire-old-app-ref.py"
 spec = importlib.util.spec_from_file_location("retire_ref", HELPER)

@@ -21,7 +21,7 @@ no settings/DNS/remotes changed, and no push, tag, release, publication or secre
 
 ## Local verification
 
-- `python3 -m unittest discover -s packaging/flatpak/site`: **19 passed**, including seven identity/publication contract tests and root-resolved assets.
+- `python3 -m unittest discover -s packaging/flatpak/site`: **23 passed**, including eleven identity/publication/transition contract tests and root-resolved assets.
 - `python3 -m unittest discover -s scripts/flatpak -p 'test_*.py'`: **23 passed**.
 - `bash scripts/flatpak/test_served_urls.sh`: passed (root page, new descriptor, repository summary, canonical/cache-busted variants).
 - `desktop-file-validate packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop`: passed.
@@ -34,19 +34,48 @@ no settings/DNS/remotes changed, and no push, tag, release, publication or secre
 - `CARGO_BUILD_JOBS=2 cargo clippy --workspace --all-targets -- -D warnings`: passed.
 - `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2 CARGO_TARGET_DIR=/Users/vitor/orca/workspaces/Doom-Deck-Launcher/app-header-brand/target cargo test -p ddl headless::flatpak:: -- --test-threads=2`: **5 passed**, entirely off-screen; reused the existing build cache. No source-wide test rerun or diagnosis of the other worker's known follow-ups.
 
+## Final review follow-up
+
+- Corrected `flatpak build-update-repo --homepage` to `${SITE_BASE}/`; repository metadata,
+  AppStream, descriptors and page canonical URL now agree.
+- The coordinator confirmed the published obsolete loose ref at
+  `repo/refs/heads/app/io.github.vittau.Doom-Deck-Launcher/x86_64/stable`.
+  `retire-old-app-ref.py` unlinks **only that exact file** after the new signed export and
+  before regenerating/signing AppStream and summary. It is idempotent, rejects symlink
+  paths and non-file targets, and does not delete Git refs, objects, other OSTree refs or
+  publication history. Existing pruning policy remains unchanged.
+- The signed smoke client now lists application IDs explicitly, requires the new ID and
+  fails if the obsolete ID remains advertised. GPG verification and fresh-client install
+  checks remain enabled. Actual signed publication is still coordinator-owned.
+- Four additional tests run the cleanup CLI twice on a bounded OSTree-layout fixture,
+  compare all retained files byte-for-byte (including same-ID other branches/architectures,
+  similarly prefixed ref, other apps/runtimes, remote refs, objects, summary and Git refs),
+  reject symlinks/non-files, check operation order/signing/homepage metadata, and execute
+  the real smoke assertion block against new-only, both-ID, old-only and empty listings.
+  **Limitation:** neither `ostree` nor `flatpak` is installed on this macOS host; local fixtures
+  do not claim to verify signatures or regenerate real AppStream. The Linux signed publisher
+  now enforces both application-list assertions before installation.
+- Manifest comments now describe the per-startup bundle check and the last `catalog/`
+  content commit timestamp; no catalog behavior or generator/release-state fixture changed.
+- Follow-up implementation commit: `da772e3`; then merged coordinator checkpoint `8eb2914`
+  cleanly. Formatting, all 23 site tests, workflow lint (same existing runner-label exception),
+  purge tests and served URL checks pass after integration. No Rust behavior changed in this
+  follow-up; the earlier full workspace Clippy and focused Rust checks above remain applicable.
+
 ## Exact remaining old-reference audit
 
 Ran `rg -n 'io.github.vittau.Doom-Deck-Launcher|vitormach.dev|vittau.github.io' . --hidden --glob '!.git' --glob '!docs/reports/079-domain-and-flatpak-identity.md'`.
-There are **45 matching lines in 17 files**, classified as follows; none is an active old
+There are **46 matching lines in 18 files**, classified as follows; none is an active old
 application export or canonical site setting owned by this worker.
 
 | File(s) | Matching lines | Classification |
 | --- | ---: | --- |
 | `docs/flatpak-remote.md` | 1 | Necessary upstream DNS CNAME target `vittau.github.io`, not a public website base. |
+| `scripts/flatpak/retire-old-app-ref.py` | 1 | Exact obsolete OSTree ref authorized for retirement; never an active export. |
+| `.github/workflows/flatpak-remote.yml` | 1 | Negative signed-remote assertion: old application must not be advertised. |
 | `scripts/flatpak/test_purge_cloudflare_cache.py` | 3 | Intentional rejection fixtures for both former origins; never allowed purge targets. |
-| `docs/decisions.md` | 2 | Coordinator-owned existing decisions. Propose recording the domain/ID supersession; worker did not edit. |
-| `docs/orchestration.md` | 1 | Coordinator-owned current guidance; root reports updating this on its branch. Worker reverted its local edit as requested. |
-| `docs/status.md` | 1 | Coordinator-owned current site link. Coordinator should update after integration/publication. |
+| `docs/decisions.md` | 2 | Historical decisions now explicitly superseded by coordinator-added D-039; retain. |
+| `docs/status.md` | 1 | Coordinator-owned earlier release/site evidence; coordinator should refresh status after publication. |
 | `docs/journal.yml` | 2 | Historical publication entries; retain. |
 | `docs/orchestration-pause-2026-10-21.md` | 1 | Historical pause/handoff snapshot; retain. |
 | `docs/reports/058-flatpak-research.md` | 4 | Historical research report; retain. |
@@ -71,7 +100,9 @@ No edits to coordinator-owned overview/decisions/status/journal or the other wor
 are `luke.ns.cloudflare.com` and `zara.ns.cloudflare.com`. Initially no public apex A answer
 was present and Pages had `cname: null`, publishing from `gh-pages` at `/`. The coordinator
 subsequently reports all four apex GitHub A records configured and Pages custom domain set
-to `doomdecklauncher.com`; `www` was NXDOMAIN and TLS validation remained pending. The
+to `doomdecklauncher.com`; `www` was initially NXDOMAIN and TLS was pending. The latest
+coordinator confirmation reports the Pages certificate approved for both apex and www,
+`https_enforced: true`, and the owner confirms Pages works. The
 coordinator configured the new Cloudflare zone variable; the token is unchanged and the owner
 expects it to cover the new zone. This worker did not test credentials or mutate settings.
 
