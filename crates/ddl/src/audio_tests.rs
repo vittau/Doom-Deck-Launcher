@@ -197,7 +197,7 @@ fn an_explicit_arachno_choice_writes_the_verified_absolute_path() {
 
     let active = fs::read_to_string(services.config.active_path()).unwrap();
     assert!(
-        active.contains(&format!("snd_midiplayer \"fluidsynth\"\n")),
+        active.contains("snd_midiplayer \"fluidsynth\"\n"),
         "{active}"
     );
     assert!(
@@ -279,6 +279,40 @@ fn a_running_engine_is_never_changed() {
         custom
     );
     guard.end().unwrap();
+}
+
+/// Spec 067 review: a real config/path failure must abort the shared launch
+/// path with an actionable problem, never silently launch with another font.
+#[test]
+fn an_unwritable_config_aborts_the_launch_with_an_actionable_problem() {
+    let temp = tempfile::tempdir().unwrap();
+    let (members, _, _) = fixture(temp.path());
+    let env = environment(temp.path(), members.clone());
+    Soundfonts::with_members(&env.paths, members)
+        .select(Choice::Default)
+        .unwrap();
+    let services = Services::open(env).unwrap();
+    services.config.provision().unwrap();
+    let active = services.config.active_path();
+    fs::remove_file(&active).unwrap();
+    fs::create_dir(&active).unwrap();
+
+    match services.begin_engine_run() {
+        Ok(guard) => {
+            let _ = guard.end();
+            panic!("a config write failure must not start the engine");
+        }
+        Err(error) => {
+            let problem = error.into_problem();
+            assert_eq!(problem, Problem::Audio);
+            assert!(
+                problem.to_string().contains("Settings → Audio"),
+                "the error tells the player where to act: {problem}"
+            );
+        }
+    }
+    // The failed attempt did not leave the run guard held.
+    services.config.run_guard().unwrap().end().unwrap();
 }
 
 #[test]

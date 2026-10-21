@@ -168,6 +168,7 @@ fn scene(installed_font: bool, selected: Option<Choice>) -> Scene {
 /// F4 opens Settings; Down enters the section column; Down again reaches Audio.
 fn open_audio(
     window: &slint::platform::software_renderer::MinimalSoftwareWindow,
+    ui: &AppWindow,
     state: &Rc<RefCell<Runtime>>,
 ) {
     press(window, Key::F4);
@@ -177,6 +178,28 @@ fn open_audio(
     assert_eq!(state.borrow().focus, 2, "Audio is the second section");
     press(window, Key::Return);
     assert_eq!(state.borrow().focus, 70, "Default is focused");
+    // R6 review: the secondary Terms action and any primary action must be
+    // fully visible at 1280×800 without relying on focus-follow scrolling.
+    for id in [72, 73] {
+        if let Some(node) = ui.get_nodes().iter().find(|node| node.id == id) {
+            assert!(node.actionable, "action {id} must be actionable");
+            assert!(
+                node.y + node.h - ui.get_scroll_offset() <= 506.,
+                "action {id} ends at {} in the 506px visible content area",
+                node.y + node.h
+            );
+        }
+    }
+    let terms = ui
+        .get_nodes()
+        .iter()
+        .find(|node| node.id == 73)
+        .expect("the Terms action is always present");
+    assert!(
+        terms.y + terms.h - ui.get_scroll_offset() <= 506.,
+        "the Terms action is clipped by the 1280×800 content viewport"
+    );
+    assert_eq!(ui.get_scroll_offset(), 0., "baseline needs no scrolling");
 }
 
 fn labels(ui: &AppWindow) -> String {
@@ -199,7 +222,7 @@ fn audio_section_renders_and_selects_default() {
         env,
         _temp,
     } = scene(false, None);
-    open_audio(&window, &state);
+    open_audio(&window, &ui, &state);
     let text = labels(&ui);
     for expected in [
         "MIDI soundfont",
@@ -243,7 +266,7 @@ fn installed_arachno_is_selectable_and_persists() {
         env,
         _temp,
     } = scene(true, None);
-    open_audio(&window, &state);
+    open_audio(&window, &ui, &state);
     assert!(labels(&ui).contains("Installed"));
     assert!(
         ui.get_nodes().iter().any(|n| n.id == 71 && n.actionable),
@@ -274,7 +297,7 @@ fn audio_download_and_error_states_render() {
     let Scene {
         window, ui, state, ..
     } = scene(false, None);
-    open_audio(&window, &state);
+    open_audio(&window, &ui, &state);
     {
         let mut state = state.borrow_mut();
         state.screen = Screen::Progress;
@@ -293,9 +316,10 @@ fn audio_download_and_error_states_render() {
 
     {
         let mut state = state.borrow_mut();
-        state.screen = Screen::Settings;
+        // The real failure path keeps the Progress screen open so Retry can
+        // restart the same install; Back returns to Audio.
+        state.screen = Screen::Progress;
         state.busy = false;
-        state.pending = None;
         state.progress = None;
         state.problem = Some(Problem::Network);
         state.focus = 800;
@@ -337,7 +361,7 @@ fn a_missing_selected_font_stays_visible_and_recoverable() {
     .unwrap();
     state.borrow_mut().start(&ui, Command::Startup);
     settle(&state);
-    open_audio(&window, &state);
+    open_audio(&window, &ui, &state);
     let text = labels(&ui);
     assert!(text.contains("Using Default"), "{text}");
     assert!(text.contains("Reinstall"), "{text}");

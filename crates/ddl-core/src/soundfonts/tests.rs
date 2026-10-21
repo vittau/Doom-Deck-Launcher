@@ -388,7 +388,7 @@ fn explicit_arachno_selection_survives_restart_and_returns_the_verified_path() {
         "a restart restores the selection"
     );
 
-    fs::write(&effective.path.unwrap(), b"RIFF\x04\0\0\0sfbx").unwrap();
+    fs::write(effective.path.unwrap(), b"RIFF\x04\0\0\0sfbx").unwrap();
     assert!(
         restarted.select_members(Choice::Arachno, &members).is_err(),
         "a damaged font is never selectable"
@@ -432,7 +432,7 @@ fn install_present_checks_pointer_and_sizes_but_is_not_a_verification() {
 fn corrupt_audio_settings_preserve_the_engine_and_report_a_warning() {
     let dir = tempfile::tempdir().unwrap();
     let fonts = service(dir.path());
-    fs::create_dir_all(&fonts.preferences.parent().unwrap()).unwrap();
+    fs::create_dir_all(fonts.preferences.parent().unwrap()).unwrap();
     fs::write(&fonts.preferences, b"{ not json").unwrap();
     let effective = fonts.effective();
     assert_eq!(

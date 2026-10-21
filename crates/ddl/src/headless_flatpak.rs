@@ -236,9 +236,9 @@ fn diagnostics_show_the_flatpak_sandbox_line_and_the_update_source() {
     assert!(!ui.get_sheet_open(), "no old install, no offer");
 
     state.borrow_mut().screen = Screen::Settings;
-    state.borrow_mut().focus = 4;
+    state.borrow_mut().focus = 5;
     state.borrow_mut().sync(&ui);
-    ui.invoke_clicked(4);
+    ui.invoke_clicked(5);
     let shown = labels(&ui);
     assert!(
         shown.contains("Flatpak sandbox: yes (io.github.vittau.Doom-Deck-Launcher)"),
@@ -281,9 +281,9 @@ fn diagnostics_outside_the_sandbox_say_no_and_hide_the_store_note() {
     );
 
     state.borrow_mut().screen = Screen::Settings;
-    state.borrow_mut().focus = 4;
+    state.borrow_mut().focus = 5;
     state.borrow_mut().sync(&ui);
-    ui.invoke_clicked(4);
+    ui.invoke_clicked(5);
     let shown = labels(&ui);
     assert!(shown.contains("Flatpak sandbox: no"), "{shown}");
     assert!(!shown.contains("Discover (Flathub)"), "{shown}");
@@ -308,9 +308,9 @@ fn settings_name_a_library_the_flatpak_cannot_see() {
     } = scene_with(flatpak(), false, true);
 
     state.borrow_mut().screen = Screen::Settings;
-    state.borrow_mut().focus = 2;
+    state.borrow_mut().focus = 3;
     state.borrow_mut().sync(&ui);
-    ui.invoke_clicked(2);
+    ui.invoke_clicked(3);
     let shown = labels(&ui);
     let sd_card = _temp.path().join("run/media/deck/sd-card/SteamLibrary");
     assert!(

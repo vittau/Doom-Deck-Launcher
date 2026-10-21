@@ -2767,7 +2767,7 @@ impl Runtime {
                     let hidden = self.snapshot.as_ref().map_or(0, |s| s.hidden_paths.len());
                     let height: f32 = match self.settings_section {
                         0 => 700.,
-                        1 => 620.,
+                        1 => 520.,
                         2 => self.snapshot.as_ref().map_or(316., |s| {
                             (316. + (s.folders.len() + s.automatic_folders.len()) as f32 * 112.)
                                 .max(316.)
@@ -2926,17 +2926,17 @@ impl Runtime {
                                 };
                                 let selected_arachno = audio.choice == Some(Choice::Arachno);
                                 b.label(372., 36., 816., 44., text(ui, T::AudioTitle), 30.);
-                                b.label(372., 88., 816., 44., text(ui, T::AudioHelp), 20.);
+                                b.label(372., 84., 816., 28., text(ui, T::AudioHelp), 20.);
                                 b.choice_enabled(
                                     70,
                                     372.,
-                                    140.,
+                                    116.,
                                     816.,
                                     text(ui, T::AudioDefault),
                                     selected_default,
                                     true,
                                 );
-                                b.label(372., 198., 816., 32., text(ui, T::AudioDefaultHelp), 20.);
+                                b.label(372., 172., 816., 28., text(ui, T::AudioDefaultHelp), 20.);
                                 let state = if audio.installed {
                                     text(ui, T::Installed)
                                 } else {
@@ -2945,7 +2945,7 @@ impl Runtime {
                                 b.choice_enabled(
                                     71,
                                     372.,
-                                    240.,
+                                    206.,
                                     816.,
                                     text(ui, T::AudioArachno),
                                     selected_arachno,
@@ -2953,9 +2953,9 @@ impl Runtime {
                                 );
                                 b.label(
                                     372.,
-                                    298.,
+                                    262.,
                                     816.,
-                                    32.,
+                                    28.,
                                     format!(
                                         "{} · {} · {}",
                                         ddl_core::soundfonts::AUTHOR,
@@ -2965,12 +2965,15 @@ impl Runtime {
                                     .into(),
                                     20.,
                                 );
-                                if audio.choice.is_none() && audio.current == Current::Custom {
+                                if let Some(warning) = &audio.warning {
+                                    b.label(372., 296., 816., 48., warning.as_str().into(), 20.);
+                                } else if audio.choice.is_none() && audio.current == Current::Custom
+                                {
                                     b.label(
                                         372.,
-                                        334.,
+                                        296.,
                                         816.,
-                                        56.,
+                                        48.,
                                         format!(
                                             "{} — {}",
                                             text(ui, T::AudioCustom),
@@ -2984,7 +2987,7 @@ impl Runtime {
                                     b.button(
                                         72,
                                         372.,
-                                        396.,
+                                        352.,
                                         380.,
                                         text(
                                             ui,
@@ -3000,15 +3003,12 @@ impl Runtime {
                                 b.row(
                                     73,
                                     372.,
-                                    468.,
+                                    416.,
                                     816.,
                                     text(ui, T::AudioTerms),
-                                    ddl_core::soundfonts::TERMS.into(),
+                                    "arachnosoft.com".into(),
                                     true,
                                 );
-                                if let Some(warning) = &audio.warning {
-                                    b.label(372., 552., 816., 56., warning.as_str().into(), 20.);
-                                }
                             }
                             2 => {
                                 // R4 opt-in, default off; the existing Ember
@@ -3761,6 +3761,7 @@ impl Nodes {
     }
     /// A choice row that can be present but not yet selectable (spec 067 R2:
     /// Arachno before its reviewed install exists).
+    #[allow(clippy::too_many_arguments)]
     fn choice_enabled(
         &mut self,
         id: i32,

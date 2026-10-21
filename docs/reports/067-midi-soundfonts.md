@@ -1,108 +1,134 @@
-# 067 — MIDI soundfonts: interrupted worker handoff
+# 067 — MIDI soundfonts: implementation report
 
 ## Outcome
 
-Implementation is **incomplete**. The coordinator intentionally interrupted this Codex
-Dispatch for an owner-requested OpenCode provider handover, rather than an implementation
-failure. Standalone core work is preserved; existing Settings/config/runtime/launch files
-were never edited because the 064 integration checkpoint had not arrived.
+Spec 067 is implemented: Settings → Audio offers **Default** and a reviewed, optional
+**Arachno SoundFont 1.0** install, persists one global choice in versioned JSON, and applies it to
+every DDL launch path between engine runs. Missing/damaged installed fonts fall back to Default
+with a visible reinstall action; real config/path failures abort the launch with an actionable
+error instead of silently using another backend. Final 064 commits were merged before the final
+checks, and `main` at `43fc298` was merged into the task branch before the full run.
 
-## Completed
+## What changed
 
-- Merged local main at `da63a6d` before work; read updated spec, research, AGENTS,
-  relevant OVERVIEW configuration/ownership sections and current decisions.
-- Commit `d6c3010` adds `ddl_core::soundfonts` and minimal module registration.
-- Pinned author-linked HTTPS Dropbox ZIP, exact archive and three member sizes/SHA-256
-  values from `docs/research/midi-soundfonts.md`; reuse existing bounded, timed,
-  cancellable Fetcher and Extractor. No new dependencies.
-- Whole-archive safety checks reject unsafe names, symlinks, duplicate names, excessive
-  count, member/total expansion and compression ratio. Important library detail: ZIP 9
-  collapses duplicate names in its index; compare the classic EOCD declared count with
-  index length to reject duplicates. The reviewed package is classic, single-disk ZIP;
-  ZIP64/multi-disk is intentionally unsupported here.
-- Extract only SF2, Read Me and English HTML documentation. HTML remains inert bytes.
-  Validate RIFF/sfbk header and declared length. No converter or executable is run.
-- Immutable installation generation under resolved XDG data; atomic `installed.json`
-  pointer publishes all members together. Failed/cancelled install leaves the previous
-  pointer and choice intact; unpublished generations are harmless orphans.
-- Separate atomic versioned `audio.json` stores `Option<Choice>`: `None` means no explicit
-  Audio choice, allowing later integration to preserve custom engine configuration.
-  Download never selects. Arachno selection requires verified production bytes.
-- `effective()` hashes selected Arachno fully and returns Default plus recoverable
-  warning when missing/corrupt, retaining the persisted selection for reinstall.
-- `cached_font()` is intended for background services snapshots. It hashes on cache miss,
-  invalidates on member/pointer metadata changes (Unix inode/ctime included), and rejects
-  symlinks; `verified_font()` remains a full verification for launch. Keep all these calls,
-  install/network/ZIP work off Slint's UI thread. No caller integration exists yet.
-- `config_path()` accepts absolute UTF-8 paths with spaces and rejects quotes/control
-  characters because DSDA v0.30.1 has no string escape grammar.
+### Reviewed install and preference (`ddl-core::soundfonts`)
+
+- Pinned the author-linked HTTPS Dropbox ZIP, exact archive/member sizes and SHA-256 values from
+  `docs/research/midi-soundfonts.md`; source, terms, author and download size are public constants.
+- Reused the existing bounded, timed, resumable/cancellable `Fetcher` and `Extractor`. The narrow
+  Dropbox redirect policy is unchanged; GitHub's catalog exception is not granted to this source.
+- Whole-archive inspection rejects unsafe names, symlinks, duplicate names (EOCD count vs index),
+  excessive entry count, expansion and compression ratio before extraction. Only the SF2, Read Me
+  and English HTML notice are extracted; HTML is retained as inert bytes. RIFF/`sfbk` length is
+  validated and nothing from the archive is executed.
+- Installs publish an immutable generation plus an atomic `installed.json` pointer. Failed,
+  cancelled or interrupted installs leave the previous generation and preference intact.
+- `audio.json` stores `schema_version` and `Option<Choice>`; `None` means no explicit choice yet.
+  Download never selects. Arachno selection requires a full verification. `effective()` keeps the
+  persisted Arachno selection while reporting a Default fallback when the install is missing or
+  damaged; unreadable preferences leave the engine configuration untouched with a warning.
+- `cached_font()` supplies the Settings snapshot without hashing on every frame; every launch hashes
+  again. Paths are accepted only when absolute UTF-8 without quotes/control characters, matching
+  DSDA v0.30.1's unescaped string grammar (spaces are supported). No new dependencies.
+
+### Guarded engine application (`dsda_config`)
+
+- `soundfonts::engine` classifies an existing `active.cfg` honestly: native `fluidsynth` + empty
+  font is **Default**, anything else is **Custom**. `keys_for` renders the two owned keys and
+  `apply` collapses duplicate audio lines so DSDA's last-occurrence rule cannot override the choice.
+- `DsdaConfigManager::apply_audio` writes only `snd_midiplayer` and `snd_soundfont`, preserves
+  comments/unrelated/engine-generated keys, backs up before a change, writes atomically, makes no
+  write while the run guard is active, and is idempotent when the values already match.
+- **Review correction:** it never copies the active file into `dsda/base/<version>.cfg`. The
+  baseline remains the template comparison point, so an Audio change cannot turn a player's
+  unrelated edits into "DDL-applied" values that a later template migration overwrites.
+- Regression covers: player edits kept and reported as a conflict across a template bump, baseline
+  unchanged, explicit choice surviving migration, no writes during a run, and idempotency.
+
+### Services, launch routes and Settings UI
+
+- `Services` exposes `AudioState` (explicit choice, cheap installed state, current engine
+  classification, warning) and `Command::InstallSoundfont` / `Command::SelectSoundfont`.
+- All four launch entry points (UI `Command::Play`, CLI mapset, base game and custom setup) share
+  `begin_engine_run`, which applies the choice **before** acquiring the run guard. `prepare_audio`
+  returns `Problem::Audio` for path/provision/write failures, so the launch stops with “Check
+  Settings → Audio”; a missing/damaged selected font remains the intentional Default fallback.
+- Settings gains an Audio section with Default always available, Arachno selectable only after a
+  verified install, install/download/reinstall/retry actions, author/size/state, a secondary terms
+  action, and concise “used for MIDI music on the next launch” help. No custom import, file picker,
+  synth or quality/performance claim. Native mapset `SNDFONT` precedence is untouched.
+- The secondary terms action and primary action are fully visible at 1280×800 without focus-follow
+  scrolling; a headless assertion now enforces the 506 px visible content bound.
 
 ## Verification
 
-Last completed command (started before the handover instruction arrived):
+All commands used `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`; pipelines used `set -euo pipefail`.
 
-```sh
-CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2 cargo test -p ddl-core soundfonts --lib
-```
+- `cargo fmt --all --check` — passed.
+- `cargo clippy --workspace --all-targets -- -D warnings` — passed.
+- `cargo test --workspace` — passed, including doctests. This is the single final full run.
+- `cargo test -p ddl-core --lib soundfonts` — **24 passed**: source constants, synthetic verified
+  install/publication, archive/member hash and size failures, RIFF validation, unsafe/duplicate/
+  symlink/bounds/ratio rejection, cancellation at two boundaries, retry preservation, pointer
+  recovery, explicit/restarted/missing/corrupt selection states, unreadable preferences, path
+  grammar, snapshot metadata invalidation and install-presence checks.
+- `cargo test -p ddl-core --lib dsda_config::manager` — **20 passed**, including the two review
+  regressions above and “template does not own the audio keys”.
+- `cargo test -p ddl --bin ddl audio_tests` — **8 passed**: install-never-selects, restart
+  persistence, verified absolute Arachno path, explicit Default replacing a custom setting with a
+  backup, no-choice custom preservation, missing-font fallback with kept selection, no write during
+  a run, and an unwritable config aborting with `Problem::Audio`.
+- `cargo test -p ddl --bin ddl headless::audio` — **4 passed**: controller navigation/focus, Default
+  selection, installed Arachno selection/restart, visible action bounds, download progress, error
+  `Retry`/`Diagnostics`, and the missing-font recoverable state.
+- `recipe_change_tests::a_cli_mapset_launch_applies_the_explicit_audio_choice` covers the CLI
+  mapset route end to end through the fake engine; all four routes share the same guarded helper.
+- Existing 064/066/Flatpak/SIGIL journeys were updated only for the new fifth Settings section and
+  re-run; the final workspace run is green.
 
-**13 passed**, no network, 586 unrelated tests filtered out. Coverage: initial/explicit/restarted
-preferences; synthetic verified install; no auto-select; only reviewed member publication;
-archive/member hash failure; invalid RIFF/form/length; cancellation before work and at extraction;
-retry preserving previous install and choice; interrupted unpublished generation recovery;
-selected missing-font fallback; unsafe/unrequested ZIP names; bounds; duplicate and symlink
-entries; unsupported state/escaping pointer; installed symlink rejection; DSDA path validation;
-snapshot metadata invalidation. Two additional passing tests after `d6c3010` cover metadata
-invalidation and cancellation at the extraction boundary and are committed with this handoff.
+### Rendered previews (headless software renderer, 1280×800)
 
-`rustfmt --edition 2024` was run on new module/tests. No full workspace fmt/clippy/test run
-or Slint build/render was attempted. No visible windows were opened or screen captures made.
-The cached research ZIP was inspected only for metadata (454 entries, maximum compression
-ratio about 31.9, no dot/parent path components); tests do not depend on it. No font or notice
-binaries were committed.
+- `target/headless/audio_section_renders_and_selects_default/067-audio-settings.png` — default state,
+  Terms fully visible.
+- `target/headless/installed_arachno_is_selectable_and_persists/067-audio-installed.png` — installed
+  and selected.
+- `target/headless/a_missing_selected_font_stays_visible_and_recoverable/067-audio-missing.png` —
+  warning + Reinstall.
+- `target/headless/audio_download_and_error_states_render/067-audio-downloading.png` — progress,
+  Cancel and byte totals.
+- `target/headless/audio_download_and_error_states_render/067-audio-error.png` — failed download
+  with Retry/Diagnostics.
 
-## Remaining implementation / handoff guidance
+PNGs were inspected: labels, selected state, actions and the Terms row are fully visible at the
+baseline scroll position. No visible window was opened and no screen was captured.
 
-1. Obtain coordinator's explicit 064 integration checkpoint, then merge integrated main
-   into this task branch. Main had advanced to `92bea57` when the handover arrived; it
-   was not merged, because work was stopped immediately.
-2. Implement guarded DSDA config-manager Audio application and custom-setting detection.
-   Explicit choices own `snd_midiplayer` and `snd_soundfont`; `None` preserves custom
-   values and UI must label those honestly. Preserve comments/unrelated keys/backups,
-   no writes while run guard active, and protect explicit choices across migrations.
-3. Apply before the existing run guard is acquired on every route. Read-only inspection
-   found UI catalog `Command::Play`, CLI `run_mapset`, `run_custom`, plus base-game launch
-   paths. `run_resolution` and `run_plan` run after guard acquisition in current main,
-   so blindly placing config writes there will fail the guard or violate ownership.
-   Re-inspect after merging 064, which owns these files.
-4. Add services commands/snapshot audio state and use existing state/download guard,
-   progress, cancellation, retry/error flows. Snapshot should use cached verification;
-   prelaunch should fully verify selected font on services worker. Treat malformed state
-   appropriately and avoid a corrupted audio preference unexpectedly blocking play.
-5. Add Audio Settings section, installed selector (Default always available, Arachno only
-   verified), honest custom label, download/installed/error states, credit Maxime Abbey,
-   size, secondary original source/terms links, concise next-launch MIDI help. No automatic
-   selection, custom import or quality/performance claims. Red remains launch-only.
-6. Add config/run-guard/custom-preservation/migration and every-launch-route tests, plus
-   headless controller/focus tests and 1280×800 Audio/progress/error PNGs; inspect PNGs.
-   Existing runtime uses dynamic Settings node construction; no Slint file edits yet.
-7. Final checks once after integration, with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2` and
-   `set -euo pipefail` for shell pipelines: fmt, clippy warnings denied, full workspace tests.
-   Check coordinator before starting broader builds because host was overloaded.
+## Requirement evidence
 
-## Requirement evidence and open items
+- **R1** — Audio section, Default always present, Arachno only reviewed; headless controller and
+  focus tests (`headless::audio`).
+- **R2** — Optional bounded download, progress, cancellation/retry through existing install
+  patterns, no auto-select, duplicate installs serialized by the state lock; service/core tests.
+- **R3** — Pinned official source/bytes, narrow hosts, archive/member/count/size/ratio/symlink/
+  traversal/duplicate rejection, inert notices, no binaries in Git.
+- **R4** — Versioned global choice, restart, missing/damaged fallback with warning and Reinstall,
+  download never disturbs the installed font or choice.
+- **R5** — All launch paths share pre-guard application; explicit choices own the two keys; custom
+  settings preserved until an explicit choice; baseline and unrelated edits preserved; mapset
+  `SNDFONT` precedence untouched. Real write failures abort with `Problem::Audio`.
+- **R6** — Concise next-launch help, no unavailable Arachno in the selector, valid focus after
+  install state changes, standard action styling (red remains launch-only), Terms secondary.
 
-- R1/R6: UI remains open; no headless renders produced.
-- R2: core optional installer/progress/cancel/retry semantics implemented and tested;
-  duplicate download guard and visible states await services/UI integration.
-- R3: standalone source/safety/atomic publication implemented; transport mechanics rely
-  on existing Fetcher offline tests. Final lint and review remain.
-- R4: standalone versioned choice, restart, verified-selection guard and recoverable
-  fallback implemented; player-facing message/reinstall awaits integration.
-- R5: only safe path validation implemented. All config application, custom detection,
-  migration protection, run guard integration and route evidence remain open.
-- No dependencies added; existing serde/serde_json, sha2, zip and downloads machinery reused.
-- **Confirmed:** engine string/config/SNDFONT behavior and source identity are grounded in
-  pinned upstream links in `docs/research/midi-soundfonts.md`; this worker did not change it.
-- **Needs Deck Validation:** audible MIDI playback/switch-back, official AppImage path access,
-  Gaming Mode controls and Flatpak sandbox access. These cannot be established by macOS
-  offline tests and were not claimed.
+## Unautomatable / Needs Deck Validation
+
+- Audible MIDI/MUS switching between Default and Arachno with the official DSDA-Doom AppImage, and
+  switching back to Default, cannot be established by macOS offline tests.
+- Gaming Mode controller navigation on hardware and Flatpak sandbox access to the installed SF2
+  path need a physical Deck run.
+- The 143 MiB author archive was not downloaded or installed during tests; all tests use synthetic
+  verified fixtures. The exact reviewed hashes are pinned from research.
+- No performance, battery or audio-quality claim is made.
+
+## Dependencies
+
+No dependencies added. Existing `serde`/`serde_json`, `sha2`, `zip`, `tempfile` (tests) and the
+downloads/extraction machinery are reused.
