@@ -7,19 +7,23 @@
 - **063 / D-035:** signed self-hosted repository merged under direct owner supervision. Publish
   run 39537960687 passed; Pages enabled and homepage/repository summary respond HTTP 200.
   Public ref app ID, URL and embedded key checked with cache-busting (earlier 404 cached by CDN).
-  Reviewed signature-check and Pages-deployment fixes are merged. Publish run 39540938605
-  exposed empty OSTree directories lost through the gh-pages Git clone; the reviewed layout fix
-  is merged and awaits a new publication run. Deck install has not yet been confirmed.
+  Publish run 39542532738 passed with signature verification, incremental OSTree export and
+  explicit Pages deployment. The new page is published at gh-pages commit c5462d5. Cloudflare
+  accepted a manual purge of the project prefix; canonical page returned HTTP 200 / MISS and
+  matched the origin byte for byte. Canonical flatpakref app ID, URL and embedded key checked.
+  Automatic prefix purge is merged; CI run 39543519029 is validating that path.
+  Deck install has not yet been confirmed.
   Approved site: `https://www.vitormach.dev/Doom-Deck-Launcher/`.
 - **064 / D-036:** `button-actions` worker implements the owner's direct Play, visual/copy and
   detected engine-resolution requests. No integration yet; headless review/checks remain.
-- **065:** launcher-themed project/download page in progress; the owner approved its early
-  headless visual direction. Its primary download is a signed `.flatpakref`, not a desktop entry.
-  Publication waits for final review and passing deployment.
-- **066:** Antaresian Reliquary recipe/research/screenshots worker started; description must warn
-  that MAP31 performs poorly on Deck because of its massive enemy count (owner request).
-- **067:** Audio soundfont spec/research ready: Default and optional verified Arachno download.
-  Implementation follows 064 to avoid concurrent Settings/config edits.
+- **065:** owner-approved launcher-themed project/download page reviewed, merged and published.
+  Primary download is the signed `.flatpakref`; graphical Discover steps lead the installation.
+- **066:** Antaresian Reliquary recipe/research/screenshots reviewed; tests and real-fetch lint
+  passed. MAP31 warning now leads the description so it remains visible. Integration pending.
+- **067:** standalone Audio soundfont storage/preferences committed, 13 offline tests passed.
+  Continuation transferred to OpenCode under the owner's quota override. It may integrate
+  Settings/config privately atop committed 064; final checks wait for reviewed main integration.
+- **Worker routing:** OpenCode only, including UI, until the owner lifts the override.
 
 The milestone tables below describe the last release; the checkpoint above records newer work.
 

@@ -1,6 +1,6 @@
 # 065 — Launcher-themed project and Flatpak download page
 
-**Status:** In progress · **Depends on:** 063 and a working signed remote
+**Status:** Complete — published 2026-10-21; physical Deck installation remains unvalidated · **Depends on:** 063 and a working signed remote
 **Origin:** owner, 2026-10-21: page at `https://www.vitormach.dev/Doom-Deck-Launcher/`, similar to
 README but with a more polished layout matching the launcher; include a Deck install link.
 

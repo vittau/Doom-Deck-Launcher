@@ -809,3 +809,15 @@
     Owner approved 065 early headless visual direction; 062 artifact and main CI passed.
     063 follow-up restores empty OSTree directories lost through the gh-pages Git roundtrip.
   refs: [docs/specs/067-midi-soundfonts.md, docs/research/midi-soundfonts.md, docs/status.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Published the owner-approved project page at vitormach.dev/Doom-Deck-Launcher/;
+    run 39542532738 passed signed-client verification and explicit Pages deployment.
+    Cloudflare accepted the owner-authorized project-prefix purge, and the canonical page
+    returned MISS with bytes matching gh-pages c5462d5. The canonical install ref and embedded
+    public key also matched. Prefix-purge automation merged; run 39543519029 verifies it in CI.
+    Owner requires OpenCode workers only due Codex quota. Soundfont core handoff preserves
+    commits d6c3010/4dd7776 and 13 passing offline tests; OpenCode continues Settings integration.
+  refs: [docs/status.md, docs/specs/063-flatpak-selfhosted-remote.md, docs/specs/065-project-download-page.md, docs/specs/067-midi-soundfonts.md]
