@@ -1,6 +1,7 @@
 # 067 — FluidSynth soundfont selection
 
-**Status:** Spec ready; implementation follows 064's Settings/config integration.
+**Status:** In progress; standalone core work may proceed in parallel, with Settings/config
+integration following 064.
 **Origin:** owner, 2026-10-21: Settings → Audio, downloadable Arachno and a selector for
 installed soundfonts; the engine's built-in soundfont is labeled Default.
 
@@ -49,8 +50,10 @@ installed soundfonts; the engine's built-in soundfont is labeled Default.
 
 ## Ownership and verification
 
-One fresh Codex UI worker owns this feature after 064 settles; core implementation is allowed
-in the same task to keep state/config/UI semantics consistent. It may edit a small soundfonts
+One fresh Codex UI worker owns this feature; core implementation is allowed
+in the same task to keep state/config/UI semantics consistent. While 064 is active, start only
+the standalone soundfonts module/research/tests; wait for the coordinator's integration checkpoint
+before editing existing Settings/config/launch files, then merge main with 064. It may edit a small soundfonts
 module under `ddl-core`, config-manager integration, application services/runtime/Settings UI,
 relevant fixtures/tests, research and `docs/reports/067-midi-soundfonts.md`. No coordinator-owned
 docs, unrelated catalog, Flatpak/workflows or site changes. No new dependencies unless necessary
