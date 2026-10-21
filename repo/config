@@ -6,5 +6,5 @@ indexed-deltas=true
 [flatpak]
 title=DoomDeckLauncher
 comment=Experimental DoomDeckLauncher builds for Steam Deck
-homepage=https://github.com/vittau/Doom-Deck-Launcher
+homepage=https://doomdecklauncher.com/
 default-branch=stable
