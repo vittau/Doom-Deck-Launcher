@@ -29,6 +29,13 @@
   update. Format tests cover UTC, month/year boundaries and unknown serial. Use the existing
   fake transport, no network tests and no new dependency unless justified.
 
+- R6: Preserve the deliberate stable bundle minimum-client policy (it must not follow every
+  workspace version bump). The 92-item catalog exceeds old clients' global card-ID range, so
+  this publication genuinely requires the 0.0.11 reachability fix: raise the stable default
+  minimum to 0.0.11 with an explicit rationale and offline compatibility test. Future recipe-only
+  changes keep this minimum until they genuinely need a new client capability. The coordinator
+  bumps the application version separately before publication.
+
 ## Ownership and verification
 
 Backend worker owns services and core catalog startup/date formatting, build/publish serial
