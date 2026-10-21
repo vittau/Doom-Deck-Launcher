@@ -54,6 +54,11 @@ unknown. `serial_date` (Settings, CLI) is unchanged.
   an automatic fetch, publishes serial 900 from another path, releases the response (serial 500) and
   asserts the cache still holds 900; `an_older_automatic_response_never_rolls_back_a_newer_catalog`
   covers the already-cached case.
+- **Metadata is best effort:** the attempt record never erases a successful publication — the
+  cached bundle and the adopted serial stay authoritative if the lock or `app.json` write fails.
+  `an_unwritable_attempt_never_erases_a_successful_publication` opens services, replaces
+  `app.json` with a directory, runs the startup check and asserts serial 500 is adopted, cached and
+  reported.
 - **Attempt recording:** success, "not newer" and fetch failure all record `catalog_last_check` with
   a read-merge-write of `app.json` only (malformed/newer-schema untouched); `iwads.json` is never
   rewritten from the background instance.

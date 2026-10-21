@@ -92,6 +92,11 @@ that amount. Deck responsiveness and the Slint render share are **Needs Deck Val
   state and the failure rollback. They run in the existing headless harness: `headless::isolated`
   re-executes each case in a child process, which is how the suite runs several platform cases —
   **correcting** the earlier claim that "one Slint platform per thread" blocked these tests.
+- **Stale-result interleaving:** `a_stale_saved_result_never_inverts_the_latest_intent` injects
+  the first write's `ProfileSaved(true)` **after** a newer `false` press, and asserts the visible
+  row (and the selected-profile mirror) stays `false`, the stale result becomes the baseline, and
+  the next Confirm persists `true`. `patch_pistol_value` now updates the selected-profile mirrors
+  (`item.profiles`, `base.profiles`) with the row, so nothing visible drifts.
 - **First-ever identities (review):** the catalog fallback only materialises the identity the UI
   actually shows (`<recipe>-default`); any other id is refused. The base fallback only accepts the
   identity `fresh_base_profile` mints (`base-<game>-profile-N`); the bare `base-doom2` and

@@ -14,6 +14,7 @@ use local_ui::LocalUi;
 use ddl_core::{
     downloads::{CancellationToken, InstallProgress, InstallStage},
     platform::{legacy_import::LegacyInstall, sandbox::Sandbox},
+    profiles::Profile,
     resolver::Blocker,
     soundfonts::{Choice, engine::Current},
 };
@@ -475,49 +476,7 @@ impl Runtime {
                     self.last_exit = Some(outcome);
                 }
                 Event::ProfileSaved(profile) => {
-                    // Spec 075, R2: the saved profile is the new persisted
-                    // baseline. Applying it first, then re-applying the latest
-                    // intent, keeps a stale save result from inverting a newer
-                    // press (and keeps the selected profile list in step).
-                    let saved = profile.pistol_start;
-                    self.pistol_baseline.insert(profile.id.clone(), saved);
-                    let intent = self.pistol_intent.get(&profile.id).copied();
-                    if let Some(snapshot) = self.snapshot.as_mut() {
-                        if let Some(item) = snapshot
-                            .items
-                            .iter_mut()
-                            .find(|i| i.profile.id == profile.id)
-                        {
-                            item.profile = profile.clone();
-                            for held in &mut item.profiles {
-                                if held.id == profile.id {
-                                    held.pistol_start = saved;
-                                }
-                            }
-                            if let Ok(summary) = &mut item.launch {
-                                summary.pistol_start = saved;
-                            }
-                        } else if let Some(base) = snapshot
-                            .base_games
-                            .iter_mut()
-                            .find(|b| b.profile.id == profile.id)
-                        {
-                            base.profile = profile.clone();
-                            for held in &mut base.profiles {
-                                if held.id == profile.id {
-                                    held.pistol_start = saved;
-                                }
-                            }
-                        }
-                    }
-                    // Re-apply the latest request so the row shows what the
-                    // player asked for, not the older result that just landed.
-                    if let Some(intent) = intent
-                        && intent != saved
-                    {
-                        self.patch_pistol_value(&profile.id, intent);
-                    }
-                    self.pistol_in_flight = false;
+                    self.apply_saved_profile(&profile);
                 }
                 Event::Finished(result) => {
                     self.busy = false;
@@ -1569,6 +1528,50 @@ impl Runtime {
             Command::Local(services::LocalCommand::BasePistolStart { profile_id, value }),
         );
     }
+    /// Spec 075, R2: applies a save result. The saved value becomes the
+    /// baseline, the row takes the saved profile, and the latest intent is
+    /// re-applied on top, so an older result can never invert a newer press.
+    /// The selected-profile mirrors follow both.
+    fn apply_saved_profile(&mut self, profile: &Profile) {
+        let saved = profile.pistol_start;
+        self.pistol_baseline.insert(profile.id.clone(), saved);
+        let intent = self.pistol_intent.get(&profile.id).copied();
+        if let Some(snapshot) = self.snapshot.as_mut() {
+            if let Some(item) = snapshot
+                .items
+                .iter_mut()
+                .find(|i| i.profile.id == profile.id)
+            {
+                item.profile = profile.clone();
+                for held in &mut item.profiles {
+                    if held.id == profile.id {
+                        held.pistol_start = saved;
+                    }
+                }
+                if let Ok(summary) = &mut item.launch {
+                    summary.pistol_start = saved;
+                }
+            } else if let Some(base) = snapshot
+                .base_games
+                .iter_mut()
+                .find(|b| b.profile.id == profile.id)
+            {
+                base.profile = profile.clone();
+                for held in &mut base.profiles {
+                    if held.id == profile.id {
+                        held.pistol_start = saved;
+                    }
+                }
+            }
+        }
+        if let Some(intent) = intent
+            && intent != saved
+        {
+            self.patch_pistol_value(&profile.id, intent);
+        }
+        self.pistol_in_flight = false;
+    }
+
     /// Spec 075, R2: writes the visible value into the snapshot row (catalog
     /// mapset or base game) and its launch summary; returns the value it
     /// replaced, or `None` when no row owns the profile.
@@ -1581,6 +1584,11 @@ impl Runtime {
         {
             let previous = item.profile.pistol_start;
             item.profile.pistol_start = value;
+            for held in &mut item.profiles {
+                if held.id == item.profile.id {
+                    held.pistol_start = value;
+                }
+            }
             if let Ok(summary) = &mut item.launch {
                 summary.pistol_start = value;
             }
@@ -1592,6 +1600,11 @@ impl Runtime {
             .find(|b| b.profile.id == profile_id)?;
         let previous = base.profile.pistol_start;
         base.profile.pistol_start = value;
+        for held in &mut base.profiles {
+            if held.id == base.profile.id {
+                held.pistol_start = value;
+            }
+        }
         Some(previous)
     }
     /// Spec 075, R2: a failed write restores the **last value a save confirmed**
@@ -4968,6 +4981,65 @@ mod startup_and_pistol_tests {
             .expect("sigil item")
             .profile
             .pistol_start
+    }
+
+    /// Spec 075, R2 review: a save result that arrives **after** a newer press
+    /// must not invert the visible row — the intent wins — and the next press
+    /// still persists correctly (deterministic event injection, no timing).
+    #[test]
+    fn a_stale_saved_result_never_inverts_the_latest_intent() {
+        if crate::headless::isolated(
+            module_path!(),
+            "a_stale_saved_result_never_inverts_the_latest_intent",
+        ) {
+            return;
+        }
+        with_ui(|ui| {
+            let env = test_environment();
+            persist_catalog_profile(&env);
+            let mut runtime = Runtime::new(env.clone());
+            let mut snapshot = snapshot_with_sigil(false);
+            // A selected-profile mirror the row can drift from if it is not kept
+            // in step with the visible value.
+            snapshot.items[0].profiles = vec![snapshot.items[0].profile.clone()];
+            runtime.snapshot = Some(snapshot);
+            runtime.screen = Screen::Setup;
+            runtime.focus = 41;
+
+            // Two presses while the first write is in flight: the latest intent
+            // is `false` (the row was flipped on, then off).
+            runtime.busy = true;
+            runtime.set_pistol_start(ui, "sigil".into(), "sigil-default".into(), true);
+            runtime.set_pistol_start(ui, "sigil".into(), "sigil-default".into(), false);
+            // The first write's result (true) lands late.
+            let mut saved = runtime.snapshot.as_ref().unwrap().items[0].profile.clone();
+            saved.pistol_start = true;
+            runtime.apply_saved_profile(&saved);
+
+            let item = &runtime.snapshot.as_ref().unwrap().items[0];
+            assert!(
+                !item.profile.pistol_start,
+                "the latest intent stays visible"
+            );
+            assert!(
+                !item.profiles[0].pistol_start,
+                "the selected-profile mirror follows the visible value"
+            );
+            assert_eq!(
+                runtime.pistol_baseline.get("sigil-default").copied(),
+                Some(true),
+                "the stale result is the persisted baseline"
+            );
+
+            // The next press requests on again and must end persisted.
+            runtime.busy = false;
+            runtime.action(ui, Action::Confirm);
+            settle(&mut runtime, ui);
+            assert!(
+                catalog_pistol_start(&env),
+                "the final requested value is durable"
+            );
+        });
     }
 
     /// Spec 075, R2 review: three quick Confirm presses on the real route keep

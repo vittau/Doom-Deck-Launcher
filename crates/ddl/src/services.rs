@@ -1993,6 +1993,14 @@ impl Services {
         self.record_catalog_attempt_locked(now)
     }
 
+    /// Best-effort attempt record: logs and continues, because the catalog
+    /// publication it follows is already committed.
+    fn record_catalog_attempt_best_effort(&mut self, now: u64) {
+        if let Err(error) = self.record_catalog_attempt_locked(now) {
+            tracing::warn!(?error, "could not record the catalog check attempt");
+        }
+    }
+
     /// The attempt record itself; the caller holds the cross-process lock.
     fn record_catalog_attempt_locked(&mut self, now: u64) -> Result<(), Problem> {
         let path = self.env.paths.config.join("app.json");
@@ -2053,7 +2061,7 @@ impl Services {
                     tracing::warn!(
                         "catalog bundle carried no usable recipe; keeping the current catalog"
                     );
-                    self.record_catalog_attempt(now)?;
+                    self.record_catalog_attempt(now).ok();
                     return Ok(CatalogOutcome::Current {
                         serial: self.catalog_origin.serial,
                     });
@@ -2077,7 +2085,7 @@ impl Services {
                         effective,
                         "ignoring a catalog bundle older than the one in use"
                     );
-                    self.record_catalog_attempt_locked(now)?;
+                    self.record_catalog_attempt_best_effort(now);
                     return Ok(CatalogOutcome::Current { serial: effective });
                 }
                 ddl_core::catalog::store_cache(&self.env.paths.data, &accepted.bundle, now)
@@ -2092,7 +2100,10 @@ impl Services {
                     source_commit: source_commit.clone(),
                     fetched_at: Some(now),
                 };
-                self.record_catalog_attempt_locked(now)?;
+                // Metadata is best effort: a busy lock or an app.json write
+                // failure must not erase a catalog that is already cached and
+                // adopted (spec 077 review).
+                self.record_catalog_attempt_best_effort(now);
                 Ok(CatalogOutcome::Updated {
                     serial,
                     source_commit,
@@ -5551,6 +5562,31 @@ mod catalog_tests {
             cached.bundle.catalog_serial, 900,
             "the cache keeps the newer bundle"
         );
+    }
+
+    /// Spec 077, R1 review: an unusable `app.json` never erases a successful
+    /// publication — the attempt metadata is best effort.
+    #[test]
+    fn an_unwritable_attempt_never_erases_a_successful_publication() {
+        let temp = tempfile::tempdir().unwrap();
+        let served = bundle_json(500);
+        let server = Server::start(move |_r| Response::ok(served.clone()));
+        let env = environment(temp.path(), server.url("/catalog.json"));
+        let mut s = Services::open(env.clone()).unwrap();
+        // Make the metadata target unusable after the instance opened.
+        let app = env.paths.config.join("app.json");
+        let _ = fs::remove_file(&app);
+        fs::create_dir(&app).unwrap();
+
+        let outcome = startup(&mut s);
+        assert_eq!(
+            outcome.updated,
+            Some(500),
+            "the adoption stays authoritative"
+        );
+        let cached = ddl_core::catalog::load_cache(&env.paths.data).expect("cache");
+        assert_eq!(cached.bundle.catalog_serial, 500);
+        assert_eq!(s.catalog_info().serial, 500);
     }
 
     #[test]
