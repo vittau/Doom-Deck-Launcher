@@ -6,6 +6,11 @@ README but with a more polished layout matching the launcher; include a Deck ins
 
 ## Requirements
 
+Mission: a Steam DOOM owner should quickly understand the value, find the right download,
+install on Deck and reach their first modded game with minimal friction. Lead with the player
+outcome and one clear install action; put repository/build details in secondary links. Describe
+necessary setup honestly and do not advertise unmeasured performance claims.
+
 - **R1:** Replace the provisional installation landing page with a responsive static project
   page at the approved URL, using README's accurate product/install content and existing
   Ember Cathedral identity, logo, screenshots, typography and license/credit conventions.

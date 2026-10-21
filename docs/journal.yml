@@ -782,3 +782,11 @@
   refs: [docs/specs/063-flatpak-selfhosted-remote.md,
          docs/specs/064-button-actions-and-display.md, docs/specs/065-project-download-page.md,
          docs/decisions.md]
+- date: 2026-10-21
+  type: decision
+  summary: >-
+    Owner states DDL's central mission: easy discovery, installation and use, especially for
+    Steam DOOM owners, with minimal friction to modded play and good performance/configuration
+    defaults out of the box. OVERVIEW now records the complete discovery-to-play journey as
+    the product criterion; spec 065 prioritizes a clear player-facing install path.
+  refs: [OVERVIEW.md, docs/specs/065-project-download-page.md]
