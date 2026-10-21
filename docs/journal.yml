@@ -798,3 +798,14 @@
     hardware used about half or less. Spec 064 adds the renderer default with upgrade-safe
     migration and tests. This measurement is CPU power, not total system power or autonomy.
   refs: [docs/decisions.md, docs/specs/064-button-actions-and-display.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Spec 067 records the owner-requested Settings Audio section, Default engine font and
+    optional Arachno SF2 download/selection. Pinned DSDA v0.30.1 source confirms SC-55 credits,
+    string config and mapset SNDFONT precedence; official Arachno ZIP/member bytes and SHA-256
+    verified. No font is bundled/rehosted. Implementation follows 064 config/UI integration.
+    Owner approved 065 early headless visual direction; 062 artifact and main CI passed.
+    063 follow-up restores empty OSTree directories lost through the gh-pages Git roundtrip.
+  refs: [docs/specs/067-midi-soundfonts.md, docs/research/midi-soundfonts.md, docs/status.md]
