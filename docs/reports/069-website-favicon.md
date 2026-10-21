@@ -100,3 +100,13 @@ review, publish using the independent page workflow and purge the project prefix
 then verify deployed hashed URLs. No push, tag, release or deployment was performed.
 Physical Deck installation, gameplay and MIDI audio remain outside this presentation
 change. No open implementation items remain for spec 065's bounded correction.
+
+## Owner alignment correction
+
+After publication the owner identified excessive space and vertical misalignment between DDL,
+its subtitle and the emblem. The coordinator corrected this bounded layout: a separate existing
+emblem sits beside a centered two-line text block, reusing the outlined DDL lettering from the
+unchanged app horizontal SVG. The text lines share a left edge and a 2 px gap; no new artwork.
+Twelve offline renderer tests pass. Headless Chromium at 1280, 390 and 320 px asserts matching
+emblem/text vertical centers (within 0.2 px), matching text left edges, gap at most 3 px and no
+horizontal overflow. Header PNGs were visually checked at `/tmp/ddl-brand-{width}.png`.
