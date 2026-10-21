@@ -1,6 +1,6 @@
 # 065 — Launcher-themed project and Flatpak download page
 
-**Status:** In progress · **Depends on:** 063 and a working signed remote
+**Status:** Complete — published 2026-10-21; physical Deck installation remains unvalidated · **Depends on:** 063 and a working signed remote
 **Origin:** owner, 2026-10-21: page at `https://www.vitormach.dev/Doom-Deck-Launcher/`, similar to
 README but with a more polished layout matching the launcher; include a Deck install link.
 
@@ -30,6 +30,19 @@ necessary setup honestly and do not advertise unmeasured performance claims.
   Explain that it helps Steam DOOM owners play community modifications on Deck; do not imply
   official Valve/id affiliation. The primary install path should use the graphical handler for
   `.flatpakref`, with CLI details secondary and actual Deck validation clearly distinguished.
+
+- **R6 (owner's latest revision, 2026-10-21):** include a compact support button in the
+  header using the owner-supplied official Buy Me a Coffee embed: slug `vittau`, text `Donate`,
+  Cookie font, yellow `#FD0`, black text/outline and white coffee. Retain the official logo and
+  font, overriding only dimensions to fit the header. This explicitly permits the official
+  external button script and its Google Fonts stylesheet, superseding the earlier local-only
+  constraint. Include a no-JavaScript donation link. Version the local stylesheet by content
+  to avoid stale browser styling. Keep install as the primary page action.
+
+- **R7 (owner, 2026-10-21):** Publish page-only edits independently of the Flatpak build.
+  Automatically deploy relevant main-branch page/assets changes, with a manual trigger too.
+  Preserve the published app version/date, signed repository, descriptors and key. Serialize
+  both writers to the same Pages branch; retain deployment verification and prefix cache purge.
 
 ## Acceptance
 

@@ -3,3 +3,7 @@
 .scratch/
 *.AppImage
 *.appimage
+
+# Python bytecode from offline helper tests
+__pycache__/
+*.pyc

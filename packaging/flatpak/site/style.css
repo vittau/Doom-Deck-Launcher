@@ -457,6 +457,27 @@ summary {
   color: var(--muted);
   max-width: 100%;
 }
+.coffee-widget {
+  flex: none;
+  min-height: 44px;
+}
+.site-header .bmc-btn {
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 28px;
+}
+.site-header .bmc-btn svg {
+  height: 26px !important;
+  width: 19px;
+}
+.site-header .bmc-btn-text {
+  width: auto;
+}
+.site-header .bmc-btn:hover {
+  filter: brightness(1.06);
+}
 footer {
   border-top: 1px solid var(--line);
   padding-block: 30px 40px;
@@ -546,7 +567,8 @@ footer > p {
     height: 40px;
   }
   .site-header nav {
-    gap: 18px;
+    gap: 4px 12px;
+    flex-wrap: wrap;
   }
   .site-header nav a {
     font-size: 16px;
