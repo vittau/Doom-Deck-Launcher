@@ -5,6 +5,7 @@
 ## Requirements
 
 - R1: Trace and remove unrelated expensive work from the Pistol start toggle. In particular,
+  both catalog-mapset Setup and base-game BaseSetup toggles must use the lightweight path;
   changing this boolean must not rebuild the full catalog snapshot or re-hash installed WADs/
   extras across the library. The audit identified repeated catalog parsing; memoize immutable
   embedded source parsing with std facilities while preserving independent mutable catalog
@@ -26,7 +27,8 @@
 
 ## Ownership and verification
 
-Backend worker owns services/core catalog memoization and the narrow runtime start/drain/
+Backend worker owns services/core catalog memoization, local_action BaseSetup toggle dispatch,
+and the narrow runtime start/drain/
 Pistol-start dispatch path, with focused tests. UI worker concurrently owns runtime card layout,
 category test fixtures and header subtitle binding plus Slint; coordinate by function before
 editing and commit narrow runtime changes separately for straightforward integration.
