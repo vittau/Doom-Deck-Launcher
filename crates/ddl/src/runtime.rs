@@ -152,6 +152,29 @@ pub struct Runtime {
     import_offer: Option<LegacyInstall>,
     /// The next `start` imports `import_offer` before opening the services.
     import_now: bool,
+    /// Spec 075, R2: the value to restore if the light Pistol start write fails.
+    pistol_pending: Option<PistolPending>,
+    /// Spec 077, R1: the per-startup catalog check runs on its own channel so it
+    /// never sets `busy`.
+    catalog_rx: Option<Receiver<services::StartupCatalog>>,
+    /// Spec 077, R1: at most one automatic check per application start.
+    catalog_checked: bool,
+    /// Spec 077, R1: a newer catalog is cached and the fresh view is pending.
+    catalog_reload_pending: bool,
+    /// Spec 075, R2: the last Pistol start requested while a command was running.
+    pistol_queue: Option<(String, String, bool)>,
+    /// Spec 075, R2: the same for a base-game profile.
+    base_pistol_queue: Option<(String, bool)>,
+    /// Spec 075, R2: the last value this UI knows to be persisted per profile.
+    pistol_last_saved: Option<(String, bool)>,
+}
+
+/// Spec 075, R2: what an in-flight Pistol start changed, so a failed write can
+/// put the previous value back instead of showing it as saved.
+#[derive(Debug, Clone)]
+struct PistolPending {
+    profile_id: String,
+    previous: bool,
 }
 impl Runtime {
     pub fn new(env: Environment) -> Self {
@@ -196,6 +219,13 @@ impl Runtime {
             sandbox: Sandbox::none(),
             import_offer: None,
             import_now: false,
+            pistol_pending: None,
+            catalog_rx: None,
+            catalog_checked: false,
+            catalog_reload_pending: false,
+            pistol_queue: None,
+            base_pistol_queue: None,
+            pistol_last_saved: None,
         }
     }
     /// Runs inside `sandbox`: decides, before the services create any file of
@@ -351,8 +381,16 @@ impl Runtime {
             let result = prepared
                 .and_then(|_| Services::open_with(env, sandbox))
                 .and_then(|mut services| {
-                    services.execute(command, &cancel, &mut emit)?;
-                    services.snapshot().map(Box::new)
+                    let refresh = services.execute(command, &cancel, &mut emit)?;
+                    match refresh {
+                        // Spec 075, R1: the light path reports its one value and
+                        // skips the snapshot, so nothing re-hashes the library.
+                        services::Refresh::Profile(profile) => {
+                            emit(Event::ProfileSaved(*profile));
+                            Ok(None)
+                        }
+                        services::Refresh::Full => services.snapshot().map(|s| Some(Box::new(s))),
+                    }
                 });
             emit(Event::Finished(result));
         });
@@ -364,7 +402,27 @@ impl Runtime {
             .as_ref()
             .map(|r| r.try_iter().collect())
             .unwrap_or_default();
+        // Spec 077, R1: the startup catalog check has its own channel so it can
+        // finish while the user is already navigating or saving.
+        let catalog_events: Vec<_> = self
+            .catalog_rx
+            .as_ref()
+            .map(|r| r.try_iter().collect())
+            .unwrap_or_default();
         let mut auto_check = false;
+        for result in catalog_events {
+            // Spec 077, R1/R3: adopt a newer catalog without touching the busy
+            // gate, the pending command or the current screen.
+            if let Some(serial) = result.updated {
+                let date =
+                    ddl_core::catalog::serial_date(serial).unwrap_or_else(|| "unknown".into());
+                ui.invoke_show_toast(value(ui, T::CatalogUpdated, date));
+                // Adopt through a fresh services instance once no command runs,
+                // never from this background instance's older state.
+                self.catalog_reload_pending = true;
+            }
+            self.catalog_rx = None;
+        }
         for event in events {
             match event {
                 Event::Working => {}
@@ -398,22 +456,16 @@ impl Runtime {
                     ));
                 }
                 Event::Catalog(outcome) => {
-                    // Spec 019 R5: the manual action reports its result; an
-                    // automatic check stays quiet except when it updated.
-                    let automatic = matches!(
-                        self.pending,
-                        Some(Command::CatalogCheck { automatic: true })
-                    );
+                    // Spec 019 R5: the manual action reports its result.
                     match &outcome {
                         services::CatalogOutcome::Updated { serial, .. } => {
                             let date = ddl_core::catalog::serial_date(*serial)
                                 .unwrap_or_else(|| "unknown".into());
                             ui.invoke_show_toast(value(ui, T::CatalogUpdated, date));
                         }
-                        services::CatalogOutcome::Current { .. } if !automatic => {
+                        services::CatalogOutcome::Current { .. } => {
                             ui.invoke_show_toast(text(ui, T::CatalogCurrent));
                         }
-                        _ => {}
                     }
                 }
                 Event::EngineExit(outcome) => {
@@ -426,17 +478,56 @@ impl Runtime {
                     }
                     self.last_exit = Some(outcome);
                 }
+                Event::ProfileSaved(profile) => {
+                    // Spec 075, R2: the authoritative saved profile replaces the
+                    // optimistic row and the launch summary's flag. The selected
+                    // profile list mirrors it, and a base-game row is patched too.
+                    let value = profile.pistol_start;
+                    if let Some(snapshot) = self.snapshot.as_mut() {
+                        if let Some(item) = snapshot
+                            .items
+                            .iter_mut()
+                            .find(|i| i.profile.id == profile.id)
+                        {
+                            item.profile = profile.clone();
+                            for held in &mut item.profiles {
+                                if held.id == profile.id {
+                                    held.pistol_start = value;
+                                }
+                            }
+                            if let Ok(summary) = &mut item.launch {
+                                summary.pistol_start = value;
+                            }
+                        } else if let Some(base) = snapshot
+                            .base_games
+                            .iter_mut()
+                            .find(|b| b.profile.id == profile.id)
+                        {
+                            base.profile = profile.clone();
+                            for held in &mut base.profiles {
+                                if held.id == profile.id {
+                                    held.pistol_start = value;
+                                }
+                            }
+                        }
+                    }
+                    self.pistol_last_saved = Some((profile.id.clone(), value));
+                    self.pistol_pending = None;
+                }
                 Event::Finished(result) => {
                     self.busy = false;
                     self.playing = false;
                     let command = self.pending.take();
                     match result {
                         Ok(snapshot) => {
-                            self.snapshot = Some(*snapshot);
-                            self.unreadable.clear();
-                            self.recovery_attempts = 0;
-                            self.local_finished(ui, &command);
-                            self.problem = None;
+                            if let Some(snapshot) = snapshot {
+                                self.snapshot = Some(*snapshot);
+                                self.unreadable.clear();
+                                self.recovery_attempts = 0;
+                                self.local_finished(ui, &command);
+                                self.problem = None;
+                            }
+                            self.pistol_pending = None;
                             if let Some(Command::UpdateMapset(id)) = &command
                                 && let Some(item) = self
                                     .snapshot
@@ -551,6 +642,11 @@ impl Runtime {
                         }
                         Err(Problem::Local(message)) => self.local_error(message),
                         Err(problem) => {
+                            // Spec 075, R2: a failed write must not leave the
+                            // optimistic value looking saved.
+                            if matches!(command, Some(Command::SetPistolStart { .. })) {
+                                self.revert_pistol_start();
+                            }
                             self.problem = Some(problem);
                             self.focus = 800;
                             if self.screen == Screen::Loading {
@@ -565,24 +661,66 @@ impl Runtime {
                 }
             }
         }
-        // Spec 019 R5: dispatched after the startup snapshot so the first frame
-        // never waits on the network.
+        // Spec 077, R1: dispatched after the startup snapshot so the first frame
+        // never waits on the network, outside the busy gate.
         if auto_check {
-            self.start(ui, Command::CatalogCheck { automatic: true });
+            self.spawn_catalog_check(ui);
+        }
+        // Spec 075, R2: a toggle pressed while a command was running is applied
+        // once it finishes, so the last requested value is never lost.
+        if !self.busy {
+            if let Some((recipe_id, profile_id, value)) = self.pistol_queue.take() {
+                self.dispatch_pistol_start(ui, recipe_id, profile_id, value);
+            } else if let Some((profile_id, value)) = self.base_pistol_queue.take() {
+                self.pistol_pending = Some(PistolPending {
+                    profile_id: profile_id.clone(),
+                    previous: self
+                        .pistol_last_saved
+                        .as_ref()
+                        .filter(|(id, _)| id == &profile_id)
+                        .map_or(!value, |(_, saved)| *saved),
+                });
+                self.start(
+                    ui,
+                    Command::Local(services::LocalCommand::BasePistolStart { profile_id, value }),
+                );
+            }
+            if self.catalog_reload_pending {
+                self.catalog_reload_pending = false;
+                self.start(ui, Command::RefreshCatalog);
+            }
         }
         self.sync(ui);
     }
-    /// Whether the automatic catalog check should run now (spec 019, R5):
-    /// production only, enabled, and at least 24 h since the last attempt.
+    /// Spec 077, R1: the automatic check runs once per application start, in the
+    /// background after the first usable snapshot, whenever the opt-out is off.
+    /// There is no time-based throttle: every startup checks once.
     fn should_auto_check(&self) -> bool {
-        if !self.env.is_production() {
-            return false;
-        }
-        let Some(snapshot) = &self.snapshot else {
-            return false;
-        };
-        snapshot.catalog.auto_update
-            && ddl_core::catalog::catalog_check_due(snapshot.catalog.last_check, now_unix_secs())
+        auto_check_due(
+            self.env.is_production(),
+            self.catalog_checked,
+            self.snapshot
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.catalog.auto_update),
+        )
+    }
+    /// Spec 077, R1: fetch and adopt a newer catalog without setting `busy`, so
+    /// navigation and actions keep working while the network is out.
+    fn spawn_catalog_check(&mut self, ui: &AppWindow) {
+        self.catalog_checked = true;
+        let (tx, rx) = mpsc::channel();
+        self.catalog_rx = Some(rx);
+        let env = self.env.clone();
+        let sandbox = self.sandbox.clone();
+        let weak = ui.as_weak();
+        std::thread::spawn(move || {
+            let result = Services::open_with(env, sandbox)
+                .and_then(|mut services| services.startup_catalog_check(&CancellationToken::new()))
+                .unwrap_or_default();
+            if tx.send(result).is_ok() {
+                let _ = weak.upgrade_in_event_loop(|ui| ui.invoke_services_ready());
+            }
+        });
     }
     pub fn hotplug(&self, ui: &AppWindow, connected: bool) {
         if !self.playing {
@@ -1053,9 +1191,10 @@ impl Runtime {
             }
             (Screen::Setup, 41) => {
                 if let Some(item) = self.item() {
-                    let mut profile = item.profile.clone();
-                    profile.pistol_start = !profile.pistol_start;
-                    self.start(ui, Command::Save(profile));
+                    let recipe_id = item.recipe.id.clone();
+                    let profile_id = item.profile.id.clone();
+                    let value = !item.profile.pistol_start;
+                    self.set_pistol_start(ui, recipe_id, profile_id, value);
                 }
             }
             (Screen::Setup, 42) => self.advanced = !self.advanced,
@@ -1236,7 +1375,7 @@ impl Runtime {
             }
             // Spec 019 R5: manual catalog check and the automatic toggle.
             (Screen::Settings, 73) if self.settings_section == 0 => {
-                self.start(ui, Command::CatalogCheck { automatic: false })
+                self.start(ui, Command::CatalogCheck)
             }
             (Screen::Settings, 74) if self.settings_section == 0 => {
                 if let Some(s) = &self.snapshot {
@@ -1345,6 +1484,119 @@ impl Runtime {
         } else {
             self.focus = CHIP + next as i32;
         }
+    }
+    /// Spec 075, R1/R2: toggle Pistol start through the light profile path.
+    ///
+    /// The row and the launch summary flip immediately (the same optimistic rule
+    /// favorites use); the worker only validates and writes the profile, and a
+    /// failure restores the previous value instead of showing it as saved.
+    fn set_pistol_start(
+        &mut self,
+        ui: &AppWindow,
+        recipe_id: String,
+        profile_id: String,
+        value: bool,
+    ) {
+        let Some(previous) = self.patch_pistol_value(&profile_id, value) else {
+            return;
+        };
+        self.pistol_last_saved = Some((profile_id.clone(), previous));
+        if self.busy {
+            // The user pressed again while a command ran: keep the last intent
+            // and apply it when the worker is free (spec 075, R2).
+            self.pistol_queue = Some((recipe_id, profile_id, value));
+            return;
+        }
+        self.pistol_pending = Some(PistolPending {
+            profile_id: profile_id.clone(),
+            previous,
+        });
+        self.start(
+            ui,
+            Command::SetPistolStart {
+                recipe_id,
+                profile_id,
+                value,
+            },
+        );
+    }
+    /// Spec 075, R2: the queued Pistol start for a catalog-mapset profile.
+    fn dispatch_pistol_start(
+        &mut self,
+        ui: &AppWindow,
+        recipe_id: String,
+        profile_id: String,
+        value: bool,
+    ) {
+        let previous = self
+            .pistol_last_saved
+            .as_ref()
+            .filter(|(id, _)| id == &profile_id)
+            .map_or(!value, |(_, saved)| *saved);
+        self.pistol_pending = Some(PistolPending {
+            profile_id: profile_id.clone(),
+            previous,
+        });
+        self.start(
+            ui,
+            Command::SetPistolStart {
+                recipe_id,
+                profile_id,
+                value,
+            },
+        );
+    }
+    /// Spec 075, R1/R2: the base-game Pistol start toggle (local UI), the second
+    /// production control, through the same light path.
+    fn set_base_pistol_start(&mut self, ui: &AppWindow, profile_id: String, value: bool) {
+        let Some(previous) = self.patch_pistol_value(&profile_id, value) else {
+            return;
+        };
+        self.pistol_last_saved = Some((profile_id.clone(), previous));
+        if self.busy {
+            self.base_pistol_queue = Some((profile_id, value));
+            return;
+        }
+        self.pistol_pending = Some(PistolPending {
+            profile_id: profile_id.clone(),
+            previous,
+        });
+        self.start(
+            ui,
+            Command::Local(services::LocalCommand::BasePistolStart { profile_id, value }),
+        );
+    }
+    /// Spec 075, R2: writes the visible value into the snapshot row (catalog
+    /// mapset or base game) and its launch summary; returns the value it
+    /// replaced, or `None` when no row owns the profile.
+    fn patch_pistol_value(&mut self, profile_id: &str, value: bool) -> Option<bool> {
+        let snapshot = self.snapshot.as_mut()?;
+        if let Some(item) = snapshot
+            .items
+            .iter_mut()
+            .find(|i| i.profile.id == profile_id)
+        {
+            let previous = item.profile.pistol_start;
+            item.profile.pistol_start = value;
+            if let Ok(summary) = &mut item.launch {
+                summary.pistol_start = value;
+            }
+            return Some(previous);
+        }
+        let base = snapshot
+            .base_games
+            .iter_mut()
+            .find(|b| b.profile.id == profile_id)?;
+        let previous = base.profile.pistol_start;
+        base.profile.pistol_start = value;
+        Some(previous)
+    }
+    /// Spec 075, R2: undo the optimistic value after a failed write.
+    fn revert_pistol_start(&mut self) {
+        let Some(pending) = self.pistol_pending.take() else {
+            return;
+        };
+        self.patch_pistol_value(&pending.profile_id, pending.previous);
     }
     /// X: toggles the favorite mark of the focused card, or of the open detail.
     fn toggle_favorite(&mut self, ui: &AppWindow) {
@@ -4133,12 +4385,10 @@ fn display_title(recipe: &ddl_core::catalog::Recipe) -> &str {
     recipe.title.split(" (").next().unwrap_or(&recipe.title)
 }
 
-/// The wall clock, in UTC Unix seconds (spec 019 R5 throttle).
-fn now_unix_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
+/// Spec 077, R1: whether a startup should check the catalog. Pure, so the
+/// once-per-start, production and opt-out rules are tested without a window.
+fn auto_check_due(production: bool, already_checked: bool, auto_update: bool) -> bool {
+    production && !already_checked && auto_update
 }
 
 /// "Catalog: <serial date> (built-in | updated)" for Settings (spec 019, R5).
@@ -4489,5 +4739,146 @@ mod category_tests {
             "wraps, then drops the rest"
         );
         assert!(b.nodes.iter().all(|n| n.x + n.w <= 760.));
+    }
+}
+
+#[cfg(test)]
+mod startup_and_pistol_tests {
+    use super::*;
+    use ddl_core::catalog::Catalog;
+    use ddl_core::engines::dsda::{Complevel, ComplevelWord};
+    use ddl_core::library::RecipeStatus;
+    use ddl_core::profiles::Profile;
+    use ddl_core::resolver::{Summary, SummaryContent};
+
+    /// Spec 077, R1: production only, once per start, opt-out respected — and no
+    /// 24 h or 10 min throttle anywhere in the rule.
+    #[test]
+    fn a_startup_checks_once_per_start_unless_opted_out_or_not_production() {
+        assert!(auto_check_due(true, false, true));
+        assert!(
+            !auto_check_due(true, true, true),
+            "already checked this start"
+        );
+        assert!(!auto_check_due(true, false, false), "automatic updates off");
+        assert!(!auto_check_due(false, false, true), "tests and dev builds");
+    }
+
+    fn test_environment() -> Environment {
+        let home = std::env::temp_dir().join("ddl-075-077-runtime-tests");
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| match key {
+            "HOME" => Some(home.display().to_string()),
+            _ => None,
+        })
+        .expect("paths resolve from HOME");
+        Environment {
+            paths,
+            home,
+            screen: None,
+            test: None,
+        }
+    }
+
+    /// One Discover/Library row for `sigil` whose launch summary shows the
+    /// profile's Pistol start value.
+    fn snapshot_with_sigil(pistol_start: bool) -> Snapshot {
+        let catalog = Catalog::embedded();
+        let recipe = catalog.recipe("sigil").expect("sigil").clone();
+        let profile = Profile::new("sigil-default", "Default", "sigil");
+        let summary = Summary {
+            base_game: recipe.base_game.game,
+            iwad_present: true,
+            iwad_variant: None,
+            iwad_path: PathBuf::from("/tmp/doom2.wad"),
+            content: vec![SummaryContent {
+                position: 1,
+                label: "Main".into(),
+                path: PathBuf::from("/tmp/sigil.wad"),
+            }],
+            complevel: Complevel::from_word(ComplevelWord::Vanilla, 2).expect("vanilla"),
+            skill: 3,
+            pistol_start,
+            engine_version: "0.30.1".into(),
+        };
+        Snapshot {
+            items: vec![Item {
+                recipe,
+                manifest: None,
+                profile,
+                profiles: vec![],
+                last_played: None,
+                launch: Ok(summary),
+                favorite: false,
+                recipe_status: RecipeStatus::Current,
+                change_summary: String::new(),
+                update_dismissed: false,
+                update_notice: vec![],
+            }],
+            base_games: vec![],
+            automatic_folders: vec![],
+            custom: vec![],
+            custom_profiles: vec![],
+            local_issues: Default::default(),
+            profiles_with_saves: Default::default(),
+            tags: catalog.tags.clone(),
+            engine: None,
+            previous: None,
+            attribution: None,
+            iwads: vec![],
+            folders: vec![],
+            hidden_paths: vec![],
+            config_notice: false,
+            config_usable: true,
+            config_version: String::new(),
+            audio: crate::services::AudioState {
+                choice: None,
+                installed: false,
+                current: ddl_core::soundfonts::engine::Current::Default,
+                warning: None,
+            },
+            logs: PathBuf::new(),
+            search_standard_folders: false,
+            catalog: crate::services::CatalogInfo {
+                serial: 0,
+                updated: false,
+                source_commit: String::new(),
+                fetched_at: None,
+                auto_update: true,
+                last_check: None,
+            },
+        }
+    }
+
+    /// Spec 075, R2: the row and the launch summary flip together, and a failed
+    /// write puts the previous value back instead of showing it as saved.
+    #[test]
+    fn the_optimistic_pistol_value_is_reverted_when_the_write_fails() {
+        let mut runtime = Runtime::new(test_environment());
+        runtime.snapshot = Some(snapshot_with_sigil(false));
+
+        let previous = runtime.patch_pistol_value("sigil-default", true);
+        assert_eq!(previous, Some(false));
+        let item = &runtime.snapshot.as_ref().unwrap().items[0];
+        assert!(item.profile.pistol_start, "the row flips immediately");
+        assert!(
+            matches!(&item.launch, Ok(summary) if summary.pistol_start),
+            "the launch summary follows the row"
+        );
+
+        runtime.pistol_pending = Some(PistolPending {
+            profile_id: "sigil-default".into(),
+            previous: false,
+        });
+        runtime.revert_pistol_start();
+        let item = &runtime.snapshot.as_ref().unwrap().items[0];
+        assert!(!item.profile.pistol_start, "the failed value is undone");
+        assert!(
+            matches!(&item.launch, Ok(summary) if !summary.pistol_start),
+            "the summary is restored too"
+        );
+        assert!(runtime.pistol_pending.is_none(), "nothing stays pending");
+
+        // Another profile's row is never touched.
+        assert_eq!(runtime.patch_pistol_value("other", true), None);
     }
 }
