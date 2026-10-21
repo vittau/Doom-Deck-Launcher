@@ -131,3 +131,14 @@ No dependencies added. Five offline renderer tests pass. Headless Chromium rende
 1280×800, 1280×720 and 390×844 confirm the support action is fully inside the first viewport,
 with no horizontal overflow. Desktop render inspected visually. No application code changed.
 The two paused OpenCode conversations remain paused.
+
+## Independent website publication (owner revision, 2026-10-21)
+
+Added `project-site.yml`: automatic page/asset changes on main and manual dispatch now refresh
+only page-owned files. The job reuses the already published app version/date, rejects changes
+outside index.html/assets, and shares the existing publication lock. Deployment wait, Cloudflare
+prefix purge and canonical HTML/CSS/ref/summary verification remain in place. No SDK, Rust
+build, GPG private key or new dependency is required. `render-site.py --refresh` fails closed
+when existing release metadata is missing, invalid or ambiguous. Seven offline tests pass,
+including refresh metadata/signature preservation and rejected-input checks; actionlint passes.
+Application release publication still renders the page with its new version as before.

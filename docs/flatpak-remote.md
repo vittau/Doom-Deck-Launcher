@@ -88,6 +88,17 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
    served landing page, `.flatpakref` and `repo/summary` byte-for-byte. With a purge configured the
    canonical URLs are used; otherwise the check falls back to a cache-busting query.
 
+### Page-only updates
+
+`.github/workflows/project-site.yml` deploys page/source-asset changes pushed to `main` and
+supports manual dispatch. It refreshes only `index.html` and `assets/`, retaining the version
+and release date of the app already published. It does not install an SDK, compile Rust, sign
+artifacts, or change the Flatpak repository/descriptors. Both publication workflows share the
+`flatpak-remote` concurrency group to serialize writes to `gh-pages`. The page workflow requests
+and waits for Pages deployment, purges the same Cloudflare prefix, then verifies the served
+HTML, stylesheet, signed descriptor and repository summary. An initial Flatpak publication must
+exist before the first page-only refresh.
+
 Published layout:
 
 ```text

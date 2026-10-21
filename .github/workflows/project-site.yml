@@ -1,0 +1,191 @@
+# Page-only publishing: no Rust build, Flatpak SDK or signing key needed.
+name: Project website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - packaging/flatpak/site/**
+      - scripts/flatpak/render-site.py
+      - scripts/flatpak/purge_cloudflare_cache.py
+      - scripts/flatpak/served_urls.sh
+      - docs/screenshots/**
+      - docs/design/logo/**
+      - crates/ddl/ui/assets/logo/**
+      - crates/ddl/ui/assets/*.ttf
+      - crates/ddl/ui/assets/*-OFL.txt
+      - .github/workflows/project-site.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+# Same lock as Flatpak publication: neither writer can overwrite the other.
+concurrency:
+  group: flatpak-remote
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  APP_ID: io.github.vittau.Doom-Deck-Launcher
+  SITE_BASE: https://www.vitormach.dev/Doom-Deck-Launcher
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out page sources
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check out the existing signed publication
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: gh-pages
+          path: published
+
+      - name: Validate and refresh the page
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s packaging/flatpak/site
+          python3 scripts/flatpak/render-site.py --refresh \
+            --output "$GITHUB_WORKSPACE/published" \
+            --app-id "$APP_ID" --site-base "$SITE_BASE"
+          # Page-only publishing must never modify the signed repository or refs.
+          git -C published add --all
+          while IFS= read -r path; do
+            case "$path" in
+              index.html|assets/*) ;;
+              *) echo "::error::Unexpected publication change: $path"; exit 1 ;;
+            esac
+          done < <(git -C published diff --cached --name-only)
+
+      - name: Publish page assets
+        run: |
+          set -euo pipefail
+          if ! git -C published diff --cached --quiet; then
+            git -C published \
+              -c user.name="ddl-site-bot" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "Refresh project website"
+            git -C published push origin HEAD:gh-pages
+          fi
+
+      - name: Request a Pages build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # A push made with GITHUB_TOKEN does not trigger a Pages build, so ask
+          # for one explicitly through the documented REST endpoint. The token
+          # needs the `pages: write` permission declared above.
+          curl -fsS --max-time 20 -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds" \
+            | tee "$RUNNER_TEMP/pages-build.json"
+          commit="$(git -C "$GITHUB_WORKSPACE/published" rev-parse HEAD)"
+          echo "PAGES_COMMIT=$commit" >> "$GITHUB_ENV"
+          echo "Requested a Pages build for $commit"
+
+      - name: Wait for the Pages deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds/latest"
+          field() {
+            python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1]) or "")' "$1"
+          }
+          for attempt in $(seq 1 48); do
+            body="$(curl -fsS --max-time 20 \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" "$api")"
+            status="$(printf '%s' "$body" | field status)"
+            commit="$(printf '%s' "$body" | field commit)"
+            if [ "$commit" = "$PAGES_COMMIT" ] && [ "$status" = "built" ]; then
+              echo "Pages built $commit"
+              exit 0
+            fi
+            if [ "$commit" = "$PAGES_COMMIT" ] && [ "$status" = "errored" ]; then
+              echo "::error::Pages build failed for $commit: $body"
+              exit 1
+            fi
+            echo "Pages status for $PAGES_COMMIT: ${status:-unknown} (attempt $attempt)"
+            sleep 10
+          done
+          echo "::error::Pages did not build $PAGES_COMMIT within 8 minutes"
+          exit 1
+
+      - name: Purge the Cloudflare cache prefix
+        env:
+          CLOUDFLARE_CACHE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_CACHE_PURGE_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+        run: |
+          set -euo pipefail
+          # One scoped prefix for the whole DDL tree (owner decision): never the
+          # zone, another host or purge_everything. Missing both settings skip
+          # the purge; a partial setup fails. The token is read from the
+          # environment and is never printed.
+          if [ -n "${CLOUDFLARE_CACHE_PURGE_TOKEN}" ] && [ -n "${CLOUDFLARE_ZONE_ID}" ]; then
+            echo "PURGE_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "PURGE_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
+          python3 scripts/flatpak/purge_cloudflare_cache.py --site-url "${SITE_BASE}/"
+
+      - name: Verify the published files
+        run: |
+          set -euo pipefail
+          # shellcheck source=scripts/flatpak/served_urls.sh
+          source scripts/flatpak/served_urls.sh
+          # With a successful purge the canonical URLs must already be fresh, so
+          # they are checked without a cache buster. Without purge credentials,
+          # fall back to the cache-busting query used before.
+          if [ "${PURGE_CONFIGURED:-false}" = "true" ]; then
+            echo "Cloudflare purge configured: verifying canonical URLs"
+            query=""
+          else
+            echo "Cloudflare purge not configured: verifying with a cache-busting query"
+            query="?v=${PAGES_COMMIT:0:12}"
+          fi
+          mapfile -t urls < <(served_urls "$SITE_BASE" "$APP_ID" "$query")
+          page_url="${urls[0]}"
+          ref_url="${urls[1]}"
+          summary_url="${urls[2]}"
+          served=0
+          for attempt in $(seq 1 12); do
+            # Every artifact, including the landing page, must be served and
+            # byte-identical to what this run rendered; a stale page is a
+            # failure, never a green result.
+            if curl -fsS --max-time 20 "$page_url" -o "$RUNNER_TEMP/published.index.html" \
+               && curl -fsS --max-time 20 "$ref_url" -o "$RUNNER_TEMP/published.flatpakref" \
+               && curl -fsS --max-time 20 "$summary_url" -o "$RUNNER_TEMP/published.summary" \
+               && cmp -s "$RUNNER_TEMP/published.index.html" "$GITHUB_WORKSPACE/published/index.html" \
+               && cmp -s "$RUNNER_TEMP/published.flatpakref" "$GITHUB_WORKSPACE/published/${APP_ID}.flatpakref" \
+               && cmp -s "$RUNNER_TEMP/published.summary" "$GITHUB_WORKSPACE/published/repo/summary" \
+               && curl -fsS --max-time 20 "${SITE_BASE}/assets/style.css${query}" -o "$RUNNER_TEMP/published.style.css" \
+               && cmp -s "$RUNNER_TEMP/published.style.css" "$GITHUB_WORKSPACE/published/assets/style.css"; then
+              served=1
+              break
+            fi
+            echo "Published files are not current yet (attempt $attempt)..."
+            sleep 10
+          done
+          if [ "$served" != 1 ]; then
+            echo "::error::the served page, .flatpakref or repo/summary did not converge to the exported files"
+            sha256sum "$GITHUB_WORKSPACE/published/index.html" "$RUNNER_TEMP/published.index.html" 2>/dev/null || true
+            sha256sum "$GITHUB_WORKSPACE/published/repo/summary" "$RUNNER_TEMP/published.summary" 2>/dev/null || true
+            exit 1
+          fi
+          grep -Fx "Name=${APP_ID}" "$RUNNER_TEMP/published.flatpakref"
+          grep -Fx "Url=${SITE_BASE}/repo/" "$RUNNER_TEMP/published.flatpakref"
+          grep -q '^GPGKey=' "$RUNNER_TEMP/published.flatpakref"
+          echo "Published page, descriptor and summary are served and consistent"
+

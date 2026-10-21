@@ -103,6 +103,30 @@ class RenderTests(unittest.TestCase):
                 self.render(**args)
         self.assertEqual(list(self.out.iterdir()), [])
 
+    def test_refresh_preserves_published_release_and_signed_files(self):
+        text = self.render(version="0.0.9-focus", published="2026-10-20")
+        artifact = self.out / "repo/summary.sig"
+        artifact.parent.mkdir()
+        artifact.write_bytes(b"signed summary")
+        # Simulate an older page layout without changing its release metadata.
+        (self.out / "index.html").write_text(text.replace("Your DOOM.", "Old heading"))
+        renderer.refresh(self.out, APP_ID, BASE)
+        result = (self.out / "index.html").read_text()
+        self.assertIn("Your DOOM.", result)
+        self.assertIn("v0.0.9-focus", result)
+        self.assertIn('datetime="2026-10-20"', result)
+        self.assertEqual(artifact.read_bytes(), b"signed summary")
+
+    def test_refresh_rejects_missing_ambiguous_or_invalid_release(self):
+        original = self.render()
+        for text in ("no release", original + original,
+                     original.replace('datetime="2026-10-21"', 'datetime="invalid"')):
+            with self.subTest(text=text[:30]):
+                (self.out / "index.html").write_text(text)
+                with self.assertRaises(ValueError):
+                    renderer.refresh(self.out, APP_ID, BASE)
+                self.assertEqual((self.out / "index.html").read_text(), text)
+
     def test_url_attribute_is_escaped(self):
         text = self.render(site_base='https://example.com/a"quoted')
         self.assertIn('https://example.com/a&quot;quoted/', text)

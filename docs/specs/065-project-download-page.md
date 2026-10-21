@@ -37,6 +37,11 @@ necessary setup honestly and do not advertise unmeasured performance claims.
   as the primary action. Use a local inline icon and neutral support copy; no external widget,
   script, tracking or invented claims about how contributions are spent.
 
+- **R7 (owner, 2026-10-21):** Publish page-only edits independently of the Flatpak build.
+  Automatically deploy relevant main-branch page/assets changes, with a manual trigger too.
+  Preserve the published app version/date, signed repository, descriptors and key. Serialize
+  both writers to the same Pages branch; retain deployment verification and prefix cache purge.
+
 ## Acceptance
 
 Validate static HTML and links, inspect headless renders at desktop and narrow widths and
