@@ -43,6 +43,11 @@ GA4 configuration, primary Flatpak installation flow and independent website pub
   variability and never guarantee rankings, citations or index inclusion. Keep content usable
   without JavaScript and GA initialized once. Cite current primary docs for technical claims.
 
+- R7 (owner follow-up): Move the existing official Donate widget from the header to immediately
+  below the hero's version/publication-date line. Preserve the yellow #FFDD00, official logo,
+  Cookie font, compact size and no-JavaScript fallback. Keep Install primary, with sensible
+  spacing and no duplicate widget. Inspect desktop and mobile headless previews.
+
 ## Ownership and handoff
 
 Own website templates/CSS, renderer, narrow page/publication workflow changes, optimized website
