@@ -1,0 +1,6 @@
+# Local Flatpak build outputs; never commit them.
+/_build/
+/_repo/
+/*.flatpak
+/*.flatpak.sha256
+/flatpak-build.log
