@@ -1,9 +1,9 @@
 # 063 — Signed Flatpak repository on GitHub Pages
 
 **Spec:** [`docs/specs/063-flatpak-selfhosted-remote.md`](../specs/063-flatpak-selfhosted-remote.md)
-**Status:** merged into `main`; publication verified end to end by run 39542532738 (Pages commit
-`c5462d5`), and the scoped purge accepted by Cloudflare with a manual run of the reviewed helper.
-CI run 39543519029 exercises the purge path of this automation · 2026-10-21
+**Status:** merged into `main`; the full pipeline, including the scoped Cloudflare purge and the
+canonical landing-page byte-comparison, is verified by run 39543519029 (Pages commit `2073bf0`).
+Deck hardware validation remains open · 2026-10-21
 **Integration:** `origin/main`, currently `c6e3b5e` (includes the purge automation)
 
 ## What changed
@@ -94,6 +94,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | OSTree layout roundtrip | local git repo with `repo/{config,objects,refs/heads/…,summary}`, committed and cloned | the clone loses `tmp`, `state`, `extensions`, `refs/mirrors`, `refs/remotes` (empty directories); the restore loop recreates all of them |
 | Purge helper tests | `python3 -m unittest -v test_purge_cloudflare_cache` in `scripts/flatpak/` | 21 tests pass: one-prefix payload without scheme, rejected prefixes, skip/partial configuration, bounded retries, oversize and non-JSON responses, literal `success`, and no token in output |
 | Served URL tests | `bash scripts/flatpak/test_served_urls.sh` | canonical URLs (page first, no double slash) and cache-busting URLs match the expected shape |
+| CI purge path | [run 39543519029](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39543519029) | purge accepted for the exact prefix; canonical page, descriptor and summary verified; Pages `2073bf0` |
 | Whitespace | `git diff --check` | pass |
 
 Not run, because there is no Flatpak runtime on the macOS dev host:
@@ -117,12 +118,12 @@ HTTP 200 with `CF-Cache-Status: MISS` and bytes identical to `c5462d5/index.html
 canonical `.flatpakref` returned 200 with the expected app id, repository URL and public GPG key. No
 manual cache clear was needed.
 
-Still unproven in CI:
+Run [39543519029](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39543519029) then closed
+the loop inside CI: the purge step reported `Cloudflare purge accepted for prefix
+www.vitormach.dev/Doom-Deck-Launcher/`, the served-file check switched to canonical URLs and
+confirmed the page, descriptor and summary. Pages built `2073bf0`.
 
-- the Cloudflare purge path inside the workflow (run
-  [39543519029](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39543519029), in progress at
-  the time of writing);
-- the byte-comparison of the served landing page by the workflow itself, which is part of that run.
+All workflow steps are therefore exercised. What remains is hardware validation on a Deck, not CI.
 
 The Pages endpoint itself was exercised against this repository: `POST /pages/builds` returned
 `queued` and the build for the `gh-pages` head `953ccd5` reached `built`. The most recent manual
@@ -146,7 +147,7 @@ implementation to execution. No private key material is reproduced here.
 | Pages trigger | Confirmed that `POST /repos/…/pages/builds` returns `queued` and the build for `953ccd5` (the `gh-pages` head) reached `built` in about 20 s. The workflow now requests this build explicitly, because a `GITHUB_TOKEN` push does not trigger Pages |
 | `summary.sig` format | Downloaded the published file: it starts with `ostree.gpgsigs`, an OSTree GVariant map, not a raw OpenPGP signature. The `gpg --verify` approach was removed; verification goes through Flatpak/OSTree with `--gpg-import` and normal GPG verification |
 | Signature smoke test | Review follow-up: the throwaway remote imports `packaging/flatpak/repo-key.gpg`, runs `remote-modify --gpg-verify` (which also enables summary verification for a remote without a collection ID) and installs with verification on |
-| Cloudflare purge | Owner supplied `CLOUDFLARE_CACHE_PURGE_TOKEN` (secret) and `CLOUDFLARE_ZONE_ID` (variable). After the Pages deployment the workflow purges the single prefix `www.vitormach.dev/Doom-Deck-Launcher/`; both settings missing skip, a partial setup fails. 21 Python tests plus a shell test cover the request scope and failure handling. The owner ran the reviewed helper manually: Cloudflare accepted the exact prefix, the canonical homepage returned 200 with `CF-Cache-Status: MISS` and bytes identical to `c5462d5/index.html`, and the canonical `.flatpakref` matched the expected app id, URL and public key. CI run 39543519029 exercises the same path inside the workflow |
+| Cloudflare purge | Owner supplied `CLOUDFLARE_CACHE_PURGE_TOKEN` (secret) and `CLOUDFLARE_ZONE_ID` (variable). After the Pages deployment the workflow purges the single prefix `www.vitormach.dev/Doom-Deck-Launcher/`; both settings missing skip, a partial setup fails. 21 Python tests plus a shell test cover the request scope and failure handling. The owner ran the reviewed helper manually: Cloudflare accepted the exact prefix, the canonical homepage returned 200 with `CF-Cache-Status: MISS` and bytes identical to `c5462d5/index.html`, and the canonical `.flatpakref` matched the expected app id, URL and public key. CI run 39543519029 then accepted the same prefix from the workflow and verified the canonical page, descriptor and summary |
 | Manual dispatch input | [39542355868](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542355868) passed `0dd4749` (short SHA) as `ref`; `actions/checkout` resolved it as `refs/heads/0dd4749*` and failed before any build step. The input accepts a tag, a branch or a full 40-character SHA |
 
 CI history while getting there:
@@ -161,7 +162,7 @@ CI history while getting there:
 | [39542355868](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542355868) | Flatpak repository | failure | Manual dispatch passed `0dd4749` (short SHA) as `ref`; `actions/checkout` treats it as a ref name and fails before any build step. Input mistake, no code fix |
 | 39542511716 | Flatpak repository | cancelled | Mistaken invocation, superseded immediately |
 | [39542532738](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542532738) | Flatpak repository | success | Full merged pipeline: incremental export over the existing `gh-pages`, signed smoke test, Pages build request, wait and served-file check; Pages built `c5462d5` |
-| [39543519029](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39543519029) | Flatpak repository | in progress | First run with the in-workflow Cloudflare purge path and the landing-page byte-comparison |
+| [39543519029](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39543519029) | Flatpak repository | success | First run with the in-workflow purge: `Cloudflare purge accepted for prefix www.vitormach.dev/Doom-Deck-Launcher/`, canonical-URL verification of page, descriptor and summary; Pages built `2073bf0` |
 | 39537765626 / 39537765603 | Flatpak / CI | failure / cancelled | Same two manifest causes as above, superseded |
 
 ## Current state and remaining work
