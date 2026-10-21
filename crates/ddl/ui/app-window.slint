@@ -249,6 +249,25 @@ component Hint inherits Rectangle {
         text: root.label; color: Tokens.muted; font-size: Tokens.metadata; vertical-alignment: center;
     }
 }
+// Spec 071: the website's compact brand arrangement (main 0518500) in app form.
+// The approved horizontal master is cropped to its outlined DDL lettering, so
+// the emblem and type keep the exact artwork shipped for the site.
+component Brand inherits Rectangle {
+    width: 56px; height: 56px;
+    Image { x: 0px; y: 0px; width: 56px; height: 56px; source: @image-url("assets/logo/emblem-small.svg"); image-fit: contain; }
+    Rectangle {
+        x: 66.5px; y: 4.25px; width: 77px; height: 31.5px; clip: true;
+        Image {
+            x: -65.625px; y: -12.25px; width: 144.375px; height: 56px;
+            source: @image-url("assets/logo/horizontal.svg"); image-fit: fill;
+        }
+    }
+    Text {
+        x: 66.5px; y: 37.75px; width: 96px; height: 14px;
+        text: @tr("DoomDeckLauncher"); color: Tokens.text; font-family: "Barlow"; font-size: 10px;
+        vertical-alignment: center;
+    }
+}
 export component AppWindow inherits Window {
     title: @tr("DoomDeckLauncher");
     out property <image> app-icon: @image-url("assets/logo/icon.png");
@@ -371,7 +390,7 @@ export component AppWindow inherits Window {
     Image { x: 0px; y: 104px; width: parent.width; height: parent.height - 168px; source: @image-url("assets/ember/wall.jpg"); image-fit: fill; }
     Rectangle {
         x: 0px; y: 0px; width: parent.width; height: 104px; background: Tokens.deep;
-        Image { x: 40px; y: 24px; width: 154px; height: 56px; source: @image-url("assets/logo/horizontal.svg"); image-fit: contain; }
+        Brand { x: 40px; y: 24px; }
         for label[index] in [@tr("Home"), @tr("Library"), @tr("Discover"), @tr("Settings")]: Rectangle {
             x: (214 + index * 180) * 1px; y: 24px; width: 148px; height: 52px;
             background: root.tabs-enabled && root.active-tab == index ? Tokens.raised : transparent; border-radius: 8px;

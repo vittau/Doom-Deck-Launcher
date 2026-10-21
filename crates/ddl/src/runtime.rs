@@ -40,23 +40,51 @@ pub enum Screen {
     Browser,
     Settings,
 }
-/// A Discover category (spec 015, R4). The strip lists `All`, one `Tag` per
-/// vocabulary tag some recipe uses, then `Favorites`.
+/// A Discover category (spec 015, R4; spec 072). The strip lists the owner's
+/// requested specific categories that some recipe uses, then `Favorites`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Category {
-    All,
     Tag(String),
     Favorites,
 }
+/// The owner's Discover order (spec 072 R1). Vocabulary entries outside this
+/// list keep their catalog metadata but are not navigation categories.
+const CATEGORY_ORDER: [&str; 7] = [
+    "cacowards",
+    "megawad",
+    "community-projects",
+    "doomer-boards",
+    "classics",
+    "episode",
+    "challenging",
+];
+/// First node id of a Discover/Library card; card `k` has id `CARD + k`.
+pub(crate) const CARD: i32 = 10;
+/// Last card id. Kept below `CHIP` so cards and category chips never collide
+/// (spec 072 R4: every mapset in the 90+ recipe catalog stays reachable).
+pub(crate) const CARD_LAST: i32 = 199;
 /// First node id of the category strip; chip `k` has id `CHIP + k`.
 const CHIP: i32 = 200;
 const CHIPS_MAX: usize = 30;
-/// "Show all mapsets" button of the empty Favorites state.
-const SHOW_ALL: i32 = 230;
+/// "Browse mapsets" action of the empty Favorites state.
+const BROWSE: i32 = 230;
 /// Horizontal room for the strip, between the card grid's edges.
 const STRIP_WIDTH: f32 = 1200.;
 /// Vertical room the strip takes above the Discover grid.
 const STRIP_HEIGHT: f32 = 72.;
+/// The requested categories that at least one recipe uses, in the owner's order.
+fn requested_categories(used: impl Fn(&str) -> bool) -> Vec<Category> {
+    CATEGORY_ORDER
+        .iter()
+        .filter(|id| used(id))
+        .take(CHIPS_MAX - 1)
+        .map(|id| Category::Tag((*id).to_owned()))
+        .collect()
+}
+/// Spec 072 R2: the first available category, or Favorites when none exist.
+fn first_available(available: &[Category]) -> Category {
+    available.first().cloned().unwrap_or(Category::Favorites)
+}
 #[derive(Clone)]
 enum Sheet {
     Quit,
@@ -109,6 +137,8 @@ pub struct Runtime {
     uninstall_delete_profiles: bool,
     /// Discover category, remembered for the session (spec 015, R4).
     category: Category,
+    /// False until the first snapshot picks the initial specific category.
+    category_chosen: bool,
     /// First strip chip drawn when the strip is wider than the grid.
     strip_start: usize,
     scroll_anchor: Option<(Screen, Option<local_ui::View>, i32)>,
@@ -156,7 +186,8 @@ impl Runtime {
             settings_section: 0,
             advanced: false,
             uninstall_delete_profiles: false,
-            category: Category::All,
+            category: Category::Favorites,
+            category_chosen: false,
             strip_start: 0,
             scroll_anchor: None,
             updates: vec![],
@@ -501,7 +532,7 @@ impl Runtime {
                                 Some(Command::Uninstall(id, _)) => {
                                     ui.invoke_show_toast(value(ui, T::Uninstalled, &id));
                                     self.screen = Screen::Library;
-                                    self.focus = 10;
+                                    self.focus = CARD;
                                     self.history.clear();
                                 }
                                 _ => {}
@@ -729,7 +760,9 @@ impl Runtime {
             }
             // The strip is entered at the selected chip and left for the first card, so
             // the way in and out never depends on column geometry.
-            Action::Up if self.screen == Screen::Discover && (10..=99).contains(&self.focus) => {
+            Action::Up
+                if self.screen == Screen::Discover && (CARD..=CARD_LAST).contains(&self.focus) =>
+            {
                 self.move_focus(ui, action);
                 if (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
                     self.focus = CHIP + self.category_index() as i32;
@@ -740,7 +773,7 @@ impl Runtime {
                     && (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus)
                     && !self.discover_items().is_empty() =>
             {
-                self.focus = 10 + self.discover_items()[0] as i32;
+                self.focus = CARD + self.discover_items()[0] as i32;
             }
             Action::Up | Action::Down | Action::Left | Action::Right => self.move_focus(ui, action),
             Action::PreviousCategory | Action::NextCategory if self.screen == Screen::Discover => {
@@ -855,7 +888,7 @@ impl Runtime {
             (Screen::FirstRun, 3) => self.start(ui, Command::Scan(None)),
             (Screen::FirstRun, 4) => {
                 self.screen = Screen::Discover;
-                self.focus = 10;
+                self.focus = self.discover_entry_focus();
             }
             (Screen::FirstRun, 5) => {
                 self.screen = Screen::Home;
@@ -887,29 +920,32 @@ impl Runtime {
                     }
                 } else {
                     self.screen = Screen::Discover;
-                    self.focus = 10;
+                    self.focus = self.discover_entry_focus();
                 }
             }
             (Screen::Home, 2) => {
                 self.screen = Screen::Discover;
-                self.focus = 10;
+                self.focus = self.discover_entry_focus();
             }
             (Screen::Discover, id) if (CHIP..CHIP + CHIPS_MAX as i32).contains(&id) => {
                 if let Some(category) = self.categories().get((id - CHIP) as usize) {
                     self.category = category.clone();
                 }
                 if let Some(&first) = self.discover_items().first() {
-                    self.focus = 10 + first as i32;
+                    self.focus = CARD + first as i32;
                 }
             }
-            (Screen::Discover, SHOW_ALL) => {
-                self.category = Category::All;
-                self.focus = self
-                    .discover_items()
-                    .first()
-                    .map_or(CHIP, |&i| 10 + i as i32);
+            (Screen::Discover, BROWSE) => {
+                if let Some(first) = self
+                    .categories()
+                    .into_iter()
+                    .find(|c| matches!(c, Category::Tag(_)))
+                {
+                    self.category = first;
+                    self.focus = self.discover_entry_focus();
+                }
             }
-            (Screen::Discover | Screen::Library, 10..=99) => {
+            (Screen::Discover | Screen::Library, CARD..=CARD_LAST) => {
                 if self.screen == Screen::Library
                     && self
                         .snapshot
@@ -917,9 +953,9 @@ impl Runtime {
                         .is_some_and(|s| s.items.iter().all(|i| i.manifest.is_none()))
                 {
                     self.screen = Screen::Discover;
-                    self.focus = 10;
+                    self.focus = self.discover_entry_focus();
                 } else {
-                    self.selected = (self.focus - 10) as usize;
+                    self.selected = (self.focus - CARD) as usize;
                     self.enter(Screen::Detail, 1);
                 }
             }
@@ -1232,25 +1268,21 @@ impl Runtime {
             _ => {}
         }
     }
-    /// The strip: `All`, the vocabulary tags some recipe uses (in `order`), `Favorites`.
+    /// The strip (spec 072 R1): requested specific categories some recipe uses,
+    /// in the owner's order, then `Favorites`. Never empty.
     fn categories(&self) -> Vec<Category> {
-        let mut list = vec![Category::All];
-        if let Some(s) = &self.snapshot {
-            list.extend(
-                s.tags
-                    .ordered()
-                    .into_iter()
-                    .filter(|tag| s.items.iter().any(|i| i.recipe.tags.contains(&tag.id)))
-                    .take(CHIPS_MAX - 2)
-                    .map(|tag| Category::Tag(tag.id.clone())),
-            );
-        }
+        let mut list = self.snapshot.as_ref().map_or_else(Vec::new, |s| {
+            requested_categories(|id| {
+                s.items
+                    .iter()
+                    .any(|i| i.recipe.tags.iter().any(|tag| tag == id))
+            })
+        });
         list.push(Category::Favorites);
         list
     }
     fn category_label(&self, ui: &AppWindow, category: &Category) -> String {
         match category {
-            Category::All => text(ui, T::AllCategory).into(),
             Category::Favorites => text(ui, T::FavoritesCategory).into(),
             Category::Tag(id) => self
                 .snapshot
@@ -1265,6 +1297,12 @@ impl Runtime {
             .position(|c| *c == self.category)
             .unwrap_or(0)
     }
+    /// Where Discover starts: the first shown card, else the selected chip.
+    fn discover_entry_focus(&self) -> i32 {
+        self.discover_items()
+            .first()
+            .map_or(CHIP + self.category_index() as i32, |&i| CARD + i as i32)
+    }
     /// Snapshot indexes shown on Discover in the current category, favorites first.
     fn discover_items(&self) -> Vec<usize> {
         let Some(s) = &self.snapshot else {
@@ -1272,7 +1310,6 @@ impl Runtime {
         };
         let mut shown: Vec<usize> = (0..s.items.len())
             .filter(|&i| match &self.category {
-                Category::All => true,
                 Category::Tag(id) => s.items[i].recipe.tags.contains(id),
                 Category::Favorites => s.items[i].favorite,
             })
@@ -1295,13 +1332,16 @@ impl Runtime {
     /// when it had it, otherwise focus enters the new grid (or the chip when empty).
     fn step_category(&mut self, delta: isize) {
         let list = self.categories();
+        if list.is_empty() {
+            return;
+        }
         let next = (self.category_index() as isize + delta).rem_euclid(list.len() as isize);
         self.category = list[next as usize].clone();
         if !(CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
             self.focus = self
                 .discover_items()
                 .first()
-                .map_or(CHIP + next as i32, |&i| 10 + i as i32);
+                .map_or(CHIP + next as i32, |&i| CARD + i as i32);
         } else {
             self.focus = CHIP + next as i32;
         }
@@ -1312,8 +1352,8 @@ impl Runtime {
             return;
         }
         let target = match self.screen {
-            Screen::Discover | Screen::Library if (10..=99).contains(&self.focus) => {
-                Some((self.focus - 10) as usize)
+            Screen::Discover | Screen::Library if (CARD..=CARD_LAST).contains(&self.focus) => {
+                Some((self.focus - CARD) as usize)
             }
             Screen::Detail => Some(self.selected),
             _ => None,
@@ -1634,9 +1674,32 @@ impl Runtime {
     pub fn title_fit_advanced(&mut self) {
         self.advanced = true;
     }
+    /// Render-only seam: simulate a remembered category after a catalog refresh.
+    #[cfg(test)]
+    pub fn choose_category(&mut self, category: Category) {
+        self.category = category;
+        self.category_chosen = true;
+    }
+    #[cfg(test)]
+    pub fn chosen_category(&self) -> &Category {
+        &self.category
+    }
     pub fn sync(&mut self, ui: &AppWindow) {
-        if !self.categories().contains(&self.category) {
-            self.category = Category::All;
+        // Spec 072 R2: a new session starts on the first requested category a
+        // recipe uses; a category that vanishes after a refresh falls back the
+        // same way. `categories` always ends with Favorites, so this never indexes
+        // an empty list, even with no catalog.
+        let available = self.categories();
+        let choosing_initial = !self.category_chosen && self.snapshot.is_some();
+        if choosing_initial || !available.contains(&self.category) {
+            self.category = first_available(&available);
+            self.category_chosen = true;
+            if self.screen == Screen::Discover
+                && ((CARD..=CARD_LAST).contains(&self.focus)
+                    || (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus))
+            {
+                self.focus = self.discover_entry_focus();
+            }
         }
         if self.screen == Screen::Settings && (1..=5).contains(&self.focus) {
             self.settings_section = (self.focus - 1) as usize;
@@ -1885,7 +1948,7 @@ impl Runtime {
                             let item = &s.items[i];
                             let x = 12. + 408. * (visible % 3) as f32;
                             let y = 12. + top + 438. * (visible / 3) as f32;
-                            b.card(10 + i as i32, x, y, 384., 410.);
+                            b.card(CARD + i as i32, x, y, 384., 410.);
                             b.recipe_art(x + 20., y + 20., 344., 142., &item.recipe);
                             if item.favorite {
                                 b.favorite(x + 312., y + 28.);
@@ -1977,7 +2040,20 @@ impl Runtime {
                                 text(ui, T::NoFavoritesHelp),
                                 22.,
                             );
-                            b.button(SHOW_ALL, 36., 204. + top, 400., text(ui, T::ShowAll), false);
+                            if self
+                                .categories()
+                                .iter()
+                                .any(|c| matches!(c, Category::Tag(_)))
+                            {
+                                b.button(
+                                    BROWSE,
+                                    36.,
+                                    204. + top,
+                                    400.,
+                                    text(ui, T::BrowseMapsets),
+                                    false,
+                                );
+                            }
                         } else if shown.is_empty() {
                             b.panel(12., 12., 1200., 300.);
                             b.label(36., 60., 1100., 70., text(ui, T::NoInstalled), 30.);
@@ -3285,11 +3361,11 @@ impl Runtime {
                 .map_or_else(|| text(ui, T::Open), |n| n.label.clone()),
         );
         let card_focus = matches!(self.screen, Screen::Discover | Screen::Library)
-            && (10..=99).contains(&self.focus);
+            && (CARD..=CARD_LAST).contains(&self.focus);
         let marked = if card_focus {
             self.snapshot
                 .as_ref()
-                .and_then(|s| s.items.get((self.focus - 10) as usize))
+                .and_then(|s| s.items.get((self.focus - CARD) as usize))
         } else {
             self.item()
         }
@@ -4255,6 +4331,59 @@ mod category_tests {
             .map(|n| n.id - CHIP)
             .collect()
     }
+    #[test]
+    fn requested_categories_keep_the_owner_order_and_omit_other_navigation() {
+        let catalog = Catalog::embedded();
+        let used = requested_categories(|id| {
+            catalog
+                .recipes
+                .iter()
+                .any(|r| r.recipe.tags.iter().any(|tag| tag == id))
+        });
+        let ids: Vec<&str> = used
+            .iter()
+            .map(|c| match c {
+                Category::Tag(id) => id.as_str(),
+                Category::Favorites => "Favorites",
+            })
+            .collect();
+        let expected: Vec<&str> = CATEGORY_ORDER
+            .into_iter()
+            .filter(|id| ids.contains(id))
+            .collect();
+        // `ids` follows the same constant, so also pin the owner's relative order.
+        let position = |id: &str| ids.iter().position(|candidate| *candidate == id).unwrap();
+        assert!(position("cacowards") < position("megawad"));
+        assert!(position("megawad") < position("community-projects"));
+        assert!(position("community-projects") < position("classics"));
+        assert!(position("classics") < position("episode"));
+        assert!(position("episode") < position("challenging"));
+        assert_eq!(ids, expected, "owner order, only used requested ids");
+        assert!(!ids.contains(&"featured"), "Featured is hidden");
+        assert!(!ids.contains(&"beginner-friendly"), "unrequested is hidden");
+        assert!(!ids.contains(&"All"), "All no longer exists");
+        assert_eq!(first_available(&used), Category::Tag("cacowards".into()));
+        assert_eq!(
+            first_available(&[Category::Favorites]),
+            Category::Favorites,
+            "an empty catalog still has a safe category"
+        );
+        assert_eq!(first_available(&[]), Category::Favorites);
+    }
+
+    #[test]
+    fn every_embedded_mapset_is_reachable_from_a_requested_category() {
+        for recipe in &Catalog::embedded().recipes {
+            assert!(
+                CATEGORY_ORDER
+                    .iter()
+                    .any(|id| recipe.recipe.tags.iter().any(|tag| tag == id)),
+                "{} is only in hidden categories",
+                recipe.recipe.id
+            );
+        }
+    }
+
     #[test]
     fn a_strip_that_fits_is_drawn_whole_without_arrows() {
         let mut b = Nodes { nodes: vec![] };

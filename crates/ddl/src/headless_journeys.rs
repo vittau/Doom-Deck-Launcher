@@ -256,6 +256,16 @@ fn categories_favorites_and_screenshots() {
     production::categories_journey(&window, &ui);
 }
 
+/// Spec 072 R4: a 90+ recipe catalog keeps the last card reachable.
+#[test]
+fn catalog_card_ids_beyond_99_stay_reachable() {
+    if isolated(module_path!(), "catalog_card_ids_beyond_99_stay_reachable") {
+        return;
+    }
+    let (_window, ui) = setup();
+    production::catalog_92_journey(&ui);
+}
+
 /// Spec 020: an installed recipe change, Keep current and a removed recipe.
 #[test]
 fn recipe_changes_update_keep_and_removed() {
