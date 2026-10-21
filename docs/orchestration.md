@@ -27,6 +27,12 @@ Read this before taking over as orchestrator. Workers only need `AGENTS.md` and 
 
 ## Worker routing
 
+**Current owner override (2026-10-21): OpenCode workers only, including UI.** Codex quota is
+nearly exhausted. Do not launch Codex workers until the owner lifts this instruction; transfer
+the active soundfont task to a fresh OpenCode worker at its committed checkpoint. Use paid
+DeepSeek Flash for the wide UI/config feature and Free for bounded tasks. The default routing
+table below resumes only after this override is lifted.
+
 | Work | Agent | Launch |
 | --- | --- | --- |
 | Default development and research, bounded | opencode, **DeepSeek V4.1 Flash Free** (`opencode/deepseek-v4.1-flash-free`), effort high — 200k context | see *Launching opencode* |
