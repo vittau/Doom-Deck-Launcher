@@ -1,8 +1,9 @@
 # 063 — Signed Flatpak repository on GitHub Pages
 
 **Spec:** [`docs/specs/063-flatpak-selfhosted-remote.md`](../specs/063-flatpak-selfhosted-remote.md)
-**Status:** implementation complete, not yet run · 2026-10-20
-**Branch:** `vittau/flatpak-selfhost-remote` (on top of `vittau/flatpak-ci-package`)
+**Status:** merged into `main` and exercised through the `gh-pages` push; the incremental-export fix
+and the explicit Pages request still need a fresh successful run · 2026-10-21
+**Integration:** `origin/main`, currently `1dc6e8e`
 
 ## What changed
 
@@ -57,16 +58,16 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
    `pages: write`, bounded with `--max-time`), waits for the build of the pushed commit and then
    re-checks the served `.flatpakref` and `repo/summary` until the summary is byte-identical to the
    exported one. A stale CDN copy is retried and fails the job on exhaustion.
-7. **Runtimes stay on Flathub.** `RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo`;
+8. **Runtimes stay on Flathub.** `RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo`;
    only the app comes from this remote.
-8. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
+9. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
    `release.yml` still owns releases.
 
 ## Requirement verification
 
 | Requirement | Evidence |
 | --- | --- |
-| R1 signed repository | `build-export --gpg-sign`, `build-update-repo --gpg-sign`, `GPGKey` in both generated ref files, and a smoke test that imports `packaging/flatpak/repo-key.gpg`, verifies `summary.sig` and installs with GPG verification enabled |
+| R1 signed repository | `build-export --gpg-sign`, `build-update-repo --gpg-sign`, `GPGKey` in both generated ref files, and a smoke test that imports `packaging/flatpak/repo-key.gpg` into a throwaway remote and installs with GPG verification enabled, so Flatpak/OSTree verify the summary and the commit |
 | R2 tag + manual pipeline | `on: push: tags: v*` and `workflow_dispatch` with a `ref` input; build → verify → sign → export → smoke → render → push → explicit Pages build request → served-file check. `pages: write` is declared for the REST build request |
 | R3 stable URLs | Render step writes `<app-id>.flatpakref`, `ddl.flatpakrepo`, `index.html`, `.nojekyll`; `repo/` comes from `build-export`; paths verified by dry-running the render block locally |
 | R4 key handling | `scripts/flatpak/make-signing-key.sh`: isolated `GNUPGHOME`, `umask 077`, refuses to overwrite, never prints private material; workflow fails early without the secret and imports into `$RUNNER_TEMP/gnupg` |
@@ -90,13 +91,21 @@ Not run, because there is no Flatpak runtime on the macOS dev host:
 
 The first publish run ([39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687))
 proved the build, the signed export, the existing smoke test and the `gh-pages` push on a Linux
-runner. Pages was enabled afterwards: the homepage and `repo/summary` are served (HTTP 200) and the
-`.flatpakref` is served with a cache-busting query, with key, URL and app id checked. The bare
-`.flatpakref` URL was still returning 404 from a Cloudflare negative cache at the time of writing.
+runner. Pages was enabled afterwards and all three public URLs (site, `.flatpakref`,
+`repo/summary`) return HTTP 200; the earlier bare-URL 404 was a Cloudflare negative cache that has
+since expired.
 
-The two review fixes (Flatpak-side signature verification and the explicit Pages build request)
-have not run in CI yet. The Pages endpoint itself was exercised against this repository: `POST
-/pages/builds` returned `queued` and the build for the `gh-pages` head `953ccd5` reached `built`.
+Still unproven in CI:
+
+- the incremental export over the existing `gh-pages` after restoring the OSTree layout;
+- the `pages: write` REST request, its wait and the served-file comparison.
+
+The Pages endpoint itself was exercised against this repository: `POST /pages/builds` returned
+`queued` and the build for the `gh-pages` head `953ccd5` reached `built`. The most recent manual
+dispatch ([39542355868](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542355868)) did
+not reach the build: it passed `0dd4749` (a short SHA) as the `ref` input, which `actions/checkout`
+treats as a ref name (`refs/heads/0dd4749*`). Manual runs need a tag, a branch or a full
+40-character SHA.
 
 ## Execution log (2026-10-21)
 
@@ -106,12 +115,13 @@ implementation to execution. No private key material is reproduced here.
 | Step | Result |
 | --- | --- |
 | Repository key | Generated with `scripts/flatpak/make-signing-key.sh`; fingerprint `EF50C91A6703B13327AEAF00962CEACA8DE90556`; public half committed as `packaging/flatpak/repo-key.gpg`; secret stored as the `FLATPAK_GPG_PRIVATE_KEY` repository secret, fingerprint as `FLATPAK_GPG_KEY_ID`; backup kept outside the repository |
-| Integration | Spec 062 and this branch merged into `main` (`cfb7b36`, `c7efd6c`) and pushed to `origin/main`; later manifest fixes merged as `2e76897` and `9808e6b` |
+| Integration | Spec 062 and this branch merged into `main` (`cfb7b36`, `c7efd6c`); manifest fixes followed as `2e76897` and `9808e6b`; the layout fix was reviewed and merged as `1f66a25`. `origin/main` is now `1dc6e8e` |
 | First publish run | [39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687) — success: build, signed export, smoke test, site render and push to `gh-pages` |
-| Pages | Enabled by the coordinator on the `gh-pages` root (`build_type: legacy`, source `gh-pages`); the homepage and `repo/summary` return HTTP 200, and the `.flatpakref` returns 200 with a cache-busting query (key, URL and app id checked). The bare URL still returns 404 from a Cloudflare negative cache; that is transient |
+| Pages | Enabled by the coordinator on the `gh-pages` root (`build_type: legacy`, source `gh-pages`). The site, the `.flatpakref` and `repo/summary` all return HTTP 200; the earlier bare-URL 404 was a Cloudflare negative cache that expired |
 | Pages trigger | Confirmed that `POST /repos/…/pages/builds` returns `queued` and the build for `953ccd5` (the `gh-pages` head) reached `built` in about 20 s. The workflow now requests this build explicitly, because a `GITHUB_TOKEN` push does not trigger Pages |
 | `summary.sig` format | Downloaded the published file: it starts with `ostree.gpgsigs`, an OSTree GVariant map, not a raw OpenPGP signature. The `gpg --verify` approach was removed; verification goes through Flatpak/OSTree with `--gpg-import` and normal GPG verification |
 | Signature smoke test | Review follow-up: the throwaway remote imports `packaging/flatpak/repo-key.gpg`, runs `remote-modify --gpg-verify` (which also enables summary verification for a remote without a collection ID) and installs with verification on |
+| Manual dispatch input | [39542355868](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542355868) passed `0dd4749` (short SHA) as `ref`; `actions/checkout` resolved it as `refs/heads/0dd4749*` and failed before any build step. The input accepts a tag, a branch or a full 40-character SHA |
 
 CI history while getting there:
 
@@ -122,25 +132,26 @@ CI history while getting there:
 | [39537960702](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960702) | Flatpak (artifact) | failure | The manifest check imports `yaml`, but the generator venv installed only `aiohttp` and `tomlkit`. Fixed by pinning `PyYAML==6.0.3` (`2fa9dc3`) |
 | [39540926300](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39540926300) | Flatpak (artifact) | success | First green artifact run with the PyYAML pin |
 | [39540938605](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39540938605) | Flatpak repository | failure | After export: `Listing refs: opendir(refs/remotes): No such file or directory`. The `gh-pages` git roundtrip drops empty OSTree directories; fixed by restoring the layout after the clone |
+| [39542355868](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542355868) | Flatpak repository | failure | Manual dispatch passed `0dd4749` (short SHA) as `ref`; `actions/checkout` treats it as a ref name and fails before any build step. Input mistake, no code fix |
+| 39542511716 | Flatpak repository | cancelled | Mistaken invocation, superseded immediately |
 | 39537765626 / 39537765603 | Flatpak / CI | failure / cancelled | Same two manifest causes as above, superseded |
 
-## What the owner still has to do
+## Current state and remaining work
 
-1. ~~Generate the key and set the secrets.~~ Done on 2026-10-21.
-2. ~~Publish once to create `gh-pages`.~~ Done by run 39537960687.
-3. **Enable Pages** (*Settings → Pages → Deploy from a branch → `gh-pages` / `/`*) and confirm the
-   public URLs. The coordinator took this over.
-4. Publish future versions with `git tag vX.Y.Z && git push origin vX.Y.Z`.
+Setup and first publication are done: the signing key and secrets exist, Pages serves the site on
+the `gh-pages` branch, and the signed repository has been published once. The channel remains
+experimental; it is not a stable release and has no Flathub listing.
+
+- **Publishing a version is a release decision.** The workflow runs on `v*` tags or by manual
+  dispatch with a tag, a branch or a full 40-character SHA. Creating a tag triggers this channel,
+  but nothing here approves a stable release.
+- **Deck validation is still open:** extracted DSDA-Doom with working GL/audio/pad, IWAD visibility,
+  tarball-era import, OSK in Gaming Mode, launch from Steam.
 
 ## Open questions for the coordinator
 
-1. **Decision record.** This adds a distribution channel. `docs/decisions.md` was not edited; a new
-   entry should state: self-hosted signed Flatpak repo as the experimental channel, Flathub still
-   not submitted, `gh-pages` as the only write target of the publish workflow.
-2. **README.** No Flatpak link was added to `README.md`; the tarball stays the supported install.
+1. **README.** No Flatpak link was added to `README.md`; the tarball stays the supported install.
    Say the word if the experimental channel should be advertised there.
-3. **Branch stack.** This branch sits on `vittau/flatpak-ci-package` (spec 062), which is still
-   unreviewed. Merge 062 first, then this one.
-4. **Repository size.** Every release keeps `repo/` history in `gh-pages`; pruning bounds growth but
+2. **Repository size.** Every release keeps `repo/` history in `gh-pages`; pruning bounds growth but
    Pages has a 1 GB published-site limit. If it becomes a problem, move to a dedicated repository or
    to Pages artifact deployment.
