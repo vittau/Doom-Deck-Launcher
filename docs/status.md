@@ -1,5 +1,17 @@
 # Status
 
+## Paused by owner — 2026-10-21
+
+Both active OpenCode workers are interrupted and saved for machine shutdown. **Do not resume
+until the owner asks; then resume the same conversations.** Exact session/Task/Dispatch IDs,
+WIP commits, tests, unfinished changes and restoration commands are in
+[the pause checkpoint](orchestration-pause-2026-10-21.md).
+
+Main `1152859` includes reviewed 064/066, signed publication/cache automation and the support
+link. Its fmt/clippy and all **819** workspace tests passed. Only 067 soundfonts and 068 SIGIL
+purchased/COMPAT support remain in retained worktrees. Earlier checkpoint details below are
+historical; the pause document is current.
+
 ## Coordination checkpoint — 2026-10-21
 
 - **062:** Flatpak packaging and artifact workflow merged; artifact run 39540926300 passed
