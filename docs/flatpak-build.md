@@ -1,12 +1,22 @@
 # Experimental Flatpak build
 
-Status: **experimental, AI-assisted, CI artifact only.** There is no Flathub submission, no
-release, and no supported install channel behind this package. The normal Steam Deck download is
-still the release tarball described in the [README](../README.md#install-on-steam-deck).
+Status: **experimental, AI-assisted, CI artifact only.** The normal Steam Deck download is still
+the release tarball described in the [README](../README.md#install-on-steam-deck).
 
-The files live in [`packaging/flatpak/`](../packaging/flatpak) and the workflow in
-[`.github/workflows/flatpak.yml`](../.github/workflows/flatpak.yml). Spec 062 defines the scope;
-D-034 records the owner's authoring exception.
+There are now two Flatpak paths:
+
+| Path | Workflow | Output |
+| --- | --- | --- |
+| Build validation and `.flatpak` artifact | `.github/workflows/flatpak.yml` | workflow artifact, 14 days |
+| Signed install repository | `.github/workflows/flatpak-remote.yml` | `gh-pages`, served at <https://www.vitormach.dev/Doom-Deck-Launcher/> |
+
+For the one-command install, updating and the signing key, read
+[`docs/flatpak-remote.md`](flatpak-remote.md). Everything below describes the artifact-only build,
+which stays the place to validate manifest changes before publishing.
+
+The files live in [`packaging/flatpak/`](../packaging/flatpak) and the workflows in
+[`.github/workflows/`](../.github/workflows). Spec 062 defines the artifact scope, spec 063 the
+repository; D-034 records the owner's authoring exception.
 
 ## What this builds
 
@@ -140,8 +150,9 @@ That is the check that keeps the lockfile authoritative; do not hand-edit the JS
   SHA-256 in `cargo-sources.json`, generated from the checked-out lockfile.
 - **Rust:** one official compiler archive, pinned by URL and SHA-256.
 - **Release tarball:** `.github/workflows/release.yml` is unchanged. It still builds
-  `ddl-linux-x86_64.tar.gz` in the Steam Linux Runtime SDK and publishes it. The Flatpak workflow
-  never publishes anything.
+  `ddl-linux-x86_64.tar.gz` in the Steam Linux Runtime SDK and publishes it. `flatpak.yml` never
+  publishes anything; only `flatpak-remote.yml` writes the `gh-pages` branch, and it never creates a
+  Release.
 
 `flathub.json` here only declares the x86_64 architecture. It is not a submission and the package
 is not eligible for Flathub under its current Generative AI policy (D-034).
@@ -194,7 +205,8 @@ Packaging limitations:
   first run is slow (the 90-minute timeout covers it).
 - The package uses the 26.08 runtime branch, which moves within the branch. The Rust compiler,
   crates and app tree are pinned; the runtime is a supported branch, not a commit.
-- `flathub.json` is inert here; there is no store page and no update channel.
+- `flathub.json` is inert here; there is no store page and no Flathub update channel. Updates come
+  from the self-hosted repository described in [`docs/flatpak-remote.md`](flatpak-remote.md).
 
 ## Troubleshooting
 
