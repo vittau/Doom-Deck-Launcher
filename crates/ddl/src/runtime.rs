@@ -3601,6 +3601,7 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Cancelled => T::ErrorCancelled,
         Problem::Engine => T::ErrorEngine,
         Problem::Config => T::ErrorConfig,
+        Problem::Audio => T::ErrorAudio,
         Problem::UnknownFile => T::UnknownFile,
         Problem::Launch => T::ErrorLaunch,
         Problem::Busy => T::ErrorBusy,

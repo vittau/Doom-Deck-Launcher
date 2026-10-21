@@ -2094,7 +2094,9 @@ impl Services {
                 }
                 let recipe = self.recipe(&id)?;
                 let mut profile = self.profile(&recipe)?;
-                let guard = self.begin_engine_run().map_err(RunStartError::into_problem)?;
+                let guard = self
+                    .begin_engine_run()
+                    .map_err(RunStartError::into_problem)?;
                 let r = self
                     .resolve_launch(&recipe, &profile)
                     .map_err(|blocker| logged(Problem::State, blocker))?;
