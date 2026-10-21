@@ -133,13 +133,34 @@ Audio playback is **Needs Deck Validation**; only source support and file identi
 - No paid bytes, download URL, rehosting or binary fixture was added. The only paid identity is the
   supplied SHA-256 metadata.
 
-### Why the current import issue is fixed
+### Post-review correction — imported-row sheet dispatch
+
+- `Runtime::handle` wrapped the `Sheet` match in an outer `if confirm`, while
+  `Sheet::UserComponent` contained its own `if confirm { toggle } else { browse }`. The nested
+  branch was unreachable: Left/Import on an imported row dismissed the sheet without opening the
+  picker. The sheet now dispatches both actions explicitly: Return toggles On/Off, Left opens the
+  existing picker to replace the file, and Back still only dismisses.
+- `Command::Import` now removes the component's previous imported member from the staging base
+  before `stage_update`. Replacing a missing or corrupt imported file therefore recovers instead of
+  failing `NotInstalled` while trying to retain the old file; the original manifest is still kept
+  for generation retirement.
+- Added the headless controller regression `imported_component_sheet_actions`. It drives the real
+  imported soundtrack row and sheet, asserts the Import/On labels and 901 focus at 1280×800,
+  exercises Left → fake directory picker → known-file replacement, Return → Off while keeping the
+  file, deletes the imported file and recovers it through Left → Import, and checks Back leaves
+  both the profile and the screen unchanged. The fixture gives only the test scene's soundtrack a
+  synthetic known hash; the existing `purchased.wad` remains an unknown-file case. No native
+  window or picker is opened.
+
+### Why the supplied hashes were not the whole fix
 
 Before this change both user-supplied components had `known_sha256 = []`. The importer therefore
 always returned `matched = false`, and the UI rejected even the correct purchased WAD as
 `UnknownFile`, so these editions could not be enabled. The exact hashes above make the supplied
-paid WADs recognizable while every other file remains an unmatched mismatch (D-014). No import or
-resolver code change was needed.
+paid WADs recognizable while every other file remains an unmatched mismatch (D-014). That was a
+native identity fix only. The post-review correction also changes import-adjacent selection
+behavior (the imported-row sheet dispatch and re-import staging), but it does not add a generic
+resolver policy or change audio/launch behavior.
 
 ## Tests (R4)
 
@@ -158,10 +179,18 @@ resolver code change was needed.
 - The existing synthetic-fixture test
   `library::tests::imports_known_and_unknown_user_files_and_never_rejects_unknown_hashes` covers
   positive hash recognition and unmatched-file behavior without touching the owner's assets.
-- `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and
-  `cargo test --workspace` pass on the merged tree with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`.
-  The headless setup journey and UI-string tests also pass; no visible window or screenshot was
-  opened.
+- Added `headless::journeys::imported_component_sheet_actions`, the post-review controller
+  regression described above. Its artifact is
+  `target/headless/imported_component_sheet_actions/068-imported-component-sheet.png`; the rendered
+  frame shows the “Imported component” title, the help text, the focused `On` button and the
+  `Import` button at 1280×800.
+- Before the correction, `cargo fmt --all --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` passed on
+  the merged tree with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`. The unchanged full suite was not
+  repeated for this correction; the focused reruns were `cargo fmt --all --check`,
+  `cargo clippy -p ddl --all-targets -- -D warnings` and
+  `cargo test -p ddl imported_component_sheet_actions -- --test-threads=2`, all passing. No visible
+  window or native picker was opened; the only screenshot is the headless artifact above.
 
 ## Left open
 

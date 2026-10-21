@@ -260,6 +260,20 @@ pub(super) fn scene() -> Scene {
         .clone();
     let auger_package = synthetic_package(&mut auger.recipe);
     catalog.recipes.retain(|r| r.recipe.id == "sigil");
+    // The paid soundtracks cannot ship in the test fixture. Give the REG
+    // component one synthetic known file so the imported-row sheet and its
+    // replacement flow can be driven offline; the unknown-file fixture stays
+    // unrecognized.
+    let known_soundtrack = b"Known synthetic soundtrack";
+    std::fs::write(home.join("known-soundtrack.wad"), known_soundtrack).unwrap();
+    if let Some(component) = catalog.recipes[0]
+        .recipe
+        .components
+        .iter_mut()
+        .find(|c| c.id == "soundtrack")
+    {
+        component.known_sha256 = vec![Sha256::of(known_soundtrack).to_hex()];
+    }
     let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
     use std::io::Write;
     for member in &mut catalog.recipes[0].recipe.packages[0].members {
@@ -3083,4 +3097,213 @@ fn capture_component(
         "{name}: production component label must be visible"
     );
     write_png(name, &frame);
+}
+
+/// Spec 068 correction: both controller actions on an imported row's sheet.
+/// Right toggles, left opens the existing directory picker for a replacement,
+/// and Back only dismisses. A missing old file must not block the replacement.
+pub(super) fn imported_component_sheet(scene: &Scene, capture: Captures) {
+    let Scene { home, .. } = scene;
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
+
+    // Start from the SIGIL setup reached by the preceding journey segments.
+    {
+        let mut runtime = state.borrow_mut();
+        runtime.screen = Screen::Setup;
+        runtime.selected = 1;
+        runtime.focus = 102;
+        runtime.sync(ui);
+    }
+    assert_eq!(ui.get_heading(), "Play setup / SIGIL");
+    assert!(
+        ui.get_nodes().iter().any(|node| node.id == 102),
+        "advanced options expose the soundtrack row"
+    );
+    // The preceding segment stored an unrecognized file on the row without
+    // enabling it, so this is already an imported row.
+    let imported_path = state.borrow().snapshot.as_ref().unwrap().items[1]
+        .manifest
+        .as_ref()
+        .unwrap()
+        .find_imported("soundtrack")
+        .unwrap()
+        .path
+        .clone();
+    assert!(imported_path.is_file());
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .profile
+            .components
+            .iter()
+            .all(|component| component != "soundtrack")
+    );
+
+    // The imported row opens the sheet with the import action on the left and
+    // On on the right; both are visible at 1280x800 and the right one is focused.
+    ui.invoke_clicked(102);
+    assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_focused(), 901);
+    assert_eq!(ui.get_sheet_title().as_str(), "Imported component");
+    assert_eq!(
+        ui.get_sheet_body().as_str(),
+        "Import a replacement file, or switch this component on or off."
+    );
+    let nodes: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    let import_button = nodes.iter().find(|node| node.id == 900).unwrap();
+    let on_button = nodes.iter().find(|node| node.id == 901).unwrap();
+    assert_eq!(import_button.label, "Import");
+    assert_eq!(on_button.label, "On");
+    assert!(import_button.actionable && on_button.actionable);
+    assert_eq!(import_button.y, on_button.y);
+    capture("068-imported-component-sheet.png");
+
+    // Left opens the real picker workflow through the test directory boundary,
+    // and choosing a known file replaces the stored unknown one and enables it.
+    let known = home.join("known-soundtrack.wad");
+    press(window, Key::LeftArrow);
+    assert_eq!(ui.get_focused(), 900);
+    press(window, Key::Return);
+    idle(&state);
+    assert!(!ui.get_sheet_open());
+    assert_eq!(state.borrow().screen, Screen::Browser);
+    assert!(state.borrow().directory.is_some());
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .profile
+            .components
+            .iter()
+            .all(|component| component != "soundtrack"),
+        "opening the picker must not toggle the component"
+    );
+    let row = state
+        .borrow()
+        .directory
+        .as_ref()
+        .unwrap()
+        .entries
+        .iter()
+        .position(|(path, _)| path == &known)
+        .unwrap();
+    ui.invoke_clicked(100 + row as i32);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    let imported_path = state.borrow().snapshot.as_ref().unwrap().items[1]
+        .manifest
+        .as_ref()
+        .unwrap()
+        .find_imported("soundtrack")
+        .unwrap()
+        .path
+        .clone();
+    assert!(imported_path.is_file());
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .profile
+            .components
+            .iter()
+            .any(|component| component == "soundtrack")
+    );
+
+    // Right (confirm) toggles the imported component off and keeps the file.
+    ui.invoke_clicked(102);
+    assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_focused(), 901);
+    let nodes: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    assert_eq!(
+        nodes.iter().find(|node| node.id == 901).unwrap().label,
+        "Off"
+    );
+    press(window, Key::Return);
+    idle(&state);
+    assert!(!ui.get_sheet_open());
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(ui.get_focused(), 102);
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .profile
+            .components
+            .iter()
+            .all(|component| component != "soundtrack")
+    );
+    assert_eq!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .manifest
+            .as_ref()
+            .unwrap()
+            .find_imported("soundtrack")
+            .unwrap()
+            .path,
+        imported_path,
+        "toggling off keeps the imported file"
+    );
+
+    // Simulate the recoverable failure: the imported file disappears while the
+    // sheet still knows the row is imported. Left import must replace it.
+    std::fs::remove_file(&imported_path).unwrap();
+    assert!(!imported_path.exists());
+    ui.invoke_clicked(102);
+    assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_focused(), 901);
+    let nodes: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    assert_eq!(
+        nodes.iter().find(|node| node.id == 901).unwrap().label,
+        "On",
+        "the component is off, so the right action offers On"
+    );
+    press(window, Key::LeftArrow);
+    assert_eq!(ui.get_focused(), 900);
+    press(window, Key::Return);
+    idle(&state);
+    assert!(!ui.get_sheet_open());
+    assert_eq!(state.borrow().screen, Screen::Browser);
+    assert!(state.borrow().directory.is_some());
+    let row = state
+        .borrow()
+        .directory
+        .as_ref()
+        .unwrap()
+        .entries
+        .iter()
+        .position(|(path, _)| path == &known)
+        .unwrap();
+    ui.invoke_clicked(100 + row as i32);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    let recovered_path = state.borrow().snapshot.as_ref().unwrap().items[1]
+        .manifest
+        .as_ref()
+        .unwrap()
+        .find_imported("soundtrack")
+        .unwrap()
+        .path
+        .clone();
+    assert!(recovered_path.is_file(), "the missing file was replaced");
+    assert!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .profile
+            .components
+            .iter()
+            .any(|component| component == "soundtrack"),
+        "a successful replacement turns the component on"
+    );
+
+    // Back dismisses without toggling or starting the picker.
+    ui.invoke_clicked(102);
+    assert!(ui.get_sheet_open());
+    let before = state.borrow().snapshot.as_ref().unwrap().items[1]
+        .profile
+        .components
+        .clone();
+    press(window, Key::Escape);
+    assert!(!ui.get_sheet_open());
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert_eq!(ui.get_focused(), 102);
+    assert_eq!(
+        state.borrow().snapshot.as_ref().unwrap().items[1]
+            .profile
+            .components,
+        before
+    );
 }

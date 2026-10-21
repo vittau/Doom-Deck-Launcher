@@ -655,13 +655,7 @@ impl Runtime {
                             }
                             Sheet::Remove(path) => self.start(ui, Command::RemoveFolder(path)),
                             Sheet::Component(id) => self.toggle(ui, &id),
-                            Sheet::UserComponent(id) => {
-                                if confirm {
-                                    self.toggle(ui, &id);
-                                } else {
-                                    self.browse(ui, Some(id));
-                                }
-                            }
+                            Sheet::UserComponent(id) => self.toggle(ui, &id),
                             Sheet::DeleteProfile(id, _) => {
                                 self.start(ui, Command::DeleteProfile(id))
                             }
@@ -674,6 +668,10 @@ impl Runtime {
                             }
                             Sheet::Profiles | Sheet::ProfileNames => {}
                         }
+                    } else if let Sheet::UserComponent(id) = sheet {
+                        // The left button imports a replacement even though the
+                        // row already has an imported file. It must not toggle.
+                        self.browse(ui, Some(id));
                     }
                 }
                 _ => {}

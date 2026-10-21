@@ -1992,6 +1992,14 @@ impl Services {
                 enable_component(&recipe, &mut profile, &component);
                 let outcome = if let Some(mut active) = self.active(&id)? {
                     let previous = active.manifest.clone();
+                    // The file being replaced may be missing or corrupt. Drop
+                    // its old import from the staging base so stage_update does
+                    // not reject the recovery before the replacement is added.
+                    let mut stage_base = previous.clone();
+                    stage_base.members.retain(|member| {
+                        !(member.package.is_none()
+                            && member.component.as_deref() == Some(component.as_str()))
+                    });
                     let mut staged = self
                         .installer
                         .stage_update(
@@ -2001,7 +2009,7 @@ impl Services {
                                 .iter()
                                 .map(String::as_str)
                                 .collect::<Vec<_>>(),
-                            &previous,
+                            &stage_base,
                             cancel,
                             &mut |_| {},
                         )
