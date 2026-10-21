@@ -100,13 +100,20 @@ h3 {
 }
 .brand {
   display: inline-flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
   text-decoration: none;
   font-size: 23px;
 }
 .brand img {
   flex-shrink: 0;
+}
+.brand-subtitle {
+  margin-left: 75px;
+  margin-top: -4px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 nav {
   display: flex;
@@ -557,14 +564,6 @@ footer > p {
     gap: 12px;
     flex-wrap: wrap;
     padding-block: 16px;
-  }
-  .brand {
-    font-size: 20px;
-    gap: 10px;
-  }
-  .brand img {
-    width: 40px;
-    height: 40px;
   }
   .site-header nav {
     gap: 4px 12px;

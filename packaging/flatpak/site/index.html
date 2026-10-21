@@ -31,7 +31,7 @@
    >
     <meta name="twitter:card" content="summary_large_image">
     <meta name="theme-color" content="#120c0d">
-    <link rel="icon" href="assets/icon.png" type="image/png">
+    <link rel="icon" href="assets/icon.png?v=@@ICON_HASH@@" type="image/png" sizes="256x256">
     <link rel="stylesheet" href="assets/style.css?v=@@STYLE_HASH@@">
   </head>
   <body>
@@ -39,11 +39,11 @@
     <header class="site-header wrap">
       <a class="brand" href="@@SITE_BASE@@/" aria-label="DoomDeckLauncher home"
         ><img
-          src="assets/emblem-small.svg"
+          src="assets/horizontal.svg"
           alt=""
-          width="48"
-          height="48"
-       ><span>DoomDeckLauncher</span></a
+          width="165"
+          height="64"
+       ><span class="brand-subtitle">DoomDeckLauncher</span></a
       >
       <nav aria-label="Main navigation">
         <a href="#install">Install</a><a href="#inside">The launcher</a
@@ -100,10 +100,10 @@
               <span>DDL / DISCOVER</span>
             </div>
             <a
-              href="assets/discover.png"
+              href="assets/discover.png?v=@@DISCOVER_HASH@@"
               aria-label="View full-size Discover screenshot"
               ><img
-                src="assets/discover.png"
+                src="assets/discover.png?v=@@DISCOVER_HASH@@"
                 width="1280"
                 height="800"
                 alt="The launcher’s Discover view, with community mapset cards, categories, favorites and controller prompts."
@@ -162,10 +162,10 @@
         <div class="screens">
           <figure>
             <a
-              href="assets/home.png"
+              href="assets/home.png?v=@@HOME_HASH@@"
               aria-label="View full-size Home screenshot"
               ><img
-                src="assets/home.png"
+                src="assets/home.png?v=@@HOME_HASH@@"
                 width="1280"
                 height="800"
                 loading="lazy"
@@ -177,22 +177,36 @@
           </figure>
           <figure>
             <a
-              href="assets/play-setup.png"
+              href="assets/play-setup.png?v=@@PLAY_SETUP_HASH@@"
               aria-label="View full-size Play setup screenshot"
               ><img
-                src="assets/play-setup.png"
+                src="assets/play-setup.png?v=@@PLAY_SETUP_HASH@@"
                 width="1280"
                 height="800"
                 loading="lazy"
-                alt="Play setup with difficulty, optional components and explicit load order."
+                alt="Play setup with optional components, skill, pistol start and content load order."
            ></a>
             <figcaption>
               <span>PLAY SETUP</span> Make the run your own.
             </figcaption>
           </figure>
+          <figure>
+            <a href="assets/mapset-detail.png?v=@@MAPSET_DETAIL_HASH@@" aria-label="View full-size mapset detail screenshot"
+              ><img src="assets/mapset-detail.png?v=@@MAPSET_DETAIL_HASH@@" width="1280" height="800" loading="lazy"
+                alt="Mapset detail with author, description, base game requirement, tags and favorite."
+           ></a>
+            <figcaption><span>MAPSET DETAIL</span> Know what you are about to play.</figcaption>
+          </figure>
+          <figure>
+            <a href="assets/audio-settings.png?v=@@AUDIO_SETTINGS_HASH@@" aria-label="View full-size Audio settings screenshot"
+              ><img src="assets/audio-settings.png?v=@@AUDIO_SETTINGS_HASH@@" width="1280" height="800" loading="lazy"
+                alt="Audio settings with the default MIDI soundfont selected and an optional Arachno download."
+           ></a>
+            <figcaption><span>AUDIO</span> Choose your MIDI soundfont.</figcaption>
+          </figure>
         </div>
         <p class="caption">
-          Launcher previews with sample data. Map imagery belongs to
+          Current Slint UI rendered off-screen with sample data, shared with the README. Map imagery belongs to
           its respective creators; <a href="#credits">see credits</a>.
         </p>
       </section>
