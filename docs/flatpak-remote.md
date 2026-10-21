@@ -47,6 +47,7 @@ forward. There is no downgrade path from the CLI other than reinstalling an old 
 | Symptom | Cause / fix |
 | --- | --- |
 | `error: No such ref` right after a release | GitHub Pages has not rebuilt yet. Wait a minute; the publish job retries for ~90 s and warns if it is slower. |
+| `404` on the `.flatpakref` right after the first publication | A CDN may cache the earlier negative response. Retry with a query string (`…flatpakref?v=1`) or wait for the cache to expire; the file itself is published. |
 | `GPG verification failed` | The repository key was rotated. Remove and re-add the remote (see below). |
 | `flatpak install` says the runtime is missing | Add Flathub once: `flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo`. |
 | `flatpak remote-ls ddl` is empty | The remote points at the wrong URL. Check `flatpak remotes --show-details` for `ddl`. |
@@ -72,7 +73,9 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
 5. exports the build as a **signed** commit on branch `stable` with
    `flatpak build-export --timestamp=<tag date>`, then signs the summary and generates static deltas
    with `flatpak build-update-repo --generate-static-deltas --prune --prune-depth=2`;
-6. renders `index.html`, `<app-id>.flatpakref`, `ddl.flatpakrepo` and `.nojekyll`, and pushes them
+6. imports `packaging/flatpak/repo-key.gpg`, verifies `summary.sig`, installs the export from a
+   throwaway remote with GPG verification enabled and runs `ddl --version`;
+7. renders `index.html`, `<app-id>.flatpakref`, `ddl.flatpakrepo` and `.nojekyll`, and pushes them
    plus `repo/` to the `gh-pages` branch with the workflow's `GITHUB_TOKEN`.
 
 Published layout:
@@ -178,12 +181,18 @@ runtime. The differences are procedural, not technical:
 ## Not verified yet
 
 The first publish run succeeded: it built the app, exported and signed the repository, smoke-tested
-the exported commit and pushed `gh-pages`. Still unverified:
+the exported commit and pushed `gh-pages`. The CI smoke test now also proves the signature, by
+importing `packaging/flatpak/repo-key.gpg`, verifying `summary.sig` and installing from a remote with
+GPG verification enabled.
 
-- GitHub Pages serving `repo/` and the generated ref files (Pages was not enabled when the run
-  finished, so the post-publish check only warned).
-- Installing the `.flatpakref` on a real Deck or Linux host and verifying the summary signature as a
-  client.
+Pages is enabled: the homepage and `repo/summary` return HTTP 200, and the `.flatpakref` returns 200
+with a cache-busting query (public key, URL and app id checked). The bare `.flatpakref` URL was still
+serving a cached 404 from Cloudflare at the time of writing.
+
+Still unverified:
+
+- Installing the published `.flatpakref` on a real Steam Deck or Linux host.
+- Runtime behaviour on hardware (GL, audio, controller, IWAD visibility, OSK).
 
 See [`docs/reports/063-flatpak-selfhosted-remote.md`](reports/063-flatpak-selfhosted-remote.md) for
 the full run history.

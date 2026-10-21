@@ -236,16 +236,26 @@ jobs:
             "$site/repo"
           du -sh "$site/repo"
 
-      - name: Smoke-test the exported build
+      - name: Verify the signature and smoke-test the published build
         run: |
           set -euo pipefail
           site="$RUNNER_TEMP/site"
           install -d -m 0700 "$RUNNER_TEMP/xdg"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
-          # Local, throwaway remote: prove the exported commit starts before it
-          # is published. Signature verification is exercised by real clients.
-          flatpak --user remote-add --if-not-exists --no-gpg-verify ddl-smoke "$site/repo"
+
+          # The summary must carry a detached signature from the committed key.
+          verify_home="$RUNNER_TEMP/verify-gpg"
+          install -d -m 0700 "$verify_home"
+          GNUPGHOME="$verify_home" gpg --batch --quiet --import packaging/flatpak/repo-key.gpg
+          GNUPGHOME="$verify_home" gpg --batch --verify \
+            "$site/repo/summary.sig" "$site/repo/summary"
+
+          # A fresh client using only the committed public key must install and
+          # run the export; no --no-gpg-verify path is allowed here.
+          flatpak --user remote-add --if-not-exists \
+            --gpg-import=packaging/flatpak/repo-key.gpg ddl-smoke "$site/repo"
           flatpak --user install -y --noninteractive ddl-smoke "${APP_ID}//stable"
+          flatpak --user remote-ls --app ddl-smoke
           flatpak run --command=ddl "${APP_ID}//stable" --version | tee "$RUNNER_TEMP/version.txt"
           version="$(sed -n 's/^version *= *"\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
           test -n "$version"
