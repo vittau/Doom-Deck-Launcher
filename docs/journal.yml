@@ -881,3 +881,12 @@
     publication. Physical Deck checks remain pending.
   refs: [docs/reports/074-card-padding.md, docs/reports/075-pistol-start-latency.md,
     docs/reports/076-sigil-edition-copy.md, docs/reports/077-catalog-startup-and-date.md]
+
+- date: 2026-10-21
+  type: decision
+  summary: >-
+    Owner purchased doomdecklauncher.com and selected it as the canonical public endpoint.
+    Adopt com.doomdecklauncher.DoomDeckLauncher for the Flatpak, with no old-ID migration
+    required because the owner is the only installed user. Record D-039 and spec 079;
+    keep the existing GitHub Pages/signed repository publication and unrelated state guards.
+  refs: [docs/decisions.md, docs/specs/079-domain-and-flatpak-identity.md]

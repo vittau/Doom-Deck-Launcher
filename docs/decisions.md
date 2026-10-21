@@ -13,7 +13,7 @@ manifest eligible under Flathub's current policy. The Flathub submission restric
 GPG-signed Flatpak repository and project page at
 `https://www.vitormach.dev/Doom-Deck-Launcher/`, backed by this repository's `gh-pages` branch.
 The owner agreed this with the Flatpak worker while the coordinator was unavailable and
-confirmed the URL on resumption. Specs 062–063 implement the experimental build/install channel;
+confirmed the URL on resumption. D-039 subsequently replaces this original URL. Specs 062–063 implement the experimental build/install channel;
 the existing GitHub tarball stays available. Flathub is a later option subject to its policies,
 not the destination of these AI-assisted manifests. Spec 065 will replace the provisional page
 with a launcher-themed page based on README, featuring a prominent `.flatpakref` install link.
@@ -40,6 +40,16 @@ D-025/spec 019's once-per-24-hour cadence. Discover shows a small effective-cata
 timestamp in English UTC (for example `October 21, 2026 at 13:39 (UTC)`), rather than device
 fetch time. Catalog publication stays independent of app releases; version gates only advance
 when the catalog genuinely requires a newer client capability. Spec 077.
+
+**D-039 — Dedicated domain and Flatpak identity (Accepted, owner, 2026-10-21).**
+Use `https://doomdecklauncher.com/` as the canonical website and installation endpoint,
+backed by the existing GitHub Pages publication. Use Flatpak ID
+`com.doomdecklauncher.DoomDeckLauncher`. The owner explicitly authorizes replacing the old
+ID and endpoint without a migration or compatibility alias because only the owner installed
+that package. This replaces D-035's original URL and D-034's original ID; hosting, signing,
+upstream downloads and unrelated state-schema/release compatibility checks stay in scope as
+before. README recommends the signed Flatpak and points to the website for installation.
+Spec 079.
 
 | ID | Decision | Status |
 | --- | --- | --- |
