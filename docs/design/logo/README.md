@@ -20,7 +20,7 @@ The previous D-023 production masters are kept as history in
 | `horizontal.svg` | Lock-up (small-tier emblem + DDL on a dark tablet), 330×128. Header slot: 154×56, **144 px minimum width**. |
 | `stacked.svg` | Full-tier emblem over DDL and the name, 480×400; **240 px minimum width**. Loading screen. |
 | `full-name.svg` | Full-tier emblem beside the name, 700×160; **350 px minimum width**. Settings → About. |
-| `readme-header-dark.svg` | README header (370×160, displayed at 370×160): small-tier emblem + DDL wordmark + Barlow subtitle, bone ink for GitHub's dark theme. Matches the website header composition (spec 081). |
+| `readme-header-dark.svg` | README header (370×160, displayed at 1:1): small-tier emblem + DDL wordmark + Barlow subtitle, bone ink for GitHub's dark theme. Matches the website header composition (spec 081). |
 | `readme-header-light.svg` | Same compact header, dark ink (`#120C0D`) and the same ruby carved side, for GitHub's light theme. |
 | `readme-logo-dark.svg` | Superseded full-name lock-up (760×200), bone name; kept as a reference mark, no longer used by README. |
 | `readme-logo-light.svg` | Same reference lock-up with dark ink (`#120C0D`) for light grounds. |
