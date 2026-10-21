@@ -266,6 +266,19 @@ fn cards_keep_roomy_insets_and_two_tag_rows() {
     production::card_padding_after(&window, &ui);
 }
 
+/// Spec 076: SIGIL's plain normal/COMPAT edition copy in Setup and the import sheet.
+#[test]
+fn sigil_editions_name_the_normal_and_compat_editions() {
+    if isolated(
+        module_path!(),
+        "sigil_editions_name_the_normal_and_compat_editions",
+    ) {
+        return;
+    }
+    let (window, ui) = setup();
+    production::sigil_edition_copy(&window, &ui);
+}
+
 /// Spec 072 R4: a 90+ recipe catalog keeps the last card reachable.
 #[test]
 fn catalog_card_ids_beyond_99_stay_reachable() {

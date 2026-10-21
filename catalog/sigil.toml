@@ -5,7 +5,7 @@ title = "SIGIL"
 authors = ["John Romero"]
 release = "1.23"
 page = "https://romero.com/sigil"
-description = "Episode 5 for DOOM, with a MIDI soundtrack and optional paid replacements, including an Episode 3 compatibility path."
+description = "Episode 5 for DOOM with the free MIDI soundtrack, an optional paid Buckethead soundtrack, and a COMPAT edition for older ports. DSDA-Doom plays the normal Episode 5 maps directly."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
 tags = ["featured", "classics", "cacowards", "episode"]
 
@@ -81,8 +81,8 @@ keep = true
 
 [[components]]
 id = "main"
-label = "SIGIL"
-description = "Main episode/mapset with bundled MIDI music."
+label = "Normal episode (MIDI)"
+description = "The normal SIGIL Episode 5 maps (E5M1–E5M9) with the free MIDI soundtrack. DSDA-Doom supports this episode directly."
 optional = false
 default = true
 position = 1
@@ -94,8 +94,8 @@ role = "maps"
 
 [[components]]
 id = "compat"
-label = "Episode 3 compatibility WAD"
-description = "Free E3M1–E3M9 replacement for older ports; required by the paid E3 soundtrack. DSDA-Doom supports the native E5 UMAPINFO episode instead."
+label = "COMPAT edition maps (older ports)"
+description = "The COMPAT edition: the same maps placed in DOOM's Episode 3 slots for older ports that cannot load a new episode. DSDA-Doom does not need it; use it only for compatibility or with the paid COMPAT soundtrack."
 optional = true
 default = false
 position = 1
@@ -109,8 +109,8 @@ role = "maps"
 
 [[components]]
 id = "soundtrack"
-label = "Buckethead soundtrack (REG WAD)"
-description = "Paid SIGIL_V1_23_REG.wad: the complete E5M1–E5M9 episode with Buckethead's MP3 music embedded. Replaces SIGIL_V1_23.wad; never load both."
+label = "Normal episode with Buckethead music (paid)"
+description = "Paid SIGIL_V1_23_REG.wad: the complete normal Episode 5 maps (E5M1–E5M9) with Buckethead's MP3 soundtrack embedded. Replaces SIGIL_V1_23.wad; never load both."
 optional = true
 default = false
 position = 1
@@ -125,14 +125,14 @@ role = "maps"
 
 [[components]]
 id = "compat-soundtrack"
-label = "Buckethead E3 soundtrack (paid)"
-description = "Paid SIGIL_SHREDS_COMPAT.wad: music-only MP3 soundtrack for the E3 compatibility maps. Enabling it also selects the free Episode 3 map WAD; it never replaces the native E5 episode."
+label = "COMPAT edition soundtrack (Buckethead, paid)"
+description = "Paid SIGIL_SHREDS_COMPAT.wad: music-only MP3 soundtrack for the COMPAT edition maps. Enabling it also selects the free COMPAT map WAD; it is not used with the normal Episode 5 maps and never replaces them."
 optional = true
 default = false
 position = 2
 requires = "compat"
 user_supplied = true
-obtain = "Purchase the SIGIL digital download or fan box from romero.com/sigil, then import SIGIL_SHREDS_COMPAT.wad (162,146,269 bytes). It is music-only and must load after the Episode 3 compatibility map WAD."
+obtain = "Purchase the SIGIL digital download or fan box from romero.com/sigil, then import SIGIL_SHREDS_COMPAT.wad (162,146,269 bytes). It is music-only and must load after the COMPAT edition map WAD."
 known_sha256 = ["e5592bc76951a63d8647c5dc7004378ca4d7fcecfda3ab73acc6c220f1193ab7"]
 
 [[components.members]]
