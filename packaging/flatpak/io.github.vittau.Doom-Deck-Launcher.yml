@@ -62,7 +62,10 @@ modules:
   - name: rust-toolchain
     buildsystem: simple
     build-commands:
-      - cd rust-x86_64-unknown-linux-gnu && ./install.sh --prefix="${FLATPAK_DEST}/rust" --disable-ldconfig --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu
+      # flatpak-builder strips the archive's single top-level directory, so the
+      # official tarball's install.sh lands at the module build root.
+      - test -x ./install.sh
+      - ./install.sh --prefix="${FLATPAK_DEST}/rust" --disable-ldconfig --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu
       - ${FLATPAK_DEST}/rust/bin/rustc --version
       - ${FLATPAK_DEST}/rust/bin/cargo --version
     sources:
