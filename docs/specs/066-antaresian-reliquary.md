@@ -20,6 +20,12 @@
 - **R4:** Document findings and links in `docs/research/reference-antaresian-reliquary.md` with
   Confirmed / Proposed / Needs Deck Validation labels. DoomWiki/Doomworld may block automation;
   label search/Wayback evidence appropriately and prefer the author's bundled text for facts.
+- **R5:** Include an English performance warning in the player-facing description: MAP31 has
+  a massive enemy count and performs poorly on Steam Deck. This warning is explicitly requested
+  by the owner (2026-10-21), with reference to
+  `https://doomwiki.org/wiki/MAP31:_The_Eclipse_of_Betelgeuse_(Antaresian_Reliquary)`.
+  Record owner provenance in research/verification notes; do not invent FPS, enemy counts,
+  benchmarks or claim DDL measured it. Keep the warning concise and visible on detail.
 
 ## Ownership and acceptance
 
