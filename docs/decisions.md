@@ -9,6 +9,23 @@ CI package with explicit AI-assisted provenance, overriding the human-only file-
 restriction for that package. It does not authorize a Flathub submission or make the generated
 manifest eligible under Flathub's current policy. The Flathub submission restrictions below remain.
 
+**D-035 — Signed self-hosted Flatpak channel (Accepted, owner, 2026-10-21).** Publish a dedicated
+GPG-signed Flatpak repository and project page at
+`https://www.vitormach.dev/Doom-Deck-Launcher/`, backed by this repository's `gh-pages` branch.
+The owner agreed this with the Flatpak worker while the coordinator was unavailable and
+confirmed the URL on resumption. Specs 062–063 implement the experimental build/install channel;
+the existing GitHub tarball stays available. Flathub is a later option subject to its policies,
+not the destination of these AI-assisted manifests. Spec 065 will replace the provisional page
+with a launcher-themed page based on README, featuring a prominent `.flatpakref` install link.
+
+**D-036 — Direct Play and base-game artwork (Accepted, owner, 2026-10-21).** Home Continue and
+the main game-detail action launch the remembered/selected profile directly; Edit opens setup.
+Red is reserved for actions that launch a game, superseding spec 060's red primary actions.
+The owner explicitly requests DoomWiki menu/title artwork for base-game cards, a narrow
+exception to D-020's no-id-assets rule; source/credit and image limits still apply. Spec 064
+also records UI spacing/copy changes and automatic engine aspect with detected fullscreen
+resolution; external-display behavior remains Needs Deck Validation.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
