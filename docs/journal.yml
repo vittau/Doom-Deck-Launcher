@@ -845,3 +845,15 @@
     checks for actual audio, sandbox font access and purchased-edition controller flows.
     No paid media/font binary or new dependency is bundled. Hardware playback remains untested.
   refs: [docs/reports/067-midi-soundfonts.md, docs/reports/068-sigil-purchased-editions.md, docs/deck-testing.md]
+
+- date: 2026-10-21
+  type: change
+  summary: >-
+    Published v0.0.10-audio as a GitHub pre-release tarball (39609918963) and signed Flatpak
+    update (39609918709). Refreshed website/README screenshots, explicit versioned favicons
+    and app DDL header with product subtitle; owner-requested tighter centered revision
+    published with successful project-prefix purge and canonical verification (39612160906).
+    Added tagged-serializer upgrade fixtures through 0.0.10 and passed the six-release guard.
+    Owner next requests matching app header, specific ordered Discover categories without
+    All/Featured, dedicated Doomer Boards category and Memento Mori I/II in Classics.
+  refs: [docs/reports/069-website-favicon.md, docs/reports/070-release-state-fixtures.md, docs/specs/071-app-header-brand.md, docs/specs/072-discover-specific-categories.md, docs/specs/073-classic-memento-mori.md]

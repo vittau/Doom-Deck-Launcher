@@ -27,36 +27,20 @@ Read this before taking over as orchestrator. Workers only need `AGENTS.md` and 
 
 ## Worker routing
 
-**Current owner override (2026-10-21, supersedes OpenCode-only routing): prioritize new workers
-on GPT-6.1 Sol, effort medium, for today.** Keep existing OpenCode conversations for their current
-tasks and review corrections; do not replace them solely because routing changed. OpenCode remains
-the fallback when needed. After today, use the default routing table below unless the owner updates
-this preference.
+Follow the owner's current agent-spawning instructions. Through 2026-11-01 inclusive, use
+GPT-6.1 Sol medium for medium-complexity work normally assigned to DeepSeek Flash high only
+when Codex short-window usage is below 50%; otherwise use the normal routing below. Existing
+workers keep their current conversations for the same task and review corrections.
 
-| Work | Agent | Launch |
+| Work | Agent | Fallback at usage/token limit |
 | --- | --- | --- |
-| Default development and research, bounded | opencode, **DeepSeek V4.1 Flash Free** (`opencode/deepseek-v4.1-flash-free`), effort high — 200k context | see *Launching opencode* |
-| Default work that is long or wide, or when Free credits/endpoint fail | opencode, DeepSeek V4.1 Flash (`opencode-go/deepseek-v4.1-flash`, 1M context), effort high | see *Launching opencode* |
-| Wide-context work; **all UI design and implementation** (it generates raster mockups) | Codex, GPT-6.1-Sol, effort medium | `worker-start … --agent codex --model gpt-6.1-sol --effort medium` |
-| Fallback when Codex's budget is out | opencode (Flash, paid) — **not Claude** (see below) | see *Launching opencode* |
+| High complexity or extensive context | Codex, GPT-6.1 Sol, medium | OpenCode, DeepSeek V4.1 Flash, high |
+| Medium complexity, likely long | OpenCode, DeepSeek V4.1 Flash, high | — |
+| Medium complexity, likely short | OpenCode, DeepSeek V4.1 Flash Free, high | — |
+| Simple parallel work | Claude Haiku 5.5, high | OpenCode, DeepSeek V4.1 Flash, medium |
 
-**Claude workers are paused** (owner, 2026-10-20: "Não use mais Sonnet 5.5 por enquanto, tokens
-Claude próximos de acabar. Use apenas OpenCode como fallback"). Do not start Claude Code workers
-until the owner lifts this; the orchestrator itself also runs on the owner's Claude quota, so keep
-coordinator turns lean (no idle polling loops, short reports). Before the pause the fallback was
-Claude Code Sonnet 5.5, effort high.
-
-Switch rules: Codex above ~85 % of its 5-hour window or ~90 % weekly → route new work to opencode
-until it resets (two Codex workers can burn a fresh 5-hour window in about 35 minutes). A worker
-that hits a usage limit mid-task → snapshot its tree, interrupt it, close its terminal, and start a
-replacement on the **same Task and worktree**, then type a continuation note into the new terminal
-(what is committed, what is uncommitted, decisions already given). The owner may override routing
-for a day (2026-10-17: "Codex first"); such overrides end with the day. A worker above ~80 %
-context → its next task goes to a fresh worker. Read Codex usage from the health monitor line, the
-`rate_limits` field in `~/.codex/sessions/**/*.jsonl`, or the Codex footer.
-
-**No context rot:** every new task gets a **fresh agent**. Only post-review fixes to the *same*
-task may reuse that task's terminal. After settlement: release the worker, close its terminal.
+The former OpenCode-only and unconditional one-day Codex preferences are superseded. Orca
+skills remain the authority on dispatch, recovery and cleanup.
 
 ## Task lifecycle
 
