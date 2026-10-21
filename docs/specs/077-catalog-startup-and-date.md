@@ -1,6 +1,6 @@
 # 077 — Check the independent catalog at every startup and show its date
 
-**Status:** Ready. **Origin:** owner; supersedes spec 019 R5's daily throttle.
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner; supersedes spec 019 R5's daily throttle.
 
 ## Requirements
 

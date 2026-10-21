@@ -1,6 +1,6 @@
 # 071 — Match the application header to the website brand
 
-**Status:** Ready. **Origin:** owner: use the website logo arrangement inside DDL too.
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner: use the website logo arrangement inside DDL too.
 
 ## Requirements
 

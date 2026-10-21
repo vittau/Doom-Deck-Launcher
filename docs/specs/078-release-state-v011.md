@@ -1,6 +1,6 @@
 # 078 — Preserve the v0.0.11 release state
 
-**Status:** Ready after the coordinator publishes `v0.0.11-polish`.
+**Status:** Complete — tagged serializer fixture generated and readability guard verified.
 **Origin:** spec 055 R4 and the release lifecycle in `docs/orchestration.md`.
 
 ## Requirements

@@ -2,10 +2,10 @@
 
 ## Current checkpoint — 2026-10-21
 
-**Available for Deck testing:** [v0.0.10-audio](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.10-audio)
+**Available for Deck testing:** [v0.0.11-polish](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.11-polish)
 ships the Linux tarball and the signed Flatpak update at
-[the project site](https://doomdecklauncher.com/). Release run `39609918963` and
-signed repository publication `39609918709` succeeded. Canonical site identifies app v0.0.10.
+[the project site](https://doomdecklauncher.com/). Release run `39693631790` and
+signed repository publication `39693631806` succeeded. Canonical site identifies app v0.0.11.
 
 - **Integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian Reliquary
   with MAP31 performance warning (066), Default/Arachno Audio settings (067), and verified SIGIL
@@ -20,24 +20,27 @@ signed repository publication `39609918709` succeeded. Canonical site identifies
 - **Release-state guard:** real serializer-generated fixtures now cover all six release tags
   through v0.0.10-audio (070), including explicit Default audio preferences. Focused integrated
   guard, fmt and clippy passed. No application behavior changed in this follow-up.
-- **Integrated on the verification branch, not yet published:** compact application branding,
+- **Published in v0.0.11-polish:** compact application branding,
   specific ordered Discover categories and reachable cards across the 92-recipe catalog (071/072),
   verified Memento Mori I/II and dedicated Doomer Boards membership (073), roomier mapset and
   base-game cards with artwork clear of frames (074), lightweight profile-only Pistol start writes
   with rapid-input/failure handling (075), plain normal/COMPAT SIGIL edition labels (076), and
   an independent catalog check at every startup with its English UTC source date in Discover
   (077, D-038). Actual launch-time file verification remains intact.
-- **Current verification:** all five refreshed shared screenshots reviewed; formatting and
-  workspace Clippy passed. The combined local matrix covers **898 unique Rust tests**: 889 in
-  the final workspace run excluding nine expensive title-fit checks, which passed in the earlier
-  run. Corrected CLI, recipe-update and SIGIL summary assertions passed in the final run.
-  Domain integration passed 23 site/transition tests, 23 purge tests, served URL checks and
-  descriptor validation. No new release or website deployment has happened yet.
-- **Domain/identity transition integrated:** `https://doomdecklauncher.com/` and
-  `com.doomdecklauncher.DoomDeckLauncher` (079, D-039). DNS/Pages HTTPS and certificate are
-  working; CI uses the new Cloudflare zone. The previous project-page URL responds with a 301
-  to the canonical site. The signed new-ID channel still awaits tagged publication; old-ID
-  installation migration is intentionally omitted by owner request.
+- **Current verification:** all five refreshed shared screenshots reviewed and compared against
+  canonical served bytes. Formatting, workspace Clippy and **898 Rust tests** passed, including
+  the full unfiltered Linux CI run `39693604865`; Steam Runtime build/catalog publication,
+  Flatpak artifact `39693604642` and real-network e2e `39693602559` passed. Signed publication
+  installed and executed the new identity successfully. Downloaded tarball matches its SHA-256.
+- **Domain/identity transition published:** `https://doomdecklauncher.com/` and
+  `com.doomdecklauncher.DoomDeckLauncher` (079, D-039). Valid HTTPS and HTTP redirects work;
+  the previous project-page URL responds with a 301 to the canonical site. The signed repository
+  advertises the new ID and retires the old app ref; no installation migration was requested.
+  Cloudflare accepted the exact `doomdecklauncher.com/` prefix purge, followed by successful
+  canonical file validation. The tagged serializer fixture and seven-release guard are verified.
+- **Website follow-ups:** the owner confirmed Search Console configuration and supplied the GA4
+  measurement ID. A website/AI-search audit and matching README header are in review; GA4 site
+  integration is pending. No search-index coverage or Analytics event reception is claimed.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.

@@ -1,6 +1,6 @@
 # 072 — Discover uses specific categories
 
-**Status:** Ready. **Origin:** owner: remove All, then also Featured, from Discover before
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner: remove All, then also Featured, from Discover before
 refreshing the screenshots.
 
 ## Requirements

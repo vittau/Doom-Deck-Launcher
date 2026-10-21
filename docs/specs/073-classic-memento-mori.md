@@ -1,6 +1,6 @@
 # 073 — Add Memento Mori classics
 
-**Status:** Ready. **Origin:** owner requests Memento Mori, Memento Mori 2 and Scythe under Classics.
+**Status:** Complete — published in v0.0.11-polish. **Origin:** owner requests Memento Mori, Memento Mori 2 and Scythe under Classics.
 
 ## Requirements
 
