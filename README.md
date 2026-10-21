@@ -38,7 +38,7 @@ Click an image to inspect it at 1280×800.
 ## Install on Steam Deck
 
 **Recommended: Flatpak.** Prefer the signed Flatpak on Steam Deck and follow the
-[installation instructions on the DDL website](https://www.vitormach.dev/Doom-Deck-Launcher/).
+[installation instructions on the DDL website](https://doomdecklauncher.com/).
 Launcher updates arrive through Discover; the mapset catalog updates inside DDL.
 The [Steam Deck guide](docs/steam-deck-guide.md#flatpak-discover) covers adding DDL to Steam
 and troubleshooting. Physical Deck installation checks are still pending.

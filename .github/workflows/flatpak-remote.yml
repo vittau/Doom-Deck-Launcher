@@ -1,13 +1,12 @@
 # Publish a signed Flatpak repository to
-# https://www.vitormach.dev/Doom-Deck-Launcher/ (spec 063).
+# https://doomdecklauncher.com/ (specs 063 and 079).
 #
 # This is the install channel for Steam Deck users. The built app is exported to
 # an OSTree repository, signed with the dedicated repository key and committed to
-# this repository's `gh-pages` branch, which GitHub Pages serves under the
-# repository name. Users install with one command:
+# this repository's `gh-pages` branch, served at the custom domain root. Users install with one command:
 #
 #   flatpak install --user --from \
-#     https://www.vitormach.dev/Doom-Deck-Launcher/io.github.vittau.Doom-Deck-Launcher.flatpakref
+#     https://doomdecklauncher.com/com.doomdecklauncher.DoomDeckLauncher.flatpakref
 #
 # It is deliberately separate from `.github/workflows/flatpak.yml`, which stays
 # an artifact-only validation job. Nothing here creates a GitHub Release, and
@@ -57,9 +56,9 @@ defaults:
 
 env:
   CARGO_TERM_COLOR: always
-  APP_ID: io.github.vittau.Doom-Deck-Launcher
-  MANIFEST: packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml
-  SITE_BASE: https://www.vitormach.dev/Doom-Deck-Launcher
+  APP_ID: com.doomdecklauncher.DoomDeckLauncher
+  MANIFEST: packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.yml
+  SITE_BASE: https://doomdecklauncher.com
   PAGES_BRANCH: gh-pages
   GENERATOR_COMMIT: 74697c75b630d7330e77250fc13cb5ea688d9479
   GENERATOR_SHA256: 0a2db6be87d75910facef28ab46d4d6460802e8419ab850d0caa6a364d26b380
@@ -145,9 +144,9 @@ jobs:
       - name: Validate desktop entry and AppStream metainfo
         run: |
           set -euo pipefail
-          desktop-file-validate packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop
+          desktop-file-validate packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop
           appstreamcli validate --no-net --explain \
-            packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml
+            packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml
 
       - name: Import the repository signing key
         env:
@@ -292,7 +291,7 @@ jobs:
           Branch=stable
           Title=DoomDeckLauncher
           Comment=Experimental DoomDeckLauncher build for Steam Deck
-          Homepage=https://github.com/vittau/Doom-Deck-Launcher
+          Homepage=${SITE_BASE}/
           Url=${repo_url}
           IsRuntime=false
           SuggestRemoteName=ddl
@@ -305,7 +304,7 @@ jobs:
           Version=1
           Title=DoomDeckLauncher
           Url=${repo_url}
-          Homepage=https://github.com/vittau/Doom-Deck-Launcher
+          Homepage=${SITE_BASE}/
           Comment=Experimental DoomDeckLauncher builds for Steam Deck
           Description=Signed, self-hosted builds of DoomDeckLauncher. Runtimes come from Flathub.
           DefaultBranch=stable
@@ -320,7 +319,7 @@ jobs:
 
           # The published site carries only what we render here plus repo/.
           find "$site" -maxdepth 1 -type f \
-            ! -name "index.html" ! -name ".nojekyll" \
+            ! -name "index.html" ! -name ".nojekyll" ! -name "CNAME" \
             ! -name "${APP_ID}.flatpakref" ! -name "ddl.flatpakrepo" -delete
 
           echo "SITE_VERSION=$version" >> "$GITHUB_ENV"

@@ -4,7 +4,7 @@
 use super::*;
 use ddl_core::platform::legacy_import::{self, Decision, LegacyInstall};
 
-const APP: &str = "io.github.vittau.Doom-Deck-Launcher";
+const APP: &str = "com.doomdecklauncher.DoomDeckLauncher";
 
 pub(crate) fn flatpak() -> Sandbox {
     Sandbox::flatpak(Some(APP.to_owned()))

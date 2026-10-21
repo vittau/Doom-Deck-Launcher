@@ -112,7 +112,7 @@ Repository owners can upload [social-preview.png](design/logo/social-preview.png
 DDL currently uses its own signed Flatpak repository. Physical Deck installation and migration
 remain **Needs Deck Validation**; publication and signed installation checks pass in CI.
 
-**Install.** In Desktop Mode open the [DDL download page](https://www.vitormach.dev/Doom-Deck-Launcher/),
+**Install.** In Desktop Mode open the [DDL download page](https://doomdecklauncher.com/),
 choose **Install on Steam Deck**, and open the downloaded `.flatpakref` in Discover to install.
 It adds the signed DDL repository, so later launcher updates come through Discover; DDL has no
 self-update of its own. You do not need to download the `.flatpakref` again for each update.
@@ -124,7 +124,7 @@ and then either
 
 - pick **DoomDeckLauncher** if Steam lists it (Flatpak exports a launcher for it), or
 - **Browse…** to `/usr/bin/flatpak` and set the launch options to
-  `run io.github.vittau.Doom-Deck-Launcher`.
+  `run com.doomdecklauncher.DoomDeckLauncher`.
 
 **Needs Deck Validation:** which of the two the current Steam client offers. Rename the shortcut
 to **DoomDeckLauncher** so artwork tools find it.
@@ -145,7 +145,7 @@ work as described below. **Needs Deck Validation:** the on-screen keyboard and c
 picker in Gaming Mode without the overlay. DDL asks for Steam's keyboard through `xdg-open`
 when sandboxed; if it does not appear, the **Steam + X** hint on screen is the fallback.
 
-**Where your data lives.** Inside `~/.var/app/io.github.vittau.Doom-Deck-Launcher/`:
+**Where your data lives.** Inside `~/.var/app/com.doomdecklauncher.DoomDeckLauncher/`:
 
 | What | Folder |
 | --- | --- |
@@ -163,7 +163,7 @@ Flatpak only sees what it has been given access to. When a folder that a Steam o
 (or your own folder list) names cannot be opened, Settings → IWAD folders and the IWAD review
 say so in one line, for example `/run/media/deck/SD/SteamLibrary is not visible to the Flatpak
 — see the guide`. Grant read access to that location (for example with Flatseal, or
-`flatpak override --user --filesystem=<path>:ro io.github.vittau.Doom-Deck-Launcher`), then
+`flatpak override --user --filesystem=<path>:ro com.doomdecklauncher.DoomDeckLauncher`), then
 use **Rescan**. **Needs Deck Validation:** which locations the published Flatpak can read on your Deck.
 
 **Importing a tarball setup.** If you used the tarball before, the first start of the Flatpak
@@ -172,7 +172,7 @@ profiles, installed mapsets and saves from `~/.config/ddl` and `~/.local/share/d
 moves or changes the originals, and your IWADs stay where they are. A DSDA-Doom engine that the
 tarball ran as an AppImage is not copied: DDL installs it again for the Flatpak. **No, don't ask
 again** is remembered (B closes the question until the next start). To be asked again, delete
-`~/.var/app/io.github.vittau.Doom-Deck-Launcher/.local/state/ddl/legacy-import.json` while DDL
+`~/.var/app/com.doomdecklauncher.DoomDeckLauncher/.local/state/ddl/legacy-import.json` while DDL
 still has no data of its own.
 
 ## Recommended Steam Deck Controller Setup

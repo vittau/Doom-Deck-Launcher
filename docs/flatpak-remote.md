@@ -5,8 +5,8 @@ served from GitHub Pages, but it is **not** a Flathub release, has **no** store 
 been validated on a Steam Deck yet. Spec 063 defines the scope; the release tarball in the
 [README](../README.md#install-on-steam-deck) remains the supported channel.
 
-- Site: <https://www.vitormach.dev/Doom-Deck-Launcher/>
-- App id: `io.github.vittau.Doom-Deck-Launcher`
+- Site: <https://doomdecklauncher.com/>
+- App id: `com.doomdecklauncher.DoomDeckLauncher`
 - Branch: `stable`
 - Runtime: `org.freedesktop.Platform//26.08`, installed from Flathub
 - Architecture: `x86_64` only
@@ -17,7 +17,7 @@ Desktop Mode → Konsole:
 
 ```sh
 flatpak install --user --from \
-  https://www.vitormach.dev/Doom-Deck-Launcher/io.github.vittau.Doom-Deck-Launcher.flatpakref
+  https://doomdecklauncher.com/com.doomdecklauncher.DoomDeckLauncher.flatpakref
 ```
 
 The `.flatpakref` embeds the repository's public key and points the runtime at Flathub, which
@@ -25,18 +25,18 @@ SteamOS already has configured. No `remote-add`, no key import, no zip to downlo
 newer is required (`--device=input`); SteamOS 3.10 ships 1.18.
 
 Then add it to Steam as described in the [Deck guide](steam-deck-guide.md): shortcut to
-`/usr/bin/flatpak` with launch options `run io.github.vittau.Doom-Deck-Launcher`, compatibility tool
+`/usr/bin/flatpak` with launch options `run com.doomdecklauncher.DoomDeckLauncher`, compatibility tool
 **none**.
 
 ## Update and remove
 
 ```sh
-flatpak update --user io.github.vittau.Doom-Deck-Launcher
-flatpak uninstall --user io.github.vittau.Doom-Deck-Launcher
+flatpak update --user com.doomdecklauncher.DoomDeckLauncher
+flatpak uninstall --user com.doomdecklauncher.DoomDeckLauncher
 ```
 
 Discover also offers the update on its next check. Configuration, mapsets, engines and profiles live
-in `~/.var/app/io.github.vittau.Doom-Deck-Launcher/` and survive updates. `flatpak uninstall
+in `~/.var/app/com.doomdecklauncher.DoomDeckLauncher/` and survive updates. `flatpak uninstall
 --delete-data` removes them too.
 
 The published repository keeps the last three builds (`--prune-depth=2`); updates always move
@@ -54,14 +54,14 @@ forward. There is no downgrade path from the CLI other than reinstalling an old 
 | `GPG verification failed` | The repository key was rotated. Remove and re-add the remote (see below). |
 | `flatpak install` says the runtime is missing | Add Flathub once: `flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo`. |
 | `flatpak remote-ls ddl` is empty | The remote points at the wrong URL. Check `flatpak remotes --show-details` for `ddl`. |
-| App installed, no window | Expected permissions are `--socket=wayland`/`fallback-x11`; run `flatpak run io.github.vittau.Doom-Deck-Launcher` from a terminal and read stderr. |
+| App installed, no window | Expected permissions are `--socket=wayland`/`fallback-x11`; run `flatpak run com.doomdecklauncher.DoomDeckLauncher` from a terminal and read stderr. |
 
 Useful inspection commands:
 
 ```sh
 flatpak remotes --show-details
-flatpak remote-info --user ddl io.github.vittau.Doom-Deck-Launcher
-flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
+flatpak remote-info --user ddl com.doomdecklauncher.DoomDeckLauncher
+flatpak info --user --show-metadata com.doomdecklauncher.DoomDeckLauncher
 ```
 
 ## How publication works
@@ -79,11 +79,11 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
 6. imports `packaging/flatpak/repo-key.gpg` into a throwaway remote with GPG verification enabled,
    then lists and installs from it (Flatpak/OSTree verify the summary and commit signatures; the
    `repo/summary.sig` file itself is an OSTree GVariant map, not a raw OpenPGP signature);
-7. renders `index.html`, `<app-id>.flatpakref`, `ddl.flatpakrepo` and `.nojekyll`, and pushes them
+7. renders a root `CNAME` containing `doomdecklauncher.com`, `index.html`, `<app-id>.flatpakref`, `ddl.flatpakrepo` and `.nojekyll`, and pushes them
    plus `repo/` to the `gh-pages` branch with the workflow's `GITHUB_TOKEN`;
 8. requests a GitHub Pages build through the REST API (`pages: write`) — a `GITHUB_TOKEN` push alone
    does not trigger one — and waits for the build of the pushed commit;
-9. purges the single Cloudflare prefix `www.vitormach.dev/Doom-Deck-Launcher/` after the deployment,
+9. purges the single Cloudflare prefix `doomdecklauncher.com/` after the deployment,
    when `CLOUDFLARE_CACHE_PURGE_TOKEN` and `CLOUDFLARE_ZONE_ID` are configured, and then checks the
    served landing page, `.flatpakref` and `repo/summary` byte-for-byte. With a purge configured the
    canonical URLs are used; otherwise the check falls back to a cache-busting query.
@@ -91,20 +91,25 @@ flatpak info --user --show-metadata io.github.vittau.Doom-Deck-Launcher
 ### Page-only updates
 
 `.github/workflows/project-site.yml` deploys page/source-asset changes pushed to `main` and
-supports manual dispatch. It refreshes only `index.html` and `assets/`, retaining the version
+supports manual dispatch. It refreshes `index.html`, `assets/` and the root `CNAME`, retaining the version
 and release date of the app already published. It does not install an SDK, compile Rust, sign
 artifacts, or change the Flatpak repository/descriptors. Both publication workflows share the
 `flatpak-remote` concurrency group to serialize writes to `gh-pages`. The page workflow requests
 and waits for Pages deployment, purges the same Cloudflare prefix, then verifies the served
 HTML, stylesheet, signed descriptor and repository summary. An initial Flatpak publication must
-exist before the first page-only refresh.
+exist before the first page-only refresh. If the requested application descriptor, canonical
+remote URL or signed summary artifacts are absent, page-only publishing succeeds with a
+`Page refresh deferred` notice and skips rendering, publishing, Pages requests and purging.
+The existing publication (including any CNAME) remains untouched. Run the signed Flatpak
+publisher first to initialize the new identity; later page-only updates proceed normally.
 
 Published layout:
 
 ```text
 /                                  landing page (this repo's gh-pages)
-/io.github.vittau.Doom-Deck-Launcher.flatpakref
+/com.doomdecklauncher.DoomDeckLauncher.flatpakref
 /ddl.flatpakrepo
+/CNAME                             doomdecklauncher.com
 /repo/                             OSTree remote: summary, config, objects/, deltas/
 ```
 
@@ -113,12 +118,28 @@ the `gh-pages` branch, which is why old builds consume repository size; pruning 
 
 ## One-time setup (maintainer)
 
-1. **Pages.** After the first publication creates the branch, enable Pages for this repository:
-   *Settings → Pages → Build and deployment → Source: Deploy from a branch → `gh-pages` / `/`*.
-   The site then appears at `https://www.vitormach.dev/Doom-Deck-Launcher/` (the custom domain and
-   user site are already configured).
+1. **Pages and DNS.** Keep *Settings → Pages → Build and deployment → Source:
+   Deploy from a branch → `gh-pages` / `/`*. Set this repository's **Custom domain** to
+   `doomdecklauncher.com` and save before pointing DNS at Pages. Both publishers create the
+   root `CNAME` with exactly that name; the signed publisher's cleanup retains it.
+   **Confirmed:** for branch publishing, saving the custom domain creates this file in the
+   source branch. [GitHub Pages custom-domain setup](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
 
-2. **Signing key.** On a trusted machine with `gpg` (macOS: `brew install gnupg`):
+   At Cloudflare, in the **doomdecklauncher.com** zone, configure the apex with GitHub's
+   documented `A` records: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`,
+   `185.199.111.153` (or a supported ALIAS/ANAME setup). Use DNS-only records while GitHub
+   validates DNS and provisions HTTPS, then enable **Enforce HTTPS** when available.
+   Optional recommended `www` CNAME: `vittau.github.io` (no repository path); keep the
+   apex as the canonical domain.
+   GitHub documents up to 24 hours for DNS propagation and HTTPS availability.
+   Verify with `dig doomdecklauncher.com A +short` and the Pages settings DNS check.
+   Domain verification in the GitHub account is recommended before assigning the domain;
+   follow GitHub's account-specific TXT instructions rather than inventing a verification token.
+   No old-domain redirect or old-ID migration is required.
+
+2. **Signing key.** Reuse the existing project key and signing secrets for this identity
+   change. The following generation steps are only for a fresh bootstrap, on a trusted
+   machine with `gpg` (macOS: `brew install gnupg`):
 
    ```sh
    scripts/flatpak/make-signing-key.sh
@@ -146,10 +167,13 @@ the `gh-pages` branch, which is why old builds consume repository size; pruning 
    gh variable set CLOUDFLARE_ZONE_ID -R vittau/Doom-Deck-Launcher --body <zone id>
    ```
 
-   Use an API token with **Zone → Cache Purge** restricted to this zone (`vitormach.dev`); the token
+   Configure these settings for the new zone before running either publisher. The previous
+   zone ID must be replaced; the token must authorize the new zone. The coordinator/owner
+   supplies the settings and confirms whether the existing token already has that scope.
+   Use an API token with **Zone → Cache Purge** restricted to this zone (`doomdecklauncher.com`); the token
    is read from the environment and never printed. With both settings absent the step reports a skip
    and publication continues; with only one present it fails. The purge covers exactly one prefix,
-   `www.vitormach.dev/Doom-Deck-Launcher/` — never the zone, another host or `purge_everything` — so
+   `doomdecklauncher.com/` — never the zone, another host or `purge_everything` — so
    it also invalidates immutable OSTree objects under that tree, which is what the owner asked for.
 
 4. **Publish.** Push a tag (`git tag v0.1.0 && git push origin v0.1.0`) or run
@@ -166,7 +190,7 @@ scoped to this repository and cannot touch `main` history.
   Pages site alone cannot push an unsigned build. The private key exists only as a repository
   secret and in the maintainer's offline backup. The public half is committed at
   `packaging/flatpak/repo-key.gpg`, and the workflow refuses to sign if the secret does not match it.
-- **HTTPS.** GitHub Pages terminates TLS for `www.vitormach.dev`; the OSTree remote uses that URL.
+- **HTTPS.** GitHub Pages terminates TLS for `doomdecklauncher.com`; the OSTree remote uses that URL.
 - **No host execution.** The app still runs entirely inside the sandbox; the engine is downloaded at
   runtime and extracted, never mounted.
 - **Cloudflare token.** The purge token needs only **Zone → Cache Purge** for this zone. It is read
@@ -183,9 +207,9 @@ The key has no expiry. To rotate it: generate a new key with the same script, re
 Users then see a verification failure, because the pinned key changed, and must reinstall:
 
 ```sh
-flatpak uninstall --user io.github.vittau.Doom-Deck-Launcher
+flatpak uninstall --user com.doomdecklauncher.DoomDeckLauncher
 flatpak uninstall --user --unused
-flatpak install --user --from https://www.vitormach.dev/Doom-Deck-Launcher/io.github.vittau.Doom-Deck-Launcher.flatpakref
+flatpak install --user --from https://doomdecklauncher.com/com.doomdecklauncher.DoomDeckLauncher.flatpakref
 ```
 
 Losing the private key without a backup has the same effect for every existing user. For a single
@@ -217,21 +241,11 @@ runtime. The differences are procedural, not technical:
 - Steam launches the Flatpak shortcut from Gaming Mode; the overlay will not attach (Flatpak unsets
   `LD_PRELOAD`).
 
-## Not verified yet
+## Publication and hardware validation
 
-The first publish run succeeded: it built the app, exported and signed the repository, smoke-tested
-the exported commit and pushed `gh-pages`. The CI smoke test now also proves the signature, by
-importing `packaging/flatpak/repo-key.gpg`, verifying `summary.sig` and installing from a remote with
-GPG verification enabled.
-
-Pages is enabled: the homepage and `repo/summary` return HTTP 200, and the `.flatpakref` returns 200
-with a cache-busting query (public key, URL and app id checked). The bare `.flatpakref` URL was still
-serving a cached 404 from Cloudflare at the time of writing.
-
-Still unverified:
-
-- Installing the published `.flatpakref` on a real Steam Deck or Linux host.
-- Runtime behaviour on hardware (GL, audio, controller, IWAD visibility, OSK).
-
-See [`docs/reports/063-flatpak-selfhosted-remote.md`](reports/063-flatpak-selfhosted-remote.md) for
-the full run history.
+The earlier channel's successful publication is recorded in
+[`docs/reports/063-flatpak-selfhosted-remote.md`](reports/063-flatpak-selfhosted-remote.md).
+It does not verify the new domain or application ID. After DNS/Pages setup and a signed
+publication, verify the canonical homepage, new `.flatpakref`, `repo/summary`, signatures,
+and the exact prefix purge. **Needs Deck Validation:** install the new descriptor on a
+real Steam Deck and verify runtime behaviour (GL, audio, controller, IWAD visibility, OSK).

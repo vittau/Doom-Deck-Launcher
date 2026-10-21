@@ -119,7 +119,7 @@ mod tests {
     use super::*;
 
     fn sandboxed() -> Sandbox {
-        Sandbox::flatpak(Some("io.github.vittau.Doom-Deck-Launcher".to_owned()))
+        Sandbox::flatpak(Some("com.doomdecklauncher.DoomDeckLauncher".to_owned()))
     }
 
     /// A fake host: a Steam root whose `libraryfolders.vdf` names one library

@@ -8,7 +8,7 @@ There are now two Flatpak paths:
 | Path | Workflow | Output |
 | --- | --- | --- |
 | Build validation and `.flatpak` artifact | `.github/workflows/flatpak.yml` | workflow artifact, 14 days |
-| Signed install repository | `.github/workflows/flatpak-remote.yml` | `gh-pages`, served at <https://www.vitormach.dev/Doom-Deck-Launcher/> |
+| Signed install repository | `.github/workflows/flatpak-remote.yml` | `gh-pages`, served at <https://doomdecklauncher.com/> |
 
 For the one-command install, updating and the signing key, read
 [`docs/flatpak-remote.md`](flatpak-remote.md). Everything below describes the artifact-only build,
@@ -22,7 +22,7 @@ repository; D-034 records the owner's authoring exception.
 
 | Item | Value |
 | --- | --- |
-| App id | `io.github.vittau.Doom-Deck-Launcher` |
+| App id | `com.doomdecklauncher.DoomDeckLauncher` |
 | Runtime / SDK | `org.freedesktop.Platform` / `org.freedesktop.Sdk` **26.08** |
 | Architecture | `x86_64` only |
 | App sources | the checked-out tree (`type: dir`), no self-referential commit pin |
@@ -70,18 +70,18 @@ On a Linux host with Flatpak 1.16 or newer (SteamOS 3.10 ships 1.18):
 ```sh
 sha256sum -c ddl-flatpak-x86_64.flatpak.sha256
 flatpak install --user ./ddl-flatpak-x86_64.flatpak
-flatpak run io.github.vittau.Doom-Deck-Launcher
+flatpak run com.doomdecklauncher.DoomDeckLauncher
 ```
 
 The bundle records `https://flathub.org/repo/flathub.flatpakrepo` as its runtime source, so the
 26.08 runtime can be installed on a machine that does not have it yet. Remove it with:
 
 ```sh
-flatpak uninstall --user io.github.vittau.Doom-Deck-Launcher
+flatpak uninstall --user com.doomdecklauncher.DoomDeckLauncher
 ```
 
 To add it to Steam, use the same manual flow as the tarball but point the shortcut at
-`/usr/bin/flatpak` with launch options `run io.github.vittau.Doom-Deck-Launcher`, or pick the
+`/usr/bin/flatpak` with launch options `run com.doomdecklauncher.DoomDeckLauncher`, or pick the
 exported desktop entry if Steam lists it. Set **Compatibility tool: none**.
 
 ## Build locally (Linux)
@@ -101,17 +101,17 @@ printf '%s\n' "$(git log -1 --format=%ct)" > packaging/flatpak/catalog-serial
 python3 flatpak-cargo-generator.py Cargo.lock -o packaging/flatpak/cargo-sources.json
 
 # 4. Validate metadata
-desktop-file-validate packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop
-appstreamcli validate --no-net --explain packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml
+desktop-file-validate packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop
+appstreamcli validate --no-net --explain packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml
 
 # 5. Build, export and install
 flatpak-builder --user --arch=x86_64 --force-clean --disable-rofiles-fuse \
   --repo=/tmp/ddl-flatpak-repo /tmp/ddl-flatpak-build \
-  packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml
+  packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.yml
 flatpak build-export --arch=x86_64 /tmp/ddl-flatpak-repo /tmp/ddl-flatpak-build master
 flatpak --user remote-add --if-not-exists --no-gpg-verify ddl-local /tmp/ddl-flatpak-repo
-flatpak --user install -y ddl-local io.github.vittau.Doom-Deck-Launcher//master
-flatpak run --command=ddl io.github.vittau.Doom-Deck-Launcher//master --version
+flatpak --user install -y ddl-local com.doomdecklauncher.DoomDeckLauncher//master
+flatpak run --command=ddl com.doomdecklauncher.DoomDeckLauncher//master --version
 ```
 
 Restore the sentinel before committing:
