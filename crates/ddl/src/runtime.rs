@@ -1949,61 +1949,56 @@ impl Runtime {
                             let x = 12. + 408. * (visible % 3) as f32;
                             let y = 12. + top + 438. * (visible / 3) as f32;
                             b.card(CARD + i as i32, x, y, 384., 410.);
-                            b.recipe_art(x + 20., y + 20., 344., 142., &item.recipe);
+                            // Spec 074: a 28 px inset on every side keeps the art,
+                            // text and chips clear of the 20 px ornamental frame and
+                            // leaves room for two chip rows above the bottom edge.
+                            b.recipe_art(x + 28., y + 28., 328., 128., &item.recipe);
                             if item.favorite {
-                                b.favorite(x + 312., y + 28.);
+                                b.favorite(x + 316., y + 36.);
                             }
                             b.title(
-                                x + 24.,
-                                y + 174.,
-                                336.,
-                                68.,
+                                x + 28.,
+                                y + 164.,
+                                328.,
+                                60.,
                                 display_title(&item.recipe).into(),
                                 26.,
                             );
                             b.author(
-                                x + 24.,
-                                y + 244.,
-                                336.,
-                                26.,
+                                x + 28.,
+                                y + 230.,
+                                328.,
+                                24.,
                                 item.recipe.authors.join(", ").into(),
                                 20.,
                             );
-                            b.label(
-                                x + 24.,
-                                y + 270.,
-                                336.,
-                                28.,
-                                game(ui, item.recipe.base_game.game),
-                                22.,
+                            let status = text(
+                                ui,
+                                match item.recipe_status {
+                                    ddl_core::library::RecipeStatus::Removed => T::RecipeRemoved,
+                                    ddl_core::library::RecipeStatus::Update(_)
+                                        if !item.update_dismissed =>
+                                    {
+                                        T::RecipeUpdate
+                                    }
+                                    _ if base_ready(s, &item.recipe) => T::BaseReady,
+                                    _ => T::BaseMissingShort,
+                                },
                             );
                             b.label(
-                                x + 24.,
-                                y + 300.,
-                                336.,
-                                28.,
-                                text(
-                                    ui,
-                                    match item.recipe_status {
-                                        ddl_core::library::RecipeStatus::Removed => {
-                                            T::RecipeRemoved
-                                        }
-                                        ddl_core::library::RecipeStatus::Update(_)
-                                            if !item.update_dismissed =>
-                                        {
-                                            T::RecipeUpdate
-                                        }
-                                        _ if base_ready(s, &item.recipe) => T::BaseReady,
-                                        _ => T::BaseMissingShort,
-                                    },
-                                ),
-                                20.,
+                                x + 28.,
+                                y + 258.,
+                                328.,
+                                24.,
+                                format!("{} · {status}", game(ui, item.recipe.base_game.game))
+                                    .into(),
+                                18.,
                             );
                             b.label(
-                                x + 24.,
-                                y + 330.,
-                                336.,
-                                28.,
+                                x + 28.,
+                                y + 286.,
+                                328.,
+                                24.,
                                 if discover {
                                     text(
                                         ui,
@@ -2024,9 +2019,9 @@ impl Runtime {
                             };
                             b.chips(
                                 &tag_labels(s, &item.recipe, 2, lead),
-                                x + 24.,
-                                y + 366.,
-                                336.,
+                                x + 28.,
+                                y + 314.,
+                                328.,
                             );
                         }
                         if discover && self.category == Category::Favorites && shown.is_empty() {
