@@ -42,23 +42,28 @@ unknown. `serial_date` (Settings, CLI) is unchanged.
   checkouts now uses `fetch-depth: 0` so the history actually reaches that commit. A commit that
   touches no catalog file does not change the displayed date.
 
-## Review fixes (committed-code review of `f09c41f`)
+## Review fixes (final, after `97cf359`)
 
-- **Stale cache anti-rollback:** adoption compares the accepted serial with the serial effective on
-  disk *at that moment* (cached bundle, this instance, embedded fallback), so a slower automatic
-  response can never overwrite a newer catalog another process adopted during the request.
-  `an_older_automatic_response_never_rolls_back_a_newer_catalog` proves the cache keeps the newer
-  serial.
-- **Lost queued reload:** `catalog_reload_pending` is cleared only when `RefreshCatalog` is actually
-  dispatched, and the reload goes before any queued Pistol toggle, so a busy moment can never drop
-  it.
-- **Cache read/compare/store is one locked step:** the anti-rollback comparison and the cache write
-  now hold the cross-process state lock together (after the network, never during it), so two
-  checks cannot interleave read/compare/store.
-- **Malformed/newer-schema `app.json`:** the attempt recorder leaves an unreadable or
-  unsupported-schema file untouched (it writes only when the file parses or is missing) and never
-  rewrites `iwads.json`.
+- **Publication lock — the earlier report was wrong:** the cache read/compare/store was *not*
+  locked in `97cf359`. It now is: `fetch_and_accept_catalog` performs the network call with no lock,
+  then takes one short cross-process state lock around the anti-rollback comparison, the cache write
+  and the attempt record. `CatalogCheck` is no longer treated as a mutating command at the
+  `execute` level, so the manual check does not hold the lock across the network and the publication
+  lock is never nested.
+- **Delayed-response proof:** `a_delayed_automatic_response_cannot_overwrite_a_newer_publish` stalls
+  an automatic fetch, publishes serial 900 from another path, releases the response (serial 500) and
+  asserts the cache still holds 900; `an_older_automatic_response_never_rolls_back_a_newer_catalog`
+  covers the already-cached case.
+- **Metadata is best effort:** the attempt record never erases a successful publication — the
+  cached bundle and the adopted serial stay authoritative if the lock or `app.json` write fails.
+  `an_unwritable_attempt_never_erases_a_successful_publication` opens services, replaces
+  `app.json` with a directory, runs the startup check and asserts serial 500 is adopted, cached and
+  reported.
+- **Attempt recording:** success, "not newer" and fetch failure all record `catalog_last_check` with
+  a read-merge-write of `app.json` only (malformed/newer-schema untouched); `iwads.json` is never
+  rewritten from the background instance.
 
+## Earlier review fixes
 ## Verification (focused, offline)
 
 | Check | Result |

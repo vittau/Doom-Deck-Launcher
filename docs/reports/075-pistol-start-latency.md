@@ -78,26 +78,30 @@ that amount. Deck responsiveness and the Slint render share are **Needs Deck Val
 - **Base-game first press:** the base profile is materialised from the id (`base-<game>-profile-N`)
   when no JSON exists, so the toggle works on a fresh install.
 
-## Second review round (5b303c2 follow-up)
+## Final review round (97cf359 follow-up)
 
-- **Base first press on ids like `base-doom2`:** `BaseGame::id()` is `base:doom2`, the default
-  profile id is `base-doom2` and copies are `base-doom2-profile-N`, so the first press now resolves
-  the game from the id stem and materialises the profile. Covered by a real positive test against
-  the identified fixture registry (`the_first_base_pistol_press_works_without_a_saved_profile`),
-  which presses on a fresh profile for both id shapes and asserts the persisted `recipe_id`.
-- **Real Confirm route and rapid presses:** the generic `activate()` busy gate used to drop a second
-  Confirm before it reached the light path. The Pistol rows (catalog Setup 41 and base
-  `View::BaseSetup` 5) now handle a press while busy and queue the intent;
-  `two_confirm_presses_through_the_action_path_persist_the_final_intent` drives `action(Confirm)`
-  twice on the real route, waits for both workers, and asserts the persisted value plus that the
-  row mirrors the stored profile.
-- **Rapid failed toggles:** the queue entry carries the value that press replaced, the standalone
-  `pistol_last_saved` baseline is gone, and a failure drops any queued intent and restores the last
-  persisted value, so the visible row can never drift from disk. The write-failure path stays
-  covered by `a_failed_pistol_start_write_is_reported` and the runtime patch/revert test; a headless
-  double-failure journey was dropped because only one Slint platform can be installed per test
-  thread, which the UI worker's shared harness already owns.
-
+- **Intent vs persisted baseline:** the runtime keeps the latest requested value per profile
+  (`pistol_intent`) separately from the last value a save confirmed (`pistol_baseline`). A save
+  result first records the baseline and applies the saved profile, then re-applies the intent, so
+  an older result can never invert a newer press; a queued press is re-dispatched once the worker is
+  free. A failure restores the **actual last persisted value**, drops only that profile's intent
+  and queue entry (other profiles keep theirs), and surfaces the error.
+- **Real Confirm tests:** `rapid_confirm_presses_on_a_mapset_keep_the_last_intent` and
+  `rapid_confirm_presses_on_a_base_game_keep_the_last_intent` drive `action(Confirm)` three times
+  plus a failing pair through the real route, asserting the durable value, the row/launch-summary
+  state and the failure rollback. They run in the existing headless harness: `headless::isolated`
+  re-executes each case in a child process, which is how the suite runs several platform cases —
+  **correcting** the earlier claim that "one Slint platform per thread" blocked these tests.
+- **Stale-result interleaving:** `a_stale_saved_result_never_inverts_the_latest_intent` injects
+  the first write's `ProfileSaved(true)` **after** a newer `false` press, and asserts the visible
+  row (and the selected-profile mirror) stays `false`, the stale result becomes the baseline, and
+  the next Confirm persists `true`. `patch_pistol_value` now updates the selected-profile mirrors
+  (`item.profiles`, `base.profiles`) with the row, so nothing visible drifts.
+- **First-ever identities (review):** the catalog fallback only materialises the identity the UI
+  actually shows (`<recipe>-default`); any other id is refused. The base fallback only accepts the
+  identity `fresh_base_profile` mints (`base-<game>-profile-N`); the bare `base-doom2` and
+  arbitrary suffixes are refused. Both are tested positively against an identified fixture
+  registry and negatively for unknown ids.
 ## Open
 
 - Actual controller `Confirm` routing for a rapid double press is covered by the queue logic and the

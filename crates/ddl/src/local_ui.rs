@@ -51,6 +51,15 @@ pub(super) struct LocalUi {
     picker_file_start: usize,
     picker_shortcut_start: usize,
 }
+
+#[cfg(test)]
+impl LocalUi {
+    /// Test seam: open the base setup view for one base game.
+    pub(super) fn open_base_for_tests(&mut self, base: &str) {
+        self.target = Some(base.to_owned());
+        self.view = Some(View::BaseSetup);
+    }
+}
 impl Runtime {
     fn local_setup(&self) -> Option<&CustomSetup> {
         let id = self.local.target.as_ref()?;
