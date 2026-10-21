@@ -143,3 +143,22 @@ interrupts did not reach those private servers. Subsequent SIGIL tests were inte
 so they are not a successful full-check result. Soundfont late error-copy wiring is saved
 and pushed at `6bb3610`; review and validation remain pending. Conversation backups were
 re-exported after stopping the private servers. Do not restart workers until the owner asks.
+
+## Final owner-approved website state
+
+The hero support placement above was superseded by subsequent explicit owner revisions.
+The donation button is now in the **header navigation**, compact (approximately 114×44 px),
+yellow `#FD0`, labelled **Donate**, using the **official Buy Me a Coffee logo and Cookie font**.
+Owner supplied and authorized the official embed script; spec 065 R6 records this exception
+to the prior local-only/no-script constraint. Source commit: `7930387`.
+Website-only deployment `39552405595` succeeded, including Pages deployment, Cloudflare prefix
+purge and canonical file verification. CSS URLs now carry a content hash to bypass stale
+browser caches. Nine offline renderer tests passed; headless desktop/narrow checks confirmed
+loaded Cookie font, correct color/dimensions and no horizontal overflow. No app rebuild needed.
+
+The owner ended the session after this deployment. Await an explicit command to resume the
+two saved OpenCode conversations. Resume only tasks 067/068 in their existing worktrees and
+sessions; do not recreate agents or repeat completed research. Main and both task branches
+were pushed; worktrees were clean. Current task checkpoints remain `6bb3610` (067) and
+`aaf56031c4526449687b998d62af953b91afeda3` (068). The independent website work did not resume
+or complete either feature task.
