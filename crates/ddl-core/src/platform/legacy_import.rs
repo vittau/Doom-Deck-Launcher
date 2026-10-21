@@ -578,7 +578,7 @@ mod tests {
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/fixtures/state/v0.0.7-deck"
     );
-    const APP: &str = "io.github.vittau.Doom-Deck-Launcher";
+    const APP: &str = "com.doomdecklauncher.DoomDeckLauncher";
 
     fn sandbox() -> Sandbox {
         Sandbox::flatpak(Some(APP.to_owned()))

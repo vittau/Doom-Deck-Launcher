@@ -11,7 +11,7 @@
 #
 # x86_64 only: the Rust toolchain source and the CI job are both restricted to
 # x86_64. Steam Deck is x86_64 and the release tarball is x86_64 too.
-app-id: io.github.vittau.Doom-Deck-Launcher
+app-id: com.doomdecklauncher.DoomDeckLauncher
 runtime: org.freedesktop.Platform
 runtime-version: "26.08"
 sdk: org.freedesktop.Sdk
@@ -101,15 +101,15 @@ modules:
       # `--locked` keeps Cargo.lock unchanged; `--offline` forbids network access.
       - serial="$(cat packaging/flatpak/catalog-serial)"; DDL_CATALOG_SERIAL="$serial" cargo build --release --locked --offline -p ddl
       - install -Dm0755 target/release/ddl "${FLATPAK_DEST}/bin/ddl"
-      - install -Dm0644 packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop "${FLATPAK_DEST}/share/applications/io.github.vittau.Doom-Deck-Launcher.desktop"
-      - install -Dm0644 packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml "${FLATPAK_DEST}/share/metainfo/io.github.vittau.Doom-Deck-Launcher.metainfo.xml"
+      - install -Dm0644 packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop "${FLATPAK_DEST}/share/applications/com.doomdecklauncher.DoomDeckLauncher.desktop"
+      - install -Dm0644 packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml "${FLATPAK_DEST}/share/metainfo/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml"
       # Reuse the production window icon: 256 px PNG plus the scalable emblem.
-      - install -Dm0644 crates/ddl/ui/assets/logo/icon.png "${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.vittau.Doom-Deck-Launcher.png"
-      - install -Dm0644 crates/ddl/ui/assets/logo/emblem.svg "${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.vittau.Doom-Deck-Launcher.svg"
-      - install -Dm0644 LICENSE "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/LICENSE"
-      - install -Dm0644 crates/ddl/ui/assets/Inter-LICENSE.txt "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/Inter-LICENSE.txt"
-      - install -Dm0644 crates/ddl/ui/assets/Barlow-OFL.txt "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/Barlow-OFL.txt"
-      - install -Dm0644 crates/ddl/ui/assets/PirataOne-OFL.txt "${FLATPAK_DEST}/share/licenses/io.github.vittau.Doom-Deck-Launcher/PirataOne-OFL.txt"
+      - install -Dm0644 crates/ddl/ui/assets/logo/icon.png "${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/com.doomdecklauncher.DoomDeckLauncher.png"
+      - install -Dm0644 crates/ddl/ui/assets/logo/emblem.svg "${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/com.doomdecklauncher.DoomDeckLauncher.svg"
+      - install -Dm0644 LICENSE "${FLATPAK_DEST}/share/licenses/com.doomdecklauncher.DoomDeckLauncher/LICENSE"
+      - install -Dm0644 crates/ddl/ui/assets/Inter-LICENSE.txt "${FLATPAK_DEST}/share/licenses/com.doomdecklauncher.DoomDeckLauncher/Inter-LICENSE.txt"
+      - install -Dm0644 crates/ddl/ui/assets/Barlow-OFL.txt "${FLATPAK_DEST}/share/licenses/com.doomdecklauncher.DoomDeckLauncher/Barlow-OFL.txt"
+      - install -Dm0644 crates/ddl/ui/assets/PirataOne-OFL.txt "${FLATPAK_DEST}/share/licenses/com.doomdecklauncher.DoomDeckLauncher/PirataOne-OFL.txt"
     sources:
       # Exact checked-out tree. `.git` and build outputs are skipped because
       # the build does not need history; the manifest itself is in the tree.

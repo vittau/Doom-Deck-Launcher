@@ -64,8 +64,8 @@ defaults:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  APP_ID: io.github.vittau.Doom-Deck-Launcher
-  MANIFEST: packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml
+  APP_ID: com.doomdecklauncher.DoomDeckLauncher
+  MANIFEST: packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.yml
   GENERATOR_COMMIT: 74697c75b630d7330e77250fc13cb5ea688d9479
   GENERATOR_SHA256: 0a2db6be87d75910facef28ab46d4d6460802e8419ab850d0caa6a364d26b380
 
@@ -162,9 +162,9 @@ jobs:
 
           import yaml
 
-          manifest_path = pathlib.Path("packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.yml")
+          manifest_path = pathlib.Path("packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.yml")
           manifest = yaml.safe_load(manifest_path.read_text())
-          assert manifest["app-id"] == "io.github.vittau.Doom-Deck-Launcher"
+          assert manifest["app-id"] == "com.doomdecklauncher.DoomDeckLauncher"
           assert manifest["runtime"] == "org.freedesktop.Platform"
           assert manifest["runtime-version"] == "26.08"
           assert manifest["sdk"] == "org.freedesktop.Sdk"
@@ -186,8 +186,8 @@ jobs:
                       assert path.is_file(), f"missing file source {path}"
 
           for relative in [
-              "packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop",
-              "packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml",
+              "packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop",
+              "packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml",
               "crates/ddl/ui/assets/logo/icon.png",
               "crates/ddl/ui/assets/logo/emblem.svg",
               "LICENSE",
@@ -197,24 +197,24 @@ jobs:
           ]:
               assert pathlib.Path(relative).is_file(), f"missing {relative}"
 
-          desktop = pathlib.Path("packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop").read_text()
+          desktop = pathlib.Path("packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop").read_text()
           assert "Exec=ddl\n" in desktop
-          assert "Icon=io.github.vittau.Doom-Deck-Launcher\n" in desktop
+          assert "Icon=com.doomdecklauncher.DoomDeckLauncher\n" in desktop
 
-          metainfo = pathlib.Path("packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml")
+          metainfo = pathlib.Path("packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml")
           root = ET.parse(metainfo).getroot()
           assert root.tag == "component"
-          assert root.findtext("id") == "io.github.vittau.Doom-Deck-Launcher"
-          assert root.findtext("launchable") == "io.github.vittau.Doom-Deck-Launcher.desktop"
+          assert root.findtext("id") == "com.doomdecklauncher.DoomDeckLauncher"
+          assert root.findtext("launchable") == "com.doomdecklauncher.DoomDeckLauncher.desktop"
           print("manifest and metadata inputs OK")
           PY
 
       - name: Validate desktop entry and AppStream metainfo
         run: |
           set -euo pipefail
-          desktop-file-validate packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.desktop
+          desktop-file-validate packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.desktop
           appstreamcli validate --no-net --explain \
-            packaging/flatpak/io.github.vittau.Doom-Deck-Launcher.metainfo.xml
+            packaging/flatpak/com.doomdecklauncher.DoomDeckLauncher.metainfo.xml
 
       - name: Build the Flatpak
         run: |

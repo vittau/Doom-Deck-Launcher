@@ -5,7 +5,7 @@ Spec 063 R6. The owner asked for a single scoped prefix purge instead of
 enumerating files: it covers the whole DDL tree and nothing else.
 
 Safety rules:
-* exactly one prefix, ``www.vitormach.dev/Doom-Deck-Launcher/``;
+* exactly one prefix, ``doomdecklauncher.com/``;
 * never ``purge_everything``, never a host or zone purge;
 * the token is read from the environment and never printed, logged or passed
   as an argument;
@@ -27,8 +27,8 @@ import urllib.error
 import urllib.request
 
 API_BASE = "https://api.cloudflare.com/client/v4"
-SITE_URL = "https://www.vitormach.dev/Doom-Deck-Launcher/"
-ALLOWED_PREFIX = "www.vitormach.dev/Doom-Deck-Launcher/"
+SITE_URL = "https://doomdecklauncher.com/"
+ALLOWED_PREFIX = "doomdecklauncher.com/"
 TOKEN_ENV = "CLOUDFLARE_CACHE_PURGE_TOKEN"
 ZONE_ENV = "CLOUDFLARE_ZONE_ID"
 MAX_ATTEMPTS = 3

@@ -153,7 +153,7 @@ mod tests {
     fn no_marker_means_no_sandbox_even_with_flatpak_id_set() {
         let sandbox = Sandbox::detect(
             &marker(false),
-            &env(&[("FLATPAK_ID", "io.github.vittau.Doom-Deck-Launcher")]),
+            &env(&[("FLATPAK_ID", "com.doomdecklauncher.DoomDeckLauncher")]),
         );
         assert_eq!(sandbox, Sandbox::none());
         assert!(!sandbox.must_extract_engine());
@@ -165,11 +165,11 @@ mod tests {
     fn the_app_id_comes_from_flatpak_id() {
         let sandbox = Sandbox::detect(
             &marker(true),
-            &env(&[("FLATPAK_ID", "io.github.vittau.Doom-Deck-Launcher")]),
+            &env(&[("FLATPAK_ID", "com.doomdecklauncher.DoomDeckLauncher")]),
         );
         assert_eq!(
             sandbox.app_id(),
-            Some("io.github.vittau.Doom-Deck-Launcher")
+            Some("com.doomdecklauncher.DoomDeckLauncher")
         );
     }
 

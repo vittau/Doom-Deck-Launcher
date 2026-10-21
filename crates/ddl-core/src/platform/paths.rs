@@ -232,10 +232,10 @@ mod tests {
     /// the XDG variables and never rebuild the paths from HOME.
     #[test]
     fn flatpak_xdg_directories_resolve_inside_the_app_data_dir() {
-        let app = "/home/deck/.var/app/io.github.vittau.Doom-Deck-Launcher";
+        let app = "/home/deck/.var/app/com.doomdecklauncher.DoomDeckLauncher";
         let paths = resolve(&env(&[
             ("HOME", "/home/deck"),
-            ("FLATPAK_ID", "io.github.vittau.Doom-Deck-Launcher"),
+            ("FLATPAK_ID", "com.doomdecklauncher.DoomDeckLauncher"),
             ("XDG_CONFIG_HOME", &format!("{app}/config")),
             ("XDG_DATA_HOME", &format!("{app}/data")),
             ("XDG_CACHE_HOME", &format!("{app}/cache")),

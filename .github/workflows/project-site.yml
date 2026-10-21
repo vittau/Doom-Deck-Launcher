@@ -31,8 +31,8 @@ defaults:
     shell: bash
 
 env:
-  APP_ID: io.github.vittau.Doom-Deck-Launcher
-  SITE_BASE: https://www.vitormach.dev/Doom-Deck-Launcher
+  APP_ID: com.doomdecklauncher.DoomDeckLauncher
+  SITE_BASE: https://doomdecklauncher.com
 
 jobs:
   publish:
@@ -59,7 +59,7 @@ jobs:
           git -C published add --all
           while IFS= read -r path; do
             case "$path" in
-              index.html|assets/*) ;;
+              index.html|assets/*|CNAME) ;;
               *) echo "::error::Unexpected publication change: $path"; exit 1 ;;
             esac
           done < <(git -C published diff --cached --name-only)

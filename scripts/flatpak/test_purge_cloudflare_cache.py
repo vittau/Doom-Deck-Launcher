@@ -11,7 +11,7 @@ import purge_cloudflare_cache as purge_mod
 
 ZONE = "0123456789abcdef0123456789abcdef"
 TOKEN = "test-token-never-print-me"
-PREFIX = "www.vitormach.dev/Doom-Deck-Launcher/"
+PREFIX = "doomdecklauncher.com/"
 
 
 class FakePost:
@@ -68,10 +68,21 @@ class PrefixScopeTests(unittest.TestCase):
 
     def test_other_prefix_is_rejected(self):
         for url in (
-            "https://www.vitormach.dev/Other/",
-            "https://example.com/Doom-Deck-Launcher/",
-            "http://www.vitormach.dev/Doom-Deck-Launcher/",
+            "https://www.vitormach.dev/Doom-Deck-Launcher/",
             "https://www.vitormach.dev/",
+            "https://vittau.github.io/Doom-Deck-Launcher/",
+            "http://doomdecklauncher.com/",
+            "https://www.doomdecklauncher.com/",
+            "https://doomdecklauncher.com/other/",
+            "https://doomdecklauncher.com/Doom-Deck-Launcher/",
+            "https://doomdecklauncher.com/?query=1",
+            "https://doomdecklauncher.com/#fragment",
+            "https://doomdecklauncher.com:443/",
+            "https://user@doomdecklauncher.com/",
+            "https://doomdecklauncher.com.evil.example/",
+            "https://doomdecklauncher.com//",
+            "https://doomdecklauncher.com/%2f",
+            "https://doomdecklauncher.com/../",
         ):
             with self.subTest(url=url):
                 with self.assertRaises(purge_mod.ConfigError):
@@ -86,6 +97,17 @@ class PrefixScopeTests(unittest.TestCase):
         self.assertNotIn("files", encoded)
         self.assertNotIn("hosts", encoded)
         self.assertNotIn("https://", encoded)
+
+    def test_invalid_prefix_payloads_fail_before_any_request(self):
+        for prefix in ("doomdecklauncher.com", "doomdecklauncher.com/*",
+                       "doomdecklauncher.com/other/", "https://doomdecklauncher.com/"):
+            with self.subTest(prefix=prefix), self.assertRaises(purge_mod.ConfigError):
+                purge_mod.build_payload(prefix)
+
+    def test_wrong_site_with_credentials_never_calls_api(self):
+        code, post, _, _, _ = run(site_url="https://example.com/")
+        self.assertEqual(code, 2)
+        self.assertEqual(post.calls, [])
 
 
 class ConfigurationTests(unittest.TestCase):

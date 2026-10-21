@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.vittau.Doom-Deck-Launcher</id>
+  <id>com.doomdecklauncher.DoomDeckLauncher</id>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
@@ -30,7 +30,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">io.github.vittau.Doom-Deck-Launcher.desktop</launchable>
+  <launchable type="desktop-id">com.doomdecklauncher.DoomDeckLauncher.desktop</launchable>
   <provides>
     <binary>ddl</binary>
   </provides>
@@ -47,7 +47,7 @@
     <keyword>gamepad</keyword>
   </keywords>
 
-  <url type="homepage">https://github.com/vittau/Doom-Deck-Launcher</url>
+  <url type="homepage">https://doomdecklauncher.com/</url>
   <url type="bugtracker">https://github.com/vittau/Doom-Deck-Launcher/issues</url>
   <url type="vcs-browser">https://github.com/vittau/Doom-Deck-Launcher</url>
 

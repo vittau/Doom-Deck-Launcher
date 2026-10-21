@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location("render_site", ROOT / "scripts/flatpak/render-site.py")
 renderer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(renderer)
-APP_ID = "io.github.vittau.Doom-Deck-Launcher"
-BASE = "https://www.vitormach.dev/Doom-Deck-Launcher"
+APP_ID = "com.doomdecklauncher.DoomDeckLauncher"
+BASE = "https://doomdecklauncher.com"
 
 
 class Document(HTMLParser):
@@ -59,6 +59,7 @@ class RenderTests(unittest.TestCase):
         # These are signed/publication artifacts supplied by the existing workflow,
         # never created or rewritten by the page renderer.
         (self.out / "ddl.flatpakrepo").touch()
+        (self.out / f"{APP_ID}.flatpakref").touch()
         for page in (self.out / "index.html", self.out / "assets/credits.html"):
             text = page.read_text()
             doc = Document(text)
@@ -70,11 +71,18 @@ class RenderTests(unittest.TestCase):
                     self.assertIn("width", attrs)
                     self.assertIn("height", attrs)
                 for key in ("src", "href"):
-                    url = urlsplit(attrs.get(key, ""))
-                    if url.scheme or url.netloc:
+                    value = attrs.get(key, "")
+                    url = urlsplit(value)
+                    page_url = f"{BASE}/{page.relative_to(self.out)}"
+                    resolved = urlsplit(urljoin(page_url, value))
+                    if resolved.netloc != urlsplit(BASE).netloc:
                         continue
                     if url.path:
-                        self.assertTrue((page.parent / unquote(url.path)).is_file(), url.path)
+                        local = self.out / unquote(resolved.path).lstrip("/")
+                        if resolved.path.endswith("/"):
+                            local /= "index.html"
+                        self.assertTrue(local.is_file(), resolved.path)
+                        continue
                     elif url.fragment:
                         self.assertIn(url.fragment, ids)
         css = (self.out / "assets/style.css").read_text()
@@ -151,7 +159,7 @@ class RenderTests(unittest.TestCase):
                   if tag == "link" and a.get("rel") == "stylesheet"]
         self.assertEqual(styles, [f"assets/style.css?v={digest}"])
 
-    def test_favicon_provenance_subpath_and_cache_version_on_both_pages(self):
+    def test_favicon_provenance_root_and_cache_version_on_both_pages(self):
         self.render()
         source = ROOT / "crates/ddl/ui/assets/logo/icon.png"
         self.assertEqual((self.out / "assets/icon.png").read_bytes(), source.read_bytes())

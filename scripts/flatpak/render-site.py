@@ -60,6 +60,8 @@ def render(output, version, published, app_id, site_base):
         pages[target] = html
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
+    # Both branch publishers retain the apex domain on every refresh.
+    (output / "CNAME").write_text("doomdecklauncher.com\n")
     assets = output / "assets"
     assets.mkdir(exist_ok=True)
     for name, source in ASSETS.items():

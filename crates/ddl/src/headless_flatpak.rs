@@ -241,7 +241,7 @@ fn diagnostics_show_the_flatpak_sandbox_line_and_the_update_source() {
     ui.invoke_clicked(5);
     let shown = labels(&ui);
     assert!(
-        shown.contains("Flatpak sandbox: yes (io.github.vittau.Doom-Deck-Launcher)"),
+        shown.contains("Flatpak sandbox: yes (com.doomdecklauncher.DoomDeckLauncher)"),
         "{shown}"
     );
     assert!(shown.contains("App version"), "{shown}");

@@ -6,8 +6,8 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/flatpak/served_urls.sh
 source "$here/served_urls.sh"
 
-base="https://www.vitormach.dev/Doom-Deck-Launcher"
-app_id="io.github.vittau.Doom-Deck-Launcher"
+base="https://doomdecklauncher.com"
+app_id="com.doomdecklauncher.DoomDeckLauncher"
 
 canonical="$(printf '%s\n' \
   "$base/" \
