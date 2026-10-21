@@ -4471,12 +4471,13 @@ mod category_tests {
         };
         assert_eq!(
             tag_labels(&s, recipe, 2, None),
-            ["Classics", "Cacowards"],
-            "vocabulary order"
+            ["Cacowards", "Megawads"],
+            "vocabulary order after the 073 catalog"
         );
         assert_eq!(
             tag_labels(&s, recipe, 2, Some("megawad")),
-            ["Megawads", "Classics"]
+            ["Megawads", "Cacowards"],
+            "the open category leads"
         );
         assert_eq!(
             tag_labels(&s, recipe, usize::MAX, None).len(),
