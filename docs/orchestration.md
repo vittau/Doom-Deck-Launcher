@@ -166,7 +166,7 @@ below are the ones most easily lost between sessions.
   Windows; macOS last (owner, 2026-10-19). Do not start port work or port research before the Deck
   validation is done, but keep new code portable (OS specifics behind `cfg`/traits).
 - **Distribution:** GitHub pre-releases and the experimental signed self-hosted Flatpak remote
-  at `https://www.vitormach.dev/Doom-Deck-Launcher/` (D-035, owner confirmed 2026-10-21).
+  at `https://doomdecklauncher.com/` (D-039; replaces D-035's original endpoint).
   The owner explicitly authorized agent-written packaging for this channel (specs 062–063).
   Flathub is a later, policy-bound option: do not submit these AI-assisted manifests or automate
   submission/review interactions. Spec 065 will replace the provisional page with a launcher-themed

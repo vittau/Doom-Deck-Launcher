@@ -32,6 +32,10 @@ signed repository publication `39609918709` succeeded. Canonical site identifies
   and workspace Clippy passed. The combined workspace suite is running; the recipe-update
   journey's old standalone-label assertion is being adapted to the combined game/status line
   and will run separately. No new release, website deployment or cache purge has happened yet.
+- **Domain/identity transition requested:** `https://doomdecklauncher.com/` and
+  `com.doomdecklauncher.DoomDeckLauncher` are the accepted next identity (079, D-039).
+  No old-ID migration is required by the owner. Packaging/publication changes are in progress;
+  the owner is configuring DNS/Pages and the new Cloudflare zone is not configured in CI yet.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.
