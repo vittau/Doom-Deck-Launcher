@@ -63,6 +63,24 @@ unknown. `serial_date` (Settings, CLI) is unchanged.
   a read-merge-write of `app.json` only (malformed/newer-schema untouched); `iwads.json` is never
   rewritten from the background instance.
 
+## Integration fix (post-merge, `3568c86`)
+
+The combined workspace suite exposed a new integration regression in
+`cli_exec::tests::catalog_status_and_update_report_and_persist_the_catalog`,
+not a pre-existing failure: `Services::catalog_update` still took
+`lock_cli()`, then `catalog_check` → `fetch_and_accept_catalog` took the same
+state lock around publication after the network, so a CLI update rejected
+itself with `Busy`.
+
+The fix removes the obsolete outer lock from `catalog_update`; the shared
+publication helper remains the sole short cross-process lock, taken only after
+the fetch, so two publishers still cannot interleave read/compare/store and a
+delayed older response still cannot overwrite a newer one. A real lock
+contention or storage failure still reaches the CLI as `CliFailure`. The
+manual "not newer" outcome now records `catalog_last_check` best effort with
+`record_catalog_attempt` (short lock) before returning `Current`, closing the
+branch that previously returned without recording.
+
 ## Earlier review fixes
 ## Verification (focused, offline)
 
@@ -71,6 +89,8 @@ unknown. `serial_date` (Settings, CLI) is unchanged.
 | `cargo test -p ddl-core --lib -- catalog` | 112 passed (incl. the datetime format tests) |
 | `cargo test -p ddl --bin ddl -- startup` | startup tests pass |
 | `cargo test -p ddl --bin ddl -- pistol startup` | 11 passed |
+| `cargo test -p ddl catalog` (post-merge) | 26 passed, including `cli_exec::tests::catalog_status_and_update_report_and_persist_the_catalog` and all `services::catalog_tests` |
+| `headless::journeys::recipe_changes_update_keep_and_removed` (post-merge) | passes with the combined game/status assertion |
 | `cargo clippy -p ddl-core/--all-targets -D warnings`, `cargo clippy -p ddl ...` | clean |
 | `cargo fmt --all --check` | clean |
 
@@ -86,6 +106,7 @@ minimum-client test rejects `0.0.10` and accepts `0.0.11`; the format tests cove
   helper and `snapshot.catalog.serial`.
 - Physical Deck behaviour of the startup check (offline, captive portal, slow network) is **Needs
   Deck Validation**; the code no longer blocks navigation or actions while it runs.
-- `headless::journeys::catalog_card_ids_beyond_99_stay_reachable` fails in the merged tree for the
-  UI fixture, independent of this backend change (verified with my changes stashed).
+- `headless::journeys::catalog_card_ids_beyond_99_stay_reachable` now passes in the merged tree; the
+  UI fixture always appends a deterministic last card and no longer collides with the integrated
+  catalog's 92 items.
 - The combined workspace suite is the coordinator's to run; only focused checks were run here.
