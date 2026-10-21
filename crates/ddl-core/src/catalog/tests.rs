@@ -1081,6 +1081,7 @@ fn embedded_catalog_loads_the_reference_recipes_without_skips() {
             "alien-vendetta",
             "alone",
             "ancient-aliens",
+            "antaresian-reliquary",
             "aquatic-wonder",
             "auger-zenith",
             "augustland-barrens",
