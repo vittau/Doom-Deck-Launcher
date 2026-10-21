@@ -309,3 +309,51 @@ fn installed_symlink_is_never_accepted() {
     symlink(external, font_path).unwrap();
     assert!(fonts.verify_members(&members).is_err());
 }
+
+#[test]
+fn snapshot_stamps_invalidate_on_member_and_pointer_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = service(dir.path());
+    let font = sf2();
+    let (path, bytes) = archive(dir.path(), &font);
+    install(&fonts, &path, &bytes, &members(&font)).unwrap();
+    // Use the production reviewed notice path for the metadata-only stamp test.
+    let installed: Installed = read_json(&fonts.root.join("installed.json")).unwrap();
+    let root = fonts.root.join(&installed.generation);
+    let notice = root.join(MEMBERS[2].0);
+    fs::write(&notice, b"notice").unwrap();
+    let before = fonts.file_stamps().unwrap();
+    fs::write(&notice, b"edited").unwrap();
+    assert_ne!(fonts.file_stamps().unwrap(), before);
+    fs::remove_file(root.join(FONT_FILE)).unwrap();
+    assert!(fonts.file_stamps().is_err());
+}
+
+#[test]
+fn cancelling_at_extraction_boundary_leaves_previous_install_intact() {
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = service(dir.path());
+    let font = sf2();
+    let (path, bytes) = archive(dir.path(), &font);
+    let members = members(&font);
+    install(&fonts, &path, &bytes, &members).unwrap();
+    let previous = fonts.verify_members(&members).unwrap();
+    let cancel = CancellationToken::new();
+    assert!(
+        fonts
+            .install_archive(
+                &path,
+                bytes.len() as u64,
+                Sha256::of(&bytes),
+                &members,
+                &cancel,
+                &mut |p| {
+                    if p.stage == InstallStage::Extract {
+                        cancel.cancel();
+                    }
+                }
+            )
+            .is_err()
+    );
+    assert_eq!(fonts.verify_members(&members).unwrap(), previous);
+}
