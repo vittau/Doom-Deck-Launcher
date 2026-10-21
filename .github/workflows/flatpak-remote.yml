@@ -393,6 +393,18 @@ jobs:
           echo "::error::Pages did not build $PAGES_COMMIT within 8 minutes"
           exit 1
 
+      - name: Purge the Cloudflare cache prefix
+        env:
+          CLOUDFLARE_CACHE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_CACHE_PURGE_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+        run: |
+          set -euo pipefail
+          # One scoped prefix for the whole DDL tree (owner decision): never the
+          # zone, another host or purge_everything. Missing both settings skip
+          # the purge; a partial setup fails. The token is read from the
+          # environment and is never printed.
+          python3 scripts/flatpak/purge_cloudflare_cache.py --site-url "${SITE_BASE}/"
+
       - name: Verify the published files
         run: |
           set -euo pipefail

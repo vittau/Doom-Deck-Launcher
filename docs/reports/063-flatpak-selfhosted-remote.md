@@ -1,8 +1,8 @@
 # 063 — Signed Flatpak repository on GitHub Pages
 
 **Spec:** [`docs/specs/063-flatpak-selfhosted-remote.md`](../specs/063-flatpak-selfhosted-remote.md)
-**Status:** merged into `main` and exercised through the `gh-pages` push; the incremental-export fix
-and the explicit Pages request still need a fresh successful run · 2026-10-21
+**Status:** merged into `main`; the incremental-export fix, the explicit Pages request and the scoped
+Cloudflare purge still need one successful run together · 2026-10-21
 **Integration:** `origin/main`, currently `1dc6e8e`
 
 ## What changed
@@ -62,6 +62,12 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
    only the app comes from this remote.
 9. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
    `release.yml` still owns releases.
+10. **One scoped Cloudflare prefix (owner decision).** After the Pages deployment the workflow purges
+    exactly `www.vitormach.dev/Doom-Deck-Launcher/` through the per-prefix purge API. It never sends
+    `purge_everything`, a host purge or another prefix. The owner deliberately chose the whole DDL
+    tree over enumerating files, so immutable OSTree objects under it are purged too. Both settings
+    missing skip the purge; a partial configuration fails. The token is sent only in the request
+    header, never printed.
 
 ## Requirement verification
 
@@ -72,6 +78,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | R3 stable URLs | Render step writes `<app-id>.flatpakref`, `ddl.flatpakrepo`, `index.html`, `.nojekyll`; `repo/` comes from `build-export`; paths verified by dry-running the render block locally |
 | R4 key handling | `scripts/flatpak/make-signing-key.sh`: isolated `GNUPGHOME`, `umask 077`, refuses to overwrite, never prints private material; workflow fails early without the secret and imports into `$RUNNER_TEMP/gnupg` |
 | R5 documentation | `docs/flatpak-remote.md` covers install/update/remove, setup, security, rotation, rollback and the Flathub path |
+| R6 scoped purge | `scripts/flatpak/purge_cloudflare_cache.py` sends exactly `{"prefixes": ["www.vitormach.dev/Doom-Deck-Launcher/"]}` to `POST /zones/{id}/purge_cache`, validates the prefix and the zone id, retries only 429/5xx (three attempts) and requires `success: true`; 15 offline tests cover scope, skip/partial configuration, retries and secret-safe output |
 
 ## Verification run
 
@@ -83,6 +90,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | HTML parse | `html.parser` over the rendered template | no unclosed tags, no `@@…@@` placeholders left |
 | Render dry run | heredoc + `sed` with sample values | `.flatpakref` key/URL lines correct, no indentation |
 | OSTree layout roundtrip | local git repo with `repo/{config,objects,refs/heads/…,summary}`, committed and cloned | the clone loses `tmp`, `state`, `extensions`, `refs/mirrors`, `refs/remotes` (empty directories); the restore loop recreates all of them |
+| Purge helper tests | `python3 -m unittest -v test_purge_cloudflare_cache` in `scripts/flatpak/` | 15 tests pass: one-prefix payload without scheme, rejected prefixes, skip/partial configuration, bounded retries, API rejection, and no token in output |
 | Whitespace | `git diff --check` | pass |
 
 Not run, because there is no Flatpak runtime on the macOS dev host:
@@ -98,7 +106,8 @@ since expired.
 Still unproven in CI:
 
 - the incremental export over the existing `gh-pages` after restoring the OSTree layout;
-- the `pages: write` REST request, its wait and the served-file comparison.
+- the `pages: write` REST request, its wait and the served-file comparison;
+- the Cloudflare prefix purge end to end (credential wiring and API acceptance).
 
 The Pages endpoint itself was exercised against this repository: `POST /pages/builds` returned
 `queued` and the build for the `gh-pages` head `953ccd5` reached `built`. The most recent manual
@@ -121,6 +130,7 @@ implementation to execution. No private key material is reproduced here.
 | Pages trigger | Confirmed that `POST /repos/…/pages/builds` returns `queued` and the build for `953ccd5` (the `gh-pages` head) reached `built` in about 20 s. The workflow now requests this build explicitly, because a `GITHUB_TOKEN` push does not trigger Pages |
 | `summary.sig` format | Downloaded the published file: it starts with `ostree.gpgsigs`, an OSTree GVariant map, not a raw OpenPGP signature. The `gpg --verify` approach was removed; verification goes through Flatpak/OSTree with `--gpg-import` and normal GPG verification |
 | Signature smoke test | Review follow-up: the throwaway remote imports `packaging/flatpak/repo-key.gpg`, runs `remote-modify --gpg-verify` (which also enables summary verification for a remote without a collection ID) and installs with verification on |
+| Cloudflare purge | Owner supplied `CLOUDFLARE_CACHE_PURGE_TOKEN` (secret) and `CLOUDFLARE_ZONE_ID` (variable). After the Pages deployment the workflow purges the single prefix `www.vitormach.dev/Doom-Deck-Launcher/`; both settings missing skip, a partial setup fails. 15 offline tests cover the request scope and failure handling; the step has not run in CI yet |
 | Manual dispatch input | [39542355868](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39542355868) passed `0dd4749` (short SHA) as `ref`; `actions/checkout` resolved it as `refs/heads/0dd4749*` and failed before any build step. The input accepts a tag, a branch or a full 40-character SHA |
 
 CI history while getting there:
@@ -145,6 +155,9 @@ experimental; it is not a stable release and has no Flathub listing.
 - **Publishing a version is a release decision.** The workflow runs on `v*` tags or by manual
   dispatch with a tag, a branch or a full 40-character SHA. Creating a tag triggers this channel,
   but nothing here approves a stable release.
+- **Cache invalidation is optional.** With both Cloudflare settings present the workflow purges one
+  prefix after the Pages deployment; without them it reports a skip and publication continues. A
+  partial setup fails on purpose.
 - **Deck validation is still open:** extracted DSDA-Doom with working GL/audio/pad, IWAD visibility,
   tarball-era import, OSK in Gaming Mode, launch from Steam.
 
