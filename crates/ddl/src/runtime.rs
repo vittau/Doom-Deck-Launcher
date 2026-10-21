@@ -484,8 +484,10 @@ impl Runtime {
                                     }
                                 }
                                 Some(Command::Play(_)) => {
-                                    self.screen = Screen::Setup;
-                                    self.focus = 50;
+                                    // Direct Play returns to the screen that started
+                                    // it; a run begun from Play setup returns there.
+                                    self.screen = self.return_to.0;
+                                    self.focus = self.return_to.1;
                                 }
                                 Some(Command::Import(..)) => {
                                     self.screen = Screen::Setup;
@@ -3153,12 +3155,17 @@ impl Runtime {
                                 b.logo(372., 170., 560., 128., false);
                                 b.label(960., 202., 228., 44., text(ui, T::AppVersion), 26.);
                                 b.label(960., 264., 228., 44., crate::cli::VERSION.into(), 22.);
+                                // Spec 064 R5: attribution and repository link stay
+                                // above the longer licence text, so they are visible
+                                // without scrolling a tall About panel.
+                                b.label(372., 306., 816., 32., text(ui, T::MadeBy), 20.);
+                                b.label(372., 342., 816., 32., text(ui, T::Repository), 20.);
                                 // Spec 059: the engine version is its own line,
                                 // then the sandbox state and, under Flatpak,
                                 // where DDL's updates come from (R1, R7).
                                 b.label(
                                     372.,
-                                    316.,
+                                    378.,
                                     816.,
                                     40.,
                                     s.engine.as_ref().map_or_else(
@@ -3169,22 +3176,19 @@ impl Runtime {
                                 );
                                 b.label(
                                     372.,
-                                    360.,
+                                    418.,
                                     816.,
                                     40.,
                                     sandbox_text(ui, &self.sandbox),
                                     22.,
                                 );
-                                let mut y = 404.;
+                                let mut y = 462.;
                                 if self.sandbox.is_flatpak() {
                                     b.label(372., y, 816., 56., text(ui, T::StoreUpdates), 20.);
                                     y += 64.;
                                 }
                                 // Spec 017, R6: credit the widescreen status bars.
                                 b.label(372., y, 816., 56., text(ui, T::StatusBarCredit), 20.);
-                                // Spec 064 R5: attribution and repository link.
-                                b.label(372., y + 68., 816., 32., text(ui, T::MadeBy), 20.);
-                                b.label(372., y + 104., 816., 32., text(ui, T::Repository), 20.);
                             }
                         }
                     }

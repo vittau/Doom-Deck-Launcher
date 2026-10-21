@@ -308,6 +308,10 @@ fn local_custom_library_home_missing_changed_and_delete_dialog() {
     assert!(ui.get_band_screenshot().is_empty());
     assert!(r.nodes.iter().any(|n| n.id == CUSTOM));
     write_png("026-home-custom.png", &render(&window));
+    // Spec 064 R1: Home's Continue starts the game; open the detail view from
+    // Library (where the entry keeps its inspect path) for the issue flows.
+    act(&mut r, &ui, Action::Tab(1));
+    assert_eq!(r.screen, Screen::Library);
     click(&mut r, &ui, CUSTOM);
     write_png("026-custom-detail.png", &render(&window));
     fs::remove_file(&files[0]).unwrap();
@@ -392,6 +396,55 @@ fn local_custom_library_home_missing_changed_and_delete_dialog() {
     );
     assert!(store.load_optional("night-maps-default").unwrap().is_some());
     assert!(files.iter().all(|p| p.is_file()));
+}
+
+#[test]
+fn home_continue_validates_custom_files_before_direct_play() {
+    if isolated("home_continue_validates_custom_files_before_direct_play") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (s, files) = custom(&env);
+    let store = ProfileStore::new(&env.paths.config, &env.paths.data);
+    let mut profile = store.load_optional("night-maps-default").unwrap().unwrap();
+    profile.touch(2000);
+    store.save(&profile).unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    act(&mut r, &ui, Action::Tab(0));
+    assert_eq!(r.screen, Screen::Home);
+    assert_eq!(r.focus, CUSTOM);
+
+    // Spec 064 R1: Home Continue is the direct Play action, and a missing user
+    // file opens the same actionable dialog instead of launching.
+    fs::remove_file(&files[0]).unwrap();
+    r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
+    r.sync(&ui);
+    click(&mut r, &ui, CUSTOM);
+    assert!(matches!(r.local.dialog, Some(Dialog::Issue(_, false))));
+    assert_eq!(r.focus, 900);
+    write_png("064-home-missing-file.png", &render(&window));
+    act(&mut r, &ui, Action::Back);
+    assert_eq!(r.focus, CUSTOM);
+
+    // A changed file is reported as changed, still before any launch.
+    fs::write(
+        &files[0],
+        include_bytes!("../../ddl-core/tests/fixtures/local/tiny.wad"),
+    )
+    .unwrap();
+    let mut changed = fs::read(&files[0]).unwrap();
+    let last = changed.len() - 1;
+    changed[last] ^= 1;
+    fs::write(&files[0], changed).unwrap();
+    r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
+    r.sync(&ui);
+    click(&mut r, &ui, CUSTOM);
+    assert!(matches!(r.local.dialog, Some(Dialog::Issue(_, true))));
+    assert_eq!(r.focus, 900);
+    write_png("064-home-changed-file.png", &render(&window));
 }
 
 #[test]
@@ -573,6 +626,14 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     r.snapshot = Some(snapshot);
     r.sync(&ui);
     assert!(r.nodes.iter().any(|n| n.label == "Base games"));
+    assert_eq!(
+        r.nodes
+            .iter()
+            .filter(|n| n.kind == 4 && n.screenshot.contains("/base-"))
+            .count(),
+        4,
+        "every base-game card carries its menu art"
+    );
     write_png("032-library-base-games.png", &render(&window));
     click(&mut r, &ui, BASE + 1);
     assert_eq!(r.local.view, Some(View::Base));
@@ -675,8 +736,14 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     r.focus = 1;
     r.sync(&ui);
     assert!(
-        r.nodes.iter().any(|n| n.label == "Doom II" && n.y == 400.),
-        "base games remain in mixed recent history"
+        !r.nodes.iter().any(|n| n.label == "Doom II" && n.y == 400.),
+        "Home keeps only the latest game; the lower recent list is gone"
+    );
+    assert!(
+        r.nodes
+            .iter()
+            .any(|n| n.id == 1 && n.label == text(&ui, T::Continue)),
+        "the newest catalog session still owns Continue"
     );
 }
 

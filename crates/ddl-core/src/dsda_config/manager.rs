@@ -506,6 +506,25 @@ mod tests {
         (temp, config, standalone)
     }
 
+    /// R6/R7 (spec 064): a fresh install starts on Auto aspect and the hardware
+    /// renderer, with the Deck resolution kept as the display fallback.
+    #[test]
+    fn a_fresh_install_provisions_auto_aspect_and_the_hardware_renderer() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+        let manager = DsdaConfigManager::with_template(&config, Template::embedded().unwrap())
+            .with_clock(Box::new(Arc::clone(&clock)));
+        manager.provision().expect("first use");
+        let active = read(&manager.active_path());
+        assert!(active.contains("render_aspect 0\n"), "{active}");
+        assert!(active.contains("videomode \"OpenGL\"\n"), "{active}");
+        assert!(
+            active.contains("screen_resolution \"1280x800\"\n"),
+            "the display fallback stays in the managed file:\n{active}"
+        );
+    }
+
+    /// R7 (spec 064): a fresh install starts on the hardware renderer baseline.
     #[test]
     fn provisioning_creates_the_private_baseline_and_leaves_dsda_alone() {
         let (_temp, config, standalone) = scratch();
