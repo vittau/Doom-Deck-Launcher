@@ -15,8 +15,12 @@ tag = sys.argv[1]
 if tag not in {
     "v0.0.5-screens.1", "v0.0.6-local", "v0.0.7-deck",
     "v0.0.8-upgrade", "v0.0.9-focus", "v0.0.10-audio",
+    "v0.0.11-polish",
 }:
     raise SystemExit("Review the scenario against the new tag before adding it to this generator")
+# Audio preferences and their serializer first shipped in spec 067. Keep the
+# reviewed set explicit: a tag joins it only after its serializers are checked.
+AUDIO_TAGS = {"v0.0.10-audio", "v0.0.11-polish"}
 scratch = root / ".scratch" / tag
 if not scratch.exists():
     subprocess.run(["git", "worktree", "add", "--detach", str(scratch), tag], cwd=root, check=True)
@@ -28,7 +32,7 @@ if tag == "v0.0.5-screens.1":
     start = scenario.index("        SetupStore::new(&data).save")
     end = scenario.index("    }\n}", start)
     scenario = scenario[:start] + scenario[end:]
-if tag != "v0.0.10-audio":
+if tag not in AUDIO_TAGS:
     # Audio preferences and their serializer first shipped in spec 067.
     start = scenario.index("        // AUDIO_START")
     end = scenario.index("        // AUDIO_END", start) + len("        // AUDIO_END\n")
