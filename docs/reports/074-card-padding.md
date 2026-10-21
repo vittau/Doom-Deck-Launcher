@@ -88,8 +88,25 @@ The shared `docs/screenshots/discover.png` is captured from the same sample
 state at scroll top with the category strip and first card row visible; the
 sample serial is disclosed here and is not a live fetch time.
 
+## Combined game/status baseline (integration fix)
+
+Spec 074 R1 leaves every card's information unchanged, but the roomier layout
+renders game and readiness, update or removal on one 18 px line:
+`<game> · <status>`. The recipe-change journey still looked for the old
+standalone `Update available` label (and later a standalone `No longer in the
+catalog` on the Library card), so it failed on the merged checkpoint even though
+the notice was visible. The journey now finds the intended installed card
+(id `CARD`) and its status slot (`x+28, y+258`, 328×24), asserts the exact
+combined text `DOOM II · Update available` or
+`DOOM II · No longer in the catalog`, and checks that the line is inside the
+800 px viewport. The detail screen keeps its own standalone removal copy.
+Rendered evidence: `020-library-update.png` and `020-library-removed.png`.
+
 ## Verification
 
+- `headless::journeys::recipe_changes_update_keep_and_removed`: the complete
+  update, Keep current, explicit Update and removed-catalog journey passes, with
+  the visible notice asserted on the intended card's combined status line.
 - `headless::journeys::cards_keep_roomy_insets_and_two_tag_rows`: production
   snapshot, no network. Focuses an installed Doomer Boards card with two wide tag
   labels (so two chip rows), then asserts the exact art/title geometry, the two
@@ -109,15 +126,13 @@ sample serial is disclosed here and is not a live fetch time.
   the sample catalog serial, and produces the scroll-top category capture.
 - `cargo fmt --all --check` and
   `cargo clippy --workspace --all-targets -- -D warnings`: clean.
-- `cargo test --workspace -- --test-threads=2`: 205 ddl tests pass,
-  including the updated `library_owner_scene_renders` contract (`y=322` for the
-  shifted mapset row). Two failures remain that are pre-existing on the merged
-  checkpoint `7e2add0` and reproduce there without these commits:
-  `headless::journeys::recipe_changes_update_keep_and_removed` (merged Library
-  update label) and
-  `services::release_state_tests::release_state_trees_remain_readable` (its
-  release fixture predates the `doomer-boards` tag). They are backend/release
-  fixture follow-ups, not caused by this UI change.
+- `cargo test --workspace -- --test-threads=2` is the root's final run. The
+  earlier full run had two failures; the recipe journey now passes, and the
+  remaining known failure
+  (`services::release_state_tests::release_state_trees_remain_readable`)
+  reproduces on the merged checkpoint `7e2add0` without these commits: its
+  release fixture predates the `doomer-boards` tag. It is a release-fixture
+  follow-up, not caused by this UI change.
 
 ## Limits
 
