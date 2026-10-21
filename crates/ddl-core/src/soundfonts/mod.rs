@@ -70,26 +70,84 @@ impl Default for Preferences {
     }
 }
 
+/// Why a soundfont operation failed, for the UI's actionable error text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Kind {
+    /// Invalid, missing or unreadable local state.
+    State,
+    /// A local write or read failed.
+    Storage,
+    /// The player cancelled the install.
+    Cancelled,
+    /// A network or host-policy failure.
+    Network,
+    /// A size or hash did not match the reviewed values.
+    Checksum,
+    /// The archive was rejected as unsafe or malformed.
+    UnsafeArchive,
+}
+
 #[derive(Debug)]
-pub struct Error(String);
+pub struct Error {
+    kind: Kind,
+    message: String,
+}
+impl Error {
+    /// Whether the failure was a player cancel.
+    #[must_use]
+    pub fn kind(&self) -> Kind {
+        self.kind
+    }
+}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.message)
     }
 }
 impl std::error::Error for Error {}
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Self(e.to_string())
+        Self {
+            kind: Kind::Storage,
+            message: e.to_string(),
+        }
     }
 }
 impl From<crate::downloads::Error> for Error {
     fn from(e: crate::downloads::Error) -> Self {
-        Self(e.to_string())
+        use crate::downloads::Error as Download;
+        let kind = match &e {
+            Download::Cancelled => Kind::Cancelled,
+            Download::Network { .. }
+            | Download::Stalled { .. }
+            | Download::TooSlow { .. }
+            | Download::HttpStatus { .. }
+            | Download::NotHttps { .. }
+            | Download::HostNotAllowed { .. }
+            | Download::InvalidUrl { .. }
+            | Download::TooManyRedirects { .. } => Kind::Network,
+            Download::HashMismatch { .. } | Download::SizeExceeded { .. } => Kind::Checksum,
+            Download::ArchiveCorrupt { .. }
+            | Download::UnsupportedCompression { .. }
+            | Download::MemberMissing { .. }
+            | Download::MemberNotAFile { .. }
+            | Download::UnsafeMember { .. }
+            | Download::MemberConflict { .. }
+            | Download::LimitExceeded { .. } => Kind::UnsafeArchive,
+            Download::Io { .. } => Kind::Storage,
+            _ => Kind::State,
+        };
+        Self {
+            kind,
+            message: e.to_string(),
+        }
     }
 }
 fn invalid(message: &str) -> Error {
-    Error(message.into())
+    Error {
+        kind: Kind::State,
+        message: message.into(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -392,7 +450,7 @@ fn check_cancel(cancel: &CancellationToken) -> Result<(), Error> {
 }
 /// Validate every entry, including files we do not install.
 fn inspect_archive(path: &Path, cancel: &CancellationToken) -> Result<(), Error> {
-    let mut zip = zip::ZipArchive::new(File::open(path)?).map_err(|e| Error(e.to_string()))?;
+    let mut zip = zip::ZipArchive::new(File::open(path)?).map_err(|e| invalid(&e.to_string()))?;
     if zip.len() > limits().max_member_count || zip.len() != declared_entry_count(path)? {
         return Err(invalid("Too many ZIP entries"));
     }
@@ -400,8 +458,8 @@ fn inspect_archive(path: &Path, cancel: &CancellationToken) -> Result<(), Error>
     let mut total = 0u64;
     for index in 0..zip.len() {
         check_cancel(cancel)?;
-        let entry = zip.by_index(index).map_err(|e| Error(e.to_string()))?;
-        let name = entry.name().map_err(|e| Error(e.to_string()))?;
+        let entry = zip.by_index(index).map_err(|e| invalid(&e.to_string()))?;
+        let name = entry.name().map_err(|e| invalid(&e.to_string()))?;
         if name.is_empty()
             || name.starts_with('/')
             || name.contains(['\\', ':', '\0'])
@@ -530,7 +588,7 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, Error> {
     if file.metadata()?.len() > 16384 {
         return Err(invalid("Soundfont state exceeds size limit"));
     }
-    serde_json::from_reader(file.take(16385)).map_err(|e| Error(e.to_string()))
+    serde_json::from_reader(file.take(16385)).map_err(|e| invalid(&e.to_string()))
 }
 fn unique_name(prefix: &str) -> String {
     static NEXT: AtomicU64 = AtomicU64::new(0);
@@ -555,7 +613,7 @@ fn atomic_json(path: &Path, value: &impl Serialize) -> Result<(), Error> {
             .write(true)
             .create_new(true)
             .open(&temporary)?;
-        file.write_all(&serde_json::to_vec_pretty(value).map_err(|e| Error(e.to_string()))?)?;
+        file.write_all(&serde_json::to_vec_pretty(value).map_err(|e| invalid(&e.to_string()))?)?;
         file.sync_all()?;
         fs::rename(&temporary, path)?;
         Ok(())

@@ -97,9 +97,43 @@ pub fn keys_for(choice: Choice, font: Option<&Path>) -> Result<Keys, Error> {
 
 /// Sets both audio values in `document`, preserving comments, unknown lines and
 /// every unrelated setting in place.
+///
+/// DSDA reads the last occurrence of a key, so duplicate audio lines would beat
+/// the explicit choice. Duplicates are collapsed into one canonical line.
 pub fn apply(document: &mut Document, keys: &Keys) {
-    document.set(MIDIPLAYER_KEY, Value::Str(keys.midiplayer.clone()));
-    document.set(SOUNDFONT_KEY, Value::Str(keys.soundfont.clone()));
+    put(document, MIDIPLAYER_KEY, &keys.midiplayer);
+    put(document, SOUNDFONT_KEY, &keys.soundfont);
+}
+
+fn put(document: &mut Document, name: &str, value: &str) {
+    let occurrences = document
+        .entries()
+        .filter(|entry| entry.name == name)
+        .count();
+    if occurrences > 1 {
+        document.remove(name);
+    }
+    document.set(name, Value::Str(value.to_owned()));
+}
+
+/// Whether `document` already holds exactly the requested values, with no
+/// duplicate line that could override them.
+///
+/// Used to avoid rewriting (and backing up) an unchanged choice before every
+/// launch. A non-string value never matches, so applying repairs it.
+#[must_use]
+pub fn matches(document: &Document, keys: &Keys) -> bool {
+    let single = |name: &str| {
+        document
+            .entries()
+            .filter(|entry| entry.name == name)
+            .count()
+            == 1
+    };
+    single(MIDIPLAYER_KEY)
+        && single(SOUNDFONT_KEY)
+        && document.get(MIDIPLAYER_KEY).and_then(Value::as_str) == Some(keys.midiplayer.as_str())
+        && document.get(SOUNDFONT_KEY).and_then(Value::as_str) == Some(keys.soundfont.as_str())
 }
 
 #[cfg(test)]
@@ -177,6 +211,26 @@ mod tests {
         let before = document.to_text();
         apply(&mut document, &keys);
         assert_eq!(document.to_text(), before);
+    }
+
+    #[test]
+    fn matching_detects_only_exact_string_values() {
+        let keys = keys_for(Choice::Default, None).unwrap();
+        assert!(matches(
+            &Document::parse("snd_midiplayer \"fluidsynth\"\nsnd_soundfont \"\"\n"),
+            &keys
+        ));
+        assert!(!matches(&Document::parse(""), &keys));
+        assert!(!matches(
+            &Document::parse(
+                "snd_midiplayer \"fluidsynth\"\nsnd_soundfont \"\"\nsnd_soundfont \"x\"\n"
+            ),
+            &keys
+        ));
+        assert!(!matches(
+            &Document::parse("snd_midiplayer 5\nsnd_soundfont \"\"\n"),
+            &keys
+        ));
     }
 
     #[test]

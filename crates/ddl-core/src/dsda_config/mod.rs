@@ -26,7 +26,9 @@ mod template;
 use std::io;
 
 pub use guard::{GuardError, LOCK_FILE, PidLiveness, RunGuard, SystemLiveness, recorded_pid};
-pub use manager::{Clock, DSDA_DIR, DsdaConfigManager, Migration, Provision, Reset, SystemClock};
+pub use manager::{
+    AudioApply, Clock, DSDA_DIR, DsdaConfigManager, Migration, Provision, Reset, SystemClock,
+};
 pub use merge::{MergeResult, merge};
 pub use overrides::{ALLOWED_KEYS, OverrideError, Overrides};
 pub use state::{Conflict, State, shorten_home};

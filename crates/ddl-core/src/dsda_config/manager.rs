@@ -84,6 +84,15 @@ pub struct Reset {
     pub backup: PathBuf,
 }
 
+/// What [`DsdaConfigManager::apply_audio`] did (spec 067, R5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AudioApply {
+    /// Whether the active file changed.
+    pub changed: bool,
+    /// The pre-change backup, when a write happened.
+    pub backup: Option<PathBuf>,
+}
+
 /// DDL's private DSDA-Doom configuration manager.
 pub struct DsdaConfigManager {
     dir: PathBuf,
@@ -321,6 +330,48 @@ impl DsdaConfigManager {
         })?;
 
         Ok(Reset { backup })
+    }
+
+    /// Applies the two MIDI soundfont keys between engine runs (spec 067, R5).
+    ///
+    /// The explicit Audio choice owns only `snd_midiplayer` and `snd_soundfont`;
+    /// comments, DSDA-generated keys and every unrelated setting survive. When
+    /// the active file already holds the requested values nothing is written, so
+    /// an unchanged choice never rotates backups. A change is backed up first.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::RunActive`] while an engine run is active, and
+    /// [`Error::Io`] when the active file is missing or cannot be written.
+    pub fn apply_audio(&self, keys: &crate::soundfonts::engine::Keys) -> Result<AudioApply, Error> {
+        self.ensure_no_run()?;
+        let active_path = self.active_path();
+        let text = fs::read_to_string(&active_path)?;
+        let mut document = Document::parse(&text);
+        if crate::soundfonts::engine::matches(&document, keys) {
+            return Ok(AudioApply {
+                changed: false,
+                backup: None,
+            });
+        }
+        crate::soundfonts::engine::apply(&mut document, keys);
+        let now = self.clock.now_unix_secs();
+        let backup = backups::create(
+            &self.backups_dir(),
+            &active_path,
+            now,
+            &self.template.template_version,
+        )?;
+        let text = document.to_text();
+        self.write_atomic(&active_path, text.as_bytes())?;
+        self.write_atomic(
+            &self.base_path(&self.template.template_version),
+            text.as_bytes(),
+        )?;
+        Ok(AudioApply {
+            changed: true,
+            backup: Some(backup),
+        })
     }
 
     /// The diagnostics snapshot (R8).
@@ -1176,6 +1227,107 @@ mod tests {
         let state = manager.state().expect("state");
         assert_eq!(state.active_file, manager.active_path());
         assert!(state.active_file_display(home).starts_with("~/"));
+    }
+
+    /// Spec 067 R5: the two Audio keys are written between runs, backed up,
+    /// and leave comments, unknown keys and every unrelated setting alone.
+    #[test]
+    fn applying_audio_writes_only_its_two_keys_and_is_idempotent() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+        let manager = manager(&config, template("1", &[("use_mouse", 1)]), &clock);
+        manager.provision().expect("first use");
+        let edited = "# player comment\nuse_mouse 1\nsnd_midiplayer \"sdl\"\nunknown_key 7\n";
+        fs::write(manager.active_path(), edited).expect("edit");
+
+        let keys = crate::soundfonts::engine::keys_for(crate::soundfonts::Choice::Default, None)
+            .expect("native keys");
+        let applied = manager.apply_audio(&keys).expect("apply");
+        assert!(applied.changed);
+        let backup = applied.backup.clone().expect("a backup");
+        assert_eq!(read(&backup), edited, "the backup is the pre-change file");
+
+        let after = read(&manager.active_path());
+        assert!(after.contains("# player comment\n"), "{after}");
+        assert!(after.contains("use_mouse 1\n"), "{after}");
+        assert!(after.contains("snd_midiplayer \"fluidsynth\"\n"), "{after}");
+        assert!(after.contains("snd_soundfont \"\"\n"), "{after}");
+        assert!(after.contains("unknown_key 7\n"), "{after}");
+        assert_eq!(read(&manager.base_path("1")), after);
+
+        let again = manager.apply_audio(&keys).expect("apply again");
+        assert!(
+            !again.changed,
+            "an unchanged choice does not rotate backups"
+        );
+        assert!(again.backup.is_none());
+        assert_eq!(
+            fs::read_dir(manager.backups_dir())
+                .expect("backups")
+                .count(),
+            1
+        );
+    }
+
+    /// Spec 067 R5: no write may happen while DSDA is running.
+    #[test]
+    fn applying_audio_is_refused_while_an_engine_run_is_active() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+        let manager = manager(&config, template("1", &[("use_mouse", 1)]), &clock);
+        manager.provision().expect("first use");
+        let before = read(&manager.active_path());
+        let guard = manager.run_guard().expect("acquire run guard");
+        let keys = crate::soundfonts::engine::keys_for(crate::soundfonts::Choice::Default, None)
+            .expect("native keys");
+        assert!(matches!(
+            manager.apply_audio(&keys),
+            Err(Error::RunActive { .. })
+        ));
+        assert_eq!(read(&manager.active_path()), before);
+        guard.end().expect("release");
+    }
+
+    /// Spec 067 R5: an explicit Audio choice survives a template migration,
+    /// because the template does not own the two soundfont keys.
+    #[test]
+    fn an_explicit_audio_choice_survives_a_template_migration() {
+        let (_temp, config, _) = scratch();
+        let clock = TestClock::new();
+        let first = manager(&config, template("1", &[("use_mouse", 1)]), &clock);
+        first.provision().expect("first use");
+        let keys = crate::soundfonts::engine::keys_for(
+            crate::soundfonts::Choice::Arachno,
+            Some(Path::new("/data/my fonts/arachno.sf2")),
+        )
+        .expect("arachno keys");
+        first.apply_audio(&keys).expect("apply");
+
+        let second = manager(&config, template("2", &[("use_mouse", 2)]), &clock);
+        let migration = second.migrate().expect("migrate");
+        assert!(migration.migrated);
+        let merged = read(&second.active_path());
+        assert!(merged.contains("use_mouse 2\n"), "{merged}");
+        assert!(
+            merged.contains("snd_midiplayer \"fluidsynth\"\n"),
+            "the explicit choice is not reset by a migration:\n{merged}"
+        );
+        assert!(
+            merged.contains("snd_soundfont \"/data/my fonts/arachno.sf2\"\n"),
+            "the explicit choice is not reset by a migration:\n{merged}"
+        );
+    }
+
+    #[test]
+    fn the_baseline_template_does_not_own_the_audio_keys() {
+        let template = Template::embedded().expect("valid template");
+        assert!(
+            !template
+                .strings
+                .iter()
+                .any(|(key, _)| key == "snd_midiplayer" || key == "snd_soundfont"),
+            "the Audio choice owns these keys, not the baseline"
+        );
     }
 
     // Referenced by the rotation test above through the re-exported constant.
