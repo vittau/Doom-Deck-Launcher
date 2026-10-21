@@ -74,6 +74,14 @@ mod release_state_fixture {
         fs::create_dir_all(data.join("engines/dsda-doom")).unwrap();
         engine.save(&data.join("engines/dsda-doom/installed.json")).unwrap();
         DsdaConfigManager::new(&config).unwrap().provision().unwrap();
+        // AUDIO_START
+        // An explicit Default uses the release's production preferences writer
+        // without downloading or fabricating an installed soundfont.
+        Soundfonts::new(&Paths {
+            config: config.clone(), data: data.clone(),
+            cache: root.join("cache"), state: root.join("state"),
+        }).select(Choice::Default).unwrap();
+        // AUDIO_END
         SetupStore::new(&data).save(&CustomSetup::new(
             "fixture-custom", "My custom setup", CustomIwad::Identified { variant: "doom2-1.9".into() },
             Compatibility::Auto, 1700000000,
