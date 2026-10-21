@@ -26,7 +26,8 @@
 
 ## Verification
 
-Merged `origin/main` (`7772da8`) before final checks; the branch was already up to date.
+Merged `origin/main` through `783e3fc` before final checks (merge commit `22023c0`); the
+README change merged cleanly and the later checks ran on the merged tree.
 
 Reproduced with the pinned design tools (no new dependencies):
 
