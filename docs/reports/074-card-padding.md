@@ -127,12 +127,12 @@ Rendered evidence: `020-library-update.png` and `020-library-removed.png`.
 - `cargo fmt --all --check` and
   `cargo clippy --workspace --all-targets -- -D warnings`: clean.
 - `cargo test --workspace -- --test-threads=2` is the root's final run. The
-  earlier full run had two failures; the recipe journey now passes, and the
-  remaining known failure
-  (`services::release_state_tests::release_state_trees_remain_readable`)
-  reproduces on the merged checkpoint `7e2add0` without these commits: its
-  release fixture predates the `doomer-boards` tag. It is a release-fixture
-  follow-up, not caused by this UI change.
+  earlier full run's two failures are resolved in this tree: the recipe journey
+  passes with the combined assertion, and the integrated backend at `3568c86`
+  fixed the frozen-tags release guard
+  (`services::release_state_tests::release_state_trees_remain_readable` now
+  passes). The SIGIL resolver summary expectation was also updated for the new
+  copy (076). No known UI-related full-suite failure remains.
 
 ## Limits
 

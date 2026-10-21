@@ -51,6 +51,12 @@ slot.
   checks the sheet actions. This is the meaningful end-to-end check; the
   intermediate core copy test was removed because it only re-read the TOML
   fields already exercised here and in the recipe parser tests.
+- `cargo test -p ddl-core resolver::tests::summary_snapshot_for_the_three_reference_recipes`:
+  the SIGIL reference summary now expects the new `Normal episode (MIDI)`
+  content label; the launch path, complevel, skill, engine and the two other
+  reference recipes are untouched. This was the single copy-only expectation
+  the merged core suite exposed (`633 passed, 1 failed` before the update); no
+  resolver logic changed.
 - `DDL_TITLE_RECIPE=sigil title_fit_setup_and_components_first`: production
   fitter pixel audit of every SIGIL screen and component row; passes.
 - `cargo test -p ddl-core catalog::`: 107 passed.
