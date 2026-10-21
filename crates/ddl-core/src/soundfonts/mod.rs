@@ -22,6 +22,15 @@ pub const TERMS: &str = "https://www.arachnosoft.com/main/soundfont.php?document
 pub const AUTHOR: &str = "Maxime Abbey";
 pub const DOWNLOAD_BYTES: u64 = 143356181;
 pub const FONT_FILE: &str = "Arachno SoundFont - Version 1.0.sf2";
+/// Exact reviewed entry count and declared expansion of the author archive
+/// (`docs/research/midi-soundfonts.md`). Both are enforced before extraction.
+const ARCHIVE_ENTRIES: usize = 454;
+const EXPANDED_BYTES: u64 = 173559660;
+/// The reviewed archive's largest member: the SF2 itself.
+const LARGEST_MEMBER_BYTES: u64 = 155405818;
+/// The reviewed archive peaks at about 32:1. 64 leaves room for a future
+/// reviewed repack without trusting an unbounded expansion ratio.
+const MAX_COMPRESSION_RATIO: u64 = 64;
 const ZIP_HASH: &str = "5c0c573abe6c5e1a3ccceba5d52a4229db24283620c9a3eb1f403018e2aa22df";
 const FONT_HASH: &str = "9a57fb3b6714e69dda12390e351b087e81fc3b1eca15c6b4bbe172799f4cf3cd";
 const MEMBERS: [(&str, u64, &str); 3] = [
@@ -122,8 +131,11 @@ impl Soundfonts {
         Ok(prefs)
     }
     pub fn select(&self, choice: Choice) -> Result<(), Error> {
+        self.select_members(choice, &reviewed_members())
+    }
+    fn select_members(&self, choice: Choice, members: &[MemberRequest]) -> Result<(), Error> {
         if choice == Choice::Arachno {
-            self.verified_font()?;
+            self.verify_members(members)?;
         }
         atomic_json(
             &self.preferences,
@@ -133,19 +145,38 @@ impl Soundfonts {
             },
         )
     }
-    pub fn effective(&self) -> Result<Effective, Error> {
-        let choice = self.preferences()?.choice;
+    pub fn effective(&self) -> Effective {
+        self.effective_with(&reviewed_members())
+    }
+    fn effective_with(&self, members: &[MemberRequest]) -> Effective {
+        let preferences = match self.preferences() {
+            Ok(preferences) => preferences,
+            // A damaged preferences file must never block a launch or make DDL
+            // overwrite a configuration it cannot interpret. Leave the engine
+            // alone and say so in Settings.
+            Err(_) => {
+                return Effective {
+                    choice: None,
+                    path: None,
+                    warning: Some(
+                        "Audio settings could not be read. Using the engine's current MIDI configuration."
+                            .into(),
+                    ),
+                };
+            }
+        };
+        let choice = preferences.choice;
         if choice != Some(Choice::Arachno) {
-            return Ok(Effective {
+            return Effective {
                 choice,
                 path: None,
                 warning: None,
-            });
+            };
         }
-        match self.verified_font() {
-            Ok(path) => Ok(Effective { choice, path: Some(path), warning: None }),
-            Err(_) => Ok(Effective { choice: Some(Choice::Default), path: None,
-                warning: Some("Arachno is missing or damaged. Using Default; reinstall Arachno in Audio settings.".into()) }),
+        match self.verify_members(members) {
+            Ok(path) => Effective { choice, path: Some(path), warning: None },
+            Err(_) => Effective { choice: Some(Choice::Default), path: None,
+                warning: Some("Arachno is missing or damaged. Using Default; reinstall Arachno in Audio settings.".into()) },
         }
     }
     /// Snapshot-only verification cache. Launches use `verified_font` to hash
@@ -176,6 +207,9 @@ impl Soundfonts {
         Ok(path)
     }
     fn file_stamps(&self) -> Result<Vec<FileStamp>, Error> {
+        self.file_stamps_for(&reviewed_members())
+    }
+    fn file_stamps_for(&self, members: &[MemberRequest]) -> Result<Vec<FileStamp>, Error> {
         let pointer = self.root.join("installed.json");
         let installed: Installed = read_json(&pointer)?;
         if installed.schema_version != 1
@@ -189,9 +223,9 @@ impl Soundfonts {
         }
         let mut paths = vec![pointer];
         paths.extend(
-            MEMBERS
+            members
                 .iter()
-                .map(|m| self.root.join(&installed.generation).join(m.0)),
+                .map(|m| self.root.join(&installed.generation).join(&m.path)),
         );
         paths
             .iter()
@@ -242,6 +276,22 @@ impl Soundfonts {
         let font = fs::canonicalize(font)?;
         config_path(&font)?;
         Ok(font)
+    }
+    /// Cheap Settings-snapshot check: the pointer and every reviewed file exist
+    /// at the reviewed sizes and no path component is a symlink. It does not
+    /// hash; `select` and every launch use [`Soundfonts::verified_font`].
+    pub fn install_present(&self) -> bool {
+        self.install_present_with(&reviewed_members())
+    }
+    fn install_present_with(&self, members: &[MemberRequest]) -> bool {
+        let Ok(stamps) = self.file_stamps_for(members) else {
+            return false;
+        };
+        stamps.len() == members.len() + 1
+            && stamps[1..]
+                .iter()
+                .zip(members)
+                .all(|(stamp, member)| member.expected_size.is_none_or(|size| stamp.len == size))
     }
     /// Run on a worker thread. UI owns the single-download guard.
     pub fn install(
@@ -327,10 +377,10 @@ fn reviewed_members() -> Vec<MemberRequest> {
 }
 fn limits() -> ExtractLimits {
     ExtractLimits {
-        max_total_uncompressed: 173559660,
-        max_member_uncompressed: 155405818,
-        max_member_count: 454,
-        max_compression_ratio: 200,
+        max_total_uncompressed: EXPANDED_BYTES,
+        max_member_uncompressed: LARGEST_MEMBER_BYTES,
+        max_member_count: ARCHIVE_ENTRIES,
+        max_compression_ratio: MAX_COMPRESSION_RATIO,
         max_nesting_depth: 0,
     }
 }
@@ -517,3 +567,5 @@ fn atomic_json(path: &Path, value: &impl Serialize) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests;
+
+pub mod engine;

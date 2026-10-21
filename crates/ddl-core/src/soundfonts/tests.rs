@@ -70,7 +70,7 @@ fn preferences_default_explicit_default_and_restart() {
     let dir = tempfile::tempdir().unwrap();
     let fonts = service(dir.path());
     assert_eq!(fonts.preferences().unwrap().choice, None);
-    assert_eq!(fonts.effective().unwrap().choice, None);
+    assert_eq!(fonts.effective().choice, None);
     fonts.select(Choice::Default).unwrap();
     assert_eq!(
         service(dir.path()).preferences().unwrap().choice,
@@ -191,7 +191,7 @@ fn selected_missing_or_corrupt_font_falls_back_without_losing_selection() {
         },
     )
     .unwrap();
-    let effective = fonts.effective().unwrap();
+    let effective = fonts.effective();
     assert_eq!(effective.choice, Some(Choice::Default));
     assert_eq!(effective.path, None);
     assert!(effective.warning.unwrap().contains("reinstall"));
@@ -356,4 +356,134 @@ fn cancelling_at_extraction_boundary_leaves_previous_install_intact() {
             .is_err()
     );
     assert_eq!(fonts.verify_members(&members).unwrap(), previous);
+}
+
+#[test]
+fn explicit_arachno_selection_survives_restart_and_returns_the_verified_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = service(dir.path());
+    let font = sf2();
+    let (path, bytes) = archive(dir.path(), &font);
+    let members = members(&font);
+    install(&fonts, &path, &bytes, &members).unwrap();
+    fonts.select_members(Choice::Arachno, &members).unwrap();
+
+    let effective = fonts.effective_with(&members);
+    assert_eq!(effective.choice, Some(Choice::Arachno));
+    assert_eq!(
+        effective.path,
+        Some(fonts.verify_members(&members).unwrap()),
+        "the explicit choice owns the checked absolute path"
+    );
+    assert!(effective.warning.is_none());
+
+    let restarted = service(dir.path());
+    assert_eq!(
+        restarted.preferences().unwrap().choice,
+        Some(Choice::Arachno)
+    );
+    assert_eq!(
+        restarted.effective_with(&members).path,
+        effective.path,
+        "a restart restores the selection"
+    );
+
+    fs::write(&effective.path.unwrap(), b"RIFF\x04\0\0\0sfbx").unwrap();
+    assert!(
+        restarted.select_members(Choice::Arachno, &members).is_err(),
+        "a damaged font is never selectable"
+    );
+    assert_eq!(
+        restarted.effective_with(&members).choice,
+        Some(Choice::Default),
+        "a damaged selected font falls back, keeping the persisted selection"
+    );
+    assert_eq!(
+        restarted.preferences().unwrap().choice,
+        Some(Choice::Arachno)
+    );
+}
+
+#[test]
+fn install_present_checks_pointer_and_sizes_but_is_not_a_verification() {
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = service(dir.path());
+    let font = sf2();
+    let (path, bytes) = archive(dir.path(), &font);
+    let members = members(&font);
+    assert!(!fonts.install_present_with(&members));
+    install(&fonts, &path, &bytes, &members).unwrap();
+    assert!(fonts.install_present_with(&members));
+
+    // Same length, different bytes: the cheap snapshot still calls it present,
+    // while the launch-grade check rejects it.
+    let installed = fonts.verify_members(&members).unwrap();
+    fs::write(&installed, b"RIFF\x04\0\0\0sfbx").unwrap();
+    assert!(fonts.install_present_with(&members));
+    assert!(fonts.verify_members(&members).is_err());
+    fs::remove_file(installed).unwrap();
+    assert!(
+        !fonts.install_present_with(&members),
+        "a missing reviewed file"
+    );
+}
+
+#[test]
+fn corrupt_audio_settings_preserve_the_engine_and_report_a_warning() {
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = service(dir.path());
+    fs::create_dir_all(&fonts.preferences.parent().unwrap()).unwrap();
+    fs::write(&fonts.preferences, b"{ not json").unwrap();
+    let effective = fonts.effective();
+    assert_eq!(
+        effective.choice, None,
+        "DDL writes nothing it cannot interpret"
+    );
+    assert_eq!(effective.path, None);
+    let warning = effective.warning.unwrap();
+    assert!(warning.contains("could not be read"), "{warning}");
+    assert!(fonts.preferences().is_err());
+    fonts.select(Choice::Default).unwrap();
+    assert_eq!(
+        fonts.preferences().unwrap().choice,
+        Some(Choice::Default),
+        "the player can still make an explicit choice"
+    );
+}
+
+#[test]
+fn reviewed_source_constants_match_the_pinned_research() {
+    assert_eq!(
+        SOURCE,
+        "https://www.dropbox.com/s/2rnpya9ecb9m4jh/arachno-soundfont-10-sf2.zip?dl=1"
+    );
+    assert_eq!(
+        TERMS,
+        "https://www.arachnosoft.com/main/soundfont.php?documentation="
+    );
+    assert_eq!(AUTHOR, "Maxime Abbey");
+    assert_eq!(DOWNLOAD_BYTES, 143356181);
+    assert_eq!(ZIP_HASH.len(), 64);
+    assert_eq!(FONT_HASH.len(), 64);
+    assert_eq!(MEMBERS[0].1, 155405818);
+    assert_eq!(MEMBERS[1].1, 3388);
+    assert_eq!(MEMBERS[2].1, 441987);
+    let limits = limits();
+    assert_eq!(limits.max_total_uncompressed, 173559660);
+    assert_eq!(limits.max_member_uncompressed, 155405818);
+    assert_eq!(limits.max_member_count, 454);
+    assert_eq!(limits.max_nesting_depth, 0);
+    assert!(limits.max_compression_ratio <= 64);
+}
+
+#[test]
+fn rejects_member_expansion_beyond_the_reviewed_compression_ratio() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("bomb.zip");
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    zip.start_file("filler.bin", options).unwrap();
+    zip.write_all(&vec![0u8; 256 * 1024]).unwrap();
+    fs::write(&path, zip.finish().unwrap().into_inner()).unwrap();
+    assert!(inspect_archive(&path, &CancellationToken::new()).is_err());
 }
