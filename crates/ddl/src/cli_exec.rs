@@ -1437,6 +1437,7 @@ exit 1
             reviewed,
             runner,
             engine_response_timeout: None,
+            soundfont_members: None,
         });
         Fixture {
             env: Environment {

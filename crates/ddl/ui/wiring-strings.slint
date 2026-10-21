@@ -232,4 +232,19 @@ export global WiringStrings {
     out property <string> flatpak-sandbox-no: @tr("Flatpak sandbox: no");
     out property <string> store-updates: @tr("DDL updates come from Discover (Flathub). DSDA-Doom updates stay in Settings, Engine.");
     out property <string> not-visible: @tr("{} is not visible to the Flatpak — see the guide", root.value);
+
+    // Spec 067: Settings → Audio.
+    out property <string> audio: @tr("Audio");
+    out property <string> audio-title: @tr("MIDI soundfont");
+    out property <string> audio-help: @tr("Used for MIDI music on the next launch.");
+    out property <string> audio-default: @tr("Default");
+    out property <string> audio-default-help: @tr("DSDA-Doom's built-in soundfont.");
+    out property <string> audio-arachno: @tr("Arachno SoundFont 1.0");
+    out property <string> audio-not-installed: @tr("Not installed");
+    out property <string> audio-download: @tr("Download Arachno");
+    out property <string> audio-reinstall: @tr("Reinstall");
+    out property <string> audio-custom: @tr("Custom engine setting");
+    out property <string> audio-custom-help: @tr("A MIDI backend or soundfont was set outside DDL. Choose Default or Arachno to replace it.");
+    out property <string> audio-terms: @tr("Original terms and documentation");
+    out property <string> audio-link-failed: @tr("Could not open the link.");
 }

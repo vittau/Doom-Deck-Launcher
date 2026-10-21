@@ -31,6 +31,12 @@ const LARGEST_MEMBER_BYTES: u64 = 155405818;
 /// The reviewed archive peaks at about 32:1. 64 leaves room for a future
 /// reviewed repack without trusting an unbounded expansion ratio.
 const MAX_COMPRESSION_RATIO: u64 = 64;
+/// Recoverable copy shared by the launch fallback and the Settings snapshot.
+pub const MISSING_FONT_WARNING: &str =
+    "Arachno is missing or damaged. Using Default; reinstall Arachno in Audio settings.";
+/// Shown when `audio.json` cannot be read; the engine configuration is kept.
+pub const UNREADABLE_PREFERENCES_WARNING: &str =
+    "Audio settings could not be read. Using the engine's current MIDI configuration.";
 const ZIP_HASH: &str = "5c0c573abe6c5e1a3ccceba5d52a4229db24283620c9a3eb1f403018e2aa22df";
 const FONT_HASH: &str = "9a57fb3b6714e69dda12390e351b087e81fc3b1eca15c6b4bbe172799f4cf3cd";
 const MEMBERS: [(&str, u64, &str); 3] = [
@@ -114,6 +120,8 @@ impl From<std::io::Error> for Error {
     }
 }
 impl From<crate::downloads::Error> for Error {
+    // The catch-all keeps a future download variant mapped safely.
+    #[allow(unreachable_patterns)]
     fn from(e: crate::downloads::Error) -> Self {
         use crate::downloads::Error as Download;
         let kind = match &e {
@@ -155,6 +163,9 @@ pub struct Soundfonts {
     root: PathBuf,
     preferences: PathBuf,
     cache: PathBuf,
+    /// The reviewed members this installation must contain. Production always
+    /// uses [`reviewed_members`]; test-support builds a tiny verified fixture.
+    members: Vec<MemberRequest>,
 }
 #[derive(Debug, Serialize, Deserialize)]
 struct Installed {
@@ -176,7 +187,33 @@ impl Soundfonts {
             root: paths.data.join("soundfonts"),
             preferences: paths.config.join("audio.json"),
             cache: paths.cache.clone(),
+            members: reviewed_members(),
         }
+    }
+    /// Test-support: a reviewed install whose members are a tiny local fixture
+    /// instead of the 143 MiB author archive. Release builds never compile it.
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_members(paths: &Paths, members: Vec<MemberRequest>) -> Self {
+        Self {
+            root: paths.data.join("soundfonts"),
+            preferences: paths.config.join("audio.json"),
+            cache: paths.cache.clone(),
+            members,
+        }
+    }
+    /// Test-support: stage and publish a fixture archive through the production
+    /// safety path without contacting the network.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn install_fixture(
+        &self,
+        package: &Path,
+        size: u64,
+        hash: Sha256,
+        cancel: &CancellationToken,
+        progress: &mut dyn FnMut(InstallProgress),
+    ) -> Result<(), Error> {
+        self.install_archive(package, size, hash, &self.members, cancel, progress)
     }
     pub fn preferences(&self) -> Result<Preferences, Error> {
         if !self.preferences.exists() {
@@ -189,7 +226,7 @@ impl Soundfonts {
         Ok(prefs)
     }
     pub fn select(&self, choice: Choice) -> Result<(), Error> {
-        self.select_members(choice, &reviewed_members())
+        self.select_members(choice, &self.members)
     }
     fn select_members(&self, choice: Choice, members: &[MemberRequest]) -> Result<(), Error> {
         if choice == Choice::Arachno {
@@ -204,7 +241,7 @@ impl Soundfonts {
         )
     }
     pub fn effective(&self) -> Effective {
-        self.effective_with(&reviewed_members())
+        self.effective_with(&self.members)
     }
     fn effective_with(&self, members: &[MemberRequest]) -> Effective {
         let preferences = match self.preferences() {
@@ -216,10 +253,7 @@ impl Soundfonts {
                 return Effective {
                     choice: None,
                     path: None,
-                    warning: Some(
-                        "Audio settings could not be read. Using the engine's current MIDI configuration."
-                            .into(),
-                    ),
+                    warning: Some(UNREADABLE_PREFERENCES_WARNING.into()),
                 };
             }
         };
@@ -232,9 +266,16 @@ impl Soundfonts {
             };
         }
         match self.verify_members(members) {
-            Ok(path) => Effective { choice, path: Some(path), warning: None },
-            Err(_) => Effective { choice: Some(Choice::Default), path: None,
-                warning: Some("Arachno is missing or damaged. Using Default; reinstall Arachno in Audio settings.".into()) },
+            Ok(path) => Effective {
+                choice,
+                path: Some(path),
+                warning: None,
+            },
+            Err(_) => Effective {
+                choice: Some(Choice::Default),
+                path: None,
+                warning: Some(MISSING_FONT_WARNING.into()),
+            },
         }
     }
     /// Snapshot-only verification cache. Launches use `verified_font` to hash
@@ -264,7 +305,7 @@ impl Soundfonts {
         Ok(path)
     }
     fn file_stamps(&self) -> Result<Vec<FileStamp>, Error> {
-        self.file_stamps_for(&reviewed_members())
+        self.file_stamps_for(&self.members)
     }
     fn file_stamps_for(&self, members: &[MemberRequest]) -> Result<Vec<FileStamp>, Error> {
         let pointer = self.root.join("installed.json");
@@ -303,7 +344,7 @@ impl Soundfonts {
             .collect()
     }
     pub fn verified_font(&self) -> Result<PathBuf, Error> {
-        self.verify_members(&reviewed_members())
+        self.verify_members(&self.members)
     }
     fn verify_members(&self, members: &[MemberRequest]) -> Result<PathBuf, Error> {
         let installed: Installed = read_json(&self.root.join("installed.json"))?;
@@ -338,7 +379,7 @@ impl Soundfonts {
     /// at the reviewed sizes and no path component is a symlink. It does not
     /// hash; `select` and every launch use [`Soundfonts::verified_font`].
     pub fn install_present(&self) -> bool {
-        self.install_present_with(&reviewed_members())
+        self.install_present_with(&self.members)
     }
     fn install_present_with(&self, members: &[MemberRequest]) -> bool {
         let Ok(stamps) = self.file_stamps_for(members) else {
@@ -372,7 +413,7 @@ impl Soundfonts {
             &package,
             DOWNLOAD_BYTES,
             Sha256::parse_hex(ZIP_HASH).unwrap(),
-            &reviewed_members(),
+            &self.members,
             cancel,
             progress,
         )

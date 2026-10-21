@@ -52,6 +52,7 @@ fn environment(root: &std::path::Path) -> Environment {
         reviewed: dsda::ReviewedList::embedded(),
         runner: Arc::new(dsda::FakeEngineRunner::new(dsda::LaunchExit::Clean)),
         engine_response_timeout: None,
+        soundfont_members: None,
     }));
     env
 }

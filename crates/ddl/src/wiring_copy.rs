@@ -223,6 +223,19 @@ pub enum Text {
     FlatpakSandboxNo,
     StoreUpdates,
     NotVisible,
+    Audio,
+    AudioTitle,
+    AudioHelp,
+    AudioDefault,
+    AudioDefaultHelp,
+    AudioArachno,
+    AudioNotInstalled,
+    AudioDownload,
+    AudioReinstall,
+    AudioCustom,
+    AudioCustomHelp,
+    AudioTerms,
+    AudioLinkFailed,
 }
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
@@ -446,6 +459,19 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::FlatpakSandboxNo => s.get_flatpak_sandbox_no(),
         Text::StoreUpdates => s.get_store_updates(),
         Text::NotVisible => s.get_not_visible(),
+        Text::Audio => s.get_audio(),
+        Text::AudioTitle => s.get_audio_title(),
+        Text::AudioHelp => s.get_audio_help(),
+        Text::AudioDefault => s.get_audio_default(),
+        Text::AudioDefaultHelp => s.get_audio_default_help(),
+        Text::AudioArachno => s.get_audio_arachno(),
+        Text::AudioNotInstalled => s.get_audio_not_installed(),
+        Text::AudioDownload => s.get_audio_download(),
+        Text::AudioReinstall => s.get_audio_reinstall(),
+        Text::AudioCustom => s.get_audio_custom(),
+        Text::AudioCustomHelp => s.get_audio_custom_help(),
+        Text::AudioTerms => s.get_audio_terms(),
+        Text::AudioLinkFailed => s.get_audio_link_failed(),
     }
 }
 pub fn value(ui: &AppWindow, key: Text, value: impl ToString) -> slint::SharedString {
