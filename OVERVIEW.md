@@ -78,7 +78,7 @@ DDL is **not** a DOOM engine, an Electron application, a general-purpose cross-s
 1. **First run** — DDL detects usable input, checks for DSDA-Doom and IWADs in user-authorized/configured locations, explains missing prerequisites, and prepares the versioned **DDL-managed DSDA configuration** without modifying a separately installed DSDA-Doom configuration. Steam Input/gyro setup is optional and explained in `README.md`, not in an in-app wizard.
 2. **Engine setup** — DDL offers an explicit **Install DSDA-Doom** action, downloads the official supported AppImage, verifies it, and stores it in its application data directory.
 3. **Find IWADs** — DDL scans safe user-selected paths for IWADs. It identifies games from content/known hashes where possible, rather than trusting filename alone. User supplies commercial data.
-4. **Discover** — DDL shows featured beginner-friendly mapsets and verified collections with cover/screenshot, credits, required base game, target complevel, and compatibility confidence.
+4. **Discover** — DDL shows compatible mapsets in the specific curated categories, with cover/screenshot, credits, required base game, target complevel, and compatibility confidence. The independent GitHub catalog is checked at each startup and its source date is shown in Discover (D-038).
 5. **Install** — DDL downloads from the author-approved/original mirror, verifies archive integrity when a trusted digest is known, safely extracts selected resources, resolves dependencies/load order, and creates an immutable installation manifest.
 6. **Play** — DDL selects the correct IWAD, prepares a clean launch profile and effective DSDA config, supplies the correct ordered arguments (including verified `-config` behavior), and starts DSDA-Doom. The player never needs to edit command lines.
 7. **Return** — DDL shows the installed item, offers **Continue / Play**, allows profile settings and replays, and preserves the exact engine/content version details used.
@@ -86,11 +86,11 @@ DDL is **not** a DOOM engine, an Electron application, a general-purpose cross-s
 ### Core screens
 
 - **Home / Continue:** recently played, continue, favorites, setup status.
-- **Discover:** curated categories (Featured, Beginner Friendly, Classics, Cacowards, Doomer Boards Projects); full online search added after curated browsing works.
+- **Discover:** curated categories in order: Cacowards, Megawads, Community Projects, Doomer Boards, Classics, Episodes, Challenging; Favorites follows as a personal filter. All and Featured are not navigation categories (072). Full online search is added after curated browsing works.
 - **Detail:** description, authorship, previews, source, dependencies, requirements, badges for verified/support status, Install/Play.
 - **Library:** installed mapsets and user-imported PWADs; filter/search with on-screen keyboard only if needed.
 - **Profile / Game Options:** game and skill selection, play mode, pistol-start availability, gameplay flags, advanced load order and compatibility information.
-- **Settings:** engine version/update/rollback, IWAD directories, downloads/storage, logs/diagnostics, DSDA configuration defaults/restore. **Do not add Steam Input setup or Steam layout management screens.**
+- **Settings:** engine version/update/rollback, IWAD directories, downloads/storage, logs/diagnostics, DSDA configuration defaults/restore, and Audio with Default/installed MIDI soundfont selection. **Do not add Steam Input setup or Steam layout management screens.**
 
 ### Interaction standards
 
