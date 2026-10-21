@@ -1,5 +1,9 @@
 # 065 — Launcher-themed project and Flatpak download page
 
+> **Current endpoint:** [doomdecklauncher.com](https://doomdecklauncher.com/). Spec 079 / D-039
+> supersede the original domain, URL layout and Flatpak ID recorded below. Original scope is
+> retained as historical context.
+
 **Status:** Complete — published 2026-10-21; physical Deck installation remains unvalidated · **Depends on:** 063 and a working signed remote
 **Origin:** owner, 2026-10-21: page at `https://www.vitormach.dev/Doom-Deck-Launcher/`, similar to
 README but with a more polished layout matching the launcher; include a Deck install link.

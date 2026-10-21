@@ -4,7 +4,7 @@
 
 **Available for Deck testing:** [v0.0.10-audio](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.10-audio)
 ships the Linux tarball and the signed Flatpak update at
-[the project site](https://www.vitormach.dev/Doom-Deck-Launcher/). Release run `39609918963` and
+[the project site](https://doomdecklauncher.com/). Release run `39609918963` and
 signed repository publication `39609918709` succeeded. Canonical site identifies app v0.0.10.
 
 - **Integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian Reliquary
@@ -27,15 +27,17 @@ signed repository publication `39609918709` succeeded. Canonical site identifies
   with rapid-input/failure handling (075), plain normal/COMPAT SIGIL edition labels (076), and
   an independent catalog check at every startup with its English UTC source date in Discover
   (077, D-038). Actual launch-time file verification remains intact.
-- **Current verification:** root reviewed all five refreshed shared screenshots; Discover shows
-  the full category strip, first card row and disclosed sample source date. Integrated formatting
-  and workspace Clippy passed. The combined workspace suite is running; the recipe-update
-  journey's old standalone-label assertion is being adapted to the combined game/status line
-  and will run separately. No new release, website deployment or cache purge has happened yet.
-- **Domain/identity transition requested:** `https://doomdecklauncher.com/` and
-  `com.doomdecklauncher.DoomDeckLauncher` are the accepted next identity (079, D-039).
-  No old-ID migration is required by the owner. Packaging/publication changes are in progress;
-  the owner is configuring DNS/Pages and the new Cloudflare zone is not configured in CI yet.
+- **Current verification:** all five refreshed shared screenshots reviewed; formatting and
+  workspace Clippy passed. The combined local matrix covers **898 unique Rust tests**: 889 in
+  the final workspace run excluding nine expensive title-fit checks, which passed in the earlier
+  run. Corrected CLI, recipe-update and SIGIL summary assertions passed in the final run.
+  Domain integration passed 23 site/transition tests, 23 purge tests, served URL checks and
+  descriptor validation. No new release or website deployment has happened yet.
+- **Domain/identity transition integrated:** `https://doomdecklauncher.com/` and
+  `com.doomdecklauncher.DoomDeckLauncher` (079, D-039). DNS/Pages HTTPS and certificate are
+  working; CI uses the new Cloudflare zone. The previous project-page URL responds with a 301
+  to the canonical site. The signed new-ID channel still awaits tagged publication; old-ID
+  installation migration is intentionally omitted by owner request.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.

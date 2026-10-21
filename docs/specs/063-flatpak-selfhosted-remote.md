@@ -1,5 +1,9 @@
 # 063 — Publish a signed Flatpak repository at vitormach.dev/ddl
 
+> **Current endpoint:** [doomdecklauncher.com](https://doomdecklauncher.com/). Spec 079 / D-039
+> supersede the original domain, URL layout and Flatpak ID recorded below. Original scope is
+> retained as historical context.
+
 **Status:** Ready · **Depends on:** 062
 **Origin:** operator, 2026-10-20: "instalação por URL simples para o Deck, com caminho pronto para
 Flathub depois se achar que vale." Decisions taken in that conversation: a dedicated repository
