@@ -48,10 +48,24 @@ jobs:
           ref: gh-pages
           path: published
 
-      - name: Validate and refresh the page
+      - name: Check for the signed application publication
+        id: publication
         run: |
           set -euo pipefail
           python3 -m unittest discover -s packaging/flatpak/site
+          if python3 scripts/flatpak/render-site.py --check-publication \
+            --output "$GITHUB_WORKSPACE/published" \
+            --app-id "$APP_ID" --site-base "$SITE_BASE"; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Page refresh deferred: publish the signed Flatpak channel for ${APP_ID} at ${SITE_BASE}/ first"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate and refresh the page
+        if: steps.publication.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
           python3 scripts/flatpak/render-site.py --refresh \
             --output "$GITHUB_WORKSPACE/published" \
             --app-id "$APP_ID" --site-base "$SITE_BASE"
@@ -65,6 +79,7 @@ jobs:
           done < <(git -C published diff --cached --name-only)
 
       - name: Publish page assets
+        if: steps.publication.outputs.ready == 'true'
         run: |
           set -euo pipefail
           if ! git -C published diff --cached --quiet; then
@@ -76,6 +91,7 @@ jobs:
           fi
 
       - name: Request a Pages build
+        if: steps.publication.outputs.ready == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -94,6 +110,7 @@ jobs:
           echo "Requested a Pages build for $commit"
 
       - name: Wait for the Pages deployment
+        if: steps.publication.outputs.ready == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -124,6 +141,7 @@ jobs:
           exit 1
 
       - name: Purge the Cloudflare cache prefix
+        if: steps.publication.outputs.ready == 'true'
         env:
           CLOUDFLARE_CACHE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_CACHE_PURGE_TOKEN }}
           CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
@@ -141,6 +159,7 @@ jobs:
           python3 scripts/flatpak/purge_cloudflare_cache.py --site-url "${SITE_BASE}/"
 
       - name: Verify the published files
+        if: steps.publication.outputs.ready == 'true'
         run: |
           set -euo pipefail
           # shellcheck source=scripts/flatpak/served_urls.sh

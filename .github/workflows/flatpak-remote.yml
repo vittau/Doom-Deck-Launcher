@@ -1,10 +1,9 @@
 # Publish a signed Flatpak repository to
-# https://doomdecklauncher.com/ (spec 063).
+# https://doomdecklauncher.com/ (specs 063 and 079).
 #
 # This is the install channel for Steam Deck users. The built app is exported to
 # an OSTree repository, signed with the dedicated repository key and committed to
-# this repository's `gh-pages` branch, which GitHub Pages serves under the
-# repository name. Users install with one command:
+# this repository's `gh-pages` branch, served at the custom domain root. Users install with one command:
 #
 #   flatpak install --user --from \
 #     https://doomdecklauncher.com/com.doomdecklauncher.DoomDeckLauncher.flatpakref

@@ -6,6 +6,7 @@ publish date, application ID and site base; asset sources stay in their existing
 repository homes so their provenance and licenses remain attached.
 """
 import argparse
+import configparser
 import hashlib
 from datetime import date
 from html import escape
@@ -84,16 +85,46 @@ def refresh(output, app_id, site_base):
     render(output, version, published, app_id, site_base)
 
 
+def publication_ready(output, app_id, site_base):
+    """Check bounded descriptor metadata before a page-only deployment.
+
+    This is an ordering guard, not cryptographic signature verification; the
+    signed publisher verifies the repository before publishing these files.
+    """
+    output = Path(output)
+    descriptor = output / f"{app_id}.flatpakref"
+    try:
+        if not descriptor.is_file() or descriptor.stat().st_size > 64 * 1024:
+            return False
+        if not all((output / name).is_file() for name in
+                   ("repo/summary", "repo/summary.sig", "index.html")):
+            return False
+        config = configparser.ConfigParser(interpolation=None)
+        config.read_string(descriptor.read_text())
+        ref = config["Flatpak Ref"]
+        return (ref.get("Name") == app_id and ref.get("Branch") == "stable"
+                and ref.get("Url") == site_base.rstrip("/") + "/repo/"
+                and bool(ref.get("GPGKey", "").strip()))
+    except (OSError, UnicodeError, configparser.Error, KeyError):
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--version")
     parser.add_argument("--refresh", action="store_true",
                         help="retain the app release from the existing published page")
+    parser.add_argument("--check-publication", action="store_true",
+                        help="exit 0 only when a signed publication for this identity exists")
     parser.add_argument("--date")
     parser.add_argument("--app-id", required=True)
     parser.add_argument("--site-base", required=True)
     args = parser.parse_args()
+    if args.check_publication:
+        if args.refresh or args.version or args.date:
+            parser.error("--check-publication cannot be combined with rendering options")
+        return 0 if publication_ready(args.output, args.app_id, args.site_base) else 1
     if args.refresh:
         if args.version or args.date:
             parser.error("--refresh cannot be combined with --version/--date")
@@ -105,4 +136,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -85,6 +86,9 @@ class IdentityTests(unittest.TestCase):
                 self.assertEqual(config[section]["Url"], f"{BASE}/repo/")
                 self.assertEqual(config[section]["Homepage"], f"{BASE}/")
                 self.assertEqual(config[section]["GPGKey"], "existing-public-key-fixture")
+                if section == "Flatpak Ref":
+                    self.assertEqual(config[section]["Name"], APP_ID)
+                    self.assertEqual(config[section]["Branch"], "stable")
             self.assertEqual(config[section]["DefaultBranch"], "stable")
 
     def test_refresh_creates_preserves_and_corrects_root_cname(self):
@@ -98,4 +102,43 @@ class IdentityTests(unittest.TestCase):
                     (out / "CNAME").write_text(existing)
                 renderer.refresh(out, APP_ID, BASE)
                 self.assertEqual((out / "CNAME").read_text(), "doomdecklauncher.com\n")
+
+    def test_bootstrap_defers_without_mutation_then_accepts_new_channel(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            renderer.render(out, "0.0.11", "2026-10-21", APP_ID, BASE)
+            (out / "repo").mkdir()
+            (out / "repo/summary").write_bytes(b"signed repository")
+            (out / "repo/summary.sig").write_bytes(b"signature")
+            descriptor = out / f"{APP_ID}.flatpakref"
+            valid = (f"[Flatpak Ref]\nName={APP_ID}\nBranch=stable\n"
+                     f"Url={BASE}/repo/\nGPGKey=fixture-public-key\n")
+            for content in (None, valid.replace(APP_ID, "com.example.Other"),
+                            valid.replace(f"{BASE}/repo/", "https://example.com/repo/"),
+                            valid.replace("Branch=stable", "Branch=master"),
+                            valid.replace("GPGKey=fixture-public-key", "GPGKey="),
+                            "not an ini file", valid + valid, "x" * (64 * 1024 + 1)):
+                if content is not None:
+                    descriptor.write_text(content)
+                before = {p.relative_to(out): p.read_bytes() for p in out.rglob("*") if p.is_file()}
+                self.assertFalse(renderer.publication_ready(out, APP_ID, BASE))
+                self.assertEqual(before, {p.relative_to(out): p.read_bytes()
+                                          for p in out.rglob("*") if p.is_file()})
+            descriptor.write_text(valid)
+            self.assertTrue(renderer.publication_ready(out, APP_ID, BASE))
+            (out / "repo/summary.sig").unlink()
+            self.assertFalse(renderer.publication_ready(out, APP_ID, BASE))
+
+    def test_bootstrap_cli_and_workflow_gate_all_publish_actions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run([sys.executable, str(ROOT / "scripts/flatpak/render-site.py"),
+                                     "--check-publication", "--output", directory,
+                                     "--app-id", APP_ID, "--site-base", BASE], check=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(list(Path(directory).iterdir()), [])
+        workflow = (ROOT / ".github/workflows/project-site.yml").read_text()
+        steps = workflow.split("      - name: ")[1:]
+        gated = [step for step in steps if "if: steps.publication.outputs.ready == 'true'" in step]
+        self.assertEqual(len(gated), 6)
+        self.assertIn("Page refresh deferred:", workflow)
 
