@@ -2,15 +2,24 @@
 
 ## Coordination checkpoint — 2026-10-21
 
-- **062:** Flatpak packaging and artifact workflow merged; first Linux runs exposed packaging
-  issues being corrected. Artifact run 39537960702 failed because its Python venv lacked PyYAML.
+- **062:** Flatpak packaging and artifact workflow merged; artifact run 39540926300 passed
+  after fixing the Python build environment. Main CI run 39540926348 also passed.
 - **063 / D-035:** signed self-hosted repository merged under direct owner supervision. Publish
-  run 39537960687 is building; publication and Deck install have not yet been confirmed.
+  run 39537960687 passed; Pages enabled and homepage/repository summary respond HTTP 200.
+  Public ref app ID, URL and embedded key checked with cache-busting (earlier 404 cached by CDN).
+  Reviewed signature-check and Pages-deployment fixes are merged. Publish run 39540938605
+  exposed empty OSTree directories lost through the gh-pages Git clone; the reviewed layout fix
+  is merged and awaits a new publication run. Deck install has not yet been confirmed.
   Approved site: `https://www.vitormach.dev/Doom-Deck-Launcher/`.
 - **064 / D-036:** `button-actions` worker implements the owner's direct Play, visual/copy and
   detected engine-resolution requests. No integration yet; headless review/checks remain.
-- **065:** launcher-themed project/download page planned after the current work stabilizes.
-  Its primary download is a signed `.flatpakref`, not a desktop entry.
+- **065:** launcher-themed project/download page in progress; the owner approved its early
+  headless visual direction. Its primary download is a signed `.flatpakref`, not a desktop entry.
+  Publication waits for final review and passing deployment.
+- **066:** Antaresian Reliquary recipe/research/screenshots worker started; description must warn
+  that MAP31 performs poorly on Deck because of its massive enemy count (owner request).
+- **067:** Audio soundfont spec/research ready: Default and optional verified Arachno download.
+  Implementation follows 064 to avoid concurrent Settings/config edits.
 
 The milestone tables below describe the last release; the checkpoint above records newer work.
 

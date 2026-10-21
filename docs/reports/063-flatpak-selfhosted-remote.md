@@ -38,13 +38,25 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
    `Branch=stable`. The artifact workflow keeps its existing `master` export untouched.
 4. **Incremental repository.** The job clones the previous `gh-pages`, exports into its `repo/`,
    signs, generates static deltas, prunes to three builds (`--prune-depth=2`) and pushes. Users get
-   delta updates instead of a full re-download.
+   delta updates instead of a full re-download. Git cannot store empty directories, so the clone
+   loses `tmp/`, `state/`, `extensions/`, `refs/mirrors/` and `refs/remotes/`; OSTree only creates
+   that layout for a new repository (`repo_create_at_internal` returns early when `objects/` exists),
+   so the job restores the full set before exporting. Without that, `build-update-repo` fails with
+   `Listing refs: opendir(refs/remotes): No such file or directory` while generating static deltas.
 5. **Reproducible commit metadata.** `flatpak build-export --timestamp=<tag date> --subject=<commit
    subject> --body=<sha>` ties the OSTree commit to the tagged source instead of the run clock; a
    re-run of the same tag is usually a no-op.
-6. **Smoke test before publication.** The exported commit is installed from a local
-   `--no-gpg-verify` remote and `ddl --version` is checked against `Cargo.toml` before anything is
-   pushed. A build that cannot start never reaches the site.
+6. **Signature verification before publication.** The exported repository is verified the way a
+   client would: the committed `repo-key.gpg` is imported into a throwaway remote and the app is
+   installed **with GPG verification on** (no `--no-gpg-verify`), so Flatpak/OSTree verify the
+   summary and the commit signatures. `repo/summary.sig` is not fed to `gpg` directly: OSTree stores
+   it as a GVariant map (the `ostree.gpgsigs` key, confirmed by inspecting the published file), not
+   as a raw OpenPGP signature. `ddl --version` is checked against `Cargo.toml`.
+7. **Pages deployment is explicit.** Pushes made with `GITHUB_TOKEN` do not trigger a Pages build,
+   so the workflow requests one through `POST /repos/{owner}/{repo}/pages/builds` (permission
+   `pages: write`, bounded with `--max-time`), waits for the build of the pushed commit and then
+   re-checks the served `.flatpakref` and `repo/summary` until the summary is byte-identical to the
+   exported one. A stale CDN copy is retried and fails the job on exhaustion.
 7. **Runtimes stay on Flathub.** `RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo`;
    only the app comes from this remote.
 8. **`main` untouched.** The publication writes exactly one branch. No GitHub Release is created;
@@ -54,8 +66,8 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 
 | Requirement | Evidence |
 | --- | --- |
-| R1 signed repository | `build-export --gpg-sign`, `build-update-repo --gpg-sign`, `GPGKey` in both generated ref files, `--no-gpg-verify` used only for the local smoke test |
-| R2 tag + manual pipeline | `on: push: tags: v*` and `workflow_dispatch` with a `ref` input; build → verify → sign → export → smoke → render → push |
+| R1 signed repository | `build-export --gpg-sign`, `build-update-repo --gpg-sign`, `GPGKey` in both generated ref files, and a smoke test that imports `packaging/flatpak/repo-key.gpg`, verifies `summary.sig` and installs with GPG verification enabled |
+| R2 tag + manual pipeline | `on: push: tags: v*` and `workflow_dispatch` with a `ref` input; build → verify → sign → export → smoke → render → push → explicit Pages build request → served-file check. `pages: write` is declared for the REST build request |
 | R3 stable URLs | Render step writes `<app-id>.flatpakref`, `ddl.flatpakrepo`, `index.html`, `.nojekyll`; `repo/` comes from `build-export`; paths verified by dry-running the render block locally |
 | R4 key handling | `scripts/flatpak/make-signing-key.sh`: isolated `GNUPGHOME`, `umask 077`, refuses to overwrite, never prints private material; workflow fails early without the secret and imports into `$RUNNER_TEMP/gnupg` |
 | R5 documentation | `docs/flatpak-remote.md` covers install/update/remove, setup, security, rotation, rollback and the Flathub path |
@@ -69,23 +81,55 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | YAML parse | `ruby -ryaml -e 'YAML.load_file(...)'` | parses (`on` read as a boolean key by YAML 1.1, as expected) |
 | HTML parse | `html.parser` over the rendered template | no unclosed tags, no `@@…@@` placeholders left |
 | Render dry run | heredoc + `sed` with sample values | `.flatpakref` key/URL lines correct, no indentation |
+| OSTree layout roundtrip | local git repo with `repo/{config,objects,refs/heads/…,summary}`, committed and cloned | the clone loses `tmp`, `state`, `extensions`, `refs/mirrors`, `refs/remotes` (empty directories); the restore loop recreates all of them |
 | Whitespace | `git diff --check` | pass |
 
-Not run, because there is no Flatpak runtime on the macOS dev host and the branch is not pushed:
+Not run, because there is no Flatpak runtime on the macOS dev host:
 
-- `flatpak-builder` build, GPG commit/summary signing, static delta generation.
 - `flatpak install --user --from …flatpakref` on a Linux host or Deck.
-- GitHub Pages serving `repo/` and the Pages build triggered by the `gh-pages` push.
 
-## What the owner must do
+The first publish run ([39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687))
+proved the build, the signed export, the existing smoke test and the `gh-pages` push on a Linux
+runner. Pages was enabled afterwards: the homepage and `repo/summary` are served (HTTP 200) and the
+`.flatpakref` is served with a cache-busting query, with key, URL and app id checked. The bare
+`.flatpakref` URL was still returning 404 from a Cloudflare negative cache at the time of writing.
 
-1. `brew install gnupg`, then `scripts/flatpak/make-signing-key.sh` and set the two secrets it
-   prints. Back up the secret file offline and delete the local copy.
-2. Run *Actions → Flatpak repository → Run workflow* once (ref `main` after merge). This creates
-   `gh-pages` and publishes the first build.
-3. Enable Pages: *Settings → Pages → Source: Deploy from a branch → `gh-pages` / `/`*. Later runs
-   keep the site up to date; the first run before Pages is enabled ends with a warning, not a
-   failure.
+The two review fixes (Flatpak-side signature verification and the explicit Pages build request)
+have not run in CI yet. The Pages endpoint itself was exercised against this repository: `POST
+/pages/builds` returned `queued` and the build for the `gh-pages` head `953ccd5` reached `built`.
+
+## Execution log (2026-10-21)
+
+The owner authorised the channel, the signing key and the Pages setup, so the work moved from
+implementation to execution. No private key material is reproduced here.
+
+| Step | Result |
+| --- | --- |
+| Repository key | Generated with `scripts/flatpak/make-signing-key.sh`; fingerprint `EF50C91A6703B13327AEAF00962CEACA8DE90556`; public half committed as `packaging/flatpak/repo-key.gpg`; secret stored as the `FLATPAK_GPG_PRIVATE_KEY` repository secret, fingerprint as `FLATPAK_GPG_KEY_ID`; backup kept outside the repository |
+| Integration | Spec 062 and this branch merged into `main` (`cfb7b36`, `c7efd6c`) and pushed to `origin/main`; later manifest fixes merged as `2e76897` and `9808e6b` |
+| First publish run | [39537960687](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960687) — success: build, signed export, smoke test, site render and push to `gh-pages` |
+| Pages | Enabled by the coordinator on the `gh-pages` root (`build_type: legacy`, source `gh-pages`); the homepage and `repo/summary` return HTTP 200, and the `.flatpakref` returns 200 with a cache-busting query (key, URL and app id checked). The bare URL still returns 404 from a Cloudflare negative cache; that is transient |
+| Pages trigger | Confirmed that `POST /repos/…/pages/builds` returns `queued` and the build for `953ccd5` (the `gh-pages` head) reached `built` in about 20 s. The workflow now requests this build explicitly, because a `GITHUB_TOKEN` push does not trigger Pages |
+| `summary.sig` format | Downloaded the published file: it starts with `ostree.gpgsigs`, an OSTree GVariant map, not a raw OpenPGP signature. The `gpg --verify` approach was removed; verification goes through Flatpak/OSTree with `--gpg-import` and normal GPG verification |
+| Signature smoke test | Review follow-up: the throwaway remote imports `packaging/flatpak/repo-key.gpg`, runs `remote-modify --gpg-verify` (which also enables summary verification for a remote without a collection ID) and installs with verification on |
+
+CI history while getting there:
+
+| Run | Workflow | Result | Cause and fix |
+| --- | --- | --- | --- |
+| [39537456681](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537456681) | Flatpak repository | failure | `cd rust-x86_64-unknown-linux-gnu` — flatpak-builder strips the archive's top-level directory. Fixed with `./install.sh` at the build root (`c72daf5`) |
+| [39537769632](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537769632) | Flatpak repository | failure | `eu-strip` is not in the 26.08 SDK and debuginfo extraction aborts the module. Fixed with `no-debuginfo: true` on both modules (`84ebd15`) |
+| [39537960702](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960702) | Flatpak (artifact) | failure | The manifest check imports `yaml`, but the generator venv installed only `aiohttp` and `tomlkit`. Fixed by pinning `PyYAML==6.0.3` (`2fa9dc3`) |
+| [39540926300](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39540926300) | Flatpak (artifact) | success | First green artifact run with the PyYAML pin |
+| [39540938605](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39540938605) | Flatpak repository | failure | After export: `Listing refs: opendir(refs/remotes): No such file or directory`. The `gh-pages` git roundtrip drops empty OSTree directories; fixed by restoring the layout after the clone |
+| 39537765626 / 39537765603 | Flatpak / CI | failure / cancelled | Same two manifest causes as above, superseded |
+
+## What the owner still has to do
+
+1. ~~Generate the key and set the secrets.~~ Done on 2026-10-21.
+2. ~~Publish once to create `gh-pages`.~~ Done by run 39537960687.
+3. **Enable Pages** (*Settings → Pages → Deploy from a branch → `gh-pages` / `/`*) and confirm the
+   public URLs. The coordinator took this over.
 4. Publish future versions with `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 ## Open questions for the coordinator

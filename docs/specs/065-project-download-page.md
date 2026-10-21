@@ -1,6 +1,6 @@
 # 065 — Launcher-themed project and Flatpak download page
 
-**Status:** Planned · **Depends on:** 063 and a working signed remote
+**Status:** In progress · **Depends on:** 063 and a working signed remote
 **Origin:** owner, 2026-10-21: page at `https://www.vitormach.dev/Doom-Deck-Launcher/`, similar to
 README but with a more polished layout matching the launcher; include a Deck install link.
 
@@ -25,6 +25,11 @@ necessary setup honestly and do not advertise unmeasured performance claims.
 - **R4:** Preserve signed remote URLs/key handling and publication workflow behavior. Render
   the actual version rather than inventing a release. Support desktop/mobile/Deck-sized
   viewports with readable contrast, visible keyboard focus and accessible link/button labels.
+- **R5:** Make the page discoverable and shareable with a descriptive document title, concise
+  search description, canonical approved URL and social preview using existing licensed assets.
+  Explain that it helps Steam DOOM owners play community modifications on Deck; do not imply
+  official Valve/id affiliation. The primary install path should use the graphical handler for
+  `.flatpakref`, with CLI details secondary and actual Deck validation clearly distinguished.
 
 ## Acceptance
 
@@ -32,5 +37,8 @@ Validate static HTML and links, inspect headless renders at desktop and narrow w
 verify the download link resolves to the intended signed ref. Review the design with the owner
 before merging a large visual change. Report at `docs/reports/065-project-download-page.md`.
 
-This is later work: stabilize current Flatpak CI and button-actions first. The provisional page
-remains functional until this task is dispatched. Never open visible windows or capture screen.
+The first signed remote build succeeded and the site is served (2026-10-21); design may now
+proceed independently of the button-actions implementation. Keep its application files untouched.
+Publication still depends on reviewed, passing deployment changes from 063 and a headless design
+review with the owner. The provisional page remains functional until integration.
+Never open visible windows or capture the screen — headless renders only.

@@ -40,9 +40,11 @@ on:
         default: main
         type: string
 
-# The only write is the push to `gh-pages`; `main` is never touched.
+# The only write is the push to `gh-pages`; `main` is never touched. The Pages
+# build request needs `pages: write` on the same token.
 permissions:
   contents: write
+  pages: write
 
 # Never cancel a half-finished publication; let a queued run follow it.
 concurrency:
@@ -212,6 +214,14 @@ jobs:
             echo "First publication: ${PAGES_BRANCH} does not exist yet"
           fi
           install -d "$site/repo"
+          # Git cannot store empty directories, so a fresh clone of the published
+          # branch loses the empty parts of the OSTree layout. OSTree only
+          # creates the layout for a new repository (ostree-repo.c returns early
+          # when objects/ exists), so restore the full set before exporting:
+          # tmp, state, extensions, refs/{heads,mirrors,remotes}, objects.
+          for dir in tmp state extensions refs/heads refs/mirrors refs/remotes objects; do
+            install -d "$site/repo/$dir"
+          done
 
       - name: Export and sign the repository
         run: |
@@ -236,15 +246,25 @@ jobs:
             "$site/repo"
           du -sh "$site/repo"
 
-      - name: Smoke-test the exported build
+      - name: Verify the signature and smoke-test the published build
         run: |
           set -euo pipefail
           site="$RUNNER_TEMP/site"
           install -d -m 0700 "$RUNNER_TEMP/xdg"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
-          # Local, throwaway remote: prove the exported commit starts before it
-          # is published. Signature verification is exercised by real clients.
-          flatpak --user remote-add --if-not-exists --no-gpg-verify ddl-smoke "$site/repo"
+
+          # OSTree stores the summary signature in repo/summary.sig as a GVariant
+          # (the `ostree.gpgsigs` map), not as a raw OpenPGP signature, so gpg
+          # cannot verify that file directly. Let Flatpak/OSTree verify it.
+          flatpak --user remote-add --if-not-exists \
+            --gpg-import=packaging/flatpak/repo-key.gpg ddl-smoke "$site/repo"
+          # With no collection ID, setting GPG verification also makes Flatpak
+          # write gpg-verify-summary=true for this remote (flatpak 1.18).
+          flatpak --user remote-modify --gpg-verify ddl-smoke
+          flatpak --user remote-ls --app ddl-smoke
+
+          # A fresh client using only the committed public key must install and
+          # run the export; no --no-gpg-verify path is allowed here.
           flatpak --user install -y --noninteractive ddl-smoke "${APP_ID}//stable"
           flatpak run --command=ddl "${APP_ID}//stable" --version | tee "$RUNNER_TEMP/version.txt"
           version="$(sed -n 's/^version *= *"\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
@@ -290,11 +310,10 @@ jobs:
           GPGKey=${public_key}
           EOF
 
-          sed -e "s|@@VERSION@@|${version}|g" \
-              -e "s|@@DATE@@|$(date -u +%Y-%m-%d)|g" \
-              -e "s|@@APP_ID@@|${APP_ID}|g" \
-              -e "s|@@SITE_BASE@@|${SITE_BASE}|g" \
-              packaging/flatpak/site/index.html > "$site/index.html"
+          python3 scripts/flatpak/render-site.py \
+            --output "$site" --version "$version" \
+            --date "$(date -u +%Y-%m-%d)" \
+            --app-id "$APP_ID" --site-base "$SITE_BASE"
           touch "$site/.nojekyll"
 
           # The published site carries only what we render here plus repo/.
@@ -326,19 +345,82 @@ jobs:
             push --quiet origin "$PAGES_BRANCH"
           echo "Published ${SITE_VERSION} to ${SITE_BASE}/"
 
-      - name: Check that Pages serves the ref (best effort)
+      - name: Request a Pages build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          url="${SITE_BASE}/${APP_ID}.flatpakref"
-          for attempt in 1 2 3 4 5 6; do
-            if curl -fsS --max-time 15 "$url" >/dev/null; then
-              echo "Served: $url"
+          # A push made with GITHUB_TOKEN does not trigger a Pages build, so ask
+          # for one explicitly through the documented REST endpoint. The token
+          # needs the `pages: write` permission declared above.
+          curl -fsS --max-time 20 -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds" \
+            | tee "$RUNNER_TEMP/pages-build.json"
+          commit="$(git -C "$RUNNER_TEMP/site" rev-parse HEAD)"
+          echo "PAGES_COMMIT=$commit" >> "$GITHUB_ENV"
+          echo "Requested a Pages build for $commit"
+
+      - name: Wait for the Pages deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds/latest"
+          field() {
+            python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1]) or "")' "$1"
+          }
+          for attempt in $(seq 1 48); do
+            body="$(curl -fsS --max-time 20 \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" "$api")"
+            status="$(printf '%s' "$body" | field status)"
+            commit="$(printf '%s' "$body" | field commit)"
+            if [ "$commit" = "$PAGES_COMMIT" ] && [ "$status" = "built" ]; then
+              echo "Pages built $commit"
               exit 0
             fi
-            echo "Waiting for GitHub Pages (attempt $attempt)..."
-            sleep 15
+            if [ "$commit" = "$PAGES_COMMIT" ] && [ "$status" = "errored" ]; then
+              echo "::error::Pages build failed for $commit: $body"
+              exit 1
+            fi
+            echo "Pages status for $PAGES_COMMIT: ${status:-unknown} (attempt $attempt)"
+            sleep 10
           done
-          echo "::warning::GitHub Pages has not served $url yet; check the Pages build for ${GITHUB_REPOSITORY}."
+          echo "::error::Pages did not build $PAGES_COMMIT within 8 minutes"
+          exit 1
+
+      - name: Verify the published files
+        run: |
+          set -euo pipefail
+          cache_bust="?v=${PAGES_COMMIT:0:12}"
+          ref_url="${SITE_BASE}/${APP_ID}.flatpakref${cache_bust}"
+          summary_url="${SITE_BASE}/repo/summary${cache_bust}"
+          served=0
+          for attempt in $(seq 1 12); do
+            # The served summary must be byte-identical to the one just exported;
+            # a stale CDN copy must never pass this check.
+            if curl -fsS --max-time 20 "$ref_url" -o "$RUNNER_TEMP/published.flatpakref" \
+               && curl -fsS --max-time 20 "$summary_url" -o "$RUNNER_TEMP/published.summary" \
+               && cmp -s "$RUNNER_TEMP/published.summary" "$RUNNER_TEMP/site/repo/summary"; then
+              served=1
+              break
+            fi
+            echo "Published files are not current yet (attempt $attempt)..."
+            sleep 10
+          done
+          if [ "$served" != 1 ]; then
+            echo "::error::the served .flatpakref or repo/summary did not converge to the exported files"
+            sha256sum "$RUNNER_TEMP/site/repo/summary" "$RUNNER_TEMP/published.summary" 2>/dev/null || true
+            exit 1
+          fi
+          grep -Fx "Name=${APP_ID}" "$RUNNER_TEMP/published.flatpakref"
+          grep -Fx "Url=${SITE_BASE}/repo/" "$RUNNER_TEMP/published.flatpakref"
+          grep -q '^GPGKey=' "$RUNNER_TEMP/published.flatpakref"
+          echo "Published files are served and consistent"
 
       - name: Write the job summary
         if: always()

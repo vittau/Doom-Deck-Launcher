@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Render the lean project page without touching the signed Flatpak repository.
+
+Only Python's standard library is required. Publication supplies the version,
+publish date, application ID and site base; asset sources stay in their existing
+repository homes so their provenance and licenses remain attached.
+"""
+import argparse
+from datetime import date
+from html import escape
+from pathlib import Path
+import re
+import shutil
+from urllib.parse import urlsplit
+
+ROOT = Path(__file__).resolve().parents[2]
+SITE = ROOT / "packaging/flatpak/site"
+ASSETS = {
+    "style.css": SITE / "style.css",
+    "credits.html": SITE / "credits.html",
+    "emblem-small.svg": ROOT / "crates/ddl/ui/assets/logo/emblem-small.svg",
+    "icon.png": ROOT / "crates/ddl/ui/assets/logo/icon.png",
+    "hero.png": ROOT / "docs/design/logo/steam/hero.png",
+    "social-preview.png": ROOT / "docs/design/logo/social-preview.png",
+    "Barlow-Regular.ttf": ROOT / "crates/ddl/ui/assets/Barlow-Regular.ttf",
+    "PirataOne-Regular.ttf": ROOT / "crates/ddl/ui/assets/PirataOne-Regular.ttf",
+    "Barlow-OFL.txt": ROOT / "crates/ddl/ui/assets/Barlow-OFL.txt",
+    "PirataOne-OFL.txt": ROOT / "crates/ddl/ui/assets/PirataOne-OFL.txt",
+    **{f"{name}.png": ROOT / f"docs/screenshots/{name}.png"
+       for name in ("home", "discover", "play-setup")},
+}
+
+
+def render(output, version, published, app_id, site_base):
+    """Copy only page-owned assets; leave ref, key, repo and Git state intact."""
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?", version):
+        raise ValueError("version must be the published semantic version")
+    date.fromisoformat(published)
+    if not re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}", app_id):
+        raise ValueError("invalid Flatpak application ID")
+    site_base = site_base.rstrip("/")
+    url = urlsplit(site_base)
+    if url.scheme != "https" or not url.netloc or url.query or url.fragment or url.username:
+        raise ValueError("site base must be an absolute HTTPS URL without query or fragment")
+    html = (SITE / "index.html").read_text()
+    values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base)
+    for key, value in values.items():
+        html = html.replace(f"@@{key}@@", escape(value, quote=True))
+    if re.search(r"@@[A-Z_]+@@", html):
+        raise ValueError("unresolved page template token")
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    assets = output / "assets"
+    assets.mkdir(exist_ok=True)
+    for name, source in ASSETS.items():
+        shutil.copyfile(source, assets / name)
+    (output / "index.html").write_text(html)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--version", required=True)
+    parser.add_argument("--date", required=True)
+    parser.add_argument("--app-id", required=True)
+    parser.add_argument("--site-base", required=True)
+    args = parser.parse_args()
+    render(args.output, args.version, args.date, args.app_id, args.site_base)
+
+
+if __name__ == "__main__":
+    main()

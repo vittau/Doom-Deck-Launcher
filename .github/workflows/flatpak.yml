@@ -131,7 +131,7 @@ jobs:
           set -euo pipefail
           python3 -m venv "$RUNNER_TEMP/generator-venv"
           "$RUNNER_TEMP/generator-venv/bin/pip" install --quiet --disable-pip-version-check \
-            --no-cache-dir 'aiohttp==3.14.5' 'tomlkit==0.15.2'
+            --no-cache-dir 'aiohttp==3.14.5' 'tomlkit==0.15.2' 'PyYAML==6.0.3'
           generator="$RUNNER_TEMP/flatpak-cargo-generator.py"
           curl --proto '=https' --tlsv1.2 -fsSL \
             "https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/${GENERATOR_COMMIT}/cargo/flatpak-cargo-generator.py" \
