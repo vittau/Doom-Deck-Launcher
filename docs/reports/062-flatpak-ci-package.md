@@ -84,6 +84,7 @@ archives" rule: no IWAD, engine AppImage or mapset archive is extracted or run d
 - Metainfo screenshots point at the `v0.0.9-focus` tag (not a branch) and the release entry is
   `0.0.9` / `2026-10-20`. It does not claim Flathub availability, verification or Deck hardware
   validation.
+- `separate-locales: false` because the UI and metadata are English-only (D-008).
 - OARS 1.1 marks cartoon/fantasy/realistic violence and bloodshed as moderate, matching the
   catalogue art the app displays.
 
@@ -146,7 +147,7 @@ eligible under Flathub's current AI policy anyway.
 - Parses the manifest, checks every local source path and installed repository file, and asserts
   the desktop `Exec`/`Icon` and metainfo id/launchable.
 - Runs `desktop-file-validate` and `appstreamcli validate --no-net --explain`.
-- Writes the commit-time catalog serial, builds with `flatpak-builder --arch=x86_64`, exports a
+- Writes the commit-time catalog serial, builds with `flatpak-builder --arch=x86_64 --disable-rofiles-fuse`, exports a
   local repo, installs it, and runs `ddl --version` and `ddl --help` through `flatpak run`
   (headless; both exit before a window).
 - Creates `ddl-flatpak-x86_64.flatpak` with the Flathub runtime repo URL, writes its SHA-256,
