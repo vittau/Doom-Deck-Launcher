@@ -5,7 +5,7 @@ title = "Antaresian Reliquary"
 authors = ["Seongbae Park (antares031)"]
 release = "2020-08-24"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/a-c/anta_req"
-description = "DOOM II: nine Boom-compatible map slots (MAP01–MAP07, MAP31–MAP32) compiled from community projects, with new weapons and monsters from an embedded DEHACKED patch. MAP31 contains a massive number of enemies and performs poorly on Steam Deck."
+description = "MAP31 performs poorly on Steam Deck due to its massive enemy count. Nine Boom-compatible DOOM II map slots with custom weapons and monsters."
 permission = "Released under the Creative Commons Attribution-NonCommercial 4.0 International License (https://creativecommons.org/licenses/by-nc/4.0/); the bundled credits text names every contributor and resource. DDL downloads the unmodified archive and keeps that text alongside the maps; the material may not be used commercially."
 tags = ["classics", "cacowards", "episode"]
 

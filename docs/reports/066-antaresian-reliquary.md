@@ -19,9 +19,11 @@
 - Merged `origin/main` before final checks. That merge brought spec 066 R5 (owner-requested MAP31
   warning) and concurrent Flatpak work; only the spec/doc merge was relevant here.
 
-The player-facing description carries the required R5 warning verbatim in spirit: “MAP31 contains
-a massive number of enemies and performs poorly on Steam Deck.” Verification notes record that this
-is an explicit owner request (2026-10-21) based on owner knowledge, not a DDL measurement.
+The player-facing description now leads with the required R5 warning: “MAP31 performs poorly on
+Steam Deck due to its massive enemy count. Nine Boom-compatible DOOM II map slots with custom
+weapons and monsters.” It is first because the detail description is a single 760×68 px, 22 px
+line that elides; appending the warning after the metadata hid it. Verification notes continue to
+record the explicit owner request (2026-10-21) and that DDL did not measure FPS or enemy count.
 
 ## Evidence and findings
 
@@ -104,7 +106,8 @@ cargo test --workspace
   tags are limited to evidence-backed `classics`, `cacowards` and `episode`; no gameplay/Deck claim.
 - **R4:** research file uses Confirmed / Proposed / Needs Deck Validation labels and records the
   403/Wayback limitations.
-- **R5:** player-facing MAP31 warning is present and concise; owner provenance recorded.
+- **R5:** player-facing MAP31 warning is present, definite, and now leads the description so it
+  stays visible in the elided 760×68 detail text; owner provenance recorded.
 
 ## Open questions / limitations
 
