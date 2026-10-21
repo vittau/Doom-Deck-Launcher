@@ -33,6 +33,10 @@ Flathub submission, a GitHub Release, a public announcement, and any change to a
   builds offline, exports to `branch=stable`, generates static deltas, prunes old versions and
   publishes the site to this repository's `gh-pages` branch. Keep the existing artifact-only
   `Flatpak` workflow unchanged.
+  Publication must also trigger a supported GitHub Pages build/deployment, so later workflow
+  pushes actually update the served site (GITHUB_TOKEN branch pushes alone do not trigger Pages).
+  Use documented permissions and no extra PAT. This is a coordinator review clarification
+  after the first successful build on 2026-10-21.
 - **R3 — Stable URLs.** The published layout must be, at minimum:
   `…/Doom-Deck-Launcher/io.github.vittau.Doom-Deck-Launcher.flatpakref`,
   `…/Doom-Deck-Launcher/ddl.flatpakrepo`, `…/Doom-Deck-Launcher/repo/` (the OSTree remote), and a

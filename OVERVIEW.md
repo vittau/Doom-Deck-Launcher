@@ -4,10 +4,24 @@
 > **Audience:** AI orchestrator, implementation agents, maintainers  
 > **Primary platform:** Steam Deck / SteamOS (Gaming Mode first)  
 > **Primary engine:** DSDA-Doom (official Linux x86-64 AppImage)  
-> **Last updated:** 2026-10-16  
+> **Last updated:** 2026-10-21  
 > **Revision:** 1.2 — repo/docs conventions; decisions in force live in `docs/decisions.md`
 
 ## 1. Vision
+
+### Mission (owner, 2026-10-21)
+
+Make DOOM with community modifications easy to find, install and play on Steam Deck,
+especially for people who already own DOOM on Steam. Minimize the steps between discovering
+DDL and playing a compatible mapset, with well-chosen performance and configuration defaults
+from the first launch. This is DDL's central mission, not an optional polish pass.
+
+Judge the complete journey: find DDL → install it → find the player's Steam-owned games →
+choose a modification → play. Prefer automatic discovery and sensible defaults over manual
+paths, technical choices and repeated setup. Keep the advanced controls available without
+making them prerequisites. Measure the actual experience on the Deck; do not claim optimal
+performance or a seamless install from build-only smoke tests. Existing ownership, safety,
+single-engine and documentation-only Steam Input boundaries remain in force.
 
 **DoomDeckLauncher (DDL)** is a lightweight, native, controller-first DOOM launcher and curated PWAD discovery platform designed specifically for Steam Deck. Its guiding experience is:
 

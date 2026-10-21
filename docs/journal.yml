@@ -761,3 +761,40 @@
   refs: [docs/reports/050-idgames-index.md, docs/reports/059-flatpak-sandbox-ready.md,
          docs/reports/060-focus-clarity.md, docs/reports/061-library-regression.md,
          docs/decisions.md, docs/deck-testing.md]
+- date: 2026-10-20
+  type: spec
+  summary: >-
+    GPT-6.1 Sol medium takes over coordination at the owner's request. Spec 062 prepares an
+    experimental Flatpak artifact in GitHub Actions. The owner explicitly requests agent-written
+    packaging files, overriding D-034's human-only authoring restriction for this CI package;
+    its AI-assisted manifest remains ineligible for Flathub under the current policy. No
+    Flathub submission is authorized. An OpenCode worker implements packaging and CI.
+  refs: [docs/specs/062-flatpak-ci-package.md, docs/decisions.md]
+- date: 2026-10-21
+  type: decision
+  summary: >-
+    Coordination resumes after the owner worked directly with the Flatpak agent. Packaging
+    and a signed self-hosted remote (specs 062–063) are already merged; first CI builds are
+    being stabilized. D-035 records the approved vitormach.dev/Doom-Deck-Launcher site and
+    signed install channel. Recovered the button-actions brief as spec 064/D-036. The owner
+    requests a launcher-themed README-like project page with a Flatpak install link next
+    (spec 065). No Flathub submission has been made.
+  refs: [docs/specs/063-flatpak-selfhosted-remote.md,
+         docs/specs/064-button-actions-and-display.md, docs/specs/065-project-download-page.md,
+         docs/decisions.md]
+- date: 2026-10-21
+  type: decision
+  summary: >-
+    Owner states DDL's central mission: easy discovery, installation and use, especially for
+    Steam DOOM owners, with minimal friction to modded play and good performance/configuration
+    defaults out of the box. OVERVIEW now records the complete discovery-to-play journey as
+    the product criterion; spec 065 prioritizes a clear player-facing install path.
+  refs: [OVERVIEW.md, docs/specs/065-project-download-page.md]
+- date: 2026-10-21
+  type: decision
+  summary: >-
+    D-037: owner requests DSDA hardware rendering by default and accepts the fidelity tradeoff.
+    In the owner's Deck test on a 1080p TV at 120 fps, software used about 4–5 W of CPU power;
+    hardware used about half or less. Spec 064 adds the renderer default with upgrade-safe
+    migration and tests. This measurement is CPU power, not total system power or autonomy.
+  refs: [docs/decisions.md, docs/specs/064-button-actions-and-display.md]
