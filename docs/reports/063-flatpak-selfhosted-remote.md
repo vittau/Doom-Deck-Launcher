@@ -38,7 +38,11 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
    `Branch=stable`. The artifact workflow keeps its existing `master` export untouched.
 4. **Incremental repository.** The job clones the previous `gh-pages`, exports into its `repo/`,
    signs, generates static deltas, prunes to three builds (`--prune-depth=2`) and pushes. Users get
-   delta updates instead of a full re-download.
+   delta updates instead of a full re-download. Git cannot store empty directories, so the clone
+   loses `tmp/`, `state/`, `extensions/`, `refs/mirrors/` and `refs/remotes/`; OSTree only creates
+   that layout for a new repository (`repo_create_at_internal` returns early when `objects/` exists),
+   so the job restores the full set before exporting. Without that, `build-update-repo` fails with
+   `Listing refs: opendir(refs/remotes): No such file or directory` while generating static deltas.
 5. **Reproducible commit metadata.** `flatpak build-export --timestamp=<tag date> --subject=<commit
    subject> --body=<sha>` ties the OSTree commit to the tagged source instead of the run clock; a
    re-run of the same tag is usually a no-op.
@@ -77,6 +81,7 @@ No application code, catalog, dependency, toolchain or manifest change. `packagi
 | YAML parse | `ruby -ryaml -e 'YAML.load_file(...)'` | parses (`on` read as a boolean key by YAML 1.1, as expected) |
 | HTML parse | `html.parser` over the rendered template | no unclosed tags, no `@@…@@` placeholders left |
 | Render dry run | heredoc + `sed` with sample values | `.flatpakref` key/URL lines correct, no indentation |
+| OSTree layout roundtrip | local git repo with `repo/{config,objects,refs/heads/…,summary}`, committed and cloned | the clone loses `tmp`, `state`, `extensions`, `refs/mirrors`, `refs/remotes` (empty directories); the restore loop recreates all of them |
 | Whitespace | `git diff --check` | pass |
 
 Not run, because there is no Flatpak runtime on the macOS dev host:
@@ -115,6 +120,8 @@ CI history while getting there:
 | [39537456681](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537456681) | Flatpak repository | failure | `cd rust-x86_64-unknown-linux-gnu` — flatpak-builder strips the archive's top-level directory. Fixed with `./install.sh` at the build root (`c72daf5`) |
 | [39537769632](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537769632) | Flatpak repository | failure | `eu-strip` is not in the 26.08 SDK and debuginfo extraction aborts the module. Fixed with `no-debuginfo: true` on both modules (`84ebd15`) |
 | [39537960702](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39537960702) | Flatpak (artifact) | failure | The manifest check imports `yaml`, but the generator venv installed only `aiohttp` and `tomlkit`. Fixed by pinning `PyYAML==6.0.3` (`2fa9dc3`) |
+| [39540926300](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39540926300) | Flatpak (artifact) | success | First green artifact run with the PyYAML pin |
+| [39540938605](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39540938605) | Flatpak repository | failure | After export: `Listing refs: opendir(refs/remotes): No such file or directory`. The `gh-pages` git roundtrip drops empty OSTree directories; fixed by restoring the layout after the clone |
 | 39537765626 / 39537765603 | Flatpak / CI | failure / cancelled | Same two manifest causes as above, superseded |
 
 ## What the owner still has to do

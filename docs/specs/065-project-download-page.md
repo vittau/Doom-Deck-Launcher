@@ -1,6 +1,6 @@
 # 065 — Launcher-themed project and Flatpak download page
 
-**Status:** Planned · **Depends on:** 063 and a working signed remote
+**Status:** In progress · **Depends on:** 063 and a working signed remote
 **Origin:** owner, 2026-10-21: page at `https://www.vitormach.dev/Doom-Deck-Launcher/`, similar to
 README but with a more polished layout matching the launcher; include a Deck install link.
 
@@ -37,5 +37,8 @@ Validate static HTML and links, inspect headless renders at desktop and narrow w
 verify the download link resolves to the intended signed ref. Review the design with the owner
 before merging a large visual change. Report at `docs/reports/065-project-download-page.md`.
 
-This is later work: stabilize current Flatpak CI and button-actions first. The provisional page
-remains functional until this task is dispatched. Never open visible windows or capture screen.
+The first signed remote build succeeded and the site is served (2026-10-21); design may now
+proceed independently of the button-actions implementation. Keep its application files untouched.
+Publication still depends on reviewed, passing deployment changes from 063 and a headless design
+review with the owner. The provisional page remains functional until integration.
+Never open visible windows or capture the screen — headless renders only.
