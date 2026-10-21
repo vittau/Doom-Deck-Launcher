@@ -157,6 +157,24 @@ fn invalid(message: &str) -> Error {
         message: message.into(),
     }
 }
+fn cancelled() -> Error {
+    Error {
+        kind: Kind::Cancelled,
+        message: "Download cancelled".into(),
+    }
+}
+fn checksum(message: &str) -> Error {
+    Error {
+        kind: Kind::Checksum,
+        message: message.into(),
+    }
+}
+fn unsafe_archive(message: &str) -> Error {
+    Error {
+        kind: Kind::UnsafeArchive,
+        message: message.into(),
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Soundfonts {
@@ -484,23 +502,26 @@ fn limits() -> ExtractLimits {
 }
 fn check_cancel(cancel: &CancellationToken) -> Result<(), Error> {
     if cancel.is_cancelled() {
-        Err(invalid("Download cancelled"))
+        Err(cancelled())
     } else {
         Ok(())
     }
 }
 /// Validate every entry, including files we do not install.
 fn inspect_archive(path: &Path, cancel: &CancellationToken) -> Result<(), Error> {
-    let mut zip = zip::ZipArchive::new(File::open(path)?).map_err(|e| invalid(&e.to_string()))?;
+    let mut zip =
+        zip::ZipArchive::new(File::open(path)?).map_err(|e| unsafe_archive(&e.to_string()))?;
     if zip.len() > limits().max_member_count || zip.len() != declared_entry_count(path)? {
-        return Err(invalid("Too many ZIP entries"));
+        return Err(unsafe_archive("Too many ZIP entries"));
     }
     let mut names = HashSet::new();
     let mut total = 0u64;
     for index in 0..zip.len() {
         check_cancel(cancel)?;
-        let entry = zip.by_index(index).map_err(|e| invalid(&e.to_string()))?;
-        let name = entry.name().map_err(|e| invalid(&e.to_string()))?;
+        let entry = zip
+            .by_index(index)
+            .map_err(|e| unsafe_archive(&e.to_string()))?;
+        let name = entry.name().map_err(|e| unsafe_archive(&e.to_string()))?;
         if name.is_empty()
             || name.starts_with('/')
             || name.contains(['\\', ':', '\0'])
@@ -508,11 +529,11 @@ fn inspect_archive(path: &Path, cancel: &CancellationToken) -> Result<(), Error>
             || !names.insert(name.trim_end_matches('/').to_owned())
             || entry.unix_mode().is_some_and(|m| m & 0o170000 == 0o120000)
         {
-            return Err(invalid("Unsafe or duplicate ZIP entry"));
+            return Err(unsafe_archive("Unsafe or duplicate ZIP entry"));
         }
         total = total
             .checked_add(entry.size())
-            .ok_or_else(|| invalid("ZIP size overflow"))?;
+            .ok_or_else(|| unsafe_archive("ZIP size overflow"))?;
         if total > limits().max_total_uncompressed
             || entry.size() > limits().max_member_uncompressed
             || entry.size()
@@ -521,7 +542,7 @@ fn inspect_archive(path: &Path, cancel: &CancellationToken) -> Result<(), Error>
                     .max(1)
                     .saturating_mul(limits().max_compression_ratio)
         {
-            return Err(invalid("ZIP expansion limit exceeded"));
+            return Err(unsafe_archive("ZIP expansion limit exceeded"));
         }
     }
     Ok(())
@@ -546,11 +567,11 @@ fn declared_entry_count(path: &Path) -> Result<usize, Error> {
         }
         let count = word(10);
         if word(4) != 0 || word(6) != 0 || word(8) != count || count == u16::MAX {
-            return Err(invalid("Unsupported ZIP directory"));
+            return Err(unsafe_archive("Unsupported ZIP directory"));
         }
         return Ok(usize::from(count));
     }
-    Err(invalid("Missing ZIP directory"))
+    Err(unsafe_archive("Missing ZIP directory"))
 }
 fn verify_file(
     path: &Path,
@@ -560,7 +581,7 @@ fn verify_file(
 ) -> Result<(), Error> {
     let mut file = File::open(path)?;
     if !file.metadata()?.is_file() || file.metadata()?.len() != size {
-        return Err(invalid("Soundfont file size mismatch"));
+        return Err(checksum("Soundfont file size mismatch"));
     }
     let mut digest = Digest256::new();
     let mut buffer = [0u8; 65536];
@@ -573,12 +594,12 @@ fn verify_file(
         }
         total += read as u64;
         if total > size {
-            return Err(invalid("Soundfont file grew during verification"));
+            return Err(checksum("Soundfont file grew during verification"));
         }
         digest.update(&buffer[..read]);
     }
     if total != size || Sha256::finish(digest) != hash {
-        return Err(invalid("Soundfont SHA-256 mismatch"));
+        return Err(checksum("Soundfont SHA-256 mismatch"));
     }
     Ok(())
 }
@@ -591,7 +612,7 @@ fn validate_sf2(path: &Path) -> Result<(), Error> {
         || u64::from(u32::from_le_bytes(header[4..8].try_into().unwrap())) + 8
             != file.metadata()?.len()
     {
-        return Err(invalid("Invalid RIFF/sfbk soundfont"));
+        return Err(unsafe_archive("Invalid RIFF/sfbk soundfont"));
     }
     Ok(())
 }

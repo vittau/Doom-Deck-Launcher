@@ -93,6 +93,22 @@ fn install_root(env: &Environment) -> PathBuf {
     env.paths.data.join("soundfonts")
 }
 
+/// Spec 067 review: each classified installer failure keeps its player-facing
+/// cancellation/retry/checksum/archive meaning instead of becoming "state".
+#[test]
+fn soundfont_error_kinds_map_to_player_facing_problems() {
+    for (kind, problem) in [
+        (soundfonts::Kind::Cancelled, Problem::Cancelled),
+        (soundfonts::Kind::Network, Problem::Network),
+        (soundfonts::Kind::Checksum, Problem::Checksum),
+        (soundfonts::Kind::UnsafeArchive, Problem::UnsafeArchive),
+        (soundfonts::Kind::Storage, Problem::Storage),
+        (soundfonts::Kind::State, Problem::State),
+    ] {
+        assert_eq!(soundfont_problem(kind), problem, "{kind:?}");
+    }
+}
+
 #[test]
 fn a_published_font_is_installed_but_never_selected_automatically() {
     let temp = tempfile::tempdir().unwrap();

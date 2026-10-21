@@ -66,18 +66,25 @@ All commands used `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`; pipelines used `set 
 
 - `cargo fmt --all --check` — passed.
 - `cargo clippy --workspace --all-targets -- -D warnings` — passed.
-- `cargo test --workspace` — passed, including doctests. This is the single final full run.
-- `cargo test -p ddl-core --lib soundfonts` — **24 passed**: source constants, synthetic verified
+- `cargo test --workspace` — passed, including doctests. This was the single full run before the
+  post-review error-classification correction; per the follow-up instruction the correction was
+  verified with the focused core/service tests and fmt/clippy rather than repeating the unchanged
+  full headless suite.
+- `cargo test -p ddl-core --lib soundfonts` — **25 passed**: source constants, synthetic verified
   install/publication, archive/member hash and size failures, RIFF validation, unsafe/duplicate/
   symlink/bounds/ratio rejection, cancellation at two boundaries, retry preservation, pointer
   recovery, explicit/restarted/missing/corrupt selection states, unreadable preferences, path
-  grammar, snapshot metadata invalidation and install-presence checks.
+  grammar, snapshot metadata invalidation and install-presence checks. Post-review assertions
+  cover the `Error::kind()` for verification cancellation, late extraction cancellation, ignored
+  cancellation inside the atomic publication boundary, archive/member size and hash mismatches,
+  unsafe/duplicate/symlink entries, expansion limits, malformed ZIPs and invalid RIFF content.
 - `cargo test -p ddl-core --lib dsda_config::manager` — **20 passed**, including the two review
   regressions above and “template does not own the audio keys”.
-- `cargo test -p ddl --bin ddl audio_tests` — **8 passed**: install-never-selects, restart
+- `cargo test -p ddl --bin ddl audio_tests` — **9 passed**: install-never-selects, restart
   persistence, verified absolute Arachno path, explicit Default replacing a custom setting with a
   backup, no-choice custom preservation, missing-font fallback with kept selection, no write during
-  a run, and an unwritable config aborting with `Problem::Audio`.
+  a run, an unwritable config aborting with `Problem::Audio`, and a regression that every
+  `soundfonts::Kind` maps to its intended player-facing `Problem`.
 - `cargo test -p ddl --bin ddl headless::audio` — **4 passed**: controller navigation/focus, Default
   selection, installed Arachno selection/restart, visible action bounds, download progress, error
   `Retry`/`Diagnostics`, and the missing-font recoverable state.

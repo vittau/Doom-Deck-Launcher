@@ -114,33 +114,43 @@ fn cancellation_bad_hash_and_retry_preserve_published_install_and_choice() {
     let pointer = fs::read(fonts.root.join("installed.json")).unwrap();
     let cancel = CancellationToken::new();
     cancel.cancel();
-    assert!(
-        fonts
-            .install_archive(
-                &path,
-                bytes.len() as u64,
-                Sha256::of(&bytes),
-                &members,
-                &cancel,
-                &mut |_| {}
-            )
-            .is_err()
-    );
-    assert!(
-        fonts
-            .install_archive(
-                &path,
-                bytes.len() as u64,
-                Sha256::of(b"wrong"),
-                &members,
-                &CancellationToken::new(),
-                &mut |_| {}
-            )
-            .is_err()
-    );
+    let error = fonts
+        .install_archive(
+            &path,
+            bytes.len() as u64,
+            Sha256::of(&bytes),
+            &members,
+            &cancel,
+            &mut |_| {},
+        )
+        .expect_err("a cancelled verification");
+    assert_eq!(error.kind(), Kind::Cancelled, "{error}");
+    let error = fonts
+        .install_archive(
+            &path,
+            bytes.len() as u64,
+            Sha256::of(b"wrong"),
+            &members,
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+        .expect_err("an archive hash mismatch");
+    assert_eq!(error.kind(), Kind::Checksum, "{error}");
+    let error = fonts
+        .install_archive(
+            &path,
+            bytes.len() as u64 + 1,
+            Sha256::of(&bytes),
+            &members,
+            &CancellationToken::new(),
+            &mut |_| {},
+        )
+        .expect_err("an archive size mismatch");
+    assert_eq!(error.kind(), Kind::Checksum, "{error}");
     let mut wrong = members.clone();
     wrong[0].expected_sha256 = Some(Sha256::of(b"wrong member"));
-    assert!(install(&fonts, &path, &bytes, &wrong).is_err());
+    let error = install(&fonts, &path, &bytes, &wrong).expect_err("a member hash mismatch");
+    assert_eq!(error.kind(), Kind::Checksum, "{error}");
     assert_eq!(
         fs::read(fonts.root.join("installed.json")).unwrap(),
         pointer
@@ -159,7 +169,8 @@ fn invalid_riff_never_publishes_even_with_matching_hash() {
         b"RIFF\x04\0\0\0WAVE",
     ] {
         let (path, bytes) = archive(dir.path(), font);
-        assert!(install(&fonts, &path, &bytes, &members(font)).is_err());
+        let error = install(&fonts, &path, &bytes, &members(font)).expect_err("invalid RIFF");
+        assert_eq!(error.kind(), Kind::UnsafeArchive, "{error}");
         assert!(!fonts.root.join("installed.json").exists());
     }
 }
@@ -210,10 +221,9 @@ fn rejects_unsafe_unrequested_entries_and_whole_archive_bounds() {
         "./escape",
     ] {
         fs::write(&path, zip_bytes(&[("safe", b"ok"), (name, b"bad")])).unwrap();
-        assert!(
-            inspect_archive(&path, &CancellationToken::new()).is_err(),
-            "{name}"
-        );
+        let error =
+            inspect_archive(&path, &CancellationToken::new()).expect_err("an unsafe archive name");
+        assert_eq!(error.kind(), Kind::UnsafeArchive, "{name}: {error}");
     }
     let entries: Vec<_> = (0..455)
         .map(|i| (format!("{i}"), b"x".as_slice()))
@@ -223,14 +233,19 @@ fn rejects_unsafe_unrequested_entries_and_whole_archive_bounds() {
         .map(|(name, data)| (name.as_str(), *data))
         .collect();
     fs::write(&path, zip_bytes(&refs)).unwrap();
-    assert!(inspect_archive(&path, &CancellationToken::new()).is_err());
+    let error = inspect_archive(&path, &CancellationToken::new()).expect_err("too many entries");
+    assert_eq!(error.kind(), Kind::UnsafeArchive, "{error}");
     // Patch an unrequested entry's declared expanded size; the directory scan
     // rejects it before decompression or writing anything.
     let mut bytes = zip_bytes(&[("safe", b"ok")]);
     let index = bytes.windows(4).position(|w| w == b"PK\x01\x02").unwrap();
     bytes[index + 24..index + 28].copy_from_slice(&u32::MAX.to_le_bytes());
     fs::write(&path, bytes).unwrap();
-    assert!(inspect_archive(&path, &CancellationToken::new()).is_err());
+    let error = inspect_archive(&path, &CancellationToken::new()).expect_err("expansion bound");
+    assert_eq!(error.kind(), Kind::UnsafeArchive, "{error}");
+    fs::write(&path, b"not a ZIP at all").unwrap();
+    let error = inspect_archive(&path, &CancellationToken::new()).expect_err("malformed ZIP");
+    assert_eq!(error.kind(), Kind::UnsafeArchive, "{error}");
 }
 #[test]
 fn rejects_duplicate_and_symlink_unrequested_zip_entries() {
@@ -245,13 +260,15 @@ fn rejects_duplicate_and_symlink_unrequested_zip_entries() {
         }
     }
     fs::write(&path, bytes).unwrap();
-    assert!(inspect_archive(&path, &CancellationToken::new()).is_err());
+    let error = inspect_archive(&path, &CancellationToken::new()).expect_err("duplicate names");
+    assert_eq!(error.kind(), Kind::UnsafeArchive, "{error}");
     let mut bytes = zip_bytes(&[("safe", b"ok")]);
     let index = bytes.windows(4).position(|w| w == b"PK\x01\x02").unwrap();
     bytes[index + 5] = 3;
     bytes[index + 38..index + 42].copy_from_slice(&(0o120777u32 << 16).to_le_bytes());
     fs::write(&path, bytes).unwrap();
-    assert!(inspect_archive(&path, &CancellationToken::new()).is_err());
+    let error = inspect_archive(&path, &CancellationToken::new()).expect_err("a symlink entry");
+    assert_eq!(error.kind(), Kind::UnsafeArchive, "{error}");
 }
 #[test]
 fn rejects_unsupported_state_and_escaping_install_pointer() {
@@ -329,6 +346,36 @@ fn snapshot_stamps_invalidate_on_member_and_pointer_changes() {
     assert!(fonts.file_stamps().is_err());
 }
 
+/// Spec 067 review: the safe point is before the atomic publication boundary.
+/// A cancel requested once Commit starts must not publish a partial generation;
+/// this fixture has already passed verification and extraction, so publication
+/// completes and the published files verify.
+#[test]
+fn cancellation_at_publication_does_not_interrupt_the_atomic_commit() {
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = service(dir.path());
+    let font = sf2();
+    let (path, bytes) = archive(dir.path(), &font);
+    let members = members(&font);
+    let cancel = CancellationToken::new();
+    fonts
+        .install_archive(
+            &path,
+            bytes.len() as u64,
+            Sha256::of(&bytes),
+            &members,
+            &cancel,
+            &mut |p| {
+                if p.stage == InstallStage::Commit {
+                    cancel.cancel();
+                }
+            },
+        )
+        .expect("publication completes once the atomic boundary is entered");
+    fonts.verify_members(&members).unwrap();
+    assert!(fonts.install_present_with(&members));
+}
+
 #[test]
 fn cancelling_at_extraction_boundary_leaves_previous_install_intact() {
     let dir = tempfile::tempdir().unwrap();
@@ -339,22 +386,21 @@ fn cancelling_at_extraction_boundary_leaves_previous_install_intact() {
     install(&fonts, &path, &bytes, &members).unwrap();
     let previous = fonts.verify_members(&members).unwrap();
     let cancel = CancellationToken::new();
-    assert!(
-        fonts
-            .install_archive(
-                &path,
-                bytes.len() as u64,
-                Sha256::of(&bytes),
-                &members,
-                &cancel,
-                &mut |p| {
-                    if p.stage == InstallStage::Extract {
-                        cancel.cancel();
-                    }
+    let error = fonts
+        .install_archive(
+            &path,
+            bytes.len() as u64,
+            Sha256::of(&bytes),
+            &members,
+            &cancel,
+            &mut |p| {
+                if p.stage == InstallStage::Extract {
+                    cancel.cancel();
                 }
-            )
-            .is_err()
-    );
+            },
+        )
+        .expect_err("a late extraction cancellation");
+    assert_eq!(error.kind(), Kind::Cancelled, "{error}");
     assert_eq!(fonts.verify_members(&members).unwrap(), previous);
 }
 
