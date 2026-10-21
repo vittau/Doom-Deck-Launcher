@@ -457,6 +457,122 @@ fn sigil_compat_replaces_main_and_the_missing_soundtrack_blocks_only_when_enable
 }
 
 #[test]
+fn sigil_compat_soundtrack_requires_maps_and_loads_after_them() {
+    let dir = TempDir::new().unwrap();
+    let data = dir.path();
+    let recipe = embedded("sigil");
+    let registry = iwad_registry(data, "doom-1.9ud", IwadsGame::Doom, b"doomu bytes");
+    let (engine, _) = engine(data);
+    let config = config(data);
+
+    let mut manifest = empty_manifest(&recipe);
+    let compat = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "free",
+        "compat",
+        b"sigil compat",
+    );
+    let bar = add_member(
+        data,
+        &mut manifest,
+        &recipe,
+        "widehud",
+        "statusbar",
+        b"widescreen bar",
+    );
+
+    // Persisted orphan state fails validation instead of loading music alone.
+    let profile = Profile {
+        components: vec!["compat-soundtrack".to_owned()],
+        ..Profile::new("p1", "Play", "sigil")
+    };
+    let blocker = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect_err("orphaned compat soundtrack");
+    assert!(
+        matches!(blocker, Blocker::IncompatibleChoice { .. }),
+        "{blocker}"
+    );
+    assert!(blocker.to_string().contains("requires"), "{blocker}");
+
+    // The maps are present but the paid music has not been imported yet.
+    let profile = Profile {
+        components: vec![
+            "compat".to_owned(),
+            "compat-soundtrack".to_owned(),
+            "wide-status-bar".to_owned(),
+        ],
+        ..Profile::new("p1", "Play", "sigil")
+    };
+    let blocker = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect_err("soundtrack missing");
+    match blocker {
+        Blocker::ComponentNotProvided { component, .. } => {
+            assert_eq!(component, "compat-soundtrack");
+        }
+        other => panic!("expected ComponentNotProvided, got {other}"),
+    }
+
+    // With the import present, the map WAD comes first, then music, then the bar.
+    let shreds = add_import(
+        data,
+        &mut manifest,
+        &recipe,
+        "compat-soundtrack",
+        b"paid shreds",
+    );
+    let resolution = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect("resolve compat + shreds + bar");
+    assert_eq!(
+        resolution.plan().files,
+        vec![compat.clone(), shreds.clone(), bar.clone()]
+    );
+    let content = &resolution.summary().content;
+    assert_eq!(content.len(), 3);
+    assert_eq!(content[0].path, compat);
+    assert_eq!(content[1].path, shreds);
+    assert_eq!(content[2].path, bar);
+    assert_eq!(content[1].position, 2);
+
+    // Missing free map content is a separate, actionable blocker.
+    manifest
+        .members
+        .retain(|member| member.package.as_deref() != Some("free"));
+    let blocker = resolve(
+        &recipe,
+        &profile,
+        &Iwads::new(data, &registry),
+        &manifest,
+        Some(&engine),
+        &config,
+    )
+    .expect_err("compat maps missing");
+    assert!(matches!(blocker, Blocker::NotInstalled), "{blocker}");
+}
+
+#[test]
 fn missing_iwad_names_the_game_and_vanilla_resolves_per_family() {
     let dir = TempDir::new().unwrap();
     let data = dir.path();

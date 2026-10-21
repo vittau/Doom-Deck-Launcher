@@ -65,6 +65,8 @@ enum Sheet {
     StartFresh,
     Remove(PathBuf),
     Component(String),
+    /// An imported user-supplied component: toggle it or import a replacement.
+    UserComponent(String),
     Profiles,
     ProfileNames,
     DeleteProfile(String, String),
@@ -247,6 +249,8 @@ impl Runtime {
                 .item()
                 .and_then(|i| i.profiles.iter().position(|p| p.id == i.profile.id))
                 .unwrap_or(0) as i32
+        } else if matches!(sheet, Sheet::UserComponent(_)) {
+            901
         } else {
             900
         };
@@ -671,6 +675,7 @@ impl Runtime {
                             }
                             Sheet::Remove(path) => self.start(ui, Command::RemoveFolder(path)),
                             Sheet::Component(id) => self.toggle(ui, &id),
+                            Sheet::UserComponent(id) => self.toggle(ui, &id),
                             Sheet::DeleteProfile(id, _) => {
                                 self.start(ui, Command::DeleteProfile(id))
                             }
@@ -683,6 +688,10 @@ impl Runtime {
                             }
                             Sheet::Profiles | Sheet::ProfileNames => {}
                         }
+                    } else if let Sheet::UserComponent(id) = sheet {
+                        // The left button imports a replacement even though the
+                        // row already has an imported file. It must not toggle.
+                        self.browse(ui, Some(id));
                     }
                 }
                 _ => {}
@@ -1040,7 +1049,15 @@ impl Runtime {
                             self.start(ui, Command::Save(profile));
                         }
                     } else if c.user_supplied {
-                        self.browse(ui, Some(c.id));
+                        let imported = self
+                            .item()
+                            .and_then(|item| item.manifest.as_ref())
+                            .is_some_and(|manifest| manifest.find_imported(&c.id).is_some());
+                        if imported {
+                            self.show_sheet(Sheet::UserComponent(c.id));
+                        } else {
+                            self.browse(ui, Some(c.id));
+                        }
                     } else if c.replaces.is_some()
                         && self
                             .item()
@@ -2284,9 +2301,13 @@ impl Runtime {
                                 y += 36. + rows as f32 * 60. + 12.;
                                 continue;
                             }
+                            let imported = c.user_supplied
+                                && item.manifest.as_ref().is_some_and(|manifest| {
+                                    manifest.find_imported(&c.id).is_some()
+                                });
                             let detail = if !c.optional {
                                 text(ui, T::Locked)
-                            } else if c.user_supplied {
+                            } else if c.user_supplied && !imported {
                                 text(ui, T::NotProvided)
                             } else {
                                 text(
@@ -3293,10 +3314,10 @@ impl Runtime {
         );
         ui.set_profile_name_open(matches!(self.sheet, Some(Sheet::ProfileNames)));
         ui.set_sheet_open(self.sheet.is_some());
-        ui.set_sheet_body(if matches!(self.sheet, Some(Sheet::ImportOffer)) {
-            text(ui, T::ImportOfferBody)
-        } else {
-            "".into()
+        ui.set_sheet_body(match self.sheet {
+            Some(Sheet::ImportOffer) => text(ui, T::ImportOfferBody),
+            Some(Sheet::UserComponent(_)) => text(ui, T::ImportedComponentHelp),
+            _ => "".into(),
         });
         ui.set_sheet_back_later(matches!(self.sheet, Some(Sheet::ImportOffer)));
         ui.set_sheet_height(
@@ -3328,6 +3349,18 @@ impl Runtime {
                 Sheet::StartFresh => (T::StartFreshConfirm, T::Cancel, T::StartFresh),
                 Sheet::Remove(_) => (T::RemoveConfirm, T::Cancel, T::Remove),
                 Sheet::Component(_) => (T::CompatConfirm, T::Keep, T::UseVariant),
+                Sheet::UserComponent(id) => (
+                    T::ImportedComponent,
+                    T::Import,
+                    if self
+                        .item()
+                        .is_some_and(|item| item.profile.components.contains(id))
+                    {
+                        T::Off
+                    } else {
+                        T::On
+                    },
+                ),
                 Sheet::DeleteProfile(..) => (T::DeleteProfileConfirm, T::Cancel, T::DeleteProfile),
                 Sheet::ImportOffer => (T::ImportOffer, T::ImportYes, T::ImportNo),
                 Sheet::Profiles | Sheet::ProfileNames | Sheet::Uninstall(_) => unreachable!(),

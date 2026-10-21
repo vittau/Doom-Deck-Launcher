@@ -5,7 +5,7 @@ title = "SIGIL"
 authors = ["John Romero"]
 release = "1.23"
 page = "https://romero.com/sigil"
-description = "Episode 5 for DOOM, with a MIDI soundtrack and an optional Episode 3 compatibility replacement."
+description = "Episode 5 for DOOM, with a MIDI soundtrack and optional paid replacements, including an Episode 3 compatibility path."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."
 tags = ["featured", "classics", "cacowards", "episode"]
 
@@ -39,9 +39,9 @@ status = "inspected"
 tester = "DDL desk research"
 date = "2026-10-16"
 engine_version = "0.30.1"
-inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source", "Cacowards 2019 runner-up: https://www.doomworld.com/cacowards/2019/"]
-notes = "Confirmed archive/member identities and source inspection. Complevel vanilla; no gameplay test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_V1_23.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
-limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "Paid soundtrack identity and replacement behavior need purchaser validation; no filename/hash is prescribed."]
+inspected = ["docs/research/reference-sigil.md §1–§5", "Archive sizes and SHA-256; WAD lump listings; DSDA-Doom v0.30.1 source", "Cacowards 2019 runner-up: https://www.doomworld.com/cacowards/2019/", "Owner-supplied SIGIL USB image V1.23 inspected read-only 2026-10-21: docs/research/reference-sigil.md §2.1 and docs/reports/068-sigil-purchased-editions.md"]
+notes = "Confirmed archive/member identities and source inspection. The owner-supplied paid v1.23 USB image confirms SIGIL_V1_23_REG.wad is a complete 146-lump E5M1–E5M9 mapset carrying 11 Buckethead MP3 lumps; every non-music lump is byte-identical to the free WAD, so it replaces rather than augments it. SIGIL_SHREDS_COMPAT.wad is an 11-lump music-only add-on for the E3 compat path; the recipe models it as a paid imported component that requires the free compat maps and loads after them, never as a native E5 replacement. Complevel vanilla; no gameplay or audio test performed. Tags: cacowards = 2019 runner-up per https://www.doomworld.com/cacowards/2019/ (secondary evidence only: DoomWiki Cacowards 2019 via web search; doomworld.com blocks automated fetches, so the page was not read directly); classics = first free release 2019-05-01, over five years before this review; episode = nine maps E5M1–E5M9 (docs/research/reference-sigil.md); featured = D-010 reference recipe. Widescreen status bar credit: doom_widehud by NightFright and contributors (GPL-3.0), https://github.com/NightFright2k19/doom_widehud; SIGIL_V1_23.wad replaces no status-bar lump, so the base-game Doom/Doom II bar is offered."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode menu.", "SIGIL_V1_23_REG.wad MP3 playback is supported by DSDA-Doom v0.30.1's SDL_mixer path per source inspection but was not played; remains Needs Deck Validation.", "SIGIL_SHREDS_COMPAT.wad is music-only and is valid only after SIGIL_COMPAT_V1_23.wad; it is not needed on DSDA-Doom's native E5 path and is never a complete E5 replacement."]
 
 [[packages]]
 id = "free"
@@ -95,7 +95,7 @@ role = "maps"
 [[components]]
 id = "compat"
 label = "Episode 3 compatibility WAD"
-description = "Replaces E3 instead of adding E5; DSDA-Doom supports the main UMAPINFO episode."
+description = "Free E3M1–E3M9 replacement for older ports; required by the paid E3 soundtrack. DSDA-Doom supports the native E5 UMAPINFO episode instead."
 optional = true
 default = false
 position = 1
@@ -109,19 +109,34 @@ role = "maps"
 
 [[components]]
 id = "soundtrack"
-label = "Buckethead soundtrack"
-description = "Proposed paid soundtrack replacement; user supplied and unvalidated."
+label = "Buckethead soundtrack (REG WAD)"
+description = "Paid SIGIL_V1_23_REG.wad: the complete E5M1–E5M9 episode with Buckethead's MP3 music embedded. Replaces SIGIL_V1_23.wad; never load both."
 optional = true
 default = false
 position = 1
 replaces = "main"
 exclusive_group = "edition"
 user_supplied = true
-obtain = "Purchase the Buckethead soundtrack version through romero.com/sigil and import your purchased WAD. Filename/hash are unconfirmed; validate the replacement before play."
-known_sha256 = []
+obtain = "Purchase the SIGIL digital download or fan box from romero.com/sigil, then import SIGIL_V1_23_REG.wad (166,530,532 bytes). It is the paid replacement for the free MIDI WAD."
+known_sha256 = ["46fcc22fba47fff3872d9d294ee07bdbab4b0ec9feaab277f83836f5aed80bd0"]
 
 [[components.members]]
 role = "maps"
+
+[[components]]
+id = "compat-soundtrack"
+label = "Buckethead E3 soundtrack (paid)"
+description = "Paid SIGIL_SHREDS_COMPAT.wad: music-only MP3 soundtrack for the E3 compatibility maps. Enabling it also selects the free Episode 3 map WAD; it never replaces the native E5 episode."
+optional = true
+default = false
+position = 2
+requires = "compat"
+user_supplied = true
+obtain = "Purchase the SIGIL digital download or fan box from romero.com/sigil, then import SIGIL_SHREDS_COMPAT.wad (162,146,269 bytes). It is music-only and must load after the Episode 3 compatibility map WAD."
+known_sha256 = ["e5592bc76951a63d8647c5dc7004378ca4d7fcecfda3ab73acc6c220f1193ab7"]
+
+[[components.members]]
+role = "music"
 
 # Widescreen status bar (IWAD bar): NightFright's doom_widehud at commit eb3773ce9e (GPL-3.0).
 [[packages]]
@@ -145,7 +160,7 @@ label = "Widescreen status bar"
 description = "Optional widescreen (wide-aspect) base-game Doom/Doom II status bar from NightFright and contributors' doom_widehud (GPL-3.0); SIGIL ships no status-bar graphics of its own. Loads after the mapset and any gameplay add-on."
 optional = true
 default = true
-position = 2
+position = 3
 
 [[components.members]]
 package = "widehud"

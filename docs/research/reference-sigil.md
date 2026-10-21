@@ -130,8 +130,8 @@ Every WAD in the release and its purpose (**Confirmed** from the bundled texts a
 | --- | --- | --- |
 | `SIGIL_V1_23.wad` | free (both mirrors) | main: adds **episode 5** (E5M1–E5M9), free **MIDI** soundtrack |
 | `SIGIL_COMPAT_V1_23.wad` | free (both mirrors) | compat: the same levels as **E3M1–E3M9**, i.e. an **Episode 3 replacement** for ports that do not support E5 |
-| `SIGIL_V1_23_REG.wad` | paid only | same levels with the **Buckethead MP3** soundtrack embedded |
-| `SIGIL_SHREDS_COMPAT.wad` | paid only | MP3 soundtrack package for the **compat** path (load after the compat WAD) |
+| `SIGIL_V1_23_REG.wad` | paid only | **complete** E5M1–E5M9 mapset with the **Buckethead MP3** soundtrack embedded; replaces the free WAD (confirmed from the owner-supplied copy, §2.1) |
+| `SIGIL_SHREDS_COMPAT.wad` | paid only | **music-only** MP3 package (11 `D_E3M*`/intro/inter lumps) for the **compat** path; load after the compat WAD (confirmed from the owner-supplied copy, §2.1) |
 
 Bundled `SIGIL_README_V1_23.txt` states the REG/SHREDS files come with the paid fan boxes / digital
 download; the free archive ships only the two free WADs (**Confirmed**).
@@ -188,37 +188,51 @@ replacing the IWAD's own E3 episode.
 
 ## 4. Composition (candidate recipe data — **Proposed**)
 
-Components and load positions. The schema does not exist yet, so this is illustrative TOML shaped
-around D-006/D-010, not a final schema.
+Components and load positions in the implemented recipe (`catalog/sigil.toml`; the actual schema
+uses `replaces`, `exclusive_group` and `requires`):
 
 ```toml
-# ILLUSTRATIVE — not a final schema, not a catalog entry
+# Implemented shape, abbreviated; see catalog/sigil.toml for the verified members.
 id = "sigil"
 release = "1.23"
-requirements = { iwad = "doom", iwad_variants = ["doom-1.9-registered", "doom-1.9ud-ultimate"],
-                 compatibility = { family = "vanilla-limit-removing", complevel = 3 } }
-packages = [
-  { id = "sigil-free", url = "https://romero.com/s/SIGIL_V1_23-8fh4.zip",
-    sha256 = "57c35a6bcd722433fc97344314e52c06c91fdfde33b18c6d1c14a4d29e229105" },
-]
-components = [
-  { id = "main",      file = "SIGIL_V1_23.wad",        load_position = 1, default = true },
-  { id = "compat",    file = "SIGIL_COMPAT_V1_23.wad", load_position = 1, default = false,
-    exclusive_with = "main" },                        # E3 replacement alternative
-  { id = "soundtrack", file = "SIGIL_V1_23_REG.wad",   load_position = 1, optional = true,
-    source = "user-provided", exclusive_with = "main" }, # paid; DDL must not download
-  { id = "soundtrack-compat", file = "SIGIL_SHREDS_COMPAT.wad", load_position = 2,
-    optional = true, source = "user-provided", requires = "compat" },
-]
+[[components]]
+id = "main"
+optional = false
+position = 1
+[[components]]
+id = "compat"
+optional = true
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+[[components]]
+id = "soundtrack"
+optional = true
+position = 1
+replaces = "main"
+exclusive_group = "edition"
+user_supplied = true
+[[components]]
+id = "compat-soundtrack"
+optional = true
+position = 2
+requires = "compat"
+user_supplied = true
+[[components]]
+id = "wide-status-bar"
+optional = true
+position = 3
 ```
 
 - **(a) Standard play:** `SIGIL_V1_23.wad` (position 1).
 - **(b) With soundtrack:** the paid `SIGIL_V1_23_REG.wad` is a **replacement** for the free WAD
-  (it embeds the MP3 music), not an add-on loaded after it. Older paid packages also shipped
+  (it embeds the MP3 music), not an add-on loaded after it (**Confirmed** from the owner-supplied
+  v1.23 copy, §2.1). Never load REG and the free WAD together. Older paid packages also shipped
   `SIGIL_SHREDS.wad` as a soundtrack WAD loaded after the main WAD (referenced in the bundled co-op
-  instructions). **Needs validation** which file names the current paid package actually ships.
+  instructions); that older layout is not covered by the supplied v1.23 media.
 - **(c) Compat variant:** `SIGIL_COMPAT_V1_23.wad` (position 1) instead of the main WAD; if paid,
-  add `SIGIL_SHREDS_COMPAT.wad` after it.
+  add `SIGIL_SHREDS_COMPAT.wad` after it (both confirmed, §2.1). This is for strict/older ports;
+  DSDA-Doom v0.30.1 uses the native E5 UMAPINFO path instead (see §2.2).
 
 ## 5. Licence and redistribution
 
@@ -322,11 +336,11 @@ The page does **not** publish an explicit redistribution clause beyond the bundl
 | WAD | Where | Purpose |
 | --- | --- | --- |
 | `SIGIL_II_V1_0.WAD` | free (both mirrors) | main: adds **episode 6** (E6M1–E6M9), free **MIDI** soundtrack by James Paddock |
-| THORR-soundtrack build | paid only | same episode with the **THORR MP3** soundtrack |
+| `SIGIL_II_MP3_V1_0.WAD` | paid only | **complete** E6M1–E6M9 mapset with the **THORR MP3** soundtrack embedded; replaces the free WAD (confirmed from the owner-supplied copy, §2.1) |
 
-There is **no compat WAD and no separate music WAD** in the free release (**Confirmed**). The
-bundled text says SIGIL II "was not made for strict vanilla-compatible DOOM ports, but it may work
-with some of them" — no E6 replacement variant is provided.
+There is **no compat WAD and no separate music WAD** in the free or supplied paid release
+(**Confirmed**). The bundled text says SIGIL II "was not made for strict vanilla-compatible DOOM
+ports, but it may work with some of them" — no E6 replacement variant is provided.
 
 ### Lump-directory inspection (read-only)
 
@@ -375,14 +389,15 @@ packages = [
 ]
 components = [
   { id = "main",       file = "SIGIL_II_V1_0.WAD", load_position = 1, default = true },
-  { id = "soundtrack", file = "SIGIL_II_THORR.wad", load_position = 1, optional = true,
-    source = "user-provided", exclusive_with = "main" }, # paid; filename unconfirmed
+  { id = "soundtrack", file = "SIGIL_II_MP3_V1_0.WAD", load_position = 1, optional = true,
+    source = "user-provided", exclusive_with = "main" }, # paid; hash in §2.1
 ]
 ```
 
-- **(a) Standard play:** `SIGIL_II_V1_0.WAD` (position 1, case-sensitive).
-- **(b) With soundtrack:** the purchased THORR build (Windows `.WAD` vs `.wad` case unconfirmed — see
-  open questions). Presumed to **replace** the free WAD, mirroring SIGIL.
+- **(a) Standard play:** `SIGIL_II_V1_0.WAD` (position 1, uppercase `.WAD`).
+- **(b) With soundtrack:** `SIGIL_II_MP3_V1_0.WAD` (uppercase `.WAD`) **replaces** the free WAD
+  (**Confirmed** from the owner-supplied v1.0 copy, §2.1). Do not load the free WAD and MP3 WAD
+  together.
 - **(c) Compat variant:** none exists.
 
 ## 5. Licence and redistribution
@@ -416,14 +431,110 @@ The romero.com page describes it as a free download (**Confirmed**).
 
 ---
 
+# 2.1 Purchased editions inspected (owner-supplied, 2026-10-21)
+
+Read-only inspection of `/Users/vitor/Downloads/SIGIL_USB_IMAGE_V1_23` and
+`/Users/vitor/Downloads/SIGIL_II_REGISTERED_V1_0`; no bundled WAD or tool was executed and no
+paid bytes were copied into Git. Sizes and SHA-256 are of the files as supplied.
+
+| File | Bytes | SHA-256 | WAD directory |
+| --- | ---: | --- | --- |
+| `SIGIL_V1_23.wad` (free) | 4,640,555 | `29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d` | 146 lumps; E5M1–E5M9; 11 MIDI |
+| `SIGIL_V1_23_REG.wad` (paid) | 166,530,532 | `46fcc22fba47fff3872d9d294ee07bdbab4b0ec9feaab277f83836f5aed80bd0` | 146 lumps; E5M1–E5M9; 11 MP3; non-music lumps byte-identical to free |
+| `SIGIL_COMPAT_V1_23.wad` | 4,634,503 | `a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5` | 158 lumps; E3M1–E3M9; 11 MIDI; no UMAPINFO |
+| `SIGIL_SHREDS_COMPAT.wad` (paid) | 162,146,269 | `e5592bc76951a63d8647c5dc7004378ca4d7fcecfda3ab73acc6c220f1193ab7` | 11 lumps; no maps; 11 MP3 `D_E3M1`–`D_E3M9`, `D_INTRO`, `D_INTER` |
+| `SIGIL_II_V1_0.WAD` (free) | 5,632,323 | `9cadd239ea960ad40eeb655757941313cc8cb4f5f1c07a701ac986be4710a359` | 171 lumps; E6M1–E6M9; 11 MIDI |
+| `SIGIL_II_MP3_V1_0.WAD` (paid) | 146,563,690 | `8a803f5425d4bf31ddfe537b659d794acdff0631316f51b9ed45311b5ed059dc` | 171 lumps; E6M1–E6M9; 11 MP3; non-music lumps byte-identical to free |
+
+Both paid map WADs are **complete replacements**, not music add-ons: every non-music lump matches
+the corresponding free WAD byte-for-byte, and only `D_E5M*`/`D_E6M*` plus `D_INTRO`/`D_INTER`
+differ. `SIGIL_V1_23_REG.wad`'s MP3 ID3 tags name **Buckethead** and the same track titles as
+`SIGIL_V1_23.txt`; `SIGIL_II_MP3_V1_0.WAD` carries raw MPEG frames and is identified as the
+**THORR** edition by `SIGIL_II_MP3_README_V1_0.txt` and `SIGIL_II_MP3_V1_0.txt`. The supplied
+instruction texts are `SIGIL_README_V1_23.txt`, `SIGIL_V1_23.txt`, `SIGIL_II_README_V1_0.txt`,
+`SIGIL_II_V1_0.txt`, `SIGIL_II_MP3_README_V1_0.txt` and `SIGIL_II_MP3_V1_0.txt`.
+
+**DSDA-Doom load order (Confirmed from bundled docs + pinned source).** Use the native E5/E6 path:
+`SIGIL_V1_23.wad` **or** `SIGIL_V1_23_REG.wad` alone; `SIGIL_II_V1_0.WAD` **or**
+`SIGIL_II_MP3_V1_0.WAD` alone; optional wide status bar last. Do not combine free + REG, free + MP3,
+or main + COMPAT. `SIGIL_V1_23.txt` says COMPAT is for ports that do not support E5;
+`SIGIL_II_V1_0.txt` lists DSDA-Doom as tested and provides no compat WAD. DSDA v0.30.1 appends
+UMAPINFO episodes after the original episode list
+([`dsda/mapinfo.c`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/mapinfo.c#L452-L457),
+[`umapinfo.cpp`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/umapinfo.cpp#L331-L360)),
+and in-WAD MP3/OGG is routed through SDL_mixer
+([`i_sound.c`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_sound.c#L1375),
+[`i_sound.c`](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_sound.c#L1496)).
+The only COMPAT combination is `SIGIL_COMPAT_V1_23.wad` followed by
+`SIGIL_SHREDS_COMPAT.wad` on a strict/older port; it replaces **E3**, not E5, and is not needed on
+DSDA-Doom. Audio playback remains **Needs Deck Validation**.
+
+# Purchased editions — owner-supplied inspection (2026-10-21)
+
+Read-only inspection of the two owner-supplied directories named in spec 068. Only the WAD header
+and lump directory were parsed; no WAD or bundled tool was executed and no paid content was copied
+into Git. SHA-256 values are of the files exactly as supplied. The detailed evidence and supplied
+document hashes are in `docs/reports/068-sigil-purchased-editions.md`.
+
+## 2.1 Inspected files
+
+| Supplied file | Directory | Size (bytes) | SHA-256 | WAD directory |
+| --- | --- | ---: | --- | --- |
+| `SIGIL_V1_23.wad` | `SIGIL_USB_IMAGE_V1_23/WAD` | 4,640,555 | `29c3b8400657be4546eab1878e2883ffc50771c6be575677b1be5a0d0430f55d` | PWAD, 146 lumps; E5M1–E5M9; 11 MIDI music lumps |
+| `SIGIL_V1_23_REG.wad` | `SIGIL_USB_IMAGE_V1_23/WAD` | 166,530,532 | `46fcc22fba47fff3872d9d294ee07bdbab4b0ec9feaab277f83836f5aed80bd0` | PWAD, 146 lumps; E5M1–E5M9; 11 MP3 music lumps; all non-music lumps byte-identical to the free WAD |
+| `SIGIL_COMPAT_V1_23.wad` | `SIGIL_USB_IMAGE_V1_23/WAD` | 4,634,503 | `a79416b5e1a64b2946c09dcc5704f5d1448728b1afa2d761ccc067cd9ecce2b5` | PWAD, 158 lumps; E3M1–E3M9; 11 MIDI music lumps; no UMAPINFO |
+| `SIGIL_SHREDS_COMPAT.wad` | `SIGIL_USB_IMAGE_V1_23/WAD` | 162,146,269 | `e5592bc76951a63d8647c5dc7004378ca4d7fcecfda3ab73acc6c220f1193ab7` | PWAD, **11 lumps only**; no maps; `D_E3M1…D_E3M9`, `D_INTRO`, `D_INTER` as MP3 |
+| `SIGIL_II_V1_0.WAD` | `SIGIL_II_REGISTERED_V1_0` | 5,632,323 | `9cadd239ea960ad40eeb655757941313cc8cb4f5f1c07a701ac986be4710a359` | PWAD, 171 lumps; E6M1–E6M9; 11 MIDI music lumps |
+| `SIGIL_II_MP3_V1_0.WAD` | `SIGIL_II_REGISTERED_V1_0` | 146,563,690 | `8a803f5425d4bf31ddfe537b659d794acdff0631316f51b9ed45311b5ed059dc` | PWAD, 171 lumps; E6M1–E6M9; 11 MP3 music lumps; all non-music lumps byte-identical to the free WAD |
+
+**Confirmed composition facts:**
+
+- `SIGIL_V1_23_REG.wad` and `SIGIL_II_MP3_V1_0.WAD` are **complete map+music replacements**, not
+  music-only add-ons. Eleven `D_*` lumps differ from the free WAD; every other lump hash matches.
+  The SIGIL REG MP3 lumps carry ID3 `TPE1 = Buckethead` and track titles that match
+  `SIGIL_V1_23.txt`; the SIGIL II MP3 lumps are raw MPEG audio frames and their THORR identity is
+  confirmed by `SIGIL_II_MP3_README_V1_0.txt`/`SIGIL_II_MP3_V1_0.txt`.
+- `SIGIL_SHREDS_COMPAT.wad` is **music-only**. It is not playable alone and has no maps, DEHACKED or
+  UMAPINFO. It supplies `D_E3M*` for `SIGIL_COMPAT_V1_23.wad` and must load **after** it.
+- No supplied SIGIL II compat or separate music WAD exists.
+
+## 2.2 Native UMAPINFO versus COMPAT on DSDA-Doom v0.30.1
+
+**Confirmed from bundled docs:** `SIGIL_V1_23.txt` says the compat WAD is for older source ports
+that do not support E5 and makes the maps replace E3. `SIGIL_II_V1_0.txt` lists **DSDA-Doom** among
+tested ports and explicitly warns only that "some engines do not support episode 6"; it ships no
+compat WAD.
+
+**Confirmed from v0.30.1 source:** `dsda_LoadMapInfo` adds the original episodes and then loads every
+`UMAPINFO` lump ([mapinfo.c:452–457](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/dsda/mapinfo.c#L452-L457));
+the `episode` key appends the custom episode ([umapinfo.cpp:331–360](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/umapinfo.cpp#L331-L360)).
+`G_InitNew` skips its episode clamp when the requested map lump exists ([g_game.c:3003](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/g_game.c#L3003)),
+so E5M1/E6M1 start normally. In-WAD MP3 is routed through SDL_mixer ([i_sound.c:1375](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_sound.c#L1375),
+[i_sound.c:1496](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/SDL/i_sound.c#L1496));
+actual playback remains **Needs Deck Validation**.
+
+**Recommended DSDA-Doom load order for the owner files:**
+
+| Goal | Load exactly | Why |
+| --- | --- | --- |
+| SIGIL, free MIDI | `SIGIL_V1_23.wad` | Native E5 UMAPINFO; no compat needed. |
+| SIGIL, paid music | `SIGIL_V1_23_REG.wad` | Complete replacement; loading the free WAD too would duplicate maps/UMAPINFO and DEHACKED. |
+| SIGIL II, free MIDI | `SIGIL_II_V1_0.WAD` | Native E6 UMAPINFO. |
+| SIGIL II, paid music | `SIGIL_II_MP3_V1_0.WAD` | Complete replacement; do not add the free WAD. |
+| Old/strict port only | `SIGIL_COMPAT_V1_23.wad`, then `SIGIL_SHREDS_COMPAT.wad` | E3 remap, then music-only MP3 override; **not** the DSDA-Doom path. |
+| Any | Optional widescreen status bar last | Recipe already places it after the mapset. |
+
+Never combine REG/free, MP3/free, COMPAT/main or SHREDS_COMPAT/main. The COMPAT path is not "more
+correct" for DSDA-Doom; it replaces E3 and discards the native E5 episode, and SIGIL II has no E6
+compat equivalent.
+
 # Open questions
 
-1. **Paid soundtrack file names.** SIGIL: the v1.23 README names `SIGIL_V1_23_REG.wad` and
-   `SIGIL_SHREDS_COMPAT.wad`, but the site's paid bundle is described as "v1.21" and older co-op
-   instructions mention a plain `SIGIL_SHREDS.wad`. Which files does the **current** paid package
-   actually ship, and does the REG WAD replace or augment the free WAD? SIGIL II: the THORR
-   package's filename/casing and load position are unknown. (Gated content — to be supplied by the
-   owner or a purchaser; do not bypass.)
+1. **Paid soundtrack file names — resolved for the supplied versions.** The owner-supplied v1.23
+   package ships `SIGIL_V1_23_REG.wad` (complete E5 mapset + Buckethead MP3, replaces the free WAD)
+   and `SIGIL_SHREDS_COMPAT.wad` (music-only after the E3 compat WAD); the supplied SIGIL II v1.0
+   registered package ships `SIGIL_II_MP3_V1_0.WAD` (complete E6 mapset + MP3, replaces the free
+   WAD). Older `SIGIL_SHREDS.wad`-era packages remain unverified. See §2.1.
 2. **Redistribution of the paid soundtracks.** The bundled "MAY distribute" clause is written from the
    free megawad's perspective; it is unclear whether it covers the paid MP3 WADs. DDL treats them as
    user-supplied regardless.
@@ -446,6 +557,11 @@ The romero.com page describes it as a free download (**Confirmed**).
    the bundled SIGIL/SIGIL II are available as files.
 9. **Compat variant exposure.** Whether DDL should ever surface `SIGIL_COMPAT_V1_23.wad` (DSDA-Doom
    does not need it) as an advanced option, or hide it entirely.
+10. **SHREDS_COMPAT composition — implemented for the supplied v1.23 media.** The recipe models
+    `SIGIL_SHREDS_COMPAT.wad` as a user-supplied, music-only component with `requires = "compat"` and
+    position 2, after the free E3 map WAD. Enabling it also selects the compat maps; disabling or
+    choosing the native/paid replacement removes it. Loading music alone or mixing editions is
+    rejected. Deck playback remains **Needs Deck Validation**.
 
 
 ## Screenshots (spec 023, D-024)

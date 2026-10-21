@@ -158,6 +158,11 @@ pub struct Component {
     /// A replacement suppresses main; it does not load alongside it.
     #[serde(default)]
     pub replaces: Option<String>,
+    /// Another optional component that must be active with this one. Only one
+    /// dependency level is supported (`requires` may not point at a component
+    /// that itself requires another).
+    #[serde(default)]
+    pub requires: Option<String>,
     #[serde(default)]
     pub user_supplied: bool,
     #[serde(default)]
@@ -359,6 +364,7 @@ impl Recipe {
     /// duplicated optional component, two replacements, two components of one
     /// exclusive group, or two co-enabled components at the same position.
     pub fn active_components<'a>(&'a self, enabled: &[&str]) -> Result<Vec<&'a Component>, String> {
+        self.validate_component_requirements()?;
         let main = self
             .components
             .iter()
@@ -395,7 +401,234 @@ impl Recipe {
         if active.windows(2).any(|cs| cs[0].position == cs[1].position) {
             return Err("give co-enabled components distinct load positions".into());
         }
+        for component in &active {
+            let Some(required) = &component.requires else {
+                continue;
+            };
+            if !component.optional || component.replaces.is_some() {
+                return Err(format!(
+                    "component `{}` cannot depend on another component",
+                    component.id
+                ));
+            }
+            let target = self
+                .components
+                .iter()
+                .find(|other| other.id == *required)
+                .ok_or_else(|| {
+                    format!(
+                        "component `{}` requires unknown component `{required}`",
+                        component.id
+                    )
+                })?;
+            if !target.optional {
+                return Err(format!(
+                    "component `{}` requires required component `{required}`",
+                    component.id
+                ));
+            }
+            if target.requires.is_some() {
+                return Err(format!(
+                    "component `{}` uses an unsupported dependency chain",
+                    component.id
+                ));
+            }
+            if !active.iter().any(|other| other.id == target.id) {
+                return Err(format!(
+                    "component `{}` requires `{required}`",
+                    component.id
+                ));
+            }
+            if target.position >= component.position {
+                return Err(format!(
+                    "component `{}` must load after its prerequisite `{required}`",
+                    component.id
+                ));
+            }
+        }
         Ok(active)
+    }
+
+    /// Expands explicit optional component ids with their prerequisites and
+    /// proves the result is a legal selection. A lone dependent enable may add
+    /// its prerequisite, but contradictory explicit ids are rejected rather
+    /// than resolved by order.
+    ///
+    /// # Errors
+    ///
+    /// Returns a human-readable reason for an unknown/required id, an
+    /// unsupported dependency chain, or an illegal combination.
+    pub fn explicit_selection(&self, requested: &[String]) -> Result<Vec<String>, String> {
+        let expanded = self.expand_requirements(requested)?;
+        self.check_selection(&expanded)?;
+        Ok(expanded)
+    }
+
+    /// Applies one interactive on/off choice, keeping requirements and
+    /// exclusive groups consistent. Unlike [`Self::explicit_selection`], this
+    /// is intentionally order-aware because a UI action means "switch to this".
+    ///
+    /// # Errors
+    ///
+    /// Returns a human-readable reason for an unknown/required id or an
+    /// unsupported dependency chain; the input is never partially changed.
+    pub fn apply_component_choice(
+        &self,
+        selected: &[String],
+        id: &str,
+        enabled: bool,
+    ) -> Result<Vec<String>, String> {
+        let component = self.optional_component(id)?;
+        let mut next = selected.to_vec();
+        if enabled {
+            next.retain(|held| held != id);
+            if let Some(required) = &component.requires {
+                let target = self.optional_component(required)?;
+                if target.requires.is_some() {
+                    return Err(format!(
+                        "component `{id}` uses an unsupported dependency chain"
+                    ));
+                }
+                next = self.remove_exclusive_peers(&next, target);
+                if !next.iter().any(|held| held == &target.id) {
+                    next.push(target.id.clone());
+                }
+            }
+            next = self.remove_exclusive_peers(&next, component);
+            next.push(component.id.clone());
+        } else {
+            next = self.remove_with_dependents(&next, id);
+        }
+        let next = self.expand_requirements(&next)?;
+        self.check_selection(&next)?;
+        Ok(next)
+    }
+
+    fn validate_component_requirements(&self) -> Result<(), String> {
+        for component in &self.components {
+            let Some(required) = &component.requires else {
+                continue;
+            };
+            if !component.optional || component.replaces.is_some() {
+                return Err(format!(
+                    "component `{}` cannot depend on another component",
+                    component.id
+                ));
+            }
+            let target = self
+                .components
+                .iter()
+                .find(|other| other.id == *required)
+                .ok_or_else(|| {
+                    format!(
+                        "component `{}` requires unknown component `{required}`",
+                        component.id
+                    )
+                })?;
+            if target.id == component.id || !target.optional {
+                return Err(format!(
+                    "component `{}` has an invalid prerequisite `{required}`",
+                    component.id
+                ));
+            }
+            if target.requires.is_some() {
+                return Err(format!(
+                    "component `{}` uses an unsupported dependency chain",
+                    component.id
+                ));
+            }
+            if target.position >= component.position {
+                return Err(format!(
+                    "component `{}` must load after its prerequisite `{required}`",
+                    component.id
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn optional_component<'a>(&'a self, id: &str) -> Result<&'a Component, String> {
+        let component = self
+            .components
+            .iter()
+            .find(|component| component.id == id)
+            .ok_or_else(|| format!("unknown component `{id}`"))?;
+        if !component.optional {
+            return Err(format!(
+                "component `{id}` is required and cannot be selected"
+            ));
+        }
+        Ok(component)
+    }
+
+    fn expand_requirements(&self, requested: &[String]) -> Result<Vec<String>, String> {
+        let mut expanded = Vec::with_capacity(requested.len());
+        for id in requested {
+            let component = self.optional_component(id)?;
+            if component.replaces.is_some() && component.requires.is_some() {
+                return Err(format!(
+                    "component `{id}` cannot both replace main and require another component"
+                ));
+            }
+            if let Some(required) = &component.requires {
+                let target = self.optional_component(required)?;
+                if target.requires.is_some() {
+                    return Err(format!(
+                        "component `{id}` uses an unsupported dependency chain"
+                    ));
+                }
+                if target.position >= component.position {
+                    return Err(format!(
+                        "component `{id}` must load after its prerequisite `{required}`"
+                    ));
+                }
+                if !expanded.iter().any(|held| held == &target.id) {
+                    expanded.push(target.id.clone());
+                }
+            }
+            if !expanded.iter().any(|held| held == id) {
+                expanded.push(id.clone());
+            }
+        }
+        Ok(expanded)
+    }
+
+    fn remove_exclusive_peers(&self, selected: &[String], component: &Component) -> Vec<String> {
+        let Some(group) = &component.exclusive_group else {
+            return selected.to_vec();
+        };
+        let mut next = selected.to_vec();
+        for other in &self.components {
+            if other.id != component.id && other.exclusive_group.as_ref() == Some(group) {
+                next = self.remove_with_dependents(&next, &other.id);
+            }
+        }
+        next
+    }
+
+    fn remove_with_dependents(&self, selected: &[String], id: &str) -> Vec<String> {
+        let mut next = selected.to_vec();
+        let mut pending = vec![id.to_owned()];
+        let mut seen = std::collections::HashSet::new();
+        while let Some(removed) = pending.pop() {
+            if !seen.insert(removed.clone()) {
+                continue;
+            }
+            next.retain(|held| held != &removed);
+            for component in &self.components {
+                if component.requires.as_deref() == Some(removed.as_str())
+                    && !seen.contains(&component.id)
+                {
+                    pending.push(component.id.clone());
+                }
+            }
+        }
+        next
+    }
+
+    fn check_selection(&self, selected: &[String]) -> Result<(), String> {
+        let enabled: Vec<&str> = selected.iter().map(String::as_str).collect();
+        self.active_components(&enabled).map(|_| ())
     }
 
     /// The optional component ids a fresh profile enables by default (spec 017,

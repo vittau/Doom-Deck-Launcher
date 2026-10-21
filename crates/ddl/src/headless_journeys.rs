@@ -10,7 +10,7 @@ use super::{isolated, production, setup};
 /// One stateful journey segment in production order.
 type Step = for<'a, 'b> fn(&'a production::Scene, production::Captures<'b>);
 
-const STEPS: [Step; 11] = [
+const STEPS: [Step; 12] = [
     production::first_run,
     production::iwad_review,
     production::discover_and_detail,
@@ -22,6 +22,7 @@ const STEPS: [Step; 11] = [
     production::engine_updates_and_dialogs,
     production::install_error,
     production::auger_setup,
+    production::imported_component_sheet,
 ];
 
 /// Replays the first `through` segments with no rendering, so a later segment
@@ -221,6 +222,17 @@ fn auger_options_and_components() {
     replay(&scene, 10);
     let capture = |name: &str| scene.capture(name);
     production::auger_setup(&scene, &capture);
+}
+
+#[test]
+fn imported_component_sheet_actions() {
+    if isolated(module_path!(), "imported_component_sheet_actions") {
+        return;
+    }
+    let scene = production::scene();
+    replay(&scene, 11);
+    let capture = |name: &str| scene.capture(name);
+    production::imported_component_sheet(&scene, &capture);
 }
 
 #[test]

@@ -1836,6 +1836,64 @@ exit 1
     }
 
     #[test]
+    fn launch_rejects_contradictory_editions_and_accepts_the_compat_pair() {
+        let fx = fixture();
+        install_engine(&fx, false);
+        install_sigil(&fx, &["compat"]);
+        let seam = fx.env.home.join("seam-iwads");
+        {
+            let mut services = Services::open(fx.env.clone()).unwrap();
+            services.register_fake_iwads(&seam).expect("seam");
+        }
+
+        for components in [
+            vec!["compat".to_owned(), "soundtrack".to_owned()],
+            vec!["soundtrack".to_owned(), "compat".to_owned()],
+        ] {
+            let error = run(
+                &fx,
+                cli::Command::Launch {
+                    id: "sigil".into(),
+                    dry_run: true,
+                    profile: None,
+                    components,
+                    skill: None,
+                    pistol_start: false,
+                    accept_changes: false,
+                },
+            )
+            .unwrap_err();
+            let message = error.to_string();
+            assert!(
+                message.contains("invalid launch selection") && message.contains("replacement"),
+                "{message}"
+            );
+        }
+
+        // A lone dependent enable adds the free maps, then reports the missing
+        // paid import rather than rejecting the selection.
+        let error = run(
+            &fx,
+            cli::Command::Launch {
+                id: "sigil".into(),
+                dry_run: true,
+                profile: None,
+                components: vec!["compat-soundtrack".to_owned()],
+                skill: None,
+                pistol_start: false,
+                accept_changes: false,
+            },
+        )
+        .unwrap_err();
+        match error {
+            CliFailure::Blocker(Blocker::ComponentNotProvided { component, .. }) => {
+                assert_eq!(component, "compat-soundtrack");
+            }
+            other => panic!("expected ComponentNotProvided, got {other}"),
+        }
+    }
+
+    #[test]
     fn launch_dry_run_prints_the_d011_argv_with_a_registered_iwad() {
         let fx = fixture();
         install_engine(&fx, false);

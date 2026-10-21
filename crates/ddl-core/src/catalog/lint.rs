@@ -456,6 +456,47 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
             "use a lowercase slug",
         );
         issue(
+            format!("{key}.requires"),
+            c.requires.as_ref().is_some_and(|v| !slug(v)),
+            "invalid component dependency",
+            "use another optional component id",
+        );
+        if let Some(required) = &c.requires {
+            let target = r.components.iter().find(|other| other.id == *required);
+            issue(
+                format!("{key}.requires"),
+                target.is_none() || target.is_some_and(|other| other.id == c.id),
+                "unknown or self-referential component dependency",
+                "name another declared optional component",
+            );
+            if let Some(target) = target {
+                issue(
+                    format!("{key}.requires"),
+                    !target.optional,
+                    "component dependency is required",
+                    "depend only on an optional component",
+                );
+                issue(
+                    format!("{key}.requires"),
+                    target.requires.is_some(),
+                    "unsupported dependency chain",
+                    "keep dependencies one level deep",
+                );
+                issue(
+                    format!("{key}.requires"),
+                    c.replaces.is_some(),
+                    "replacement also declares a dependency",
+                    "replacements cannot require another component",
+                );
+                issue(
+                    format!("{key}.requires"),
+                    target.position >= c.position,
+                    "dependency loads at the wrong position",
+                    "load the dependent component after its prerequisite",
+                );
+            }
+        }
+        issue(
             format!("{key}.members"),
             c.members.is_empty(),
             "component has no members",
