@@ -3,6 +3,12 @@
 Complements the decision table in `OVERVIEW.md` §2; entries here win where they differ.
 Status: **Accepted** (decided) or **Proposed** (default until evidence or the owner says otherwise).
 
+**D-034 authoring exception (owner, 2026-10-20; spec 062):** the owner subsequently requested
+agent-written Flatpak packaging files and GitHub Actions builds. This authorizes an experimental
+CI package with explicit AI-assisted provenance, overriding the human-only file-authoring
+restriction for that package. It does not authorize a Flathub submission or make the generated
+manifest eligible under Flathub's current policy. The Flathub submission restrictions below remain.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
