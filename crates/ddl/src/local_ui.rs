@@ -1329,19 +1329,21 @@ impl Runtime {
             }
             for node in &mut b.nodes {
                 if node.y >= 96. {
-                    node.y += 202.;
+                    node.y += 226.;
                 }
             }
             b.title(12., 96., 1200., 42., "Base games".into(), 30.);
             for (index, item) in s.base_games.iter().enumerate() {
                 let x = 12. + index as f32 * 306.;
-                b.card(BASE + index as i32, x, 152., 282., 84.);
-                base_art(b, x + 10., 164., 96., 60., item.base.game);
-                b.title(x + 116., 162., 156., 64., item.base.title().into(), 22.);
+                b.card(BASE + index as i32, x, 148., 282., 108.);
+                // Spec 074: base-game cards keep the cover inside the 20 px
+                // ornamental frame with a 24 px inset and room for two lines.
+                base_art(b, x + 24., 172., 80., 60., item.base.game);
+                b.title(x + 112., 172., 146., 60., item.base.title().into(), 22.);
             }
             b.title(
                 12.,
-                252.,
+                280.,
                 1200.,
                 42.,
                 "Mapsets and custom setups".into(),

@@ -634,6 +634,45 @@ fn base_games_library_page_setup_sources_and_recent_history() {
         4,
         "every base-game card carries its menu art"
     );
+    // Spec 074: base-game Library cards keep a 24 px inset and clear the frame.
+    let base_cards: Vec<_> = r
+        .nodes
+        .iter()
+        .filter(|n| n.kind == 1 && (BASE..BASE + 4).contains(&n.id))
+        .collect();
+    assert_eq!(base_cards.len(), 4, "all four original games have a card");
+    for card in base_cards {
+        assert_eq!((card.w, card.h), (282., 108.));
+        let art = r
+            .nodes
+            .iter()
+            .find(|n| n.kind == 4 && n.x == card.x + 24. && n.y == card.y + 24.)
+            .expect("base-game art starts at the card inset");
+        assert_eq!((art.w, art.h), (80., 60.));
+        let title = r
+            .nodes
+            .iter()
+            .find(|n| n.kind == 20 && n.x == card.x + 112. && n.y == card.y + 24.)
+            .expect("base-game title starts beside the art");
+        assert_eq!(title.h, 60., "two lines need the multiline title slot");
+        assert!(title.y + title.h <= card.y + 108. - 24.);
+        assert!(title.x + title.w <= card.x + 282. - 24.);
+        for node in r.nodes.iter().filter(|n| {
+            matches!(n.kind, 4 | 20)
+                && n.x >= card.x
+                && n.x < card.x + 282.
+                && n.y >= card.y
+                && n.y < card.y + 108.
+        }) {
+            assert!(
+                node.x >= card.x + 24.
+                    && node.y >= card.y + 24.
+                    && node.x + node.w <= card.x + 282. - 24.
+                    && node.y + node.h <= card.y + 108. - 24.,
+                "base-game content stays inside the card inset"
+            );
+        }
+    }
     write_png("032-library-base-games.png", &render(&window));
     click(&mut r, &ui, BASE + 1);
     assert_eq!(r.local.view, Some(View::Base));
