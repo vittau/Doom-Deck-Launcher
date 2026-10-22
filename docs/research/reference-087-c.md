@@ -1,7 +1,7 @@
-# Reference research — Arrival, Vanguard, Lunatic and Overboard (spec 087 worker C, extended by spec 088)
+# Reference research — Arrival, Vanguard, Lunatic, Overboard, Headless Chicken and MSCP (spec 087 worker C, extended by specs 088 and 089)
 
-Scope: the four catalog recipes this worker owns — `arrival`, `vanguard`, `lunatic` and
-`overboard`. Every identity below was read from the downloaded bytes; nothing was executed or
+Scope: the six catalog recipes this worker owns — `arrival`, `vanguard`, `lunatic`, `overboard`,
+`headless-chicken` and `micro-slaughter-community-project`. Every identity below was read from the downloaded bytes; nothing was executed or
 extracted to disk. Labels: **Confirmed** (observed in this session or quoted from a primary
 source), **Proposed** (a DDL inference), **Needs Deck Validation** (cannot be checked on the
 macOS arm64 dev host).
