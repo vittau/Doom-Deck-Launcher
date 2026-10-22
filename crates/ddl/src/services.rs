@@ -5071,7 +5071,7 @@ mod tests {
             "installing does not import a private file on its own"
         );
         assert!(
-            !matches!(item.launch, Ok(_)),
+            item.launch.is_err(),
             "Play stays blocked until the required file exists"
         );
 

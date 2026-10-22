@@ -351,7 +351,46 @@ fn library_base_game_focus_survives_refresh_and_dpad_navigation() {
         assert_eq!(r.focus, id, "Left traverses the base-game row");
     }
     r.action(&ui, Action::Down);
-    assert_eq!(r.focus, 10, "Down reaches the installed mapsets");
+    // Spec 090 R2: the grid is in release order, so the first displayed card is
+    // the oldest installed mapset, whose id is CARD + its *snapshot* index (not
+    // necessarily 10). Down from the leftmost base game must land on that card.
+    let oldest = {
+        let snapshot = r.snapshot.as_ref().unwrap();
+        snapshot
+            .items
+            .iter()
+            .filter(|item| item.manifest.is_some())
+            .min_by(|a, b| ddl_core::catalog::compare_browsing_order(&a.recipe, &b.recipe))
+            .map(|item| item.recipe.id.clone())
+            .expect("the fixture installs mapsets")
+    };
+    let oldest_card = {
+        let snapshot = r.snapshot.as_ref().unwrap();
+        10 + snapshot
+            .items
+            .iter()
+            .position(|item| item.recipe.id == oldest)
+            .expect("the oldest installed mapset is in the snapshot") as i32
+    };
+    assert_eq!(
+        r.focus, oldest_card,
+        "Down reaches the oldest installed mapset, the first displayed card"
+    );
+    let top_left_card = ui
+        .get_nodes()
+        .iter()
+        .filter(|node| node.kind == 1 && node.actionable && (10..=199).contains(&node.id))
+        .min_by(|a, b| {
+            (a.y, a.x)
+                .partial_cmp(&(b.y, b.x))
+                .expect("finite card geometry")
+        })
+        .map(|node| node.id)
+        .expect("the installed grid is laid out");
+    assert_eq!(
+        r.focus, top_left_card,
+        "the landed card is the top-left card under the base-game row"
+    );
     r.action(&ui, Action::Up);
     assert!((6300..=6303).contains(&r.focus), "Up returns to base games");
     r.action(&ui, Action::Up);
