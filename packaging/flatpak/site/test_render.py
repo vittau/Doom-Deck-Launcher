@@ -230,17 +230,54 @@ class RenderTests(unittest.TestCase):
                 self.assertEqual(text.count("gtag('js', new Date())"), 1)
                 self.assertEqual(text.count(f"gtag('config', '{tag_id}')"), 1)
                 self.assertLess(text.index(tag_url), text.index("</head>"))
-                # Spec 082: one website property, no other IDs, identifiers, URL data or events.
+                # Spec 082: one website property, no other IDs, identifiers, URL data or events;
+                # spec 085 adds exactly one named event, on the landing page only.
                 self.assertEqual(set(re.findall(r"G-[A-Z0-9]{6,}", text)), {tag_id})
-                for forbidden in ("gtag('event'", "gtag('set'", "user_id",
-                                  "page_location", "send_to"):
+                for forbidden in ("gtag('set'", "user_id", "page_location", "send_to"):
                     self.assertNotIn(forbidden, text)
+                self.assertEqual(text.count("gtag('event'"),
+                                 1 if page == "index.html" else 0)
                 # Tracking is the only JavaScript on the legal page, and content never
                 # depends on it: the page text survives with every script removed.
                 if page == "assets/credits.html":
                     self.assertEqual(len(scripts), 2)
                 without_scripts = re.sub(r"(?is)<script\b.*?</script>", "", text)
                 self.assertIn(marker, without_scripts)
+
+    def test_donate_click_sends_one_named_event_without_parameters(self):
+        """Spec 085: the Donate link reports one named event, and nothing else changes."""
+        text = self.render()
+        call = "gtag('event', 'donate_click')"
+        self.assertEqual(text.count("gtag('event'"), 1)
+        self.assertEqual(text.count(call), 1)
+        # The event name is the whole payload: no parameters, identifiers or destination.
+        self.assertNotRegex(text, r"gtag\('event',[^)]*\{")
+        for forbidden in ("user_id", "page_location", "send_to", "link_url"):
+            self.assertNotIn(forbidden, text[text.index(call):])
+        # The anchor keeps its navigation contract untouched.
+        buttons = [a for tag, a in Document(text).elements
+                   if tag == "a" and a.get("class") == "bmc-btn"]
+        self.assertEqual(len(buttons), 1)
+        self.assertEqual(buttons[0]["id"], "donate-link")
+        self.assertEqual(buttons[0]["href"], "https://buymeacoffee.com/vittau")
+        self.assertEqual(buttons[0]["target"], "_blank")
+        self.assertEqual(buttons[0]["rel"], "noopener")
+        # The handler is the page's own plain script: it guards a blocked tag and never
+        # cancels or delays the click, so the link still works without analytics.
+        handler = re.search(r"(?is)<script>\s*\(function \(\) \{.*?</script>", text).group()
+        self.assertIn("document.getElementById('donate-link')", handler)
+        self.assertIn("addEventListener('click'", handler)
+        self.assertIn("typeof gtag === 'function'", handler)
+        self.assertNotIn("preventDefault", handler)
+        self.assertNotIn("googletagmanager", handler)
+        self.assertLess(text.index('id="donate-link"'), text.index(call))
+        self.assertLess(text.index(call), text.index("</body>"))
+        # Only the landing page measures the action.
+        for page in ("assets/credits.html", "404.html"):
+            with self.subTest(page=page):
+                other = (self.out / page).read_text()
+                self.assertNotIn("gtag('event'", other)
+                self.assertNotIn("donate_click", other)
 
     def test_favicon_provenance_root_and_cache_version_on_both_pages(self):
         self.render()
