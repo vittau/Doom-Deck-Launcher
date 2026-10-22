@@ -51,7 +51,7 @@ class IdentityTests(unittest.TestCase):
             self.assertIn("cancel-in-progress: false", workflow)
             self.assertIn("scripts/flatpak/render-site.py", workflow)
         page = (ROOT / ".github/workflows/project-site.yml").read_text()
-        self.assertIn("index.html|robots.txt|sitemap.xml|404.html|assets/*|CNAME)", page)
+        self.assertIn("index.html|robots.txt|sitemap.xml|llms.txt|404.html|assets/*|CNAME)", page)
 
     def test_signed_cleanup_retains_cname_and_new_descriptor(self):
         workflow = (ROOT / ".github/workflows/flatpak-remote.yml").read_text()
@@ -68,7 +68,7 @@ class IdentityTests(unittest.TestCase):
             self.assertTrue((out / f"{APP_ID}.flatpakref").is_file())
             self.assertFalse((out / "obsolete").exists())
             # Discovery files and the branded 404 are page outputs, not strays.
-            for kept in ("robots.txt", "sitemap.xml", "404.html"):
+            for kept in ("robots.txt", "sitemap.xml", "llms.txt", "404.html"):
                 self.assertTrue((out / kept).is_file(), kept)
 
     def test_descriptor_templates_use_canonical_root_and_existing_key(self):
