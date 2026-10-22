@@ -266,7 +266,7 @@ class DiscoveryTests(unittest.TestCase):
             path = attrs["src"].partition("?")[0]
             self.assertEqual(attrs["width"], str(images.png_size(self.out / path)[0]))
             self.assertEqual(attrs["height"], str(images.png_size(self.out / path)[1]))
-            self.assertTrue(attrs.get("alt") is not None)
+            self.assertTrue(attrs.get("alt", "").strip())
         # Above the fold: the hero artwork and its launcher preview load eagerly
         # with high priority; the four below-fold screenshots stay lazy.
         eager = [(attrs["src"], attrs.get("fetchpriority")) for tag, attrs in doc.elements

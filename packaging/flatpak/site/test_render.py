@@ -54,6 +54,31 @@ class RenderTests(unittest.TestCase):
                             and attrs["content"] == f"{BASE}/assets/social-preview.png"
                             for tag, attrs in doc.elements))
 
+    def test_images_carry_alt_text_without_duplicate_accessible_names(self):
+        """Bing's site scan counts alt="" as a missing attribute, so every image is
+        described; the ones that only repeat adjacent text stay out of the
+        accessibility tree instead of being announced twice."""
+        text = self.render()
+        imgs = re.findall(r"<img\b[^>]*>", text)
+        self.assertEqual(len(imgs), 10)
+        for img in imgs:
+            alt = re.search(r'\balt="([^"]*)"', img)
+            self.assertIsNotNone(alt, f"missing alt: {img}")
+            self.assertTrue(alt.group(1).strip(), f"empty alt: {img}")
+        header = re.search(r"<header\b.*?</header>", text, re.DOTALL).group()
+        self.assertIn('aria-label="DoomDeckLauncher home"', header)
+        wordmark = re.search(r'<span class="brand-wordmark" aria-hidden="true">\s*<img\b[^>]*'
+                             r'alt="DoomDeckLauncher wordmark"', header, re.DOTALL)
+        self.assertIsNotNone(wordmark, "wordmark alt hidden from assistive technology")
+        hero = re.search(r'<div class="hero-art" aria-hidden="true">.*?'
+                         r'alt="DoomDeckLauncher’s Rose Compass emblem in the window', text, re.DOTALL)
+        self.assertIsNotNone(hero, "hero artwork alt inside the hidden hero-art layer")
+        footer = re.search(r"<footer\b.*", text, re.DOTALL).group()
+        emblem = re.search(r'<img\b[^>]*emblem-small\.svg[^>]*>', footer).group()
+        self.assertIn('alt="DoomDeckLauncher emblem"', emblem)
+        self.assertIn('aria-hidden="true"', emblem)
+        self.assertIn('alt="Buy Me a Coffee"', re.search(r'<img\b[^>]*bmc-logo[^>]*>', text).group())
+
     def test_assets_local_links_fragments_and_css_resolve(self):
         self.render()
         # These are signed/publication artifacts supplied by the existing workflow,
@@ -68,6 +93,7 @@ class RenderTests(unittest.TestCase):
             for tag, attrs in doc.elements:
                 if tag == "img":
                     self.assertIn("alt", attrs)
+                    self.assertTrue(attrs["alt"].strip(), "empty alt attribute")
                     self.assertIn("width", attrs)
                     self.assertIn("height", attrs)
                 for key in ("src", "href"):
