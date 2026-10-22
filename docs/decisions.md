@@ -51,6 +51,18 @@ upstream downloads and unrelated state-schema/release compatibility checks stay 
 before. README recommends the signed Flatpak and points to the website for installation.
 Spec 079.
 
+**D-040 — Website events measure intent, never outcomes (Accepted, owner, 2026-10-22).**
+The website reports `page_view` automatically and exactly two custom events, `donate_click` and
+`install_click` (specs 085–086), both parameter-free and declared in markup. They record a click,
+not a result: the site cannot see Discover installing the Flatpak, and it cannot see Buy Me a
+Coffee receiving money. They are therefore **not** marked as key events in GA4, and no report,
+README line or status entry may call them installs or donations. The real outcome figures are the
+donation/supporter counts in the Buy Me a Coffee dashboard; installations are not measured at all,
+because the no-launcher-telemetry rule (spec 082) stands and a request-count proxy was not
+pursued. Reading the two events next to the dashboard numbers, as a click-to-donation rate, is the
+only supported interpretation. Adding any other event, parameter, identifier or an in-app
+measurement needs a new decision.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
