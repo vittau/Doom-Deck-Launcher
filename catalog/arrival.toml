@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-c.md §1; gathered 2026-10-22.
+schema_version = 1
+id = "arrival"
+title = "Arrival"
+authors = ["Walker \"Pavera\" Wright", "Brayden \"AD_79\" Hart"]
+release = "1.1.1, 2021-04-16 (declared in the readme); idgames archive file dated 2022-10-07"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/a-c/arrival"
+description = "DOOM II limit-removing episode: eleven slots (MAP01–MAP10 and secret MAP32) of stock-resource maps with Mek's sky replacements, an embedded map-name/story DEHACKED patch and AD_79's MIDI soundtrack."
+permission = "Authors MAY NOT use the maps as a base for modification or reuse. The music may be reused only for strictly non-commercial use as specified by the artist. Redistribution is permitted provided arrival.txt travels with the file, unmodified and intact; the author states permission was obtained for included resources. DDL downloads the unmodified archive and keeps the bundled text file."
+tags = ["classics", "cacowards"]
+
+# Bundled screenshot (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/arrival/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "arrival/01.jpg"
+credit = "Walker \"Pavera\" Wright & Brayden \"AD_79\" Hart"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP10 plus secret MAP32, no UMAPINFO or COMPLVL).
+# The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-c.md §1–§2", "Archive and member sizes/SHA-256; WAD lump inventory (PHP/11 map markers, embedded DEHACKED strings, Boom line special 271 sky transfers); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 source: prboom2/src/p_spec.c P_SpawnVanillaExtras applies line specials 271/272 in every complevel"]
+notes = "Confirmed package/member identities from three byte-identical mirrors, the eleven map markers MAP01–MAP10 and MAP32, the embedded DEHACKED lump (map names and story text only, despite the readme's 'Dehacked/BEX Patch: No' line) and no COMPLVL, MAPINFO or UMAPINFO lump. Complevel vanilla comes from the author's 'Advanced engine needed: Limit-removing' plus 'May Not Run With: Vanilla Doom' (limit-removing convention); the maps use Boom sky-transfer line specials 271, which DSDA-Doom applies in all complevels, so the vanilla level keeps the custom skies. Progression uses DSDA-Doom's hardcoded Doom II next-map table (legacy.c): after the custom MAP10 the run continues into the base IWAD's MAP11 unless the player quits. Tags: cacowards = 2021 Top Twelve (page 3) winner, https://www.doomworld.com/cacowards/2021/best3/ (read through the Wayback capture of 2021-12-10); classics = released 2021-04-16, over five years before this review, with that Cacowards recognition. The Cacowards blurb says '9 maps'; the readme and the WAD itself count eleven slots, so the <=9-map episode tag is not claimed. Needs Deck Validation: IWAD/complevel, DEHACKED application, gameplay, audio, MAP32 access and the post-MAP10 transition."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The Cacowards 2021 entry describes '9 maps' while the release declares 11 slots (9 main, 1 ending, secret MAP32); confirm MAP10 and MAP32 progression on the Deck.", "No UMAPINFO or COMPLVL exists. The hardcoded Doom II progression continues from the custom MAP10 into the base IWAD's MAP11; quit from the intermission to stop after the ending map.", "No separate DEHACKED member exists: the patch is embedded in arrival.wad and its hash is covered by the member identity."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/a-c/arrival"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/a-c/arrival.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/a-c/arrival.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/a-c/arrival.zip"]
+size = 2552025
+sha256 = "3907dbe4dfb39129ef2ff3b957640ddea7a7cad4e7d00e4a7b04adaa431992aa"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/a-c/arrival.zip"
+
+[[packages.members]]
+id = "maps"
+path = "arrival.wad"
+size = 7820717
+sha256 = "6e499ff4c0ca7afdd94bf9696be9aaa7594cc767331c56dd8f24d0c9f66acda9"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "arrival.txt"
+size = 4063
+sha256 = "a343d200cde1e70669df39a5b528ae18ece39f832c3c12d5bfd6f8350a66870d"
+keep = true
+
+[[components]]
+id = "main"
+label = "Arrival"
+description = "Main eleven-slot limit-removing mapset with an embedded DEHACKED patch and AD_79's MIDI soundtrack."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

@@ -1,0 +1,70 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-c.md §3; gathered 2026-10-22.
+schema_version = 1
+id = "vanguard"
+title = "Vanguard"
+authors = ["Paul \"skillsaw\" DeBruyne"]
+release = "2011-05-11"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/v-z/vanguard"
+description = "DOOM II Boom mapset: twelve nonlinear maps plus a bonus thirteenth, with an embedded DEHACKED level-name patch and a ZDoom-syntax MAPINFO lump that DSDA-Doom v0.30.1 does not read."
+permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Vanguard.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["classics", "cacowards"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP13). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-c.md §3", "Archive and member sizes/SHA-256; WAD lump inventory (thirteen map markers MAP01–MAP13, ZDoom-syntax MAPINFO, embedded DEHACKED, Boom generalized and extended line specials); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 prboom2/src/p_spec.c generalized-linedef dispatch and prboom2/src/dsda/mapinfo/ (legacy.c, u.c, hexen.c only — no ZDoom MAPINFO reader)"]
+notes = "Confirmed package/member identities from three byte-identical mirrors and the thirteen map markers MAP01–MAP13. Complevel boom: the author's text says '12 Boom format levels for PrBoom+, ZDoom, or Eternity' and 'Boom compatible, limit removing ports', the readme declares the 13th bonus map, and the maps themselves carry Boom generalized line types plus sky-transfer special 271, which vanilla compatibility does not implement. The MAPINFO lump uses ZDoom syntax (defaultmap/nocrouch/nojump, map blocks with titlepatch/next/music); it is not a Boom format, and DSDA-Doom v0.30.1 no longer reads ZDoom MAPINFO, so map titles and the per-map music selection fall back to the engine's behaviour. Progression uses DSDA-Doom's hardcoded Doom II next-map table (legacy.c): after the custom MAP13 the run continues into the base IWAD's MAP14 unless the player quits. The embedded DEHACKED supplies level names only. Tags: cacowards = 2011 Top Ten (page 2) winner, https://www.doomworld.com/cacowards/2011/ (the 2011 edition lives at https://www.doomworld.com/18years/best2.php, read through the Wayback capture of 2011-12-11); classics = released 2011-05-11, over five years before this review, with that Cacowards recognition. Thirteen slots, so neither megawad nor episode applies. Needs Deck Validation: IWAD/complevel, DEHACKED application, gameplay, audio and the post-MAP13 transition."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The ZDoom-syntax MAPINFO and its map titles/music are inert in DSDA-Doom v0.30.1; confirm which music plays and how the map title screen reads on the Deck.", "No UMAPINFO or COMPLVL exists. The hardcoded Doom II progression continues from the custom MAP13 into the base IWAD's MAP14; quit from the intermission to stop after the bonus map.", "Thirteen maps including the joke bonus MAP13; the Cacowards blurb counts twelve, so confirm the bonus map's intent on the Deck.", "No separate DEHACKED member exists: the patch is embedded in Vanguard.wad and its hash is covered by the member identity."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/v-z/vanguard"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/v-z/vanguard.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/v-z/vanguard.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/v-z/vanguard.zip"]
+size = 9910540
+sha256 = "d37b5bd01b7c9902be97f1d42c1c1f68cf4aaeb9ac97ab8cce88fcd1b459dbef"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/v-z/vanguard.zip"
+
+[[packages.members]]
+id = "maps"
+path = "Vanguard.wad"
+size = 34897578
+sha256 = "52807ec27756d23dedc388c8c39b953797fa2da1c8339303de63141a0cebc465"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "Vanguard.txt"
+size = 4223
+sha256 = "ceab9fcf5532157aa65fa5f3a69143d2a8711c86ef5bd6dd066340eca047bdf2"
+keep = true
+
+[[components]]
+id = "main"
+label = "Vanguard"
+description = "Main thirteen-map Boom mapset with an embedded DEHACKED level-name patch and the author's soundtrack. The bundled MAPINFO is ZDoom syntax and is not read by DSDA-Doom v0.30.1."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

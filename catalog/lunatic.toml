@@ -1,0 +1,70 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-c.md §4; gathered 2026-10-22.
+schema_version = 1
+id = "lunatic"
+title = "Lunatic"
+authors = ["Paul \"skillsaw\" DeBruyne"]
+release = "2011-08-11"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/j-l/lunatic"
+description = "DOOM II Boom episode: five moon-base maps with an embedded DEHACKED patch (modified Keen and SS behaviour) and two inert metadata lumps — a ZDoom-syntax MAPINFO and an Eternity EMAPINFO — that DSDA-Doom v0.30.1 does not read."
+permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Lunatic.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["classics", "cacowards", "episode"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single five-map DOOM II episode (MAP01–MAP05). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-c.md §4", "Archive and member sizes/SHA-256; WAD lump inventory (five map markers MAP01–MAP05, ZDoom-syntax MAPINFO, Eternity EMAPINFO, embedded DEHACKED, Boom generalized and extended line specials); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 prboom2/src/p_spec.c generalized-linedef dispatch and prboom2/src/dsda/mapinfo/ (legacy.c, u.c, hexen.c only — no ZDoom MAPINFO reader)"]
+notes = "Confirmed package/member identities from three byte-identical mirrors and the five map markers MAP01–MAP05. Complevel boom: the author's text says 'Boom compatible, limit removing ports' and 'Lunatic includes 5 Boom-format maps', and the maps use Boom generalized line types that vanilla compatibility does not implement. The MAPINFO lump is ZDoom syntax and the EMAPINFO lump is Eternity's metadata format; neither is a Boom format, and DSDA-Doom v0.30.1 reads neither (its map metadata readers are the hardcoded legacy progression, UMAPINFO and Hexen). Progression therefore uses the hardcoded Doom II next-map table (legacy.c): after the custom MAP05 the run continues into the base IWAD's MAP06 unless the player quits. The embedded DEHACKED edits a Keen type, frames and level names. Tags: cacowards = 2011 Top Ten (page 1) winner, https://www.doomworld.com/cacowards/2011/ (the 2011 edition lives at https://www.doomworld.com/18years/best1.php, read through the Wayback capture of 2011-12-10); classics = released 2011-08-11, over five years before this review, with that Cacowards recognition; episode = five maps, counted from the WAD and the author's map list. Needs Deck Validation: IWAD/complevel, DEHACKED application, gameplay, audio and the post-MAP05 transition."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "The ZDoom MAPINFO and Eternity EMAPINFO lumps are inert in DSDA-Doom v0.30.1; map titles and the per-map music selection fall back to engine behaviour. Confirm what plays on the Deck.", "No UMAPINFO or COMPLVL exists. The MAPINFO's MAP05 next points at MAP06 (itself missing from the PWAD); the hardcoded Doom II progression therefore loads the base IWAD's MAP06. Quit from the intermission to stop after MAP05.", "No separate DEHACKED member exists: the patch is embedded in Lunatic.wad and its hash is covered by the member identity."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/j-l/lunatic"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/j-l/lunatic.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/j-l/lunatic.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/j-l/lunatic.zip"]
+size = 4058779
+sha256 = "01e393282b23af6e854d8925f958ad7fb769f004cdfaa97b815bb0d9b999e616"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/j-l/lunatic.zip"
+
+[[packages.members]]
+id = "maps"
+path = "Lunatic.wad"
+size = 18160632
+sha256 = "4ef88cf44d7d15effdf634811e3ae21fceaee21336870879c95af75b08783c9f"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "Lunatic.txt"
+size = 3579
+sha256 = "93f0b9a52f1006c49fef41c341d86c5d3d83992418cafdd12fb00beb290f73cf"
+keep = true
+
+[[components]]
+id = "main"
+label = "Lunatic"
+description = "Main five-map Boom episode with an embedded DEHACKED patch and the author's soundtrack. The bundled ZDoom MAPINFO and Eternity EMAPINFO are not read by DSDA-Doom v0.30.1."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
