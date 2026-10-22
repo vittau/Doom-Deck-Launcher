@@ -20,6 +20,10 @@ description = "Jimmy's four-episode Ultimate Doom campaign: 36 fast, classic map
 permission = "Authors MAY use the contents of this file as a base for modification or reuse. Redistribution is permitted provided deathless1.1.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "megawad"]
 
+[[screenshots]]
+asset = "deathless/01.jpg"
+credit = "James Paddock (Jimmy)"
+
 [base_game]
 game = "doom"
 # Four episodes need Ultimate Doom; the KEX re-release carries the same episode data.

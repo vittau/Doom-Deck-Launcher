@@ -19,6 +19,10 @@ description = "A landmark slaughter set of 22 enormous maps: cathedral-scale hal
 permission = "Authors may use these levels as a base to build additional levels. Redistribution is permitted provided SunderReadMeV2.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "challenging"]
 
+[[screenshots]]
+asset = "sunder/01.jpg"
+credit = "Insane_Gazebo"
+
 [base_game]
 game = "doom2"
 variants = []

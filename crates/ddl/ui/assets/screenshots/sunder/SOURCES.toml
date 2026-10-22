@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://www.player.it/wp-content/uploads/2023/05/sunder-doom-wad.jpg"
+source_page = "https://www.player.it/speciali/521267-migliori-wad-doom-avventure-custom.html"
+credit = "Insane_Gazebo (screenshot: Player.it)"
+original_size = "1280x720"
+retrieved = "2026-10-22"
+permission = "In-game screenshot published in Player.it's feature on custom Doom WADs (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024, credited to the map author and the publisher, and removed on request."

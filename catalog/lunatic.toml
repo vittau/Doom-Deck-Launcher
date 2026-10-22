@@ -11,6 +11,10 @@ description = "DOOM II: five maps set on a moon base during a desperate escape a
 permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Lunatic.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["classics", "cacowards", "episode"]
 
+[[screenshots]]
+asset = "lunatic/01.jpg"
+credit = "Paul DeBruyne (skillsaw)"
+
 [base_game]
 game = "doom2"
 variants = []

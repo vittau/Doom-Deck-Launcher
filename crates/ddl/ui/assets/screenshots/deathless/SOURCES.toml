@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://mordiesrnr.wordpress.com/wp-content/uploads/2019/01/deathless_ire.png"
+source_page = "https://mordiesrnr.wordpress.com/2019/01/09/doom-deathless/"
+credit = "James Paddock (Jimmy)"
+original_size = "1920x1027"
+retrieved = "2026-10-22"
+permission = "In-game screenshot from Mordie's R&R review of Deathless (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024, credited to the author, and removed on request."

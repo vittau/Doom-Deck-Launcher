@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://www.doomworld.com/18years/wad_img/vanguard.png"
+source_page = "https://www.doomworld.com/18years/best2.php"
+credit = "Paul DeBruyne (skillsaw)"
+original_size = "640x384"
+retrieved = "2026-10-22"
+permission = "In-game screenshot published in Doomworld's 2011 Cacowards feature (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024, credited to the author, and removed on request. doomworld.com returns HTTP 403 to automated fetches, so the page and image were read through Wayback Machine captures on 2026-10-22."

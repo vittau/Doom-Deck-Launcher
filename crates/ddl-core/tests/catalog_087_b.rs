@@ -438,9 +438,9 @@ fn assigned_recipes_pass_offline_lint_including_images() {
     for id in ["no-end-in-sight", "doom-ii-the-way-id-did", "rekkr"] {
         assert_eq!(recipe(&catalog, id).screenshots.len(), 1, "{id}");
     }
-    // These still have none, so their lint covers the text fields only.
+    // These assigned recipes now reference committed screenshots too.
     for id in ["deathless", "sunder"] {
-        assert!(recipe(&catalog, id).screenshots.is_empty(), "{id}");
+        assert_eq!(recipe(&catalog, id).screenshots.len(), 1, "{id}");
     }
 }
 
