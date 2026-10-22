@@ -1,0 +1,70 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-a.md §9–§12; gathered 2026-10-22.
+schema_version = 1
+id = "tnt-revilution"
+title = "TNT: Revilution"
+authors = ["TNT: Revilution Team"]
+release = "Version 1.20, 2017-07-08 (first release 2017-05-29)"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/tntr"
+description = "TNT: Evilution community sequel: 32 vanilla-format maps with a custom soundtrack, graphics, sounds and an embedded DEHACKED/BEX patch for its custom monsters and level names."
+permission = "Authors may use the contents as a base for modification or reuse, and the team states it obtained permission from the original authors of any modified or included resources. Redistribution is permitted provided TNTR.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["cacowards", "megawad", "classics", "community-projects"]
+
+[base_game]
+game = "tnt"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous TNT mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-a.md §9–§12", "Archive, member, WAD lump, MAPINFO, embedded DEHACKED and external TNTR.deh inspection; TNTR.txt; DSDA-Doom v0.30.1 source and release notes"]
+notes = "Confirmed archive/member identities and the base game: TNTR.txt declares 'Game: TNT', so the recipe requires a TNT IWAD and must not infer Doom II from its idgames directory. TNTR.WAD has MAP01–MAP32 and an embedded DEHACKED/BEX patch (8,218 B) with its custom things, frames, codepointers, par times and strings; the external TNTR.deh (10,372 B) is the same information in plain DeHackEd form for engines without embedded support and is not loaded twice. Complevel vanilla follows 'Advanced engine needed: No. For Demos use TNT.wad', the Chocolate Doom test and the vanilla target; the vanilla alias resolves to 4 on TNT (D-030). Tags: cacowards = 2017 Cacowards runner-up, https://www.doomworld.com/cacowards/2017/ (page not read live in this session; archived inventory docs/research/cacowards.md §2017); megawad = 32 maps per TNTR.txt and the WAD; classics = released 2017-05-29, over five years before this review, with the Cacoward as lasting recognition; community-projects = the credited team and map authors in TNTR.txt."
+limitations = ["Needs Deck Validation: TNT IWAD selection, complevel, embedded DEHACKED application, load order, gameplay, audio and map selection.", "The external TNTR.deh is deliberately not declared; confirm on the Deck that the WAD's embedded DEHACKED level names and custom monsters appear.", "TNTR.txt warns of vanilla visplane crashes from Arch-Vile blasts on MAP16 and MAP22, savegame overflows on several maps, and a MAP30 telefrag compatibility setting; validate these on the Deck."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/tntr"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/tntr.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/megawads/tntr.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/megawads/tntr.zip"]
+size = 8619240
+sha256 = "aa64d4f3e713e4c7349c86d02731428c19e1f403f87e7d589d22e663a446cba8"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/tntr.zip"
+
+[[packages.members]]
+id = "maps"
+path = "TNTR.wad"
+size = 28776797
+sha256 = "3e842f3172fac2d2008cbf0dfe40b89af2ea34ece07c0df75f8992359a79af86"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "TNTR.txt"
+size = 10182
+sha256 = "52f724f2e9562a7d68bb3635fff758bf1ee5e1d268c151a59959be5c06fae6a3"
+keep = true
+
+[[components]]
+id = "main"
+label = "TNT: Revilution"
+description = "Main 32-map TNT megawad with its own soundtrack, graphics, sounds and embedded DEHACKED/BEX patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
