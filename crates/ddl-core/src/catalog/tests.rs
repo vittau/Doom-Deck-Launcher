@@ -1582,6 +1582,7 @@ fn shipped_vocabulary_is_valid_and_has_the_spec_015_tags() {
             "classics",
             "episode",
             "challenging",
+            "gimmick",
             "featured",
             "beginner-friendly"
         ]
@@ -1589,14 +1590,14 @@ fn shipped_vocabulary_is_valid_and_has_the_spec_015_tags() {
     assert_eq!(Catalog::embedded().tags, vocabulary);
 }
 
-/// Spec 073, R5: the owner's Discover sequence is the vocabulary's prefix, and
+/// Specs 073/091: the owner's Discover sequence is the vocabulary's prefix, and
 /// Featured/Beginner Friendly keep their vocabulary outside it.
 #[test]
 fn requested_discover_sequence_leads_the_vocabulary() {
     let vocabulary = vocabulary();
     let ordered: Vec<_> = vocabulary.ordered().iter().map(|t| t.id.as_str()).collect();
     assert_eq!(
-        &ordered[..7],
+        &ordered[..8],
         [
             "cacowards",
             "megawad",
@@ -1604,11 +1605,12 @@ fn requested_discover_sequence_leads_the_vocabulary() {
             "doomer-boards",
             "classics",
             "episode",
-            "challenging"
+            "challenging",
+            "gimmick"
         ],
         "the requested category sequence, in order"
     );
-    let outside = &ordered[7..];
+    let outside = &ordered[8..];
     assert!(
         outside.contains(&"featured") && outside.contains(&"beginner-friendly"),
         "metadata tags stay in the vocabulary but out of the sequence: {outside:?}"
