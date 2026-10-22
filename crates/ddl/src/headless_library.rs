@@ -108,7 +108,16 @@ fn owner_runtime(temp: &std::path::Path, ui: &AppWindow) -> Runtime {
     let mut runtime = Runtime::new(env);
     runtime.snapshot = Some(snapshot);
     runtime.screen = Screen::Library;
-    runtime.focus = -2;
+    runtime.focus = runtime
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| item.manifest.is_some())
+        .min_by(|(_, a), (_, b)| ddl_core::catalog::compare_browsing_order(&a.recipe, &b.recipe))
+        .map_or(6300, |(index, _)| 10 + index as i32);
     runtime.sync(ui);
     runtime
 }
@@ -395,4 +404,320 @@ fn library_base_game_focus_survives_refresh_and_dpad_navigation() {
     assert!((6300..=6303).contains(&r.focus), "Up returns to base games");
     r.action(&ui, Action::Up);
     assert_eq!(r.focus, 6000, "Up returns to New custom setup");
+}
+
+/// Production layouts and keyboard input, with no native backend or desktop capture.
+#[test]
+fn compact_view_scenes_and_identity_journey() {
+    if isolated(module_path!(), "compact_view_scenes_and_identity_journey") {
+        return;
+    }
+    use crate::{input::Action, runtime::Category, services::ViewFormat};
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let runtime = owner_runtime(temp.path(), &ui);
+    let state = Rc::new(std::cell::RefCell::new(runtime));
+    let callback = state.clone();
+    let weak = ui.as_weak();
+    ui.on_action(move |code| {
+        if let Some(action) = Action::from_code(code) {
+            callback
+                .borrow_mut()
+                .action(&weak.upgrade().unwrap(), action);
+        }
+    });
+    let capture = |name: &str| {
+        advance_time(20);
+        write_png(name, &render(&window));
+    };
+    {
+        let mut r = state.borrow_mut();
+        for item in &mut r.snapshot.as_mut().unwrap().items {
+            item.favorite = true;
+        }
+        r.snapshot.as_mut().unwrap().items[1].recipe.title = "The extraordinarily long mapset title across the forgotten cathedral at the edge of the universe".into();
+        r.choose_category(Category::Favorites);
+        r.screen = Screen::Discover;
+        r.focus = 11;
+        r.sync(&ui);
+    }
+    capture("095-discover-cards.png");
+    window.dispatch_event(WindowEvent::KeyPressed { text: "v".into() });
+    assert_eq!(state.borrow().view_format, ViewFormat::List);
+    window.dispatch_event(WindowEvent::KeyPressed { text: "v".into() });
+    assert_eq!(
+        state.borrow().view_format,
+        ViewFormat::List,
+        "held keyboard V cannot repeat"
+    );
+    window.dispatch_event(WindowEvent::KeyReleased { text: "v".into() });
+    assert_eq!(state.borrow().focus, 11);
+    capture("095-discover-list-long-title.png");
+    let offset = ui.get_scroll_offset();
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .filter(|n| n.kind == 24 && n.y - offset >= 0. && n.y + n.h - offset <= 502.)
+            .count()
+            >= 5
+    );
+    {
+        let mut r = state.borrow_mut();
+        r.focus = 10 + (r.snapshot.as_ref().unwrap().items.len() - 1) as i32;
+        r.sync(&ui);
+    }
+    assert!(ui.get_scroll_offset() > 0.);
+    capture("095-discover-list-scrolled.png");
+    let focused = state.borrow().focus;
+    for _ in 0..2 {
+        state.borrow_mut().action(&ui, Action::ToggleView);
+        assert_eq!(state.borrow().focus, focused);
+    }
+    state.borrow_mut().action(&ui, Action::Confirm);
+    assert_eq!(state.borrow().screen, Screen::Detail);
+    assert!(!ui.get_view_hint());
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    assert_eq!(state.borrow().view_format, ViewFormat::List);
+    state.borrow_mut().action(&ui, Action::Back);
+    assert_eq!(state.borrow().focus, focused);
+    state.borrow_mut().action(&ui, Action::Tab(1));
+    assert_eq!(state.borrow().screen, Screen::Library);
+    assert!(ui.get_list_view());
+    state.borrow_mut().focus = 6300;
+    state.borrow_mut().sync(&ui);
+    capture("095-library-list-mixed.png");
+    state.borrow_mut().focus = 6303;
+    state.borrow_mut().sync(&ui);
+    ui.set_scroll_offset(260.);
+    capture("095-library-list-section-transition.png");
+    state.borrow_mut().focus = 6300;
+    state.borrow_mut().sync(&ui);
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    assert_eq!(state.borrow().focus, 6300);
+    capture("095-library-cards-mixed.png");
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    state.borrow_mut().focus = 6101;
+    state.borrow_mut().sync(&ui);
+    capture("095-library-list-local-scrolled.png");
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    assert_eq!(state.borrow().focus, 6101);
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    state.borrow_mut().action(&ui, Action::Menu);
+    assert!(!ui.get_view_hint());
+    let format = state.borrow().view_format;
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    assert_eq!(state.borrow().view_format, format);
+    state.borrow_mut().action(&ui, Action::Back);
+    state.borrow_mut().focus = -2;
+    state.borrow_mut().sync(&ui);
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    assert_eq!(state.borrow().focus, -2, "tab focus survives");
+    state.borrow_mut().focus = 6000;
+    state.borrow_mut().sync(&ui);
+    state.borrow_mut().action(&ui, Action::ToggleView);
+    assert_eq!(state.borrow().focus, 6000, "setup control survives");
+    state.borrow_mut().action(&ui, Action::Confirm);
+    assert!(!ui.get_view_hint(), "local setup excludes toggle");
+    state.borrow_mut().finish_preferences();
+    let env = environment(&temp.path().join("home"));
+    assert_eq!(
+        crate::services::load_view_format(&env).unwrap(),
+        state.borrow().view_format
+    );
+}
+
+#[test]
+fn compact_thousand_items_repeat_without_reload_or_retained_models() {
+    if isolated(
+        module_path!(),
+        "compact_thousand_items_repeat_without_reload_or_retained_models",
+    ) {
+        return;
+    }
+    use crate::{input::Action, runtime::Category, services::ViewFormat};
+    let (_window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let prototype = r.snapshot.as_ref().unwrap().items[0].clone();
+    r.snapshot.as_mut().unwrap().items = (0..1000)
+        .map(|index| {
+            let mut item = prototype.clone();
+            item.recipe.id = format!("synthetic-{index:04}");
+            item.recipe.title = format!("Mapset {index:04}");
+            item.favorite = true;
+            item
+        })
+        .collect();
+    r.choose_category(Category::Favorites);
+    r.screen = Screen::Discover;
+    r.focus = 1_000_777;
+    r.sync(&ui);
+    let items = r.snapshot.as_ref().unwrap().items.as_ptr();
+    let mut models = vec![];
+    for _ in 0..24 {
+        let model: Rc<dyn slint::Model<Data = crate::ViewNode>> =
+            ui.get_nodes().try_into().unwrap();
+        models.push(Rc::downgrade(&model));
+        drop(model);
+        r.action(&ui, Action::ToggleView);
+        assert_eq!(r.focus, 1_000_777);
+        assert_eq!(
+            r.snapshot.as_ref().unwrap().items.as_ptr(),
+            items,
+            "reuse the same snapshot data"
+        );
+        if r.view_format == ViewFormat::List {
+            assert!(
+                ui.get_nodes().iter().all(|n| n.screenshot.is_empty()),
+                "compact rows never request screenshots"
+            );
+        }
+        assert!(
+            r.pending.is_none() && !r.busy,
+            "layout never starts a catalog/library command"
+        );
+        assert!(ui.get_scroll_offset() > 0.);
+        let focus = ui.get_nodes().iter().find(|n| n.id == r.focus).unwrap();
+        assert!(focus.y - ui.get_scroll_offset() >= 0.);
+        assert!(focus.y + focus.h - ui.get_scroll_offset() <= 502.);
+        assert!(ui.get_nodes().row_count() < 11020);
+        advance_time(1);
+        assert!(
+            models.iter().all(|old| old.upgrade().is_none()),
+            "replaced row models are released"
+        );
+    }
+    r.action(&ui, Action::ToggleView);
+    assert_eq!(r.view_format, ViewFormat::List);
+    r.action(&ui, Action::Down);
+    assert_ne!(r.focus, 1_000_777);
+    r.action(&ui, Action::Up);
+    assert_eq!(r.focus, 1_000_777);
+    r.action(&ui, Action::Confirm);
+    assert_eq!(r.selected, 777);
+    assert_eq!(r.screen, Screen::Detail);
+    r.action(&ui, Action::Back);
+    assert_eq!(r.focus, 1_000_777);
+    r.action(&ui, Action::Tab(1));
+    assert_eq!(r.view_format, ViewFormat::List);
+}
+
+#[test]
+fn compact_categories_favorites_and_shared_root_journey() {
+    if isolated(
+        module_path!(),
+        "compact_categories_favorites_and_shared_root_journey",
+    ) {
+        return;
+    }
+    use crate::{input::Action, runtime::Category, services::ViewFormat};
+    let (_window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    r.screen = Screen::Discover;
+    r.choose_category(Category::Tag("doomer-boards".into()));
+    r.sync(&ui);
+    let cards: Vec<_> = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.actionable && n.kind == 1)
+        .collect();
+    assert!(cards.len() > 5);
+    r.focus = cards[4].id;
+    r.sync(&ui);
+    let id = r.snapshot.as_ref().unwrap().items[(r.focus - 10) as usize]
+        .recipe
+        .id
+        .clone();
+    let order = |ui: &AppWindow| {
+        ui.get_nodes()
+            .iter()
+            .filter(|n| n.actionable && (n.kind == 1 || n.kind == 24))
+            .map(|n| n.id)
+            .collect::<Vec<_>>()
+    };
+    let before = order(&ui);
+    let category = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.kind == 14 && n.primary)
+        .unwrap()
+        .label;
+    r.action(&ui, Action::ToggleView);
+    assert_eq!(order(&ui), before);
+    assert_eq!(
+        ui.get_nodes()
+            .iter()
+            .find(|n| n.kind == 14 && n.primary)
+            .unwrap()
+            .label,
+        category
+    );
+    r.action(&ui, Action::X);
+    for _ in 0..1000 {
+        pump_events();
+        r.drain(&ui);
+        if !r.busy {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    assert!(!r.busy && r.problem.is_none());
+    assert_eq!(
+        r.snapshot.as_ref().unwrap().items[(r.focus - 10) as usize]
+            .recipe
+            .id,
+        id
+    );
+    assert!(
+        r.snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .find(|item| item.recipe.id == id)
+            .unwrap()
+            .favorite
+    );
+    assert_eq!(r.view_format, ViewFormat::List);
+    r.action(&ui, Action::Confirm);
+    assert_eq!(r.screen, Screen::Detail);
+    assert_eq!(r.snapshot.as_ref().unwrap().items[r.selected].recipe.id, id);
+    r.action(&ui, Action::Back);
+    r.action(&ui, Action::ToggleView);
+    assert_eq!(
+        r.snapshot.as_ref().unwrap().items[(r.focus - 10) as usize]
+            .recipe
+            .id,
+        id
+    );
+    r.action(&ui, Action::NextCategory);
+    assert_ne!(
+        ui.get_nodes()
+            .iter()
+            .find(|n| n.kind == 14 && n.primary)
+            .unwrap()
+            .label,
+        category
+    );
+    r.action(&ui, Action::Up);
+    assert!((200..230).contains(&r.focus));
+    let chip = r.focus;
+    r.action(&ui, Action::ToggleView);
+    assert_eq!(r.focus, chip);
+    r.action(&ui, Action::Tab(1));
+    assert_eq!(r.view_format, ViewFormat::List);
+    r.focus = 6300;
+    r.sync(&ui);
+    r.action(&ui, Action::Down);
+    assert_eq!(
+        r.focus, 6100,
+        "the registered base game leads to local content"
+    );
+    r.action(&ui, Action::Up);
+    assert_eq!(r.focus, 6300);
+    r.finish_preferences();
 }
