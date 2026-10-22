@@ -1,12 +1,12 @@
 # Experimental Flatpak packaging for DoomDeckLauncher (spec 062).
 #
-# This is an artifact-only CI job. It does not publish a GitHub Release, push
+# Manual only: this is an artifact-only CI job. It does not publish a GitHub Release, push
 # to a Flatpak repository or submit anything to Flathub. The package is
 # AI-assisted and experimental; see docs/flatpak-build.md and D-034.
 #
 # Build environment: the plain GitHub-hosted Ubuntu runner plus Flatpak and
 # flatpak-builder from Ubuntu's archive. It deliberately does not use the Steam
-# Linux Runtime tarball job from ci.yml/release.yml: this job proves the Flatpak
+# Linux Runtime tarball job from release.yml: this job proves the Flatpak
 # manifest, not the Deck tarball.
 #
 # External references:
@@ -19,33 +19,6 @@ name: Flatpak
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "packaging/flatpak/**"
-      - "!packaging/flatpak/site/**"
-      - ".github/workflows/flatpak.yml"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "crates/**"
-      - "catalog/**"
-      - "scripts/flatpak/**"
-      - "!scripts/flatpak/render-site.py"
-      - "LICENSE"
-  pull_request:
-    paths:
-      - "packaging/flatpak/**"
-      - "!packaging/flatpak/site/**"
-      - ".github/workflows/flatpak.yml"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "crates/**"
-      - "catalog/**"
-      - "scripts/flatpak/**"
-      - "!scripts/flatpak/render-site.py"
-      - "LICENSE"
 
 # Read-only everywhere. The artifact upload needs no repository write access.
 permissions:

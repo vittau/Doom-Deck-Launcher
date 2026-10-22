@@ -1,5 +1,32 @@
 # Contributing to DoomDeckLauncher
 
+## Developer checks
+
+Use focused tests for the behavior you change; documentation, metadata and workflow edits
+need no Rust rebuild. Automatic source CI covers `crates/`, `catalog/`, `tests/`,
+`docs/design/` reference art, Cargo/toolchain inputs and `.cargo/`. It runs fmt,
+denied-warning workspace Clippy, ordinary offline tests and catalog lint in one job.
+The ordinary suite skips only ten exhaustive render cases:
+
+```sh
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots
+```
+
+All other focused headless, navigation, persistence and model tests remain. For the full
+suite, use `cargo test --workspace --locked`, or **Actions → CI → Run workflow** with
+`full_tests=true`. This includes all nine title-fit cases and the category/favorites
+screenshot journey and cannot publish a catalog. To publish only a catalog manually, choose
+`publish_catalog=true`, `full_tests=false` on `main`; catalog pushes still publish normally.
+Avoid repeating an unchanged full-suite result after documentation/metadata/test-only
+follow-ups; use one authoritative full run when needed. See [orchestration guidance](docs/orchestration.md#verification).
+
+Packaging-only changes get [lightweight metadata checks](docs/flatpak-build.md#run-the-workflow).
+The artifact Flatpak build is manual; signed tag publication and Linux release smoke checks
+remain required. Real-network `e2e.yml` is an opt-in downloader/archive/engine diagnostic,
+not a metadata, copy, catalog-only or UI release gate. Keep upstream failures visible.
+
 ## Add a mapset
 
 Add one `catalog/<id>.toml` file in a pull request. Use a stable lowercase slug
@@ -34,9 +61,6 @@ Optional images need explicit permission, a safe relative `path`, and a nonempty
    ```sh
    cargo run -p ddl -- catalog lint catalog/your-mapset.toml
    cargo run -p ddl -- catalog lint --fetch catalog/your-mapset.toml
-   cargo fmt --all --check
-   cargo clippy --workspace --all-targets -- -D warnings
-   cargo test --workspace
    ```
 
 Lint is offline by default and exits unsuccessfully with `file:line`, an error

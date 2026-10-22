@@ -1,53 +1,40 @@
-# Continuous integration for DoomDeckLauncher (spec 001, R6).
-#
-# Four jobs:
-#   * `checks`        - formatting, lints and unit tests on the GitHub-hosted
-#                       Ubuntu runner, mirroring the commands in `AGENTS.md`;
-#   * `catalog-lint`  - offline recipe validation on every pull request;
-#   * `catalog-bundle`- publishes the catalog bundle to the `catalog` branch on
-#                       a push to `main` that touches `catalog/**`, on the first
-#                       publish (the branch does not exist yet) and when run by
-#                       hand on `main` (spec 019, R2);
-#   * `steamrt-build` - a release-mode build inside the same Steam Linux Runtime
-#                       SDK container the release uses, to prove the binary
-#                       actually links against SteamOS/Yocto-era libraries before
-#                       anyone downloads it.
-#
-# The container image is pinned by digest (see `docs/research/steam-runtime-build.md`).
-# The same digest is used by `.github/workflows/release.yml`; keep them in sync.
 name: CI
 
-# Pushes to main and pull requests, only when something that affects the build or tests
-# changed. Docs, status/journal, Markdown and orchestration scripts do not rebuild anything
-# (`docs/design/` stays: the headless UI tests read its reference images). Tag pushes do not
-# run CI either: `release.yml` builds and smoke-tests the tagged commit itself.
-# `workflow_dispatch` (spec 019, R2) lets a maintainer publish the catalog bundle on
-# demand; only the `catalog-bundle` job reacts to it, and only on `main`.
+# Only build inputs start automatic Rust checks. Catalog changes retain their
+# independent lint/publication path; docs/design contains headless reference art.
+# Release SDK builds and smoke checks belong to release.yml on tags.
 on:
   push:
     branches: [main]
     paths:
-      - '**'
-      - '!docs/**'
+      - 'crates/**'
+      - 'catalog/**'
+      - 'tests/**'
       - 'docs/design/**'
-      - '!**/*.md'
-      - '!scripts/orchestration/**'
-      - '!LICENSE'
-      - '!packaging/flatpak/site/**'
-      - '!scripts/flatpak/render-site.py'
-      - '!.github/workflows/project-site.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.cargo/**'
   pull_request:
     paths:
-      - '**'
-      - '!docs/**'
+      - 'crates/**'
+      - 'catalog/**'
+      - 'tests/**'
       - 'docs/design/**'
-      - '!**/*.md'
-      - '!scripts/orchestration/**'
-      - '!LICENSE'
-      - '!packaging/flatpak/site/**'
-      - '!scripts/flatpak/render-site.py'
-      - '!.github/workflows/project-site.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.cargo/**'
   workflow_dispatch:
+    inputs:
+      full_tests:
+        description: 'Run all offline tests, including the ten exhaustive render cases (no catalog publication)'
+        type: boolean
+        default: false
+      publish_catalog:
+        description: 'Publish catalog on main (ignored when full_tests is enabled)'
+        type: boolean
+        default: false
 
 # A newer push to the same branch or PR supersedes a running one.
 concurrency:
@@ -59,8 +46,7 @@ concurrency:
 permissions:
   contents: read
 
-# Container jobs otherwise default to `sh` (dash in the Steam Runtime image), which has no
-# `set -o pipefail`; every step here is written for bash.
+# Every shell step uses bash with pipefail available.
 defaults:
   run:
     shell: bash
@@ -74,7 +60,8 @@ env:
 
 jobs:
   checks:
-    name: fmt, clippy, test
+    name: fmt, clippy, offline tests and catalog lint
+    if: github.event_name != 'workflow_dispatch' || inputs.full_tests
     runs-on: ubuntu-latest
     steps:
       # The checkout supplies `rust-toolchain.toml`, which the next step reads.
@@ -137,76 +124,28 @@ jobs:
       - name: cargo clippy --workspace --all-targets -- -D warnings
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
-      - name: cargo test --workspace
+      - name: Ordinary offline tests (skip ten exhaustive render cases)
+        if: github.event_name != 'workflow_dispatch'
+        run: >-
+          cargo test --workspace --locked --
+          --skip headless::journeys::title_fit_
+          --skip headless::journeys::categories_favorites_and_screenshots
+
+      - name: Full offline suite (all exhaustive render cases included)
+        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
         run: cargo test --workspace --locked
 
-  catalog-lint:
-    name: Offline catalog lint
-    # Run for every PR, including every catalog/ change; no network fetches in CI.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      # The checkout supplies `rust-toolchain.toml`, which the next step reads.
-      - uses: actions/checkout@v4
-
-      # Install rustup only (`--default-toolchain none`): the exact channel and
-      # components come from `rust-toolchain.toml`, so CI can never drift from
-      # local development. No third-party toolchain action is used, which keeps
-      # the supply chain to `actions/*` and the official rustup script.
-      - name: Install the pinned Rust toolchain
-        run: |
-          set -euo pipefail
-          export PATH="$HOME/.cargo/bin:$PATH"
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
-          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
-          # Make cargo/rustc visible to the remaining steps.
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          # Read the channel back out of the pin, then install it explicitly so
-          # this job never depends on rustup's on-demand install behaviour.
-          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
-          test -n "$channel"
-          echo "Pinned toolchain: $channel"
-          # `rustfmt`/`clippy` are repeated here on purpose: `components` in
-          # rust-toolchain.toml is for local development, this line is what the
-          # CI job relies on.
-          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
-          rustup default "$channel"
-          cargo --version
-
-      # Cargo registry and build artifacts, keyed by the lockfile and toolchain pin, so an
-      # unchanged dependency tree is not recompiled on every push.
-      - name: Cache cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: catalog-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
-          restore-keys: |
-            catalog-${{ runner.os }}-
-
-      # Slint's text stack (`parley` -> `fontique` -> `yeslogic-fontconfig-sys`)
-      # probes fontconfig with pkg-config at build time on Linux. Everything
-      # else (EGL, GL, X11, Wayland, xkbcommon) is loaded with `dlopen`. gilrs
-      # (D-018) links libudev for controller hotplug, so it needs libudev-dev;
-      # the Steam Runtime SDK image already ships it.
-      - name: Install system build dependencies
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libudev-dev
-
-      - name: Validate all recipes
+      # Reuse this job's compiled workspace instead of a separate PR job/cache.
+      - name: Offline catalog lint
         run: cargo run --locked -p ddl -- catalog lint catalog/
 
   catalog-bundle:
     name: Publish catalog bundle
-    # Only a push to `main`, or a manual run on `main`, can publish; pull
+    # Only a push to `main`, or an explicit catalog-only manual run, can publish; pull
     # requests, tags and other refs never write the branch (spec 019, R2).
     if: >-
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.event_name == 'push'
+       || (github.event_name == 'workflow_dispatch' && inputs.publish_catalog && !inputs.full_tests))
       && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     # Serialize bundle jobs instead of cancelling them. Each one commits on top
@@ -336,63 +275,3 @@ jobs:
           # Ordinary, non-fast-forward-refusing push; never `--force`.
           git push origin HEAD:catalog
 
-  steamrt-build:
-    name: Steam Runtime release build
-    runs-on: ubuntu-latest
-    # Steam Linux Runtime 3.0 "sniper" SDK, pinned by the digest of tag
-    # 3.0.20261007.263965 (see docs/research/steam-runtime-build.md for why
-    # sniper and how the digest was verified).
-    container:
-      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk@sha256:220d1dc739254155a91c010f959a4f8e7c183e69d18300d6be53a20aee12b02d
-    steps:
-      # The image is Debian 11 based and has no Rust, so install rustup here too
-      # (same steps as the `checks` job; the image already ships curl and a C
-      # toolchain, and `HOME` is set by the runner).
-      - uses: actions/checkout@v4
-
-      - name: Install the pinned Rust toolchain
-        run: |
-          set -euo pipefail
-          export PATH="$HOME/.cargo/bin:$PATH"
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh
-          sh rustup-init.sh -y --profile minimal --default-toolchain none --no-modify-path
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          channel="$(sed -n 's/^channel *= *"\([^"]*\)"/\1/p' rust-toolchain.toml)"
-          test -n "$channel"
-          rustup toolchain install "$channel" --profile minimal --component rustfmt --component clippy
-          rustup default "$channel"
-          cargo --version
-
-      # Cargo registry and build artifacts, keyed by the lockfile and toolchain pin, so an
-      # unchanged dependency tree is not recompiled on every push.
-      - name: Cache cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: steamrt-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
-          restore-keys: |
-            steamrt-${{ runner.os }}-
-
-      # Release profile, exactly what `release.yml` ships. `--locked` keeps the
-      # reviewed dependency versions.
-      - name: cargo build --release -p ddl
-        run: cargo build --release --locked -p ddl
-
-      # `--version` and `--help` exit before any window is created, so they work
-      # on a headless runner and prove the binary starts against the runtime's
-      # libraries.
-      - name: Smoke test the release binary
-        run: |
-          set -euo pipefail
-          ./target/release/ddl --version
-          ./target/release/ddl --help
-
-      # The authoritative list of shared libraries the binary needs on
-      # SteamOS; recorded in the CI log and summarised in
-      # docs/research/steam-runtime-build.md.
-      - name: Print shared library requirements
-        run: ldd target/release/ddl

@@ -59,9 +59,22 @@ archives" rule applies to user content and the engine at runtime, not to a sourc
    creates the bundle and reinstalls that bundle for one more smoke test.
 3. Download the **ddl-flatpak-x86_64** artifact and extract the zip.
 
-The workflow also runs on pull requests and pushes to `main` that touch the packaging, the Rust
-lockfile/toolchain, the app sources or the catalog. It has read-only repository permissions, a
-90-minute timeout, no secrets and no publication step.
+The artifact workflow is manual only. It has read-only repository permissions, a 90-minute
+timeout, no secrets and no publication step. Packaging/helper/workflow edits automatically run
+`metadata.yml`: existing dependency-free Python and bash helper tests, XML well-formedness,
+and the checked-in first AppStream release matching the workspace version. These checks use
+no Rust build or Flatpak SDK. Run them locally with:
+
+```sh
+python3 -m unittest discover -s scripts/flatpak -p 'test_*.py'
+bash scripts/flatpak/test_served_urls.sh
+```
+
+The inline XML/version check is in `.github/workflows/metadata.yml`. Full desktop/AppStream
+validation, pinned vendor regeneration, build and sandbox smoke tests remain in the manual
+artifact workflow and signed tag publication workflow. `flatpak-remote.yml` keeps all signing,
+integrity and publication gates; `release.yml` keeps the authoritative Steam Runtime build
+and smoke verification. Website-only publication remains independent in `project-site.yml`.
 
 ### Install the artifact
 
@@ -138,7 +151,7 @@ python3 -m venv /tmp/flatpak-cargo-venv
   -o packaging/flatpak/cargo-sources.json
 ```
 
-CI regenerates the file from the checked-out `Cargo.lock` and fails if the committed file differs.
+The manual artifact and signed publication builds regenerate the file from the checked-out `Cargo.lock` and fails if the committed file differs.
 That is the check that keeps the lockfile authoritative; do not hand-edit the JSON.
 
 ## Sources: local checkout vs. published release

@@ -49,8 +49,9 @@ skills remain the authority on dispatch, recovery and cleanup.
    touch; it never edits the orchestrator-owned docs), Observable acceptance. Point to
    `AGENTS.md` and the spec rather than restating them. Always include: "never open visible
    windows or capture the screen — headless renders only"; which other workers are editing
-   which files, and "merge `main` before your final checks"; iterate with targeted tests, full
-   checks once at the end; report at `docs/reports/NNN-*.md`; heartbeat per milestone. Briefs
+   which files, and "merge `main` before your final checks"; iterate with focused checks for
+   affected behavior, using one authoritative full suite only when needed (see Verification
+   below); report at `docs/reports/NNN-*.md`; heartbeat per milestone. Briefs
    live in the orchestrator's session scratchpad and are **lost between sessions** — the spec is
    the durable contract; rebuild a brief from it.
 3. **Placement** — one Orca worktree per task, top-level from `main`
@@ -71,12 +72,14 @@ skills remain the authority on dispatch, recovery and cleanup.
    Send fixes back to the **same** terminal *before* releasing: `worker-release` of a
    worker-started Codex/Claude dispatch closes its terminal (`closed_agent_terminal`).
 7. **Merge** with `git merge --no-ff`; resolve test-list conflicts (embedded recipe
-   ids, item counts) as the union; then run `cargo fmt --all --check`, `cargo clippy --workspace
-   --all-targets -- -D warnings` and `cargo test --workspace` on the merge result before pushing.
-   Worktrees share the local `main` ref, so a worker that merges `main` picks up an unverified
-   merge: while workers are running, merge on a scratch branch (`git switch -c verify/<task>`),
-   check there, then fast-forward `main` (`git switch main && git merge --ff-only verify/<task>`). After
-   catalog or download changes also run the Linux e2e: `gh workflow run e2e.yml --ref main`.
+   ids, item counts) as the union; verify the merge result proportionately before pushing
+   (see Verification below). Worktrees share the local `main` ref, so merge on a scratch
+   branch (`git switch -c verify/<task>`), check there, then fast-forward `main`
+   (`git switch main && git merge --ff-only verify/<task>`). Use network e2e only as an
+   opt-in diagnostic for relevant downloader/archive/engine integration changes or an
+   investigation: `gh workflow run e2e.yml --ref main`. It is not a metadata, copy,
+   catalog-only or UI release gate; upstream failures must remain visible, with download
+   hashes, allowlists, timeouts and cases intact.
    Then `worker-release`, close the terminal, `worktree rm`, and update `docs/status.md` and
    `docs/journal.yml`. Keep merged task branches on the remote unless the owner asks
    (deleting remote refs needs the owner's OK).
@@ -89,12 +92,41 @@ skills remain the authority on dispatch, recovery and cleanup.
    the tag's saved-state fixture tree (`tests/fixtures/state/generate.py <tag>`, spec 055) and
    its name to the release guard test, so the next release must still read it.
 
+## Verification
+
+Choose checks from the behavior that changed. Routine source CI keeps fmt, denied-warning
+workspace Clippy, offline tests and catalog lint in one job. The ordinary test command is:
+
+```sh
+cargo test --workspace --locked -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots
+```
+
+Only the nine title-fit matrix cases and the category/favorites screenshot journey are
+excluded; focused headless, navigation, model and persistence tests remain. For exhaustive
+visual changes or another reason to run everything, choose one authoritative full-suite run
+(`cargo test --workspace --locked` locally, or CI → Run workflow → `full_tests=true`).
+Do not repeat it on macOS and Linux by habit. Manual full-suite runs cannot publish a catalog;
+manual catalog publication uses `publish_catalog=true` with `full_tests=false` on `main`.
+
+After documentation, workflow, metadata or test-only follow-ups that cannot invalidate a
+previous full-suite result, check only affected behavior rather than rerunning that suite.
+For workflow-only changes use `actionlint`, YAML parsing and static command/trigger checks;
+for packaging metadata use the existing offline helper tests, XML parsing and first release
+version check in `metadata.yml`. No Cargo or SDK build is needed for those edits. Source or
+fixture changes still need appropriate focused tests; explain any untested requirement.
+
+Keep the required Linux release build/smoke checks in `release.yml` and every signed Flatpak
+publication gate in `flatpak-remote.yml`. Artifact-only `flatpak.yml` is an explicit manual
+validation tool when a packaging build is useful. Website publication remains independent.
+Duration savings from the lean workflow have not yet been measured; record relevant run
+results before claiming a speedup.
+
 ## Machine load
 
 All workers share the owner's Mac. Cold Rust/Slint builds are heavy: five in parallel pushed the
 load average to ~170. Keep at most **four** code workers at once, and tell workers to iterate
-with `cargo test -p ddl-core` / `cargo clippy -p ddl-core` (no Slint) and run the full workspace
-checks once before `worker_done`.
+with `cargo test -p ddl-core` / `cargo clippy -p ddl-core` (no Slint), using workspace
+checks only when the affected behavior warrants them (see Verification).
 
 ## Launching opencode
 
