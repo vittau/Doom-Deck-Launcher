@@ -66,6 +66,12 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   re-checked all 25 downloaded archives against the inspected pins. Deck navigation, the import
   picker with each NERVE variant, and gameplay remain **Needs Deck Validation**. Nothing was
   pushed, tagged, released or published to the catalog branch.
+- **Shared compact browsing in progress:** spec 095 defines a Select toggle between cards and
+  a compact list in Discover and Library, one persisted preference, preserved focus/filter/order
+  and no toggle effect in other screens or sheets. A supervised Codex UI worker implements it
+  in `vittau/compact-list-095`; visual review, combined checks and physical Deck validation are
+  pending. The future /idgames browse specs (051/053) now also require bounded background
+  search, 50-row UI pages, stale-result rejection and measured responsiveness acceptance.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.

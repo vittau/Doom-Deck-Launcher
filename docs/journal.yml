@@ -966,3 +966,14 @@
   refs: [docs/reports/087-094-catalog-integration.md, docs/reports/090-catalog-order-and-dbp-filter.md,
     docs/research/catalog-release-dates.md, docs/research/catalog-release-date-audit.md,
     docs/specs/090-catalog-order-and-dbp-filter.md, docs/specs/094-no-rest-for-the-living.md]
+- date: 2026-10-22
+  type: change
+  summary: >-
+    Recorded the owner's archive-browse responsiveness requirement in specs 051/053:
+    background index preparation/search, bounded latest-query work, 50-row UI pages,
+    responsive Back/focus/cancel and explicit release-build/physical Deck measurements.
+    Added spec 095 for Select switching Discover and Library between cards and a compact
+    list through one durable preference. Started one supervised Codex UI worker in an
+    isolated worktree; implementation, visual review, checks and Deck validation remain open.
+  refs: [docs/reports/051-053-idgames-performance-contract.md,
+    docs/specs/095-shared-compact-list-view.md]
