@@ -1,0 +1,87 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §4–§5; gathered 2026-10-22.
+schema_version = 1
+id = "no-end-in-sight"
+title = "No End in Sight"
+authors = [
+  "Emil \"NaturalTvventy\" Brundage",
+  "Xaser Acheron",
+  "Chris Lutz",
+]
+release = "1.4, updated 2018-01-29 (first release 2016-11-28)"
+page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/neis"
+description = "Ultimate DOOM four-episode replacement: 38 map slots (E1M1–E4M9 plus the E1M0 and E4M0 extras) for limit-removing ports, with WAD-embedded DeHackEd level names and story text."
+permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided NEIS.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
+tags = ["classics", "cacowards", "megawad"]
+
+[base_game]
+game = "doom"
+# E4 needs Ultimate Doom; the KEX re-release carries the same episode data.
+variants = ["doom-1.9ud", "doom-1.9ud-kex-2024-08-06", "doom-1.9ud-kex-2024-10-01"]
+
+[compatibility]
+family = "limit-removing"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Four episodes (E1–E4); the menu selects the episode, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-b.md §4–§5",
+  "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
+  "NEIS.wad lump directory read as data: 1,110 lumps, 38 map markers E1M0–E4M9 including the two ExM0 extras, one 3,233-byte embedded DEHACKED lump, MAPINFO and EMAPINFO lumps, no COMPLVL or UMAPINFO lump",
+  "NEIS.txt release text: Game: Doom, Map #: E1M1-E4M9 with extras on E1M0 and E4M0, 'Limit-removing for E4; E1-E3 are vanilla-compat', external NEIS.deh only for Vanilla/Chocolate Doom, Doom prior to 1.9 excluded",
+  "NEIS.deh (6,052 bytes) compared with the WAD's embedded DEHACKED (3,233 bytes): the embedded BEX [STRINGS] patch is what DSDA-Doom applies",
+]
+notes = "Confirmed archive/member identities and source inspection. The WAD embeds its own DEHACKED patch, so the recipe does not add a separate -deh argument; the archive's NEIS.deh is, by the author's own readme, only necessary for Vanilla/Chocolate Doom, and loading it after the embedded patch would duplicate or override the same strings. Complevel vanilla (3 on Ultimate Doom) follows the authors' statement that E1–E3 are vanilla-compat and that the set needs a limit-removing engine only for E4; that is the limit-removing convention. The bundled MAPINFO (ZDoom) and EMAPINFO (Eternity) are not read by DSDA-Doom; E4M0 is described by the author as reachable only in ZDoom or Eternity. No gameplay test performed. Tags: cacowards = Doomworld's 2017 Cacowards Top Ten Page 1 winner, https://www.doomworld.com/cacowards/2017/, read through the Wayback Machine copy of the legacy /24years/best1.php page on 2026-10-22 because the live site returns 403; classics = first released 2016-11-28 and updated 2018-01-29, over five years old, with that Cacoward as cited recognition; megawad = 38 map slots counted from the WAD and the authors' map list. Not tagged community-projects: the release credits three authors and named graphics/test contributors rather than a broad community team."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode/map selection.",
+  "E4 is the limit-removing part; the readme also mentions 'some very minor Boom-compat effects', which complevel 3 does not enable. Whether those cosmetics matter needs Deck validation.",
+  "E4M0 'RGC Alpha' is credited as a super-secret map routed by the ZDoom/Eternity MAPINFO lumps, which DSDA-Doom does not read; reachability in DDL's launch needs Deck validation.",
+  "The readme warns that normal and secret exits are intentionally not swapped on some E3 maps; progression is by the authors' design, not a defect.",
+  "No screenshot bundled: no source under the contribution rules provided a compliant in-game image, so the painted fallback applies.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/neis"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom/Ports/megawads/neis.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom/Ports/megawads/neis.zip"]
+size = 6431036
+sha256 = "2cbc625a7bb5f0796046fc42b478f5b375060899366d652432375f26f50da66a"
+kind = "zip"
+idgames_path = "levels/doom/Ports/megawads/neis.zip"
+
+[[packages.members]]
+id = "maps"
+path = "NEIS.wad"
+size = 19830307
+sha256 = "f4a7f69f07d72ac5fa284e71c8fb66fb9d38256bb4000f183c46bb92fe35e069"
+keep = false
+
+[[packages.members]]
+id = "readme"
+path = "NEIS.txt"
+size = 6847
+sha256 = "683ebdcedd268af10524e29b55ad4169fd85aaef86cd5e70838591b57f2a3e82"
+keep = true
+
+[[components]]
+id = "main"
+label = "No End in Sight"
+description = "Main four-episode Ultimate DOOM replacement with the level names and story text supplied by the WAD's embedded DeHackEd patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
