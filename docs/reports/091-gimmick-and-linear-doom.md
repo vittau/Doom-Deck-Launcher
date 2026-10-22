@@ -29,24 +29,30 @@ MD5 `4f758b008649e7424ea634c615f34de7`, added 2019-04-06, described as a jokewad
 E1M8, E2M4 and E3M6. The original publication is 2019-03-31; the page header rounds it to
 "Released Apr 1, 2019".
 
-Why no recipe:
+Three independent blockers; resolving one does not remove the others:
 
-1. **No fetchable URL.** Every live ModDB page (mod, downloads, v1.2 file, start endpoint,
-   member downloads) answered HTTP 403 with a Cloudflare challenge on 2026-10-22. The file
-   is served only through an interactive `/downloads/start/176643` gate; the eventual CDN
-   address is per-request and expiring and was not observable without bypassing the
-   challenge, which is explicitly out of scope.
-2. **No host change would help.** Adding `www.moddb.com` would still hit the 403 gate; adding
-   a CDN host without observing its exact name would violate the exact-host rule, and
-   expiring links/wildcards/downloader exceptions are forbidden by R4. `catalog/hosts.toml`
-   is therefore unchanged.
-3. **No alternate compliant source.** DSDA has no `linear-doom` entry (HTTP 404) and no
-   `/idgames` path was found; a third-party mirror would be a new trust decision.
-4. **Compatibility cannot be established.** Without the archive, the map count, IWAD variant
-   and lump inventory are unknown. DSDA-Doom 0.30.1 runs Doom-format/Boom/MBF/MBF21 data
-   plus UMAPINFO and ignores GZDoom-only `ZMAPINFO`/`MAPINFO`/`DECORATE`/ACS content; the
-   author's "Tested with GZDoom 2.4.0" note is neither a requirement nor proof of DSDA
-   support. Claiming either would be invented.
+1. **Host/access — no fetchable, durable URL.** Every live ModDB page (mod, downloads, v1.2
+   file, start endpoint, member downloads) answered HTTP 403 with a Cloudflare challenge on
+   2026-10-22. The file is served only through an interactive `/downloads/start/176643` gate;
+   the eventual CDN address is per-request and expiring and was not observable without
+   bypassing the challenge, which is explicitly out of scope. Adding `www.moddb.com` would
+   still hit the 403, and adding an unobserved CDN host would violate the exact-host rule;
+   `catalog/hosts.toml` is therefore unchanged.
+2. **Archive format — 7z is not supported.** The published file is
+   `Linear_Doom_v1.2.7z`. The recipe schema accepts `kind = "zip"` or a bare WAD only, and
+   DDL's reader has no 7z support. Even with a perfect URL, the package could not be
+   declared without a new archive dependency and downloader/engine change, which is out of
+   scope. This is separate from host access and from engine compatibility.
+3. **Engine compatibility — not established.** Without the archive, the map count, IWAD
+   variant and lump inventory are unknown. DSDA-Doom 0.30.1 runs Doom-format/Boom/MBF/MBF21
+   data plus UMAPINFO and ignores GZDoom-only `ZMAPINFO`/`MAPINFO`/`DECORATE`/ACS content;
+   the author's "Tested with GZDoom 2.4.0" note is neither a requirement nor proof of DSDA
+   support. Claiming either would be invented. There is also no alternate compliant source:
+   DSDA has no `linear-doom` entry (HTTP 404) and no `/idgames` path was found.
+
+The coordinator's independent read of the same file page agrees with the identity recorded
+here: DeXiaZ, 2019-04-06, `Linear_Doom_v1.2.7z`, 274,927 bytes, MD5
+`4f758b008649e7424ea634c615f34de7`.
 
 Published MD5 and byte size are recorded as identity evidence, but the schema needs SHA-256
 for the package and every named member plus a fetchable URL, so the recipe cannot be pinned.

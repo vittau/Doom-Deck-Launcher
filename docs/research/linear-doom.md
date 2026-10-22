@@ -17,7 +17,7 @@ downloaded and no anti-bot/authentication control was bypassed.
 | Original release | 2019-03-31 | task brief and the file page's "Added" metadata for the original file; the mod header rounds it to "Released Apr 1, 2019" |
 | Update 1.1 | 2019-04-02, "Fixed version (E1M8 HOM and E3M6' exit door). All Doom Levels are Straight Line now. No more mazes. Tested with GZDoom 2.4.0" | ModDB downloads page |
 | Selected update 1.2 | 2019-04-06, "Fixed HOM in E1M4, added chaingun in E2M4 (there were no chainguns in Episode 2 before, somehow)" | ModDB v1.2 file page |
-| Archive | `Linear_Doom_v1.2.7z` | ModDB v1.2 file page |
+| Archive | `Linear_Doom_v1.2.7z` (7z format — not supported by the recipe schema, which accepts ZIP or a bare WAD) | ModDB v1.2 file page |
 | Size | 274,927 bytes (listed as 268.48kb) | ModDB v1.2 file page |
 | Published hash | MD5 `4f758b008649e7424ea634c615f34de7` | ModDB v1.2 file page |
 | Download entry point | `/downloads/start/176643?referer=...` | ModDB v1.2 file page |
@@ -52,6 +52,12 @@ workaround.
 
 ## 3. Why the download is not reproducible under current policy (R4)
 
+0. **Unsupported archive format.** The author publishes a **7z** archive
+   (`Linear_Doom_v1.2.7z`). The recipe schema accepts only `kind = "zip"` or a bare WAD, and
+   DDL's archive reader extracts ZIP; it has no 7z reader. A 7z package therefore cannot be
+   declared or installed even if a durable URL existed. Adding 7z support would mean a new
+   archive dependency and downloader/engine work, which is out of scope. This is independent
+   of host access and of engine compatibility.
 1. **Interactive gate.** ModDB serves the file only after an HTML "start download"
    endpoint (`/downloads/start/176643`). DDL's downloader is a bounded HTTPS client: it
    follows at most five redirects, validates HTTPS and an exact download host at each hop,
