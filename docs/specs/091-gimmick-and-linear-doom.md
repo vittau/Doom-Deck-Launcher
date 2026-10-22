@@ -1,6 +1,6 @@
 # 091 — Gimmick category and Linear Doom assessment
 
-**Status:** Ready. **Origin:** owner requests Linear Doom from ModDB and the
+**Status:** Done (Linear Doom omitted) — 2026-10-22. `gimmick` shipped and The 10x10 Project tagged; Linear Doom stayed out because no reproducible archive bytes or DSDA support could be established. **Origin:** owner requests Linear Doom from ModDB and the
 `gimmick` tag for both The 10x10 Project and Linear Doom.
 
 ## Requirements
@@ -50,9 +50,11 @@ active recipe. No nested agents, push, tag, release or main merge.
 
 ## Acceptance
 
-- [ ] `gimmick` validates and appears after Challenging in Discover when used.
-- [ ] The 10x10 Project carries the tag, with its existing byte pins preserved.
-- [ ] Linear Doom has a tested, reproducible DSDA-compatible recipe tagged
+- [x] `gimmick` validates and appears after Challenging in Discover when used.
+- [x] The 10x10 Project carries the tag, with its existing byte pins preserved.
+- [x] Linear Doom has a tested, reproducible DSDA-compatible recipe tagged
   `gimmick`, or a precise primary-evidence report explains why it cannot be added.
-- [ ] Source/date/permission/host evidence and test results are recorded; final
+  (Taken: no recipe, with `docs/research/linear-doom.md` recording the ModDB 403,
+  the published 7z identity and the missing DSDA evidence.)
+- [x] Source/date/permission/host evidence and test results are recorded; final
   combined workspace checks pass after integration.

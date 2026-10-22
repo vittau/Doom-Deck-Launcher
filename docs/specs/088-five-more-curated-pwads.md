@@ -1,6 +1,6 @@
 # 088 — Five additional curated PWADs
 
-**Status:** Ready. **Origin:** owner explicitly approved the five candidates named
+**Status:** Done — 2026-10-22. All five extra titles integrated (catalog reached 107); combined checks green. **Origin:** owner explicitly approved the five candidates named
 while spec 087's four OpenCode workers were running.
 
 ## Goal
@@ -57,13 +57,13 @@ These are source leads, not evidence that this coordinator verified the archives
 
 ## Acceptance criteria
 
-- [ ] **A1 (R1–R2):** all five extra recipes pass offline and real-fetch lint;
+- [x] **A1 (R1–R2):** all five extra recipes pass offline and real-fetch lint;
   archive/member identities, IWAD/complevel and file order are covered by tests.
-- [ ] **A2 (R3):** sourced artwork passes format/provenance lint, or absent source
+- [x] **A2 (R3):** sourced artwork passes format/provenance lint, or absent source
   and fallback are explicitly documented.
-- [ ] **A3 (R4):** all 107 recipes embed without skips; combined format, workspace
+- [x] **A3 (R4):** all 107 recipes embed without skips; combined format, workspace
   clippy and workspace tests pass.
-- [ ] **A4:** four expanded worker reports and coordinator report distinguish
+- [x] **A4:** four expanded worker reports and coordinator report distinguish
   confirmed inspection from gameplay/audio/progression Needs Deck Validation.
 
 ## Open questions

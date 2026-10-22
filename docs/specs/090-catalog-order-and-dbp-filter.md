@@ -78,15 +78,15 @@ in `docs/research/catalog-release-dates.md`. Check inbox and heartbeat by milest
 
 ## Acceptance criteria
 
-- [ ] **A1 (R1):** Community Projects contains no DBP; ordinary community recipes
+- [x] **A1 (R1):** Community Projects contains no DBP; ordinary community recipes
   and the complete Doomer Boards category remain reachable.
-- [ ] **A2 (R2–R3):** all shipped PWAD browsing lists use the same evidence-based
+- [x] **A2 (R2–R3):** all shipped PWAD browsing lists use the same evidence-based
   ascending chronology, with tested ties, partial/unknown dates and favorites.
-- [ ] **A3 (R4):** old recipe/manifests/cache/fixtures load; malformed present dates
+- [x] **A3 (R4):** old recipe/manifests/cache/fixtures load; malformed present dates
   fail validation; bundle/client capability gating is coherent.
-- [ ] **A4 (R5):** focused core/app/headless checks pass and the final combined
+- [x] **A4 (R5):** focused core/app/headless checks pass and the final combined
   format, workspace clippy and workspace tests pass after integration.
-- [ ] **A5 (R6):** source/precision metadata and verification report are complete;
+- [x] **A5 (R6):** source/precision metadata and verification report are complete;
   any unresolved original date is explicitly unknown rather than fabricated.
 
 ## Open questions

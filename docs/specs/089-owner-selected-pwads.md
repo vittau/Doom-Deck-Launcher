@@ -1,6 +1,6 @@
 # 089 — Further owner-selected PWADs
 
-**Status:** Ready. **Origin:** owner explicitly requested Going Down: Turbo,
+**Status:** Done — 2026-10-22. All eight exact releases integrated (catalog reached 115); combined checks green. **Origin:** owner explicitly requested Going Down: Turbo,
 Headless Chicken, Abandon, Sunder, The 10x10 Project and Micro Slaughter Community
 Project, Speed of Doom and REKKR while the four OpenCode workers were running.
 
@@ -83,13 +83,13 @@ are not claims that this coordinator has inspected these eight archives.
 
 ## Acceptance criteria
 
-- [ ] **A1 (R1–R2):** all eight exact releases have passing offline and real-fetch
+- [x] **A1 (R1–R2):** all eight exact releases have passing offline and real-fetch
   lint and offline tests for their byte identities, composition and IWAD/complevel.
-- [ ] **A2 (R3–R4):** scope, tags, permissions, artwork and limits have sources;
+- [x] **A2 (R3–R4):** scope, tags, permissions, artwork and limits have sources;
   no unmeasured Deck-performance claims or gameplay verification badges.
-- [ ] **A3 (R5):** 115 unique recipes embed without skips; combined fmt, workspace
+- [x] **A3 (R5):** 115 unique recipes embed without skips; combined fmt, workspace
   clippy and workspace tests pass. Original Going Down is preserved.
-- [ ] **A4:** all four expanded worker reports and coordinator report cover
+- [x] **A4:** all four expanded worker reports and coordinator report cover
   these additions and remaining physical Deck validation honestly.
 
 ## Open questions

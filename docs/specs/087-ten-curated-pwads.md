@@ -1,6 +1,6 @@
 # 087 — Ten curated PWAD additions
 
-**Status:** Ready. **Origin:** owner requests every title from the proposed ten-PWAD selection, implemented by parallel OpenCode workers.
+**Status:** Done — 2026-10-22. All ten titles integrated (catalog reached 102 recipes); combined checks green. **Origin:** owner requests every title from the proposed ten-PWAD selection, implemented by parallel OpenCode workers.
 
 ## Goal
 
@@ -66,15 +66,15 @@ directories. Existing research is a starting index, not a replacement for bytes.
 
 ## Acceptance criteria
 
-- [ ] **A1 (R1–R3):** exactly 102 unique embedded recipes, all ten selected titles
+- [x] **A1 (R1–R3):** exactly 102 unique embedded recipes, all ten selected titles
   present with reviewed IWAD/complevel/tags and no invalid skips.
-- [ ] **A2 (R2, R5):** offline and real-fetch lint pass for all ten; tests pin the
+- [x] **A2 (R2, R5):** offline and real-fetch lint pass for all ten; tests pin the
   inspected hashes, composition and compatibility, with no network access.
-- [ ] **A3 (R4):** each new image passes existing size/format/provenance lint, or
+- [x] **A3 (R4):** each new image passes existing size/format/provenance lint, or
   its unavailable source and fallback are recorded in the report.
-- [ ] **A4 (R5):** merged result passes cargo fmt --all --check,
+- [x] **A4 (R5):** merged result passes cargo fmt --all --check,
   cargo clippy --workspace --all-targets -- -D warnings and cargo test --workspace.
-- [ ] **A5 (R6):** four evidence reports and a combined coordinator report state
+- [x] **A5 (R6):** four evidence reports and a combined coordinator report state
   verification results and remaining physical Deck validation honestly.
 
 ## Out of scope

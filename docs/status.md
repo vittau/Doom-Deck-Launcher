@@ -52,6 +52,20 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   declarations, one `gtag('event'` call site. The owner confirmed both events arriving in
   Analytics on 2026-10-22. D-040 records that they measure intent only: they are deliberately not
   key events, and the donation outcome stays in the Buy Me a Coffee dashboard.
+- **Catalog expansion integrated locally (local only, not published):** the shipped catalog is
+  now **118 recipes** — the previous 92 plus 25 downloadable mapsets (specs 087–089, 092, 093) and
+  the player-supplied No Rest for the Living expansion (094). Browsing is ascending first-public
+  release chronology with an optional validated `original_release` (117 day precision, 1 year,
+  unknown last, favorites never reorder); Community Projects no longer duplicates Doomer Boards;
+  `gimmick` follows Challenging. A recipe with no packages is allowed only when its required main
+  is user-supplied, so the NERVE.WAD entry installs with no network, blocks Play until the file is
+  imported and keeps the `NERVE.WAD` basename for DSDA mission selection. Reader capability and
+  bundle gate are `0.0.12`. Linear Doom was assessed and omitted (no reproducible archive bytes,
+  no established DSDA support); Sunder is pinned to the author's V.2407 build. Combined fmt,
+  workspace Clippy and workspace tests pass on `verify/087-pwads`, and the integration audit
+  re-checked all 25 downloaded archives against the inspected pins. Deck navigation, the import
+  picker with each NERVE variant, and gameplay remain **Needs Deck Validation**. Nothing was
+  pushed, tagged, released or published to the catalog branch.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.

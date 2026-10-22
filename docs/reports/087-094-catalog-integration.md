@@ -1,6 +1,6 @@
 # Catalog expansion and browsing integration — specs 087–094
 
-**Status:** Integration in progress; final combined checks pending.
+**Status:** Done — 2026-10-22; combined checks green, local only (no push, tag or release).
 **Date:** 2026-10-22. **Coordinator branch:** `verify/087-pwads`.
 
 ## Result and scope
@@ -82,13 +82,35 @@ were reviewed from local image files without opening a visible application or
 capturing the desktop. Source/archive audits are read-only and tests have no
 network access.
 
-Final combined formatting, workspace Clippy, workspace tests, complete catalog
-lint, chronological metadata audit and required-import headless checks remain
-pending while the last capability changes are integrated. Linux CI/e2e and a
-physical Deck playthrough have not been run against these unpublished commits.
+Combined checks on the integrated branch: `cargo fmt --all --check` clean,
+`cargo clippy --workspace --all-targets -- -D warnings` clean and
+`cargo test --workspace -- --test-threads=2` green. The complete
+catalog lints offline with all 118 recipes embedded, and the read-only
+integration audit reported: 118 unique recipes; all 92 previous recipes unchanged
+apart from chronological metadata; all 25 downloadable additions matching the
+independently inspected archive/member sizes and SHA-256 pins; and the import-only
+NERVE entry matching the supplied BFG fingerprint with the corrected dates and
+gimmick assignment. Affected production journeys (category order and DBP
+filtering, Favorites, Library rows, metadata-only install with blocked Play and
+the required import row/sheet, and snapshot selection remapping) run headlessly.
+
+An independent audit of the original fifteen non-DBP dates corrected six values
+to first *public availability*: BTSX E1 2012-12-10 (not the Cacoward year),
+BTSX E2 2014-09-01 (public beta), SIGIL 2019-05-31 (Romero's free upload, not the
+internal readme date), Going Down 2013-10-22 (first public 11-level version),
+Sunlust 2015-06-13 (public beta) and Antaresian Reliquary 2020-05-17 (author
+thread). Award years, later repacks and final updates are never used as the
+original date.
+
+Linux CI and the real-network e2e job cannot validate unpublished commits, and a
+physical Deck playthrough has not been run against them.
 
 ## Dependencies and remaining work
 
-No new dependency or engine is introduced. Finish spec 090/094 implementation,
-review its navigation/import tests, run the combined checks, update this report
-with exact results, then advance local main and clean up settled workers.
+No new dependency or engine is introduced. The reader capability and bundle
+minimum moved to `0.0.12` for the `original_release` and zero-package/import
+capabilities (D-038 permits the gate for a real capability change). Remaining
+work is Deck-side: controller navigation and focus after the order/filter change,
+the import picker while replacing a required file, and NRFTL with each accepted
+NERVE variant. Publishing the new catalog bundle, a release and a physical Deck
+playthrough are explicitly out of this local integration.

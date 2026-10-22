@@ -1,6 +1,6 @@
 # 092 — Swim With The Whales
 
-**Status:** Ready. **Origin:** owner explicitly requests
+**Status:** Done — 2026-10-22. Integrates as recipe 116; combined checks green. **Origin:** owner explicitly requests
 https://doomwiki.org/wiki/Swim_With_The_Whales.
 
 ## Requirements
@@ -41,11 +41,11 @@ integration context. Use shared target, jobs=2 and test threads=2.
 
 ## Acceptance
 
-- [ ] One reproducible, lint-clean recipe has inspected source/permission/byte/
+- [x] One reproducible, lint-clean recipe has inspected source/permission/byte/
   compatibility evidence and an original-release date decision.
-- [ ] Offline tests cover source identities, composition, base game/complevel,
+- [x] Offline tests cover source identities, composition, base game/complevel,
   tag claims and embedding without skipped assigned recipes; fetch lint passes.
-- [ ] Artwork passes provenance checks or fallback is documented; report states
+- [x] Artwork passes provenance checks or fallback is documented; report states
   exact checks and remaining physical Deck validation.
-- [ ] Final catalog contains 116 recipes (117 if Linear Doom is also supported),
+- [x] Final catalog contains 116 recipes (117 if Linear Doom is also supported),
   all loaded with no skips; combined fmt/clippy/workspace checks pass.

@@ -1,6 +1,6 @@
 # 093 — Haste
 
-**Status:** Ready. **Origin:** owner explicitly requests
+**Status:** Done — 2026-10-22. Integrates as recipe 117; combined checks green. **Origin:** owner explicitly requests
 https://doomwiki.org/wiki/Haste_(WAD).
 
 ## Requirements and ownership
@@ -26,11 +26,11 @@ captures, nested agents, push, tag, release or main merge.
 
 ## Acceptance
 
-- [ ] One reproducible recipe passes offline/fetch lint, with actual archive/
+- [x] One reproducible recipe passes offline/fetch lint, with actual archive/
   member identities, composition, IWAD/complevel and tag claims tested offline.
-- [ ] Sources, permission, honest original-date precision, screenshot provenance
+- [x] Sources, permission, honest original-date precision, screenshot provenance
   or fallback, exact checks and physical Deck limitations are recorded.
-- [ ] Integrated catalog has 117 recipes (118 if Linear Doom is supported), no
+- [x] Integrated catalog has 117 recipes (118 if Linear Doom is supported), no
   skips and passing combined format/workspace clippy/workspace tests.
 
 These totals supersede the cumulative totals in earlier specs, without removing

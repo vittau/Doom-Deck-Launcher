@@ -949,3 +949,20 @@
     Coffee dashboard and installations are not measured, because launcher telemetry stays out and
     a request-count proxy was not pursued. Any further site event needs a new decision.
   refs: [docs/decisions.md, docs/reports/086-install-click-event.md]
+- date: 2026-10-22
+  type: change
+  summary: >-
+    Catalog grew from 92 to 118 recipes: 25 downloadable additions plus the player-supplied
+    No Rest for the Living (specs 087-094). PWAD browsing is now ascending first-public-release
+    chronology (optional validated original_release with real precision, unknown last, favorites
+    never reorder), Community Projects no longer duplicates Doomer Boards, and a gimmick tag
+    follows Challenging. A zero-package recipe is allowed only for a required user-supplied main,
+    so the NERVE.WAD expansion installs with no network, blocks Play until the file is imported,
+    and keeps the NERVE.WAD basename for DSDA mission selection. The reader capability gate and
+    the bundle minimum move to 0.0.12. Linear Doom was assessed and omitted for lack of
+    reproducible archive bytes and established DSDA support. Local integration only: no push,
+    tag, release or remote catalog publication; Deck navigation, import and gameplay remain
+    Needs Deck Validation.
+  refs: [docs/reports/087-094-catalog-integration.md, docs/reports/090-catalog-order-and-dbp-filter.md,
+    docs/research/catalog-release-dates.md, docs/research/catalog-release-date-audit.md,
+    docs/specs/090-catalog-order-and-dbp-filter.md, docs/specs/094-no-rest-for-the-living.md]

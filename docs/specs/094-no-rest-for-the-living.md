@@ -1,6 +1,6 @@
 # 094 — Player-supplied No Rest for the Living
 
-**Status:** Ready. **Origin:** owner requests the expansion and supplies
+**Status:** Done (Deck checks open) — 2026-10-22. Player-supplied entry integrated as recipe 118 with zero-network install, required import and Doom II `-file` argv. **Origin:** owner requests the expansion and supplies
 `/Users/vitor/Downloads/NERVE.WAD` for analysis, with identity references
 https://doomwiki.org/wiki/No_Rest_for_the_Living and https://doomwiki.org/wiki/NERVE.WAD.
 
@@ -72,12 +72,12 @@ recipe's chronological field only after A's evidence is integrated.
 
 ## Acceptance
 
-- [ ] Player-supplied entry loads, uses reviewed local identity evidence and
+- [x] Player-supplied entry loads, uses reviewed local identity evidence and
   never downloads or redistributes `NERVE.WAD` or any IWAD.
-- [ ] Zero-network install, mandatory import and correct filename/argv are tested;
+- [x] Zero-network install, mandatory import and correct filename/argv are tested;
   controller import remains reachable, and existing downloaded recipes/imports
   retain their validation and behavior.
-- [ ] Research/report, chronology and screenshot provenance/fallback are complete;
+- [x] Research/report, chronology and screenshot provenance/fallback are complete;
   combined format/workspace clippy/workspace tests pass after all integration.
 
 The total is 118 recipes with all requested additions except conditional Linear

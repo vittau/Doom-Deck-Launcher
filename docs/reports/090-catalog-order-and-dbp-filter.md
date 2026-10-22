@@ -35,8 +35,9 @@ The existing `015` production journey now compares each category against the fil
   after favoriting and requires it unchanged.
 - `release` remains a free-form identity string and is never parsed: the version-label test
   sorts `9.0`/1998 before `10.0`/2001.
-- All 118 recipes carry a date: 115 day precision, 3 year precision (Abandon 2020, BTSX E1 2013,
-  BTSX E2 2014 — each source stops at that granularity), 0 month-only. The evidence and the
+- All 118 recipes carry a date: 117 day precision, 1 year precision (Abandon 2020, whose source
+  stops at the year), 0 month-only. After B's audit, BTSX E1/E2 carry day-precision first-public
+  dates instead of the award/archive years. The evidence and the
   first-release-vs-update reasoning are in `docs/research/catalog-release-dates.md`.
 - **Independent audit applied (B, commit 42ebdc5).** Six values were corrected after the audit:
   BTSX E1 2012-12-10 (2013 was only the Cacoward year), BTSX E2 2014-09-01 (public beta),
@@ -148,5 +149,5 @@ and the final 118-recipe embedding count after integration.
 - **Needs Deck Validation:** NRFTL with each accepted NERVE variant (BFG/XBLA, Steam/KEX),
   filename preservation for DSDA's case-insensitive mission selection, and the unknown-hash
   warning for the KEX variant.
-- No unresolved date is fabricated: the three year-precision entries are the only ones whose
-  sources stop short of a day.
+- No unresolved date is fabricated: the single year-precision entry (Abandon 2020) is the only
+  one whose source stops short of a day.
