@@ -61,9 +61,13 @@ verified. The KEX size/MD5 are recorded here and in the recipe comments; no KEX 
   The file name must be preserved through import.
   [d_main.c:914–940](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L914-L940).
   **Confirmed.**
-- No `COMPLVL`/`UMAPINFO` is present. The IWAD table's `default_complevel = 2` and the Doom II
-  target give the `vanilla` alias (2). No gameplay test was performed. **Proposed by the reviewed
-  metadata; Needs Deck Validation.**
+- **Port family: limit-removing; complevel: `vanilla` (2).** The maps are documented as requiring
+  a limit-removing port (Doomworld forum: *"nerve.wad requires a limit removing port"*,
+  <https://www.doomworld.com/forum/topic/101831-is-there-a-mod-that-adds-the-console-exclusive-levels-into-vanilla-doom/>),
+  while the Doom II target and the IWAD table's `default_complevel = 2` keep the complevel at
+  vanilla/2. These are separate facts: limit-removing is the minimum port family, not a Boom
+  complevel. No `COMPLVL`/`UMAPINFO` is present and no gameplay test was performed. **Confirmed
+  for the family from the reviewed statement; complevel Proposed; Needs Deck Validation.**
 
 ## 4. Release, maps and permissions
 

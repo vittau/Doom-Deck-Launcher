@@ -2,7 +2,7 @@
 //! Living expansion. The test reads only the embedded catalog; it never imports
 //! or executes NERVE.WAD and never touches the network.
 
-use ddl_core::catalog::{Catalog, Role, VerificationStatus};
+use ddl_core::catalog::{Catalog, PortFamily, Role, VerificationStatus};
 
 const ID: &str = "no-rest-for-the-living";
 const BFG_SHA256: &str = "2d234de8700ee403375fda278e50ea17739b36703b3316e0429b05aca4458fa9";
@@ -46,6 +46,11 @@ fn expansion_requires_doom2_and_accepts_every_recognized_variant() {
     let catalog = Catalog::embedded();
     let recipe = recipe(&catalog);
     assert_eq!(recipe.base_game.game, ddl_core::catalog::Game::Doom2);
+    assert_eq!(
+        recipe.compatibility.family,
+        PortFamily::LimitRemoving,
+        "the expansion needs limit removal while still using complevel vanilla/2"
+    );
     assert!(
         recipe.base_game.variants.is_empty(),
         "accept every recognized Doom II IWAD variant, including BFG, classic, French and Steam/KEX"
