@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/haste.md §1–§4; gathered 2026-10-22.
+schema_version = 1
+id = "haste"
+title = "Haste"
+authors = ["Insane_Gazebo", "Scotty", "Nirvana", "Bemused", "Ribbiks", "Benjogami", "Archi"]
+release = "2021-09-22 (readme); idgames archive file dated 2022-01-08"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/haste"
+description = "DOOM II: eighteen compact, high-impact maps — from a gore-soaked prison tower and phosphorescent burrows to a Plutonian floodplain and blazing temples — built for fast, fluid play in ten-minute bursts, with an ending map and a hidden secret level."
+permission = "Authors may NOT use the contents as a base for modification or reuse; permissions were obtained from the original authors of included resources. Redistribution is permitted provided Haste.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["classics", "cacowards", "community-projects"]
+
+# Bundled screenshot (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/haste/ with source, credit and permission text
+# in SOURCES.toml beside it.
+[[screenshots]]
+asset = "haste/01.jpg"
+credit = "Insane_Gazebo & Scotty"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Continuous DOOM II set (MAP01–MAP17 plus the secret MAP31). The menu selects the map,
+# so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/haste.md §1–§5", "Archive and member sizes/SHA-256; WAD lump inventory (eighteen map markers MAP01–MAP17 and MAP31, embedded DEHACKED strings, ZDoom-syntax MAPINFO); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 prboom2/src/p_spec.c generalized-linedef dispatch and prboom2/src/dsda/mapinfo/ (legacy.c hardcoded progression, u.c UMAPINFO, hexen.c)"]
+notes = "Confirmed package/member identities from three byte-identical mirrors and eighteen map markers: MAP01–MAP17 plus the secret MAP31. Complevel boom: the author's text states 'Advanced engine needed: Boom' and lists DSDA-Doom 0.2.3 among tested engines; 17 of the 18 maps use Boom generalized line types (390 lines: 267 floor, 71 lift, 22 door, 20 locked-door, 9 ceiling, 1 crusher), which vanilla compatibility does not implement. The MAPINFO lump is ZDoom syntax (defaultmap/map blocks with titlepatch/next/sky1/cluster/music), not a Boom format, and DSDA-Doom v0.30.1 has no ZDoom MAPINFO reader, so its titles and per-map music do not apply. With no UMAPINFO or COMPLVL, progression is the hardcoded Doom II next-map table (legacy.c): MAP17 is the author's 'Thanks for Playing' ending map, after which the run would continue into the base IWAD's MAP18 unless the player quits; the secret MAP31 returns to the base IWAD's MAP32 on a normal exit. The embedded DEHACKED relabels maps only. Dates: the readme says 22/09/2021 (day-first, unambiguous) and the idgames file is dated 2022-01-08, a later archive upload. Tags: cacowards = 2021 Top Twelve (page 4) winner, https://www.doomworld.com/cacowards/2021/best4/ (read through the Wayback capture of 2021-12-10); community-projects = the readme credits two project leads and seven mappers; classics = released 2021-09-22, over five years before this review, with that Cacowards recognition. Not megawad: the archive directory says megawads but the WAD and readme have eighteen slots, fewer than thirty. Not challenging: the Cacowards write-up says the set was built to be approachable to players who do not live and breathe hardcore gameplay, so no experienced-players claim is made. The owner's gimmick tag covers The 10x10 Project and Linear Doom only, so it is not applied here. Needs Deck Validation: IWAD/complevel, DEHACKED application, gameplay, audio, performance and progression."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, embedded DEHACKED application, gameplay, audio and map selection.", "The ZDoom-syntax MAPINFO is inert in DSDA-Doom v0.30.1; confirm the map titles and music actually heard on the Deck.", "No UMAPINFO or COMPLVL exists. After the author's MAP17 ending map the hardcoded Doom II progression would continue into the base IWAD's MAP18, and a normal MAP31 exit leads to the base IWAD's MAP32; quit from the intermission to stop.", "Several maps use extended nodes (the author warns zDaemon cannot run them); confirm DSDA-Doom's node handling on the Deck.", "No framerate, memory or battery measurement was made; Deck performance of the compact slaughter maps is unverified.", "No separate DEHACKED member exists: the patch is embedded in Haste.wad and its hash is covered by the member identity."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/haste"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/haste.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/haste.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/megawads/haste.zip"]
+size = 5519763
+sha256 = "f71eb1623da6c5fc02c998499dc123b45db5c8f56ad3d8a5f92bbc800f033f12"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/haste.zip"
+
+[[packages.members]]
+id = "maps"
+path = "Haste.wad"
+size = 16931409
+sha256 = "fac36c642771ccd7336814bbff443e093ddf09469b156017a5bf2d7312d01818"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "Haste.txt"
+size = 4629
+sha256 = "8bdd5194682b362b4f3884d74ae65564a05e27d2abd8d6c8a4f2918ca966368d"
+keep = true
+
+[[components]]
+id = "main"
+label = "Haste"
+description = "The eighteen-map campaign, including the ending map and the hidden secret level."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

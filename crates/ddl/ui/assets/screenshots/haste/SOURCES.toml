@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (1280x720 JPEG).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://static.doomworld.com/pages_media/10_haste.jpg?_cb=1638911191"
+source_page = "https://www.doomworld.com/cacowards/2021/best4/"
+credit = "Insane_Gazebo & Scotty"
+original_size = "1920x1080"
+retrieved = "2026-10-22"
+permission = "In-game screenshot published with the Doomworld 2021 Cacowards feature (source_page; image read through the Wayback capture of 2021-12-10). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."
