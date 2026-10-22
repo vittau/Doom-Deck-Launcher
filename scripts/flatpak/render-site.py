@@ -63,12 +63,11 @@ def structured_data(site_base, app_id):
                 "operatingSystem": "Linux",
                 "license": "https://spdx.org/licenses/GPL-3.0-or-later.html",
                 "isAccessibleForFree": True,
-                "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+                "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD"},
                 "downloadUrl": f"{site_base}/{app_id}.flatpakref",
                 "softwareRequirements": (
-                    "A legally owned DOOM base game (IWAD) and a Steam Deck or "
-                    "other Linux system. DoomDeckLauncher never bundles or "
-                    "downloads commercial base games."
+                    "A Steam Deck and legally owned DOOM base-game files (IWADs). "
+                    "DoomDeckLauncher never bundles or downloads commercial base games."
                 ),
             },
         ],

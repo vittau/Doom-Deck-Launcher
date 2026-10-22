@@ -105,7 +105,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(app["name"], "DoomDeckLauncher")
         self.assertEqual(app["applicationCategory"], "GameApplication")
         self.assertEqual(app["operatingSystem"], "Linux")
-        self.assertEqual(app["offers"], {"@type": "Offer", "price": "0",
+        self.assertEqual(app["offers"], {"@type": "Offer", "price": 0,
                                         "priceCurrency": "USD"})
         self.assertTrue(app["isAccessibleForFree"])
         self.assertEqual(app["license"], "https://spdx.org/licenses/GPL-3.0-or-later.html")
@@ -115,6 +115,11 @@ class DiscoveryTests(unittest.TestCase):
                       "never bundles or downloads commercial base games",
                       "GPL-3.0-or-later", "DSDA-Doom", "free, open-source"):
             self.assertIn(claim, visible)
+        # The requirement sentence stays centered on Steam Deck and owned IWADs.
+        self.assertEqual(app["softwareRequirements"],
+                         "A Steam Deck and legally owned DOOM base-game files (IWADs). "
+                         "DoomDeckLauncher never bundles or downloads commercial base games.")
+        self.assertNotIn("other Linux", json.dumps(data))
         # Truth guard: no ratings, reviews, author, publisher or organization.
         for node in data["@graph"]:
             for forbidden in ("aggregateRating", "ratingValue", "review", "author",
