@@ -449,7 +449,11 @@ fn assigned_recipes_keep_their_reviewed_tags() {
             Some("cacowards/2017"),
         ),
         ("going-down-turbo", &["megawad"], None),
-        ("the-10x10-project", &["cacowards"], Some("cacowards/2022")),
+        (
+            "the-10x10-project",
+            &["cacowards", "gimmick"],
+            Some("cacowards/2022"),
+        ),
         (
             "speed-of-doom",
             &["cacowards", "challenging", "classics", "megawad"],
@@ -538,6 +542,35 @@ fn product_copy_stays_plain_english() {
         assert!(
             evidence.contains(term),
             "{id} keeps `{term}` in verification evidence"
+        );
+    }
+}
+
+/// Spec 091 R2: the 10x10 recipe earns `gimmick` from the author's explicit
+/// ten-texture/ten-flat central constraint, with the evidence kept in verification.
+#[test]
+fn the_10x10_project_documents_its_gimmick() {
+    let catalog = Catalog::embedded();
+    let ten_by_ten = recipe(&catalog, "the-10x10-project");
+    assert!(
+        ten_by_ten.tags.iter().any(|tag| tag == "gimmick"),
+        "the 10x10 Project carries the reviewed gimmick tag"
+    );
+    assert!(
+        catalog.tags.get("gimmick").is_some(),
+        "the shared vocabulary provides gimmick"
+    );
+
+    let evidence = format!(
+        "{} {}",
+        ten_by_ten.verification.notes,
+        ten_by_ten.verification.limitations.join(" ")
+    )
+    .to_ascii_lowercase();
+    for expected in ["gimmick", "ten stock textures", "ten stock flat"] {
+        assert!(
+            evidence.contains(expected),
+            "verification keeps the author's `{expected}` evidence"
         );
     }
 }
