@@ -25,6 +25,11 @@ inference; **Needs Deck Validation** = cannot be settled on this host.
   title; the catalog's canonical year URL (`https://www.doomworld.com/cacowards/<year>/`) is given
   alongside it, but those modern year pages were **not** fetched (HTTP 403, and the Wayback CDX
   index was temporarily unavailable during this session).
+- **Date normalization.** Where a readme writes a numeric date ambiguous between day/month and
+  month/day, the ZIP member timestamps decide it and the literal string is quoted anyway. This
+  affects Stardate 20X6 (`06/02/2013` = 2013-06-02; WAD timestamp 2013-05-31, text 2013-06-02) and
+  Abandon (`05/07/2023` = 2023-05-07; `Abandon.txt` timestamp 2023-05-07). Where the archive was
+  packaged after the readme's stated release (Ozonia), both dates are recorded.
 - Verification commands and results are in `docs/reports/087-d.md`.
 
 ---
@@ -181,7 +186,9 @@ directory entries, `__MACOSX/`, `__MACOSX/stardate20x6/`, an AppleDouble
 
 The folder prefix is case-exact. The `__MACOSX` metadata is not declared and never loaded.
 
-**Release text — Confirmed, quoted.** `Title: Stardate 20X6`; `Release date: 06/02/2013`;
+**Release text — Confirmed, quoted.** `Title: Stardate 20X6`; `Release date: 06/02/2013` — the
+readme writes month/day, so the normalized date is **2013-06-02**: the ZIP's WAD member is dated
+2013-05-31 and its folder/text members 2013-06-02. The literal string stays quoted above;
 `Author: Ribbiks`; `Advanced engine needed: Boom-Compatible (tested in prb+ cl9, gzdoom)`;
 `Stardate 20X6 is a set of 8 boom-compatible levels`; `Map #: MAP01 - MAP07, bonus: MAP31`;
 `Other: DEHACKED and MAPINFO lumps included.`; `Music: Yes`; `Dehacked/BEX Patch: Yes`.
@@ -212,7 +219,7 @@ Hexen/Plutonia/TNT resources; that disclaimer is kept in `credits`.
   this recipe.
 
 **Other tags — Confirmed.** `episode`: eight map slots, within the vocabulary's nine-or-fewer rule.
-`classics`: released 2013-02-06, over five years old, with the Cacowards entry as recognition.
+`classics`: released 2013-06-02, over five years old, with the Cacowards entry as recognition.
 `challenging`: the author's own statement that the maps are "very difficult" and aimed at
 "veteran doomers" on UV (quoted above).
 
@@ -232,7 +239,10 @@ resized to 1066×800, 72,662 B JPEG. Sources in `.../stardate-20x6/SOURCES.toml`
 | `ozonia.wad` | 55,559,897 | `18c8ae66abafba79ed03d4eaa382d41af8c1d862a6906cba27d071fbe4508fb8` | no |
 | `ozonia.txt` | 6,595 | `fb38dcf0da17da4b25fde66a03413a6454a583b650cb3221a547237946590275` | yes |
 
-**Release text — Confirmed, quoted.** `Title: Ozonia`; `Release date: 23/12/2021`;
+**Release text — Confirmed, quoted.** `Title: Ozonia`; `Release date: 23/12/2021` (unambiguous:
+23 cannot be a month, so 2021-12-23). The archive itself was packaged later — the ZIP's WAD member is
+dated 2022-10-30 and its text 2022-11-04 — so the recipe keeps the author's stated release date and
+pins the archived bytes by size and SHA-256;
 `Author: Deadwing`; `Advanced engine needed: Prboom`;
 "Ozonia is the third mapset of the Moonblood series, containing 32 carefully designed short maps
 with compatibility level 9."; `Game: DOOM2`; `Map #: Map01 to Map 32`; `Dehacked/BEX Patch: Yes`;
@@ -353,12 +363,13 @@ The lead page <https://doomwiki.org/wiki/Abandon> was **not** read: DoomWiki ret
 this project's clients. Identity and scope come from the author's own bundled text and the archive
 bytes, as spec 089 requires.
 
-**Release text — Confirmed, quoted.** `Title: Abandon`; `Release date: 05/07/2023`;
+**Release text — Confirmed, quoted.** `Title: Abandon`; `Release date: 05/07/2023` (month/day: **2023-05-07**; the ZIP's
+`Abandon.txt` is dated 2023-05-07 and its WAD 2023-02-10);
 `Authors: Bemused, Benjogami, Scotty`; `Description: Grandiose, oppressive slaughter maps.`;
 `Advanced engine needed: Boom`; `New levels: 17`; `Map #: MAP01-MAP17`;
 `May Not Run With: zDaemon as several maps use extended nodes`;
 `Tested With: PRBoom+ 2.4.1.5, DSDA-Doom 0.x.x`; `Dehacked/BEX Patch: Yes`; `Music: Yes`.
-So the pinned archive is a **2023-07-05 update**; the Cacoward discussed below was awarded for the
+So the pinned archive is a **2023-05-07 update**; the Cacoward discussed below was awarded for the
 project's **2020** release, whose bytes are different and are not pinned here.
 
 **WAD inspection — Confirmed.** `Abandon.wad` is a `PWAD` with **767 lumps**: eighteen map markers
@@ -408,7 +419,7 @@ modifications… as long as you include this file intact."
 **Other tags — Confirmed.** `challenging` as quoted above. Not `megawad` (17 released maps) and not
 `episode` (over nine): the project's own `New levels: 17` and `MAP01-MAP17` define the count, even
 though "Abandon" is sometimes described as a megawad. Not `classics`: the pinned archive text is
-dated 2023-07-05, under five years before this review, even though the project won in 2020.
+dated 2023-05-07, under five years before this review, even though the project won in 2020.
 
 **Performance — Needs Deck Validation.** Candidate risk factors are inspected above (177 MB WAD,
 167.7 MB of map data, a 29.1 MB single map, up to 10,030 things) plus the author's extended-node

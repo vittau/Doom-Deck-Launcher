@@ -384,3 +384,20 @@ fn tags_carry_their_cited_evidence() {
         assert!(evidence, "`{id}` must cite {citation} in its verification");
     }
 }
+
+#[test]
+fn release_labels_use_the_normalized_readme_dates() {
+    // Numeric readme dates ambiguous between day/month and month/day are resolved by the
+    // ZIP member timestamps (docs/research/reference-087-d.md, Method): Stardate 20X6 is
+    // 2013-06-02 and Abandon is 2023-05-07, not February 6 / July 5.
+    let expected = [
+        ("uac-ultra", "v1.2 (2010-03-29)"),
+        ("japanese-community-project", "v2.3 final (2016-07-24)"),
+        ("stardate-20x6", "2013-06-02"),
+        ("ozonia", "2021-12-23"),
+        ("abandon", "2023-05-07 update (original 2020 release)"),
+    ];
+    for (id, release) in expected {
+        assert_eq!(recipe(id).release, release, "`{id}` release label");
+    }
+}
