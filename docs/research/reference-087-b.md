@@ -1,7 +1,7 @@
 # Reference evidence — worker B (specs 087, 088 and 089)
 
 Titles: **Doom the Way id Did**, **No End in Sight**, **Doom II the Way id Did**,
-**Deathless** and **Sunder**. Everything below was gathered on 2026-10-22 by downloading
+**Deathless**, **Sunder** and **REKKR** (free PWAD edition). Everything below was gathered on 2026-10-22 by downloading
 the releases, reading their bytes as data and comparing them with upstream source and pages.
 Nothing from an archive was executed, and no IWAD was downloaded. Labels: **Confirmed** =
 measured from the inspected bytes or read in the quoted source; **Proposed** = a
@@ -20,7 +20,7 @@ convention-based choice; **Needs Deck Validation** = not played on the target ha
 - Cacowards pages were read through the Wayback Machine because `www.doomworld.com`
   answers automated requests with HTTP 403; the archived legacy pages are cited with
   their year and role, and the canonical year URL is the one recorded in the recipes.
-- Commands and results are in §8.
+- Commands and results are in §11.
 
 ## 1. Doom the Way id Did — release identity
 
@@ -318,7 +318,63 @@ author's "extremely difficult maps" statement. Not `megawad`: 22 maps in the pin
 views whose original size and licence could not be verified from bytes; rather than
 upscale or guess, the painted fallback stays (recorded in the recipe).
 
-## 9. Mirror verification (Confirmed)
+## 9. REKKR — free PWAD edition
+
+**Edition scoping (Confirmed):** this is the original free PWAD edition from /idgames
+(`levels/doom/megawads/rekkr.zip`, id `rekkr`). The readme calls it "a total conversion for
+Ultimate Doom v1.9", says `Other files required : None` and `Advanced engine needed :
+None`, and the archive is a PWAD over the player's own Doom IWAD. The standalone IWAD
+edition and the paid Sunken Land release are **not** acquired, declared or inferred from.
+
+| Field | Value | Evidence |
+| --- | --- | --- |
+| Title / version | REKKR, version 1.17 (first release 2018-07-09) | `REKKR.txt` "Update to: 1.17", "Release date: 7/9/2018" |
+| Uploader note | 1.17 "pulls in the first three episode map fixes and updates from Rekkr Sunken Land" | `REKKR.txt` lines 1–5 |
+| Lead | Revae (lead, textures, most maps, additional sounds) | `REK_CREDS.txt` |
+| Other credits | Music Tom Jensen (Hexenmapper); sounds TerminusEst13; maps AngrySaint, Bzzrak, AD_79, lupinx-Kassman, Velcrosasquatch, SuperCupcakeTactics, Jaws In Space, Jimmy, TerminusEst13; original E4M1 Bzzrak | `REKKR.txt` and `REK_CREDS.txt` |
+| Base game | Doom, Ultimate Doom v1.9; `New levels : 36`, `Map # : All` | `REKKR.txt` |
+| Port requirement | `Advanced engine needed : None`; `Tested With : Chocolate Doom, GZDoom, Zandronum, PRBoom(+), Eternity` | `REKKR.txt` |
+| Licence | CC BY-NC 4.0; redistribution with credit and licence link, no commercial use | `REKKR.txt` copyright section |
+
+**Confirmed.** Package and members:
+
+| Path | Bytes | SHA-256 | Declared |
+| --- | --- | --- | --- |
+| `rekkr.zip` (package) | 14,152,590 | `c28a32699a58c976c135f8d5bcc270f2801a88019fc8a1d7b4805a54cb0b8429` | package |
+| `REKKR.wad` | 41,960,202 | `fadf0b0ddb492c56e19ba5f56c8ac2e77413f287e8436cbcab31f2d41d7e9b0f` | maps |
+| `REKKR.txt` | 3,188 | `ad736135c000c80d348cb1dc5b12eed69980dd0e45dfa10207ebf77b7c377cae` | readme (keep) |
+| `REK_CREDS.txt` | 4,848 | `e8e8b89970f957996cf44013c0df9939c6f1c130dfe1bf8aeb2579d6d0b640e8` | credits (keep) |
+| `REKKR.deh` | 61,321 | `8f99e53fdca663b89f5fcb4cafa2c30f747f75c668e6e8b5ce10866168f1cea2` | **not declared** (identical to the embedded lump) |
+
+ZIP member dates: `REKKR.txt` 2024-06-22, `REKKR.deh` 2024-06-24, `REK_CREDS.txt`
+2024-07-23, `REKKR.wad` 2025-01-19.
+
+**Confirmed.** `REKKR.wad` is a PWAD, 41,960,202 bytes, 3,330 lumps, with 36 map markers
+`E1M1`–`E4M9`. Other lumps: embedded `DEHACKED` **61,321 bytes**, `MAPINFO` 5,036
+(GZDoom-family), `DECORATE` 1,204, `PLAYPAL`, `STBAR`, `TITLEPIC`/`INTERPIC` and
+`DEMO1`–`DEMO4`. No `COMPLVL`, `UMAPINFO` or `ZMAPINFO`.
+
+**Patch identity (Confirmed):** the embedded `DEHACKED` lump is **byte-identical** to the
+archive's external `REKKR.deh` — both 61,321 bytes with SHA-256 `8f99e53f…1cea2`. Declaring
+the external file as well would apply the same total-conversion patch twice, so the recipe
+declares only the map WAD; DSDA-Doom applies the embedded patch automatically (and
+`-noautoload` does not skip it).
+
+**Complevel (Proposed):** `vanilla` alias (3 on Ultimate Doom), family `vanilla`, from the
+author's "Advanced engine needed: None" and the Chocolate Doom test credit.
+
+**Tags:** `cacowards` = 2018 Cacowards **Top Ten Page 2 winner**; canonical
+https://www.doomworld.com/cacowards/2018/ returned 403 and was read through its Wayback
+copy on 2026-10-22 (that feature also names Revae Creator of the Year). `classics` = first
+released 2018-07-09 plus that award; `community-projects` = nine credited mappers plus
+music, sound and testing contributors; `megawad` = 36 maps. A total conversion has no
+separate tag in the reviewed vocabulary, so none is invented.
+
+**Artwork:** none bundled. `manbitesshark.com` (the site named in the readme) answers the
+automated request with a Cloudflare challenge (HTTP 403) and the Cacowards page carries no
+REKKR screenshot; rather than guess at a third-party image, the painted fallback stays.
+
+## 10. Mirror verification (Confirmed)
 
 | Package | www.gamers.org | ftp.fu-berlin.de | Byte-identical |
 | --- | --- | --- | --- |
@@ -327,12 +383,13 @@ upscale or guess, the painted fallback stays (recorded in the recipe).
 | `d2twid.zip` | 1,964,344 | 1,964,344 | yes (`e5ef2401…`) |
 | `deathless.zip` | 1,743,823 | 1,743,823 | yes (`47481ee5…`) |
 | `Sunder 2407.zip` | — | — | author Dropbox only |
+| `rekkr.zip` | 14,152,590 | 14,152,590 | yes (`c28a3269…`) |
 
 `youfailit.net` did not accept a TLS connection on 2026-10-22 (75 s connect timeout) and
 is not listed. Sunder has one HTTPS source because the author publishes it himself and no
 allowlisted mirror carries this build.
 
-## 10. Commands and results (2026-10-22)
+## 11. Commands and results (2026-10-22)
 
 ```sh
 # Offline lint of the five assigned recipes, from the worktree
@@ -354,7 +411,7 @@ CARGO_TARGET_DIR=<shared> CARGO_BUILD_JOBS=2 \
   cargo clippy -p ddl-core --all-targets -- -D warnings   # -> clean
 ```
 
-## 11. Open checks and limitations
+## 12. Open checks and limitations
 
 - **Needs Deck Validation (all five):** actual IWAD detection, complevel, load order,
   gameplay, audio and episode/map selection on the Deck.
@@ -369,5 +426,7 @@ CARGO_TARGET_DIR=<shared> CARGO_BUILD_JOBS=2 \
 - **Sunder:** performance on Deck is unmeasured; the pinned V.2407 build is not the
   author's newest V.2512, which is only offered on an allowlist-excluded host. MAP20
   exists despite the readme's stale count line.
-- **Artwork:** only Doom the Way id Did has bundled screenshots; the other four record
+- **REKKR:** the total-conversion DeHackEd behaviour (new monsters, weapons and strings)
+  was not played on Deck; only the free PWAD edition over Ultimate Doom is declared.
+- **Artwork:** only Doom the Way id Did has bundled screenshots; the other five record
   unavailable compliant sources and keep the painted fallback.
