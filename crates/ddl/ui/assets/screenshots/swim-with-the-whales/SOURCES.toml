@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (1280x720 JPEG).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://i.imgur.com/9833QJQ.png"
+source_page = "https://www.doomworld.com/vb/wads-mods/66260-swim-with-the-whales-final-release/"
+credit = "Ribbiks"
+original_size = "1024x768"
+retrieved = "2026-10-22"
+permission = "In-game screenshot posted by the author in the release thread (source_page, read through the Wayback capture of 2013-12-23). No separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."
