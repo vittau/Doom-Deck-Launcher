@@ -2166,7 +2166,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             // category that contains this recipe before rendering its card.
             let category = used
                 .iter()
-                .find(|tag| ddl_core::catalog::shows_in_category(&recipe, &tag.id))
+                .find(|tag| ddl_core::catalog::shows_in_category(recipe, &tag.id))
                 .expect("every reviewed recipe is in a requested category");
             r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
             r.focus = 10 + index as i32;
@@ -3970,7 +3970,7 @@ fn register_fake_doom2(
         .borrow_mut()
         .start(ui, Command::Choose(registered, "doom2-1.9".into()));
     idle(state);
-    let index = state
+    state
         .borrow()
         .snapshot
         .as_ref()
@@ -3978,8 +3978,7 @@ fn register_fake_doom2(
         .items
         .iter()
         .position(|item| item.recipe.id == "zz-no-rest-for-the-living")
-        .expect("the player-supplied expansion is in the fixture catalog");
-    index
+        .expect("the player-supplied expansion is in the fixture catalog")
 }
 
 /// Spec 094 R4 (worker D): a metadata-only, player-supplied expansion installs

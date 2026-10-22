@@ -151,3 +151,19 @@ and the final 118-recipe embedding count after integration.
   warning for the KEX variant.
 - No unresolved date is fabricated: the single year-precision entry (Abandon 2020) is the only
   one whose source stops short of a day.
+
+## Combined-check fixes
+
+- **`library_base_game_focus_survives_refresh_and_dpad_navigation`** failed because the
+  expectation `focus == 10` assumed the first displayed Library card was snapshot item 0. Since
+  spec 090 the grid is in release order, so the top-left card is the oldest installed mapset and
+  its node id is `CARD + snapshot index` (here 14). The geometry is correct: Down from the
+  leftmost base-game card lands on the top-left card of the first grid row. The test now derives
+  that card from the snapshot (the oldest installed recipe by `compare_browsing_order`), asserts
+  the landed focus equals it, and separately proves it is the topmost-leftmost installed card in
+  the laid-out nodes. No runtime navigation change was needed.
+- **Workspace clippy** failures were three test-only nits introduced with the spec 094 coverage:
+  a needless borrow in `headless_production.rs`, a `let`-and-return in the fixture helper, and
+  `!matches!(item.launch, Ok(_))` in `services.rs` (now `item.launch.is_err()`).
+- Verified after the fix: `cargo clippy --workspace --all-targets -- -D warnings` is clean and
+  `cargo test -p ddl --bin ddl -- --test-threads=2` reports **226 passed, 0 failed**.
