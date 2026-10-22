@@ -10,13 +10,17 @@ import configparser
 import hashlib
 from datetime import date
 from html import escape
+import json
 from pathlib import Path
 import re
 import shutil
 from urllib.parse import urlsplit
+from xml.sax.saxutils import escape as xml_escape
 
 ROOT = Path(__file__).resolve().parents[2]
 SITE = ROOT / "packaging/flatpak/site"
+IMAGES = SITE / "images"
+IMAGE_MANIFEST = IMAGES / "manifest.json"
 ASSETS = {
     "style.css": SITE / "style.css",
     "emblem-small.svg": ROOT / "crates/ddl/ui/assets/logo/emblem-small.svg",
@@ -33,6 +37,85 @@ ASSETS = {
 }
 
 
+def structured_data(site_base, app_id):
+    """Machine-readable product facts, all of them also visible on the page.
+
+    No rating, review, author or organization is asserted because the project
+    has none of those recorded, and no rich result is promised.
+    """
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": f"{site_base}/#website",
+                "name": "DoomDeckLauncher",
+                "alternateName": "DDL",
+                "url": f"{site_base}/",
+                "inLanguage": "en",
+            },
+            {
+                "@type": "SoftwareApplication",
+                "@id": f"{site_base}/#application",
+                "name": "DoomDeckLauncher",
+                "url": f"{site_base}/",
+                "applicationCategory": "GameApplication",
+                "operatingSystem": "Linux",
+                "license": "https://spdx.org/licenses/GPL-3.0-or-later.html",
+                "isAccessibleForFree": True,
+                "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD"},
+                "downloadUrl": f"{site_base}/{app_id}.flatpakref",
+                "softwareRequirements": (
+                    "A Steam Deck and legally owned DOOM base-game files (IWADs). "
+                    "DoomDeckLauncher never bundles or downloads commercial base games."
+                ),
+            },
+        ],
+    }
+
+
+def json_ld(site_base, app_id):
+    """Serialize JSON-LD for a raw <script> element without allowing markup breaks."""
+    text = json.dumps(structured_data(site_base, app_id), indent=2, ensure_ascii=False)
+    return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+
+
+def robots_txt(site_base):
+    """Policy-neutral crawl policy: only the OSTree object tree is excluded."""
+    return ("# DoomDeckLauncher project website\n"
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Disallow: /repo/\n"
+            "\n"
+            f"Sitemap: {site_base}/sitemap.xml\n")
+
+
+def sitemap_xml(site_base):
+    """The two indexable pages; no lastmod without real modification provenance."""
+    urls = (f"{site_base}/", f"{site_base}/assets/credits.html")
+    entries = "".join(f"  <url>\n    <loc>{xml_escape(url)}</loc>\n  </url>\n" for url in urls)
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            f"{entries}</urlset>\n")
+
+
+def image_derivatives():
+    """Load the committed WebP manifest; the offline tests check it for staleness."""
+    try:
+        manifest = json.loads(IMAGE_MANIFEST.read_text())
+    except (OSError, ValueError) as error:
+        raise ValueError(f"cannot read the image manifest: {error}") from error
+    if manifest.get("format") != 1:
+        raise ValueError("unsupported image manifest format")
+    derivatives = manifest.get("derivatives") or {}
+    for name, entry in derivatives.items():
+        if not (IMAGES / name).is_file():
+            raise ValueError(f"missing committed image derivative {name}")
+        if entry.get("source") not in ASSETS:
+            raise ValueError(f"unknown image source for {name}")
+    return derivatives
+
+
 def render(output, version, published, app_id, site_base):
     """Copy only page-owned assets; leave ref, key, repo and Git state intact."""
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?", version):
@@ -44,18 +127,27 @@ def render(output, version, published, app_id, site_base):
     url = urlsplit(site_base)
     if url.scheme != "https" or not url.netloc or url.query or url.fragment or url.username:
         raise ValueError("site base must be an absolute HTTPS URL without query or fragment")
+    derivatives = image_derivatives()
     values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base,
                   STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16],
-                  ICON_HASH=hashlib.sha256(ASSETS["icon.png"].read_bytes()).hexdigest()[:16])
+                  ICON_HASH=hashlib.sha256(ASSETS["icon.png"].read_bytes()).hexdigest()[:16],
+                  HERO_HASH=hashlib.sha256(ASSETS["hero.png"].read_bytes()).hexdigest()[:16])
     values.update({name.removesuffix(".png").replace("-", "_").upper() + "_HASH":
                    hashlib.sha256(source.read_bytes()).hexdigest()[:16]
                    for name, source in ASSETS.items() if source.parent == ROOT / "docs/screenshots"})
+    values.update({name.removesuffix(".webp").replace("-", "_").upper() + "_HASH":
+                   hashlib.sha256((IMAGES / name).read_bytes()).hexdigest()[:16]
+                   for name in derivatives})
+    raw = {"STRUCTURED_DATA": json_ld(site_base, app_id)}
     pages = {}
     for target, source in {"index.html": SITE / "index.html",
-                           "assets/credits.html": SITE / "credits.html"}.items():
+                           "assets/credits.html": SITE / "credits.html",
+                           "404.html": SITE / "404.html"}.items():
         html = source.read_text()
         for key, value in values.items():
             html = html.replace(f"@@{key}@@", escape(value, quote=True))
+        for key, value in raw.items():
+            html = html.replace(f"@@{key}@@", value)
         if re.search(r"@@[A-Z_]+@@", html):
             raise ValueError("unresolved page template token")
         pages[target] = html
@@ -63,10 +155,14 @@ def render(output, version, published, app_id, site_base):
     output.mkdir(parents=True, exist_ok=True)
     # Both branch publishers retain the apex domain on every refresh.
     (output / "CNAME").write_text("doomdecklauncher.com\n")
+    (output / "robots.txt").write_text(robots_txt(site_base))
+    (output / "sitemap.xml").write_text(sitemap_xml(site_base))
     assets = output / "assets"
     assets.mkdir(exist_ok=True)
     for name, source in ASSETS.items():
         shutil.copyfile(source, assets / name)
+    for name in derivatives:
+        shutil.copyfile(IMAGES / name, assets / name)
     for target, html in pages.items():
         (output / target).write_text(html)
 

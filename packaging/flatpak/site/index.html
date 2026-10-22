@@ -37,8 +37,22 @@
       property="og:image:alt"
       content="DoomDeckLauncher’s original Rose Compass identity in an Ember Cathedral interior"
    >
+    <meta property="og:site_name" content="DoomDeckLauncher">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:image:type" content="image/png">
     <meta name="twitter:card" content="summary_large_image">
+    <meta
+      name="twitter:title"
+      content="DoomDeckLauncher — Community DOOM maps on Steam Deck"
+   >
+    <meta
+      name="twitter:description"
+      content="A free, open-source, controller-first launcher for community DOOM mapsets on Steam Deck, powered by DSDA-Doom. Bring your own legally owned game files."
+   >
     <meta name="theme-color" content="#120c0d">
+    <script type="application/ld+json">
+@@STRUCTURED_DATA@@
+    </script>
     <link rel="icon" href="assets/icon.png?v=@@ICON_HASH@@" type="image/png" sizes="256x256">
     <link rel="stylesheet" href="assets/style.css?v=@@STYLE_HASH@@">
   </head>
@@ -56,20 +70,26 @@
         ><a href="https://github.com/vittau/Doom-Deck-Launcher"
           >Source <span aria-hidden="true">↗</span></a
         >
-        <div class="coffee-widget">
-          <script type="text/javascript"
-            src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
-            data-name="bmc-button" data-slug="vittau" data-color="#FFDD00"
-            data-emoji="" data-font="Cookie" data-text="Donate"
-            data-outline-color="#000000" data-font-color="#000000"
-            data-coffee-color="#ffffff"></script>
-          <noscript><a href="https://buymeacoffee.com/vittau">Donate</a></noscript>
-        </div>
       </nav>
     </header>
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-art" aria-hidden="true"></div>
+        <div class="hero-art" aria-hidden="true">
+          <picture>
+            <source
+              type="image/webp"
+              srcset="assets/hero-960.webp?v=@@HERO_960_HASH@@ 960w, assets/hero-1920.webp?v=@@HERO_1920_HASH@@ 1920w, assets/hero-2560.webp?v=@@HERO_2560_HASH@@ 2560w"
+              sizes="100vw"
+           >
+            <img
+              src="assets/hero.png?v=@@HERO_HASH@@"
+              width="3840"
+              height="1240"
+              alt=""
+              fetchpriority="high"
+           >
+          </picture>
+        </div>
         <div class="wrap hero-grid">
           <div class="hero-copy">
             <p class="eyebrow">
@@ -78,9 +98,9 @@
             </p>
             <h1 id="hero-title">Your DOOM.<br>A whole new <em>world.</em></h1>
             <p class="lead">
-              Turn your Steam-owned DOOM games into a doorway to community maps.
-              Discover, install and play with a native, controller-first
-              launcher for Steam Deck.
+              DoomDeckLauncher is a free, open-source, controller-first launcher
+              for Steam Deck. Turn your Steam-owned DOOM games into a doorway to
+              community maps — discover, install and play.
             </p>
             <a
               class="button primary"
@@ -96,6 +116,16 @@
               <span class="status-dot" aria-hidden="true"></span> Experimental ·
               v@@VERSION@@ · Published <time datetime="@@DATE@@">@@DATE@@</time>
             </p>
+            <!-- Official Buy Me a Coffee widget, immediately below the release line. -->
+            <div class="coffee-widget">
+              <script type="text/javascript"
+                src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
+                data-name="bmc-button" data-slug="vittau" data-color="#FFDD00"
+                data-emoji="" data-font="Cookie" data-text="Donate"
+                data-outline-color="#000000" data-font-color="#000000"
+                data-coffee-color="#ffffff"></script>
+              <noscript><a href="https://buymeacoffee.com/vittau">Donate</a></noscript>
+            </div>
             <a class="quiet-link" href="#install"
               >See the setup steps <span aria-hidden="true">↓</span></a
             >
@@ -108,12 +138,18 @@
             <a
               href="assets/discover.png?v=@@DISCOVER_HASH@@"
               aria-label="View full-size Discover screenshot"
-              ><img
-                src="assets/discover.png?v=@@DISCOVER_HASH@@"
-                width="1280"
-                height="800"
-                alt="The launcher’s Discover view, with community mapset cards, the category strip, the catalog source date and controller prompts."
-           ></a>
+              ><picture
+                ><source
+                  type="image/webp"
+                  srcset="assets/discover-640.webp?v=@@DISCOVER_640_HASH@@ 640w, assets/discover-960.webp?v=@@DISCOVER_960_HASH@@ 960w, assets/discover-1280.webp?v=@@DISCOVER_1280_HASH@@ 1280w"
+                  sizes="(max-width: 720px) calc(100vw - 40px), (max-width: 1050px) calc(50vw - 25px), 626px"
+               ><img
+                  src="assets/discover.png?v=@@DISCOVER_HASH@@"
+                  width="1280"
+                  height="800"
+                  alt="The launcher’s Discover view, with community mapset cards, the category strip, the catalog source date and controller prompts."
+                  fetchpriority="high"
+             ></picture></a>
             <figcaption>
               Launcher preview with sample data.<br>Published builds may differ.
             </figcaption>
@@ -135,7 +171,8 @@
             <h2 id="inside-title">Find your next obsession.</h2>
           </div>
           <p>
-            Browse community creations, choose a setup and keep your adventures
+            DoomDeckLauncher collects community DOOM mapsets in one library.
+            Browse the catalog, choose a setup and keep your adventures
             together.
           </p>
         </div>
@@ -170,13 +207,19 @@
             <a
               href="assets/home.png?v=@@HOME_HASH@@"
               aria-label="View full-size Home screenshot"
-              ><img
-                src="assets/home.png?v=@@HOME_HASH@@"
-                width="1280"
-                height="800"
-                loading="lazy"
-                alt="Home view with recently played mapsets and controller navigation."
-           ></a>
+              ><picture
+                ><source
+                  type="image/webp"
+                  srcset="assets/home-640.webp?v=@@HOME_640_HASH@@ 640w, assets/home-960.webp?v=@@HOME_960_HASH@@ 960w, assets/home-1280.webp?v=@@HOME_1280_HASH@@ 1280w"
+                  sizes="(max-width: 720px) calc(100vw - 40px), (max-width: 1050px) calc(50vw - 42px), 606px"
+               ><img
+                  src="assets/home.png?v=@@HOME_HASH@@"
+                  width="1280"
+                  height="800"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Home view with recently played mapsets and controller navigation."
+             ></picture></a>
             <figcaption>
               <span>HOME</span> Pick up your next adventure.
             </figcaption>
@@ -185,29 +228,45 @@
             <a
               href="assets/play-setup.png?v=@@PLAY_SETUP_HASH@@"
               aria-label="View full-size Play setup screenshot"
-              ><img
-                src="assets/play-setup.png?v=@@PLAY_SETUP_HASH@@"
-                width="1280"
-                height="800"
-                loading="lazy"
-                alt="Play setup with optional components, skill, pistol start and content load order."
-           ></a>
+              ><picture
+                ><source
+                  type="image/webp"
+                  srcset="assets/play-setup-640.webp?v=@@PLAY_SETUP_640_HASH@@ 640w, assets/play-setup-960.webp?v=@@PLAY_SETUP_960_HASH@@ 960w, assets/play-setup-1280.webp?v=@@PLAY_SETUP_1280_HASH@@ 1280w"
+                  sizes="(max-width: 720px) calc(100vw - 40px), (max-width: 1050px) calc(50vw - 42px), 606px"
+               ><img
+                  src="assets/play-setup.png?v=@@PLAY_SETUP_HASH@@"
+                  width="1280"
+                  height="800"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Play setup with optional components, skill, pistol start and content load order."
+             ></picture></a>
             <figcaption>
               <span>PLAY SETUP</span> Make the run your own.
             </figcaption>
           </figure>
           <figure>
             <a href="assets/mapset-detail.png?v=@@MAPSET_DETAIL_HASH@@" aria-label="View full-size mapset detail screenshot"
-              ><img src="assets/mapset-detail.png?v=@@MAPSET_DETAIL_HASH@@" width="1280" height="800" loading="lazy"
+              ><picture
+                ><source
+                  type="image/webp"
+                  srcset="assets/mapset-detail-640.webp?v=@@MAPSET_DETAIL_640_HASH@@ 640w, assets/mapset-detail-960.webp?v=@@MAPSET_DETAIL_960_HASH@@ 960w, assets/mapset-detail-1280.webp?v=@@MAPSET_DETAIL_1280_HASH@@ 1280w"
+                  sizes="(max-width: 720px) calc(100vw - 40px), (max-width: 1050px) calc(50vw - 42px), 606px"
+               ><img src="assets/mapset-detail.png?v=@@MAPSET_DETAIL_HASH@@" width="1280" height="800" loading="lazy" decoding="async"
                 alt="Mapset detail with author, description, base game requirement, tags and favorite."
-           ></a>
+             ></picture></a>
             <figcaption><span>MAPSET DETAIL</span> Know what you are about to play.</figcaption>
           </figure>
           <figure>
             <a href="assets/audio-settings.png?v=@@AUDIO_SETTINGS_HASH@@" aria-label="View full-size Audio settings screenshot"
-              ><img src="assets/audio-settings.png?v=@@AUDIO_SETTINGS_HASH@@" width="1280" height="800" loading="lazy"
+              ><picture
+                ><source
+                  type="image/webp"
+                  srcset="assets/audio-settings-640.webp?v=@@AUDIO_SETTINGS_640_HASH@@ 640w, assets/audio-settings-960.webp?v=@@AUDIO_SETTINGS_960_HASH@@ 960w, assets/audio-settings-1280.webp?v=@@AUDIO_SETTINGS_1280_HASH@@ 1280w"
+                  sizes="(max-width: 720px) calc(100vw - 40px), (max-width: 1050px) calc(50vw - 42px), 606px"
+               ><img src="assets/audio-settings.png?v=@@AUDIO_SETTINGS_HASH@@" width="1280" height="800" loading="lazy" decoding="async"
                 alt="Audio settings with the default MIDI soundfont selected and an optional Arachno download."
-           ></a>
+             ></picture></a>
             <figcaption><span>AUDIO</span> Choose your MIDI soundfont.</figcaption>
           </figure>
         </div>
@@ -374,6 +433,93 @@
             </p>
           </div>
         </details>
+      </section>
+
+      <section
+        id="questions"
+        class="wrap section questions"
+        aria-labelledby="questions-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Before you install</p>
+            <h2 id="questions-title">Questions, answered.</h2>
+          </div>
+          <p>
+            What DoomDeckLauncher is, what it needs from you, and what it leaves
+            to the games you already own.
+          </p>
+        </div>
+        <div class="qa-grid">
+          <article>
+            <h3>What is DoomDeckLauncher?</h3>
+            <p>
+              DoomDeckLauncher (DDL) is a free, open-source launcher for Steam
+              Deck that keeps community DOOM mapsets, curated load order, engine
+              settings, profiles and saves in one controller-first library. It
+              starts mapsets with DSDA-Doom. It is an independent project, not a
+              DOOM re-release and not a game download service.
+            </p>
+          </article>
+          <article>
+            <h3>Is it free, and what is the license?</h3>
+            <p>
+              Yes. DDL is free software under GPL-3.0-or-later, with no account,
+              subscription or paid tier. You still need to own the DOOM games
+              whose IWAD files you add.
+            </p>
+          </article>
+          <article>
+            <h3>Does it include DOOM or the mapsets?</h3>
+            <p>
+              No commercial base game is bundled or downloaded. You point DDL at
+              a folder holding your own IWADs, and DDL installs community
+              mapsets from their published releases. Mapset imagery and credits
+              stay with their authors.
+            </p>
+          </article>
+          <article>
+            <h3>Which source port does it use?</h3>
+            <p>
+              DSDA-Doom only. The official engine release is downloaded
+              separately from its upstream project inside DDL. GZDoom and other
+              source ports are not supported.
+            </p>
+          </article>
+          <article>
+            <h3>How do installation and updates work?</h3>
+            <p>
+              Download the signed <code>.flatpakref</code>, open it in Discover
+              in Desktop Mode and install. Discover then delivers launcher
+              updates from this self-hosted experimental remote — not Flathub.
+              Engine and catalog updates arrive inside DDL, and installed
+              mapsets, profiles and saves survive app updates. A
+              <code>ddl-linux-x86_64.tar.gz</code> archive is available on
+              GitHub Releases instead.
+            </p>
+          </article>
+          <article>
+            <h3>Is it made for Steam Deck?</h3>
+            <p>
+              DDL is designed controller-first for Steam Deck, with a Linux
+              Flatpak build; no Windows or macOS builds are published.
+              Installation happens in Desktop Mode, then you add the launcher to
+              Steam and return to Gaming Mode. Hardware validation is still in
+              progress: the install flow, controls and gameplay still need
+              testing on a physical Deck.
+            </p>
+          </article>
+        </div>
+        <p class="caption">
+          More detail:
+          <a href="https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/steam-deck-guide.md"
+            >the Steam Deck guide</a
+          >
+          and the
+          <a href="https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/research/flatpak.md"
+            >Flatpak research notes</a
+          >.
+        </p>
       </section>
     </main>
     <footer id="credits" class="wrap">

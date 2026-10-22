@@ -138,7 +138,8 @@ class RenderTests(unittest.TestCase):
                 self.assertEqual((self.out / "index.html").read_text(), text)
 
     def test_official_donation_embed_matches_owner_configuration(self):
-        doc = Document(self.render())
+        text = self.render()
+        doc = Document(text)
         embeds = [a for tag, a in doc.elements
                   if tag == "script" and a.get("data-name") == "bmc-button"]
         self.assertEqual(len(embeds), 1)
@@ -150,6 +151,17 @@ class RenderTests(unittest.TestCase):
             self.assertEqual(embed[f"data-{key}"], value)
         self.assertTrue(any(tag == "a" and a.get("href") == "https://buymeacoffee.com/vittau"
                             for tag, a in doc.elements))
+        # Spec 083 R7: one compact widget in the hero, below the release line and
+        # outside the header, while installation stays the primary action.
+        header = re.search(r'<header class="site-header.*?</header>', text, re.DOTALL).group()
+        self.assertNotIn("coffee-widget", header)
+        self.assertNotIn("buymeacoffee", header)
+        self.assertEqual(text.count('class="coffee-widget"'), 1)
+        self.assertEqual(text.count("https://buymeacoffee.com/vittau"), 1)
+        self.assertIn("<noscript>", text)
+        self.assertLess(text.index('<p class="release">'), text.index('class="coffee-widget"'))
+        self.assertLess(text.index('class="coffee-widget"'), text.index('class="quiet-link"'))
+        self.assertLess(text.index('class="button primary"'), text.index('class="coffee-widget"'))
 
     def test_stylesheet_url_tracks_css_content(self):
         text = self.render()

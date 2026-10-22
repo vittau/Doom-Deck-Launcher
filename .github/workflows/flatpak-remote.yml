@@ -329,6 +329,7 @@ jobs:
           # The published site carries only what we render here plus repo/.
           find "$site" -maxdepth 1 -type f \
             ! -name "index.html" ! -name ".nojekyll" ! -name "CNAME" \
+            ! -name "robots.txt" ! -name "sitemap.xml" ! -name "404.html" \
             ! -name "${APP_ID}.flatpakref" ! -name "ddl.flatpakrepo" -delete
 
           echo "SITE_VERSION=$version" >> "$GITHUB_ENV"
@@ -447,7 +448,11 @@ jobs:
             if curl -fsS --max-time 20 "$page_url" -o "$RUNNER_TEMP/published.index.html" \
                && curl -fsS --max-time 20 "$ref_url" -o "$RUNNER_TEMP/published.flatpakref" \
                && curl -fsS --max-time 20 "$summary_url" -o "$RUNNER_TEMP/published.summary" \
+               && curl -fsS --max-time 20 "${SITE_BASE}/robots.txt${query}" -o "$RUNNER_TEMP/published.robots.txt" \
+               && curl -fsS --max-time 20 "${SITE_BASE}/sitemap.xml${query}" -o "$RUNNER_TEMP/published.sitemap.xml" \
                && cmp -s "$RUNNER_TEMP/published.index.html" "$RUNNER_TEMP/site/index.html" \
+               && cmp -s "$RUNNER_TEMP/published.robots.txt" "$RUNNER_TEMP/site/robots.txt" \
+               && cmp -s "$RUNNER_TEMP/published.sitemap.xml" "$RUNNER_TEMP/site/sitemap.xml" \
                && cmp -s "$RUNNER_TEMP/published.summary" "$RUNNER_TEMP/site/repo/summary"; then
               served=1
               break
