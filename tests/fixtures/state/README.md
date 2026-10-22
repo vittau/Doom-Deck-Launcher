@@ -19,6 +19,7 @@ after generation (`git worktree remove --force .scratch/<tag>`).
 | v0.0.10-audio | d1a39cc | Profile default skill 4, DSDA baseline 5, component dependency metadata and explicit Default audio choice. |
 | v0.0.11-polish | 7772da8 | Same audio-capable scenario: profile default skill 4, DSDA baseline 5 and explicit Default audio choice; the domain/Flatpak identity work does not change state serializers. |
 | v0.0.12-catalog | 409d6c5 | Same scenario and audio choice; embedded recipe snapshots include optional `original_release` date metadata, without changing saved-state field meanings or AppState schema 2. |
+| v0.0.13-update | 7bf51c1 | Same scenario and explicit Default audio; the tag's production view-preference writer saves List in the isolated schema-1 `config/view.json`. |
 
 Each config/data state tree contains a registered engine, two IWAD folder
 references and registry entries, two installed recipe snapshots with active and

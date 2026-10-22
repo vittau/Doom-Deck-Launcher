@@ -82,6 +82,16 @@ mod release_state_fixture {
             cache: root.join("cache"), state: root.join("state"),
         }).select(Choice::Default).unwrap();
         // AUDIO_END
+        // VIEW_START
+        // Use this tag's production writer to preserve an explicit List choice.
+        super::view_preferences::save_view_format(&Environment {
+            paths: Paths {
+                config: config.clone(), data: data.clone(),
+                cache: root.join("cache"), state: root.join("state"),
+            },
+            home: "/ddl-fixture".into(), screen: None, test: None,
+        }, ViewFormat::List).unwrap();
+        // VIEW_END
         SetupStore::new(&data).save(&CustomSetup::new(
             "fixture-custom", "My custom setup", CustomIwad::Identified { variant: "doom2-1.9".into() },
             Compatibility::Auto, 1700000000,

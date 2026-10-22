@@ -5895,6 +5895,7 @@ mod release_state_tests {
             "v0.0.10-audio",
             "v0.0.11-polish",
             "v0.0.12-catalog",
+            "v0.0.13-update",
         ];
         for tag in required_tags {
             assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
@@ -6041,7 +6042,10 @@ mod release_state_tests {
             if let Some(setup) = snapshot.custom.first() {
                 assert_eq!(setup.name, "My custom setup");
             }
-            let has_audio = matches!(tag, "v0.0.10-audio" | "v0.0.11-polish" | "v0.0.12-catalog");
+            let has_audio = matches!(
+                tag,
+                "v0.0.10-audio" | "v0.0.11-polish" | "v0.0.12-catalog" | "v0.0.13-update"
+            );
             assert_eq!(tree.join("config/audio.json").is_file(), has_audio, "{tag}");
             assert_eq!(
                 services.soundfonts.preferences().unwrap().choice,
@@ -6060,6 +6064,17 @@ mod release_state_tests {
             assert!(
                 snapshot.audio.warning.is_none(),
                 "{tag}: audio preferences readable"
+            );
+            let has_view = tag == "v0.0.13-update";
+            assert_eq!(tree.join("config/view.json").is_file(), has_view, "{tag}");
+            assert_eq!(
+                load_view_format(&env).unwrap(),
+                if has_view {
+                    ViewFormat::List
+                } else {
+                    ViewFormat::Cards
+                },
+                "{tag}: the saved view survives; older releases default to Cards"
             );
             // Saving loaded state emits only the current shape and is atomic.
             let temp = tempfile::tempdir().unwrap();
