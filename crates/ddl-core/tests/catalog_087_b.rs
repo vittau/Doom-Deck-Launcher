@@ -1,5 +1,5 @@
 //! Worker B coverage for specs 087, 088 and 089: Doom the Way id Did, No End in
-//! Sight, Doom II the Way id Did, Deathless and Sunder.
+//! Sight, Doom II the Way id Did, Deathless, Sunder and REKKR.
 //!
 //! The tests are offline. They freeze the release identities inspected from the
 //! author/mirror bytes (archive and member sizes and SHA-256), the required IWAD
@@ -38,7 +38,7 @@ struct Expected {
     members: &'static [Member],
 }
 
-const ASSIGNED: [Expected; 5] = [
+const ASSIGNED: [Expected; 6] = [
     Expected {
         id: "doom-the-way-id-did",
         title: "Doom the Way id Did",
@@ -197,6 +197,46 @@ const ASSIGNED: [Expected; 5] = [
                 path: "SunderReadMeV2.TXT",
                 size: 34_421,
                 sha256: "4c67a6f5c798840953dc2d20344e3760627016f926c26d2f1cfbc5e9948b0e40",
+                keep: true,
+            },
+        ],
+    },
+    Expected {
+        id: "rekkr",
+        title: "REKKR",
+        game: Game::Doom,
+        variants: &[
+            "doom-1.9ud",
+            "doom-1.9ud-kex-2024-08-06",
+            "doom-1.9ud-kex-2024-10-01",
+        ],
+        family: PortFamily::Vanilla,
+        complevel: ComplevelAlias::Vanilla,
+        tags: &["classics", "cacowards", "community-projects", "megawad"],
+        package_size: 14_152_590,
+        package_sha256: "c28a32699a58c976c135f8d5bcc270f2801a88019fc8a1d7b4805a54cb0b8429",
+        package_urls: 2,
+        idgames_path: Some("levels/doom/megawads/rekkr.zip"),
+        members: &[
+            Member {
+                id: "maps",
+                path: "REKKR.wad",
+                size: 41_960_202,
+                sha256: "fadf0b0ddb492c56e19ba5f56c8ac2e77413f287e8436cbcab31f2d41d7e9b0f",
+                keep: false,
+            },
+            Member {
+                id: "readme",
+                path: "REKKR.txt",
+                size: 3_188,
+                sha256: "ad736135c000c80d348cb1dc5b12eed69980dd0e45dfa10207ebf77b7c377cae",
+                keep: true,
+            },
+            Member {
+                id: "credits",
+                path: "REK_CREDS.txt",
+                size: 4_848,
+                sha256: "e8e8b89970f957996cf44013c0df9939c6f1c130dfe1bf8aeb2579d6d0b640e8",
                 keep: true,
             },
         ],
@@ -400,6 +440,7 @@ fn assigned_recipes_pass_offline_lint_including_images() {
         "doom-ii-the-way-id-did",
         "deathless",
         "sunder",
+        "rekkr",
     ] {
         assert!(recipe(&catalog, id).screenshots.is_empty());
     }
