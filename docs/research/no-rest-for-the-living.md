@@ -73,7 +73,9 @@ verified. The KEX size/MD5 are recorded here and in the recipe comments; no KEX 
   Edition, Doom Classic Complete, the 2019 Unity add-on and the 2024 KEX release) are variants, not
   the original date. **Confirmed for 2010-05-26 from those sources; day precision.**
 - **Maps:** nine total — eight standard maps plus *March of the Demons* as the secret ninth
-  (DoomWiki 2011; the WAD has `MAP01`–`MAP09`). **Confirmed.**
+  (DoomWiki 2011; the WAD has `MAP01`–`MAP09`). The publisher's 2022 Add-ons page also calls it
+  "Nerve Software's nine-map Add-on" and says it debuted on the Xbox Live Arcade port of DOOM II
+  (<https://bethesda.net/en-US/news/add-ons-for-doom-doom-ii-2022>). **Confirmed.**
 - **Cacowards:** the 2010 Top Ten p1 winner, per the archived inventory
   `docs/research/cacowards.md` §2010 (source page
   <https://web.archive.org/web/2026id_/https://www.doomworld.com/17years/best1.php>). The recipe
@@ -101,12 +103,16 @@ verified. The KEX size/MD5 are recorded here and in the recipe comments; no KEX 
 
 ## 6. Artwork
 
-No compliant in-game screenshot was obtained, so no screenshot directory or `SOURCES.toml` is
-committed and the recipe carries no `[[screenshots]]` entries; the existing painted fallback stays.
-DoomWiki direct requests return Cloudflare HTTP 403 from this host, and the archived 2011 page has
-no in-game map view; the Cacowards feature page is also Cloudflare-blocked. No image was
-synthesized, cropped from a title screen or captured from a window. This is recorded as a fallback,
-not as a verified source.
+One real in-game screenshot is committed under
+`crates/ddl/ui/assets/screenshots/no-rest-for-the-living/01.jpg` (800×600 JPEG, 80,715 bytes),
+converted with `scripts/lean-image.sh` from the archived DoomWiki map image
+`No_Rest_for_the_Living_Map01_Castle2.PNG` (800×600 PNG).
+`SOURCES.toml` records the exact Wayback image URL, the canonical DoomWiki map page, the
+`Nerve Software (screenshot via DoomWiki)` credit, the original size, the retrieval date and an
+honest permission note: DoomWiki text is CC BY-SA 4.0, the in-game imagery is commercial
+id Software/Nerve Software content, and the image is bundled as a representative in-game view under
+D-024, removed on request. No image was synthesized, cropped from a title screen or captured from a
+window.
 
 ## 7. Open Deck checks
 

@@ -10,6 +10,10 @@ permission = "Commercial id Software/Nerve Software content. No redistribution p
 tags = ["cacowards", "classics", "episode"]
 packages = []
 
+[[screenshots]]
+asset = "no-rest-for-the-living/01.jpg"
+credit = "Nerve Software (screenshot via DoomWiki)"
+
 [base_game]
 game = "doom2"
 variants = ["doom2-1.9", "doom2-1.9-kex-2024-08-06", "doom2-1.9-kex-2024-10-01"]

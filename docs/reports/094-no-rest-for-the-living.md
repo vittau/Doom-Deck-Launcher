@@ -20,7 +20,7 @@ capability.
 | Format / complevel | vanilla / `vanilla` (2); Needs Deck Validation |
 | Tags | `cacowards`, `classics`, `episode` |
 | Original public date | **2010-05-26**, day precision (XBLA release) |
-| Artwork | unavailable source; painted fallback retained and documented |
+| Artwork | one sourced in-game DoomWiki screenshot (`01.jpg`, 800×600, 80,715 B) with recorded provenance; fallback otherwise |
 
 ## Evidence
 
@@ -80,10 +80,13 @@ commercial bytes are committed. D's tests own the install/import/argv/headless j
 
 ## Artwork
 
-No compliant in-game screenshot was obtained. DoomWiki direct requests return Cloudflare HTTP 403
-and the archived 2011 page has no in-game map view; no screenshot directory or `SOURCES.toml` was
-committed. The existing painted fallback art remains. No image was synthesized or captured from a
-window.
+One real in-game screenshot is committed at
+`crates/ddl/ui/assets/screenshots/no-rest-for-the-living/01.jpg` (800×600 JPEG, 80,715 bytes),
+converted from the archived DoomWiki map image `No_Rest_for_the_Living_Map01_Castle2.PNG` with
+`scripts/lean-image.sh`. `SOURCES.toml` records the Wayback image URL, canonical map page, credit,
+original size, retrieval date and the honest permission note (DoomWiki CC BY-SA 4.0 text; commercial
+id/Nerve game imagery, bundled under D-024 and removed on request). No image was synthesized or
+captured from a window.
 
 ## Open questions / Deck checks
 
