@@ -4,6 +4,8 @@ id = "the-10x10-project"
 title = "The 10x10 Project"
 authors = ["lunchlunch"]
 release = "2022-06-15"
+# First public release (spec 090): reference-087-a.md original-date table: 10x10.txt Release date 06/15/2022.
+original_release = { year = 2022, month = 6, day = 15 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/0-9/10x10"
 description = "A DOOM II set with ten main maps, a secret map and a no-exit finale (twelve map slots). Each main map is built from only ten stock textures and ten stock flats, and the combat ranges from Plutonia-style to Sunder-esque."
 permission = "Authors may use the contents as a base for modification or reuse, and the author states permission was obtained from the original authors of any modified or included resources. Redistribution is permitted provided 10x10.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."

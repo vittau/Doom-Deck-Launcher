@@ -4719,6 +4719,7 @@ mod category_tests {
         assert!(position("community-projects") < position("classics"));
         assert!(position("classics") < position("episode"));
         assert!(position("episode") < position("challenging"));
+        assert!(position("challenging") < position("gimmick"));
         assert_eq!(ids, expected, "owner order, only used requested ids");
         assert!(!ids.contains(&"featured"), "Featured is hidden");
         assert!(!ids.contains(&"beginner-friendly"), "unrequested is hidden");

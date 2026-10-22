@@ -4,6 +4,8 @@ id = "overboard"
 title = "Overboard"
 authors = ["Cyriak Harris (mouldy)"]
 release = "2022-08-04 (readme 4 August 2022, day-first date); idgames archive file dated 2022-09-27, an update fixing multiplayer issues"
+# First public release (spec 090): reference-087-c.md §8: overboard.txt 04/08/22 (day-first, author convention); the 2022-09-27 archive is a multiplayer update.
+original_release = { year = 2022, month = 8, day = 4 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/overboard"
 description = "DOOM II: fifteen maps — a six-map island-hopping holiday that turns hellish, a game-over map, a harder New Game Plus run and a bonus secret map; the author describes the difficulty as average."
 permission = "Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0): redistribution is permitted with credit and a link to the licence, no commercial use and no distribution of modified material. DDL downloads the unmodified archive and keeps the bundled credits file."

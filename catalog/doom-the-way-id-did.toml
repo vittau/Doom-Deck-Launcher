@@ -24,6 +24,8 @@ authors = [
   "Kracov (artist)",
 ]
 release = "1.1a, revised 2012-02-05 (first release 2011-12-10)"
+# First public release (spec 090): reference-087-b.md original-date table: DTWID.txt Release date 12/10/11; the pinned v1.1a is the 2012-02-05 revision.
+original_release = { year = 2011, month = 12, day = 10 }
 page = "https://www.doomworld.com/idgames/levels/doom/megawads/dtwid"
 description = "A love letter to 1994 Doom: 27 lost-level-style maps across three episodes, with tight tech bases, marble fortresses and secret-filled corridors built to feel like the original id releases."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided DTWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."

@@ -16,6 +16,8 @@ authors = [
   "Blackgaze (MAP33 \"Hexsoil\", per the bundled MAPINFO)",
 ]
 release = "1.0, finalized 2013-12-22 (release date 2013-11-07; archive re-uploaded for zip issues)"
+# First public release (spec 090): reference-087-b.md original-date table: D2TWID.txt Release date 11/7/13 (finalized 12/22/13).
+original_release = { year = 2013, month = 11, day = 7 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/d2twid"
 description = "A 32-map imaginary sequel in id's 1994 style: loading bays, flooded libraries, city streets and Hell itself, with a hidden bonus map for explorers."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided D2TWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."

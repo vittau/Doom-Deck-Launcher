@@ -4,6 +4,8 @@ id = "plutonia-2"
 title = "Plutonia 2"
 authors = ["Plutonia 2 Team"]
 release = "Version 1.0, 2008-12-31"
+# First public release (spec 090): reference-087-a.md original-date table: PL2.TXT Version 1.0, December 31, 2008.
+original_release = { year = 2008, month = 12, day = 31 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/pl2"
 description = "A 32-map sequel to The Plutonia Experiment that continues Plutonia's design and gameplay style across jungle, temple, base and hellish settings. It includes its own music and graphics."
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided PL2.TXT travels with the file, unmodified and intact; the team states it obtained permission from the original authors of any modified or included content. DDL downloads the unmodified archive and keeps the bundled release text and manual."

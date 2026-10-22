@@ -4,6 +4,8 @@ id = "haste"
 title = "Haste"
 authors = ["Insane_Gazebo", "Scotty", "Nirvana", "Bemused", "Ribbiks", "Benjogami", "Archi"]
 release = "2021-09-22 (readme); idgames archive file dated 2022-01-08"
+# First public release (spec 090): docs/research/haste.md §original public date: Haste.txt 22/09/2021, day-first; the 2022-01-08 archive is later.
+original_release = { year = 2021, month = 9, day = 22 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/haste"
 description = "DOOM II: eighteen compact, high-impact maps — from a gore-soaked prison tower and phosphorescent burrows to a Plutonian floodplain and blazing temples — built for fast, fluid play in ten-minute bursts, with an ending map and a hidden secret level."
 permission = "Authors may NOT use the contents as a base for modification or reuse; permissions were obtained from the original authors of included resources. Redistribution is permitted provided Haste.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."

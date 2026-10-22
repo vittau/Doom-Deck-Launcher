@@ -4,6 +4,8 @@ id = "vanguard"
 title = "Vanguard"
 authors = ["Paul \"skillsaw\" DeBruyne"]
 release = "2011-05-11"
+# First public release (spec 090): reference-087-c.md §8: Vanguard.txt Release date May 11 2011.
+original_release = { year = 2011, month = 5, day = 11 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/v-z/vanguard"
 description = "DOOM II: thirteen maps — twelve nonlinear maps, each with its own visual theme, plus a bonus thirteenth — inspired by Scythe 2, Alien Vendetta and Plutonia."
 permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Vanguard.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."

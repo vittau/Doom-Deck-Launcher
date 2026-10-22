@@ -16,6 +16,8 @@ authors = [
   "Jimmy (E3M7 layout)",
 ]
 release = "1.17 (first release 2018-07-09; this archive's WAD dated 2025-01-19)"
+# First public release (spec 090): reference-087-b.md original-date table: REKKR.txt Release date 7/9/2018; the pinned 1.17 update is later.
+original_release = { year = 2018, month = 7, day = 9 }
 page = "https://www.doomworld.com/idgames/levels/doom/megawads/rekkr"
 description = "A 36-map total conversion that recasts Ultimate Doom as a grim Norse saga, with new weapons, monsters, textures, sounds and a full soundtrack across four episodes."
 permission = "Licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (https://creativecommons.org/licenses/by-nc/4.0/): redistribution is allowed with credit and a link to the licence, and commercial use is not. DDL downloads the unmodified archive and keeps the bundled readme and credits files."

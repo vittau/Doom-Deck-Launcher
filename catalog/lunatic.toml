@@ -4,6 +4,8 @@ id = "lunatic"
 title = "Lunatic"
 authors = ["Paul \"skillsaw\" DeBruyne"]
 release = "2011-08-11"
+# First public release (spec 090): reference-087-c.md §8: Lunatic.txt Release date August 11, 2011.
+original_release = { year = 2011, month = 8, day = 11 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/j-l/lunatic"
 description = "DOOM II: five maps set on a moon base during a desperate escape as the moon's orbit collapses toward Earth."
 permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Lunatic.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."

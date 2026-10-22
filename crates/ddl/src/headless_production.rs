@@ -342,6 +342,19 @@ pub(super) fn scene() -> Scene {
     catalog.hosts.downloads.push("127.0.0.1".into());
     auger.recipe.packages[0].urls = vec![server.url("/auger.zip")];
     catalog.recipes.push(auger);
+    // Spec 094: the metadata-only player-supplied expansion joins the fixture so
+    // the required-import row and its sheet can be driven offline. It keeps its
+    // real embedded recipe (zero packages, required user-supplied main).
+    let import_only = Catalog::embedded()
+        .recipe("no-rest-for-the-living")
+        .expect("the player-supplied recipe is embedded")
+        .clone();
+    let import_only = ddl_core::catalog::LoadedRecipe {
+        file: "no-rest-for-the-living.toml".to_owned(),
+        sha256: Sha256::of(b"no-rest-for-the-living fixture").to_hex(),
+        recipe: import_only,
+    };
+    catalog.recipes.push(import_only);
     catalog.recipes[1].recipe.packages[0].urls = vec![server.url("/bad.zip")];
     catalog.recipes[1].recipe.packages[0].size = package.len() as u64;
     let reviewed=dsda::ReviewedList::parse(&format!("schema_version = 1\n[[version]]\ntag = 'v0.30.1'\nasset = 'test-linux.AppImage'\nsize = {}\nsha256 = '{}'\nlicense = 'GPL-2.0-or-later'\nrelease_url = 'https://github.com/dsda-org/dsda-doom/releases/tag/v0.30.1'\nsource_url = 'https://github.com/dsda-org/dsda-doom/tree/v0.30.1'\n",engine_bytes.len(),Sha256::of(&engine_bytes).to_hex())).unwrap();
@@ -2009,6 +2022,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         "classics",
         "episode",
         "challenging",
+        "gimmick",
     ]
     .into_iter()
     .filter_map(|id| catalog.tags.get(id))
@@ -3861,4 +3875,212 @@ pub(super) fn imported_component_sheet(scene: &Scene, capture: Captures) {
             .components,
         before
     );
+}
+
+/// Spec 094: the player-supplied expansion requires Doom II, so the journey
+/// registers a synthetic Doom II IWAD through the runtime's own service before
+/// opening the recipe. No commercial bytes are used.
+fn register_fake_doom2(
+    scene: &Scene,
+    state: &std::rc::Rc<RefCell<Runtime>>,
+    ui: &AppWindow,
+) -> usize {
+    let dir = scene.env.home.join("import-only-iwad");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("doom2.wad");
+    let mut wad = b"IWAD".to_vec();
+    wad.extend_from_slice(&32i32.to_le_bytes());
+    wad.extend_from_slice(&12i32.to_le_bytes());
+    for map in 1..=32 {
+        wad.extend_from_slice(&[0; 8]);
+        let mut name = [0; 8];
+        let label = format!("MAP{map:02}");
+        name[..label.len()].copy_from_slice(label.as_bytes());
+        wad.extend_from_slice(&name);
+    }
+    std::fs::write(&path, &wad).unwrap();
+    state
+        .borrow_mut()
+        .start(ui, Command::Scan(Some(dir.clone())));
+    idle(state);
+    // The registry keeps the canonical path, so choose the entry it recorded.
+    let registered = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .iwads
+        .iter()
+        .find(|entry| {
+            entry.variant.as_deref() == Some("doom2-1.9")
+                || entry.candidates.iter().any(|c| c == "doom2-1.9")
+                || entry.path.ends_with("doom2.wad")
+        })
+        .map(|entry| entry.path.clone())
+        .expect("the synthetic Doom II IWAD is registered");
+    state
+        .borrow_mut()
+        .start(ui, Command::Choose(registered, "doom2-1.9".into()));
+    idle(state);
+    let index = state
+        .borrow()
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .position(|item| item.recipe.id == "no-rest-for-the-living")
+        .expect("the player-supplied expansion is in the fixture catalog");
+    index
+}
+
+/// Spec 094 R4 (worker D): a metadata-only, player-supplied expansion installs
+/// with no download, keeps Play blocked until its required file is imported, and
+/// leaves that required row focusable through Import/Replace with no off switch.
+pub(super) fn player_supplied_expansion(scene: &Scene, capture: Captures) {
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
+    wait(&state, |r| r.snapshot.is_some());
+    idle(&state);
+    let index = register_fake_doom2(scene, &state, ui);
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Detail;
+        r.selected = index;
+        r.focus = 1;
+        r.sync(ui);
+    }
+    assert!(
+        matches!(
+            state.borrow().snapshot.as_ref().unwrap().items[index].launch,
+            Err(ddl_core::resolver::Blocker::NotInstalled)
+        ),
+        "Play is blocked before the metadata-only install"
+    );
+
+    // The Detail action installs the recipe; with no packages this writes the
+    // manifest and imports nothing, so no download is started.
+    ui.invoke_clicked(1);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    {
+        let r = state.borrow();
+        let manifest = r.snapshot.as_ref().unwrap().items[index]
+            .manifest
+            .as_ref()
+            .expect("metadata-only install recorded");
+        assert!(manifest.packages.is_empty(), "no package is ever fetched");
+        assert!(
+            !manifest.has_imports(),
+            "installing must not import a private file by itself"
+        );
+    }
+    let launch = state.borrow().snapshot.as_ref().unwrap().items[index]
+        .launch
+        .clone();
+    assert!(
+        matches!(
+            launch,
+            Err(ddl_core::resolver::Blocker::ComponentNotProvided { .. })
+        ),
+        "Play stays blocked until the required file is imported: {launch:?}"
+    );
+    capture("094-player-supplied-install.png");
+
+    // The required main row is importable: actionable, not focus-disabled, and
+    // Return opens the file picker instead of toggling anything.
+    let row = ui
+        .get_nodes()
+        .iter()
+        .find(|node| node.id == 100)
+        .expect("the required main row is painted");
+    assert!(row.actionable, "the required main row must be actionable");
+    assert_ne!(row.kind, 16, "the required main row must accept focus");
+    assert!(
+        row.detail.starts_with("Not provided"),
+        "the required row invites an import: {}",
+        row.detail
+    );
+    {
+        let mut r = state.borrow_mut();
+        r.focus = 100;
+        r.sync(ui);
+    }
+    press(window, Key::Return);
+    idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Browser);
+    capture("094-player-supplied-import-picker.png");
+}
+
+/// Spec 094 R4: after the required file exists, the same row opens a sheet whose
+/// confirm action is a safe close, never an On/Off toggle for the required main.
+pub(super) fn required_import_sheet_has_no_toggle(scene: &Scene, capture: Captures) {
+    let window = scene.window.as_ref();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
+    wait(&state, |r| r.snapshot.is_some());
+    idle(&state);
+    let index = register_fake_doom2(scene, &state, ui);
+    // Install, then record the imported file exactly as the library importer
+    // does (A's catalog_094 covers the real import path and hash matching).
+    {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Detail;
+        r.selected = index;
+        r.focus = 1;
+        r.sync(ui);
+    }
+    ui.invoke_clicked(1);
+    idle(&state);
+    let imported = scene.env.home.join("NERVE.WAD");
+    std::fs::write(&imported, b"PWAD nerve fixture").unwrap();
+    {
+        let mut r = state.borrow_mut();
+        let item = &mut r.snapshot.as_mut().unwrap().items[index];
+        item.manifest.as_mut().expect("installed").members.push(
+            ddl_core::library::InstalledMember {
+                package: None,
+                member: None,
+                component: Some("main".to_owned()),
+                path: imported,
+                size: 18,
+                sha256: "0".repeat(64),
+                keep: false,
+            },
+        );
+        r.focus = 100;
+        r.sync(ui);
+    }
+    press(window, Key::Return);
+    assert!(ui.get_sheet_open());
+    assert_eq!(ui.get_sheet_title().as_str(), "Imported component");
+    let sheet: Vec<_> = ui.get_sheet_nodes().iter().collect();
+    let import_button = sheet
+        .iter()
+        .find(|node| node.id == 900)
+        .expect("import action");
+    let confirm = sheet
+        .iter()
+        .find(|node| node.id == 901)
+        .expect("confirm action");
+    assert_eq!(import_button.label, "Import");
+    assert_eq!(
+        confirm.label, "Done",
+        "a required main offers no On/Off switch"
+    );
+    capture("094-player-supplied-import-sheet.png");
+    // Confirming closes the sheet and does not add `main` to the optional list.
+    let before = state.borrow().snapshot.as_ref().unwrap().items[index]
+        .profile
+        .components
+        .clone();
+    press(window, Key::Return);
+    idle(&state);
+    assert!(!ui.get_sheet_open());
+    let after = state.borrow().snapshot.as_ref().unwrap().items[index]
+        .profile
+        .components
+        .clone();
+    assert_eq!(before, after, "required main is never toggled");
 }

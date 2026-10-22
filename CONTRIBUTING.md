@@ -63,7 +63,7 @@ are shown in the complete example. Optional fields and constraints:
 
 | Table | Optional fields / accepted values |
 | --- | --- |
-| Root | `images` (`[[images]]`: `path`, `permission`); `screenshots` (`[[screenshots]]`: `asset`, `credit`; see [Screenshots](#screenshots)); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)) |
+| Root | `images` (`[[images]]`: `path`, `permission`); `screenshots` (`[[screenshots]]`: `asset`, `credit`; see [Screenshots](#screenshots)); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)); `original_release` (first public release, optional; see [Original release date](#original-release-date)) |
 | `base_game` | `game`: `doom`, `doom2`, `tnt`, `plutonia`; `variants` defaults empty (any variant of that game). IDs refer to the known-IWAD table; currently lowercase letters, digits, dots and hyphens. The runtime must block Play without a matching IWAD; that gate is outside catalog lint. |
 | `packages` | `kind`: `zip` or bare `wad`; optional canonical `idgames_path`; `urls`: primary followed by mirrors. Bare WADs name one member with identical package/member size/hash. |
 | `packages.members` | `keep` defaults false; unique `id` and `path` within a package. All members have exact positive `size` and `sha256`. |
@@ -116,11 +116,29 @@ Lint rejects unknown and repeated tags. Every tag is a claim and needs evidence 
 | `megawad` | At least 30 maps, counted from the WAD or the authors' map list. |
 | `episode` | Nine maps or fewer, counted the same way. |
 | `challenging` | A quoted statement from the authors or a reviewed source aimed at experienced players. |
+| `gimmick` | A quoted author/project statement or reviewed source naming the unusual explicit design constraint or playful central concept the set is organised around. |
 
 Discover shows a category for each tag that at least one recipe uses, in `order`, between
 "All" and "Favorites". To propose a new tag, add its `[[tags]]` entry to `catalog/tags.toml` in
 the same pull request that first uses it; give it a unique lowercase `id`, a unique `order`,
 an English `label` and a one-sentence `description` of the rule a recipe must meet.
+
+### Original release date
+
+Chronological browsing reads one optional root field (spec 090):
+
+```toml
+original_release = { year = 1998, month = 5, day = 12 }
+```
+
+Record the **first public release**, not the version/update named by `release` and not the
+`/idgames` upload date when they differ. Keep only the precision the evidence supports: a day,
+a month (`year` + `month`) or a year alone (`year`). Never invent January 1 or a first of the
+month, and leave the field out when the first release is unknown. Lint rejects an impossible
+calendar value and a day without a month. Lists sort ascending with unknown dates last and ties
+by title then recipe id; a coarser date sorts after the dated entries of the same period, so a
+year-only date follows that year's months and a month-only date follows that month's days.
+Explain the source in a comment or in `verification.inspected`.
 
 ### Screenshots
 
