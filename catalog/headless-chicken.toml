@@ -3,9 +3,9 @@ schema_version = 1
 id = "headless-chicken"
 title = "Headless Chicken"
 authors = ["Luca 'Chookum' Pavone"]
-release = "RC1 2023-09-12, RC13 2025-10-25 (readme); idgames archive file dated 2026-02-02"
+release = "RC1 2023-12-09, RC13 2025-10-25 (readme, day-first date); idgames archive file dated 2026-02-02"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/hdlschkn"
-description = "DOOM II Boom megawad: 33 comedic arcade-action maps across five UMAPINFO episodes, with an embedded DEHACKED patch, a COMPLVL lump declaring boom and a UMAPINFO defining episode titles, map names, music and secret-map returns."
+description = "DOOM II: a 33-map comedic arcade-action megawad in five episodes, following Doomguy through demon-held South America and beyond while chickens give chase."
 permission = "Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) as stated in the readme: redistribution is permitted with credit, a link to the licence and no commercial use. DDL downloads the unmodified archive and keeps the bundled text file."
 tags = ["megawad"]
 
@@ -60,7 +60,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Headless Chicken"
-description = "Main 33-map Boom megawad with a COMPLVL boom declaration, UMAPINFO episodes and an embedded DEHACKED patch."
+description = "The full thirty-three-map, five-episode campaign."
 optional = false
 default = true
 position = 1

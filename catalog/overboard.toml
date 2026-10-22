@@ -3,9 +3,9 @@ schema_version = 1
 id = "overboard"
 title = "Overboard"
 authors = ["Cyriak Harris (mouldy)"]
-release = "2022-04-08 (readme); idgames archive file dated 2022-09-27, an update fixing multiplayer issues"
+release = "2022-08-04 (readme 4 August 2022, day-first date); idgames archive file dated 2022-09-27, an update fixing multiplayer issues"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/overboard"
-description = "DOOM II Boom mapset: six island-hopping maps, a game-over map and a harder New Game Plus run, fifteen slots in all (MAP01–MAP14 plus MAP31), with an embedded DEHACKED patch for level names and pickups."
+description = "DOOM II: fifteen Boom-compatible maps — a six-map island-hopping holiday that turns hellish, a game-over map, a harder New Game Plus run and a bonus MAP31; the author describes the difficulty as average."
 permission = "Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0): redistribution is permitted with credit and a link to the licence, no commercial use and no distribution of modified material. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["cacowards"]
 
@@ -67,7 +67,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Overboard"
-description = "Main fifteen-slot Boom mapset with an embedded DEHACKED patch and the author's soundtrack."
+description = "The full island-hopping campaign, game-over map, New Game Plus run and bonus MAP31."
 optional = false
 default = true
 position = 1

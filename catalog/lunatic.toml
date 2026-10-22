@@ -5,7 +5,7 @@ title = "Lunatic"
 authors = ["Paul \"skillsaw\" DeBruyne"]
 release = "2011-08-11"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/j-l/lunatic"
-description = "DOOM II Boom episode: five moon-base maps with an embedded DEHACKED patch (modified Keen and SS behaviour) and two inert metadata lumps — a ZDoom-syntax MAPINFO and an Eternity EMAPINFO — that DSDA-Doom v0.30.1 does not read."
+description = "DOOM II: five Boom-compatible maps set on a moon base during a desperate escape as the moon's orbit collapses toward Earth."
 permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Lunatic.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["classics", "cacowards", "episode"]
 
@@ -59,7 +59,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Lunatic"
-description = "Main five-map Boom episode with an embedded DEHACKED patch and the author's soundtrack. The bundled ZDoom MAPINFO and Eternity EMAPINFO are not read by DSDA-Doom v0.30.1."
+description = "The five-map campaign."
 optional = false
 default = true
 position = 1

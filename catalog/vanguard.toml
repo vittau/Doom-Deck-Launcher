@@ -5,7 +5,7 @@ title = "Vanguard"
 authors = ["Paul \"skillsaw\" DeBruyne"]
 release = "2011-05-11"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/v-z/vanguard"
-description = "DOOM II Boom mapset: twelve nonlinear maps plus a bonus thirteenth, with an embedded DEHACKED level-name patch and a ZDoom-syntax MAPINFO lump that DSDA-Doom v0.30.1 does not read."
+description = "DOOM II: thirteen Boom-compatible maps — twelve nonlinear maps, each with its own visual theme, plus a bonus thirteenth — inspired by Scythe 2, Alien Vendetta and Plutonia."
 permission = "Authors may use the remaining contents of this file as a base for modification or reuse; the author states permissions were obtained from the original authors of modified or included resources. Redistribution is permitted provided Vanguard.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["classics", "cacowards"]
 
@@ -59,7 +59,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Vanguard"
-description = "Main thirteen-map Boom mapset with an embedded DEHACKED level-name patch and the author's soundtrack. The bundled MAPINFO is ZDoom syntax and is not read by DSDA-Doom v0.30.1."
+description = "The twelve-map campaign plus the bonus thirteenth map."
 optional = false
 default = true
 position = 1

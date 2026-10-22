@@ -196,7 +196,7 @@ map list (the nine-or-fewer rule).
 | Field | Value | Evidence |
 | --- | --- | --- |
 | Title | Overboard | `overboard.txt` |
-| Date | 2022-04-08 (readme); idgames file dated 2022-09-27, an update "to fix multiplayer issues" | `overboard.txt`; mirror `Last-Modified: Tue, 27 Sep 2022 00:28:31 GMT` |
+| Date | 2022-08-04 (readme `04/08/22`, day/month); idgames file dated 2022-09-27, an update "to fix multiplayer issues" | `overboard.txt`; mirror `Last-Modified: Tue, 27 Sep 2022 00:28:31 GMT`; date format corroborated in §8 |
 | Author | mouldy (Cyriak Harris) | `overboard.txt` (`Author: mouldy`); public author identity as in `catalog/going-down.toml` |
 | Game | Doom 2 | `overboard.txt` |
 | Maps | 15 slots: MAP01–MAP14 + MAP31 (six main, a game-over map, New Game Plus, MAP31) | `overboard.txt` (`New levels: 15`, `MAP01-14 & MAP31`) and the WAD directory (**Confirmed**) |
@@ -233,7 +233,7 @@ Deck Validation:** the New Game Plus flow and the post-MAP14 transition.
 
 **Tags.** `cacowards` = 2022 Top Ten page 3 winner (link above). Not `episode`: fifteen slots, even
 though the Cacowards blurb says "6 maps" (the six-map core is not the release's slot count). Not
-`classics`: released 2022-04-08, less than five years before this review. Not `challenging`: the
+`classics`: released 2022-08-04, less than five years before this review. Not `challenging`: the
 author calls the difficulty "average".
 
 **Artwork.** One in-game screenshot from the Cacowards 2022 feature
@@ -252,7 +252,7 @@ discarded). **Confirmed.**
 | Field | Value | Evidence |
 | --- | --- | --- |
 | Title | Headless Chicken | `hdlschkn.txt` |
-| Release | RC1 2023-09-12, RC13 2025-10-25 (readme); idgames file dated 2026-02-02 | `hdlschkn.txt`; mirror `Last-Modified` |
+| Release | RC1 2023-12-09, RC13 2025-10-25 (readme, day/month); idgames file dated 2026-02-02 | `hdlschkn.txt`; mirror `Last-Modified`; date format proven by the readme's own `25/10/2025` |
 | Author | Luca 'Chookum' Pavone | `hdlschkn.txt`; DSDA identity page |
 | Game | Doom 2 | `hdlschkn.txt` |
 | Maps | 33: MAP01–MAP33 in five UMAPINFO episodes | `hdlschkn.txt` ("33 levels") and the WAD directory (**Confirmed**) |
@@ -329,7 +329,27 @@ entry was found in the researched inventory, so `cacowards` is not claimed.
 in the Cacowards inventory, and Doomworld/DoomWiki block automated fetches). The painted fallback
 art stays.
 
-## 8. Mirror verification
+## 8. Original public release dates (spec 090 evidence)
+
+Spec 090 (worker D) owns the catalog field and the sorting code. This section records the best
+sourced **original public date** and its precision for the six recipes this worker owns, so the
+field can be filled without re-research. Repackaging/update dates are kept separate. **Confirmed**
+against the author text unless a caveat says otherwise.
+
+| Recipe | Original public date | Precision | Source and caveat |
+| --- | --- | --- | --- |
+| `arrival` | 2021-04-16 | day | `arrival.txt` `Release date: 4/16/2021` (the 16 cannot be a month, so the order is unambiguous). The idgames file is dated 2022-10-07, a later archive upload. |
+| `vanguard` | 2011-05-11 | day | `Vanguard.txt` `Release date: May 11 2011`; the idgames file's `Last-Modified` is the same day. |
+| `lunatic` | 2011-08-11 | day | `Lunatic.txt` `Release date: August 11, 2011`; the idgames file's `Last-Modified` is the same day. |
+| `overboard` | 2022-08-04 | day | `overboard.txt` `Release date: 04/08/22`. The readme uses day/month: the same author's `gd.txt` says `02/11/14` for Going Down, whose idgames entry is dated 2014-11-02, so `04/08/22` is 4 August 2022, not 8 April. The idgames file (2022-09-27) is a later update fixing multiplayer issues. |
+| `headless-chicken` | 2023-12-09 | day | `hdlschkn.txt` `Release date: 9/12/2023 (RC1), 25/10/2025 (RC13)`. `25/10/2025` proves day/month, so RC1 is 9 December 2023. This is the earliest public build the readme documents; earlier forum betas, if any, are not evidenced. The idgames upload is 2026-02-02 (RC13 era). |
+| `micro-slaughter-community-project` | 2021-01-27 | day | `MSCP_v1b.txt` `Release date: 27th Jan 2021`. The idgames file (2026-09-07) is the later v1b replacement for v1a; v1b keeps the 2021 release date. |
+
+No recipe in this worker's set needs a partial-precision (year/month) value: every author text
+states a full date. No date was inferred from a filename, archive mtime alone, or the Cacowards
+publication year.
+
+## 9. Mirror verification
 
 All six archives were downloaded from three allowlisted HTTPS mirrors and hashed. Every mirror
 returned the exact size and SHA-256 of §2–§7. **Confirmed** on 2026-10-22.
@@ -348,7 +368,7 @@ date; they are not listed as mirrors in the recipes. `ftpmirror.infania.net` ret
 `/idgames/…` base path used here, so it is not listed either. No host was added to
 `catalog/hosts.toml`.
 
-## 9. Verification commands and results
+## 10. Verification commands and results
 
 Run from the worktree root on 2026-10-22, with `CARGO_TARGET_DIR=/Users/vitor/git/Doom-Deck-Launcher/target`
 and `CARGO_BUILD_JOBS=2`:
@@ -357,11 +377,11 @@ and `CARGO_BUILD_JOBS=2`:
 | --- | --- |
 | `ddl catalog lint catalog/{arrival,vanguard,lunatic,overboard,headless-chicken,micro-slaughter-community-project}.toml` | `Catalog lint passed (offline).` |
 | `ddl catalog lint --fetch …` (same six paths) | `Catalog lint passed (fetched packages verified).` |
-| `cargo test -p ddl-core --test catalog_087_c -- --test-threads=2` | 9 passed, 0 failed |
+| `cargo test -p ddl-core --test catalog_087_c -- --test-threads=2` | 10 passed, 0 failed |
 | `cargo clippy -p ddl-core --all-targets -- -D warnings` | clean |
 | `cargo fmt --all --check` | clean |
 
-## 10. Open checks (all **Needs Deck Validation**)
+## 11. Open checks (all **Needs Deck Validation**)
 
 - IWAD detection and launch with the six recipes on a real Deck (DOOM II, no variants).
 - Complevel application: `vanilla` (2) for Arrival looks right for skies because DSDA-Doom applies
