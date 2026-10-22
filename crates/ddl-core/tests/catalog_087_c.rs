@@ -363,6 +363,11 @@ fn corrected_release_labels_hold_their_sourced_dates() {
         chicken.release
     );
     assert!(
+        chicken.release.contains("2026-01-19"),
+        "Headless Chicken's idgames release is RC14 dated 2026-01-19: {}",
+        chicken.release
+    );
+    assert!(
         !chicken.release.contains("2023-09-12"),
         "the September reading was a normalisation error: {}",
         chicken.release

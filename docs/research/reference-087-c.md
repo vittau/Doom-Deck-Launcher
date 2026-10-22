@@ -252,7 +252,7 @@ discarded). **Confirmed.**
 | Field | Value | Evidence |
 | --- | --- | --- |
 | Title | Headless Chicken | `hdlschkn.txt` |
-| Release | RC1 2023-12-09, RC13 2025-10-25 (readme, day/month); idgames file dated 2026-02-02 | `hdlschkn.txt`; mirror `Last-Modified`; date format proven by the readme's own `25/10/2025` |
+| Release | RC1 2023-12-09, RC14 2026-01-19 (readme, day/month); idgames file dated 2026-02-02 | `hdlschkn.txt` (`Release dates`); mirror `Last-Modified`; date format proven by the inline `19/01/2026` |
 | Author | Luca 'Chookum' Pavone | `hdlschkn.txt`; DSDA identity page |
 | Game | Doom 2 | `hdlschkn.txt` |
 | Maps | 33: MAP01–MAP33 in five UMAPINFO episodes | `hdlschkn.txt` ("33 levels") and the WAD directory (**Confirmed**) |
@@ -342,7 +342,7 @@ against the author text unless a caveat says otherwise.
 | `vanguard` | 2011-05-11 | day | `Vanguard.txt` `Release date: May 11 2011`; the idgames file's `Last-Modified` is the same day. |
 | `lunatic` | 2011-08-11 | day | `Lunatic.txt` `Release date: August 11, 2011`; the idgames file's `Last-Modified` is the same day. |
 | `overboard` | 2022-08-04 | day | `overboard.txt` `Release date: 04/08/22`. The readme uses day/month: the same author's `gd.txt` says `02/11/14` for Going Down, whose idgames entry is dated 2014-11-02, so `04/08/22` is 4 August 2022, not 8 April. The idgames file (2022-09-27) is a later update fixing multiplayer issues. |
-| `headless-chicken` | 2023-12-09 | day | `hdlschkn.txt` `Release date: 9/12/2023 (RC1), 25/10/2025 (RC13)`. `25/10/2025` proves day/month, so RC1 is 9 December 2023. This is the earliest public build the readme documents; earlier forum betas, if any, are not evidenced. The idgames upload is 2026-02-02 (RC13 era). |
+| `headless-chicken` | 2023-12-09 | day | `hdlschkn.txt` (idgames) `Release dates: 9/12/2023 (RC1), 19/01/2026 (RC14)`. `19/01/2026` proves day/month, so RC1 is 9 December 2023. This is the earliest public build the readme documents; earlier forum betas, if any, are not evidenced. The idgames upload is 2026-02-02 (RC14 era). The DSDA archive copy is a different, older RC and was not used for identity or dates. |
 | `micro-slaughter-community-project` | 2021-01-27 | day | `MSCP_v1b.txt` `Release date: 27th Jan 2021`. The idgames file (2026-09-07) is the later v1b replacement for v1a; v1b keeps the 2021 release date. |
 
 No recipe in this worker's set needs a partial-precision (year/month) value: every author text
