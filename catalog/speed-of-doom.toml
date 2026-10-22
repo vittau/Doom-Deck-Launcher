@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-a.md §21–§24; gathered 2026-10-22.
+schema_version = 1
+id = "speed-of-doom"
+title = "Speed of Doom"
+authors = ["Josh \"Joshy\" Sealy", "Darkwave0000"]
+release = "Final release, 2010-03-28"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sodfinal"
+description = "DOOM II Boom-compatible megawad: 33 challenging maps (32 main maps plus the MAP33 bonus 'Descent to Nowhere'), with a custom soundtrack, graphics and an embedded DEHACKED patch."
+permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided SODFINAL.txt travels with the file, unmodified and intact; the authors state they obtained permission from the original authors of any modified or included resources. DDL downloads the unmodified archive and keeps the bundled release text and manual."
+tags = ["cacowards", "megawad", "classics", "challenging"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP33, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-a.md §21–§24", "Archive, member, WAD lump, MAPINFO and embedded DEHACKED inspection; SODFINAL.txt and SODINFO.txt; DSDA-Doom v0.30.1 source and release notes"]
+notes = "Confirmed archive/member identities and 33 MAP01–MAP33 markers: 32 main maps plus the MAP33 bonus 'Descent to Nowhere' listed in SODINFO.txt §4.1. The WAD carries an embedded 3,412-byte DEHACKED lump, 35 D_* music lumps and a 6,487-byte ZDoom MAPINFO that is inert under DSDA-Doom v0.30.1; there is no COMPLVL, UMAPINFO or external patch. SODFINAL.txt says 'Advanced engine needed: Boom Compatible Ports' and 'Game: Doom 2', so family boom and complevel boom (9) follow the author and the Boom convention. Tags: cacowards = 2010 Cacowards Top Ten winner, https://www.doomworld.com/cacowards/2010/ (page not read live in this session; archived inventory docs/research/cacowards.md §2010); megawad = 33 maps; classics = released 2010-03-28, over five years before this review, with the Cacoward as lasting recognition; challenging = the readme says '33 challenging maps of a megawad' and SODINFO says 'Difficulty is not suited for the faint of hearts' and recommends skill 2/3 for most doomers."
+limitations = ["Needs Deck Validation: IWAD selection, complevel, embedded DEHACKED application, load order, gameplay, audio and map selection.", "SODINFO.txt warns that the WAD will crash on several maps under BOOM or MBF and recommends PrBoom-plus; DSDA-Doom is PrBoom-derived, but the release's stated crash risk and map lag still need Deck validation.", "The ZDoom MAPINFO is inert under DSDA-Doom v0.30.1, so its episode/cluster presentation is lost; confirm map progression and audio on the Deck."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sodfinal"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/sodfinal.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/sodfinal.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/sodfinal.zip"]
+size = 9261369
+sha256 = "005288821f88e25977a40d817c23dbd5784caf5fe255376d7c6f04ad16b341e0"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/sodfinal.zip"
+
+[[packages.members]]
+id = "maps"
+path = "SODfinal.wad"
+size = 28742634
+sha256 = "f985edf85ebe5ed3c8ce72efcdb2ad2e891f3c957ed5981cfd172d3937bf74cc"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "SODFINAL.txt"
+size = 2504
+sha256 = "93116e8ddee2312c580071fe40041b13bbdddf1f3d002e86c4f7fc817798efff"
+keep = true
+
+[[packages.members]]
+id = "manual"
+path = "SODINFO.txt"
+size = 40649
+sha256 = "742f4815adcec3a0caf41c4ad92753888821143228f10d392a452820aa0c6063"
+keep = true
+
+[[components]]
+id = "main"
+label = "Speed of Doom"
+description = "Main 33-map Boom megawad with its own soundtrack, graphics and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
