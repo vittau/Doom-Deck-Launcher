@@ -5,7 +5,7 @@ title = "Ozonia"
 authors = ["Deadwing", "Lorenz0", "riderr3", "antares031", "A2Rob"]
 release = "2021-12-23"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/ozonia"
-description = "DOOM II megawad: 32 short Boom-compatible maps in three episodes, with two new enemies, a new soundtrack, graphics and an embedded DEHACKED patch."
+description = "DOOM II: 32 short Boom-compatible maps in three episodes, a Plutonia-inspired campaign with two new enemies and a new soundtrack, easing in with easier early maps."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse, and state that permissions were obtained from the original authors of any modified or included resources. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
 tags = ["cacowards", "megawad"]
 
@@ -79,7 +79,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Ozonia"
-description = "Main 32-map Boom megawad with its two new enemies, soundtrack, graphics and embedded DEHACKED patch."
+description = "The full thirty-two-map campaign."
 optional = false
 default = true
 position = 1

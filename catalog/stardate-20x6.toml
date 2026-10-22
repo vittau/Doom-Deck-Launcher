@@ -5,7 +5,7 @@ title = "Stardate 20X6"
 authors = ["Ribbiks"]
 release = "2013-06-02"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/stardate"
-description = "DOOM II: eight Boom-compatible maps (MAP01–MAP07 plus MAP31) in a purple space-station theme, with new music, graphics and an embedded DEHACKED patch."
+description = "DOOM II: eight Boom-compatible maps (MAP01–MAP07 plus a bonus MAP31) in a purple space-station setting; the author calls the UV difficulty a challenge for veteran players."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse; other authors' materials are credited in the text. You MAY distribute this file provided you include the text intact and unmodified, in any electronic format, and you may not charge for the contents. The text also credits GothicDM/Gothic2, Hexen, Plutonia and TNT resources. DDL downloads the unmodified archive and keeps the bundled text."
 tags = ["classics", "cacowards", "episode", "challenging"]
 
@@ -80,7 +80,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Stardate 20X6"
-description = "Main eight-map Boom set with its music, graphics and embedded DEHACKED patch."
+description = "The eight-map campaign."
 optional = false
 default = true
 position = 1
