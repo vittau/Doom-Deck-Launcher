@@ -689,7 +689,14 @@ fn the_removed_complevel_status_key_fails_lint_with_a_clear_message() {
         "{diagnostics:?}"
     );
     assert!(diagnostics[0].hint.contains("delete"), "{diagnostics:?}");
-    assert_eq!(diagnostics[0].line, 29, "{diagnostics:?}");
+    // The report points at the injected key's own line, wherever the recipe
+    // body put it (added metadata above must not shift the answer).
+    let injected_line = with_status
+        .lines()
+        .position(|line| line.starts_with("complevel_status"))
+        .expect("the injected key is present")
+        + 1;
+    assert_eq!(diagnostics[0].line, injected_line, "{diagnostics:?}");
 
     // The embedded loader skips such a recipe with the same reason.
     let hosts_text = fs::read_to_string(format!("{CATALOG}/hosts.toml")).unwrap();
