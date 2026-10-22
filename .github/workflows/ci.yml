@@ -15,6 +15,7 @@ on:
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - '.cargo/**'
+      - '!**/*.md'
   pull_request:
     paths:
       - 'crates/**'
@@ -25,6 +26,7 @@ on:
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - '.cargo/**'
+      - '!**/*.md'
   workflow_dispatch:
     inputs:
       full_tests:
@@ -274,4 +276,3 @@ jobs:
           git commit -m "catalog: update from ${GITHUB_SHA}"
           # Ordinary, non-fast-forward-refusing push; never `--force`.
           git push origin HEAD:catalog
-
