@@ -12,6 +12,13 @@
   font-weight: 400;
   font-display: swap;
 }
+@font-face {
+  font-family: Cookie;
+  src: url("Cookie-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 :root {
   color-scheme: dark;
   --bg: #120c0d;
@@ -516,22 +523,36 @@ summary {
   min-height: 44px;
   margin: 2px 0 12px;
 }
-.coffee-widget .bmc-btn {
-  min-width: 0;
+.bmc-btn {
+  display: inline-flex;
+  align-items: center;
   height: 44px;
   padding: 0 14px;
   border-radius: 8px;
+  background: #ffdd00;
+  color: #000000;
+  font-family: Cookie, "Brush Script MT", cursive;
   font-size: 28px;
+  line-height: 1;
+  text-decoration: none;
 }
-.coffee-widget .bmc-btn svg {
-  height: 26px !important;
-  width: 19px;
+.bmc-btn:hover,
+.bmc-btn:active {
+  color: #000000;
+  filter: brightness(1.04);
 }
-.coffee-widget .bmc-btn-text {
-  width: auto;
+.bmc-btn:focus-visible {
+  outline: 3px solid var(--bone);
+  outline-offset: 4px;
 }
-.coffee-widget .bmc-btn:hover {
-  filter: brightness(1.06);
+.bmc-logo {
+  flex: none;
+  width: 18px;
+  height: 26px;
+}
+.bmc-btn-text {
+  margin-left: 8px;
+  white-space: nowrap;
 }
 footer {
   border-top: 1px solid var(--line);
