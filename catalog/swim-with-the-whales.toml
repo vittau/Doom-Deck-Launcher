@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/swim-with-the-whales.md §1–§4; gathered 2026-10-22.
+schema_version = 1
+id = "swim-with-the-whales"
+title = "Swim With The Whales"
+authors = ["Ribbiks"]
+release = "2013-12-02 readme date; first public release 2013-11-20; idgames archive file dated 2013-12-21"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/swtw"
+description = "DOOM II: three maps through abstract blue otherworlds — sunken fortresses, cathedral-like ruins and a volcanic wasteland turned to water — with elaborate secrets, a hidden joke map and a difficulty curve the author asks even veteran players to begin on HMP."
+permission = "Authors MAY use the contents as a base for modification or reuse; the credited authors of included resources are listed in the text file. Redistribution is permitted provided swtw.txt travels with the file, unmodified and intact, and the contents are not charged for. DDL downloads the unmodified archive and keeps the bundled text file."
+tags = ["classics", "cacowards", "episode", "challenging"]
+
+# Bundled screenshot (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/swim-with-the-whales/ with source, credit and
+# permission text in SOURCES.toml beside it.
+[[screenshots]]
+asset = "swim-with-the-whales/01.jpg"
+credit = "Ribbiks"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Three-map set plus a hidden MAP31. The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/swim-with-the-whales.md §1–§5", "Archive and member sizes/SHA-256 (nested case-exact paths swtw/swtw.wad and swtw/swtw.txt); WAD lump inventory (four map markers MAP01–MAP03 and MAP31, embedded DEHACKED strings, ZDoom-syntax MAPINFO); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 prboom2/src/p_spec.c generalized-linedef dispatch and prboom2/src/dsda/mapinfo/ (legacy.c hardcoded progression, u.c UMAPINFO, hexen.c)"]
+notes = "Confirmed package/member identities from three byte-identical mirrors and four map markers: MAP01–MAP03 plus the MAP31 joke map. Complevel boom: the author's text states 'Boom-Compatible (tested in prb+ cl9, gzdoom)' and 'Any port that doesn't support boom linedefs', and all four maps use Boom generalized line types (134 lines: 118 floor, 6 lift, 6 ceiling, 2 locked-door, 1 door, 1 crusher), which vanilla compatibility does not implement. The MAPINFO lump is ZDoom syntax (defaultmap/map blocks with titlepatch/next/sky1/music), not a Boom format, and DSDA-Doom v0.30.1 has no ZDoom MAPINFO reader, so its titles and per-map music do not apply. With no UMAPINFO or COMPLVL, progression is the hardcoded Doom II next-map table (legacy.c): after the custom MAP03 the run continues into the base IWAD's MAP04, and a normal exit from the custom MAP31 goes to the base IWAD's MAP32; the player quits from the intermission to stop. The embedded DEHACKED relabels maps and key pickups only. Dates: the idgames readme says 12/02/2013; the author writes month/day (his Stardate 20X6 readme 06/02/2013 matches that archive's 2013-06-02 upload, and the 2013 release-thread first post is dated 11-20-13), so the readme date is 2013-12-02 and the first public release is 2013-11-20; the idgames file is dated 2013-12-21. Tags: cacowards = 2013 runner-up, https://www.doomworld.com/cacowards/2013/ (2013 edition page https://www.doomworld.com/20years/best3.php, read through the Wayback capture of 2013-12-19); classics = public since 2013-11-20, over five years before this review, with that Cacowards recognition; episode = four map slots, counted from the WAD and the author's map list; challenging = the author calls the gameplay 'very challenging', UV 'Not messing around!' and the title map 'Maybe the hardest level I've made'. The owner's gimmick tag covers The 10x10 Project and Linear Doom only, so it is not applied here. Needs Deck Validation: IWAD/complevel, DEHACKED application, gameplay, audio, performance and progression."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, embedded DEHACKED application, gameplay, audio and map selection.", "The ZDoom-syntax MAPINFO is inert in DSDA-Doom v0.30.1; confirm the map titles and the music actually heard on the Deck.", "No UMAPINFO or COMPLVL exists. The hardcoded Doom II progression continues from the custom MAP03 into the base IWAD's MAP04, and a normal MAP31 exit leads to the base IWAD's MAP32; quit from the intermission to stop after the set.", "The author documents numerous slime trails with software rendering and recommends Glboom+ for best results; DSDA-Doom's software renderer may show similar artefacts.", "No framerate, memory or battery measurement was made; Deck performance of the three large abstract maps is unverified.", "No separate DEHACKED member exists: the patch is embedded in swtw.wad and its hash is covered by the member identity."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/swtw"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/s-u/swtw.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/s-u/swtw.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/s-u/swtw.zip"]
+size = 2719261
+sha256 = "ebd2317a3006614ce4afbd1f8c8294f34949e872860cbc2a17ed8de59d73aef7"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/s-u/swtw.zip"
+
+[[packages.members]]
+id = "maps"
+path = "swtw/swtw.wad"
+size = 8868645
+sha256 = "7f081d591f2fce923d08fe1f86ed52cc5b8bd10061c2c96711506ea6286390d7"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "swtw/swtw.txt"
+size = 8328
+sha256 = "521cb605249c52bbe3015cd62c1419c047bfcd2d4409cc17cfda5a106cf6dba0"
+keep = true
+
+[[components]]
+id = "main"
+label = "Swim With The Whales"
+description = "The three-map campaign plus the hidden joke map."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
