@@ -1,6 +1,6 @@
 # 102 — Continuous list scrolling and Library favorites first
 
-**Status:** Ready · **Depends on:** 061, 090, 095, 101
+**Status:** Implemented — awaiting coordinator visual review and physical Deck validation · **Depends on:** 061, 090, 095, 101
 **Origin:** owner, 2026-10-22: scrolling feels like changing pages and loses their
 position; use smooth continuous scrolling and order Library favorites first.
 
