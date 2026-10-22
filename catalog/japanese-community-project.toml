@@ -1,0 +1,112 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-d.md §2; gathered 2026-10-22.
+schema_version = 1
+id = "japanese-community-project"
+title = "Japanese Community Project"
+authors = ["Tatsurd-Cacocaco and the Japanese Community Project team"]
+release = "v2.3 final (2016-07-24)"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/jpcp"
+description = "DOOM II megawad: 32 limit-removing maps (MAP01–MAP32) by a credited team of Japanese mappers, with a new soundtrack, graphics and an embedded DEHACKED patch; the archive also carries an optional Katakana/Kanji status HUD."
+permission = "Authors may NOT use the contents of this file as a base for modification or reuse; permissions were obtained from the original authors of any resources modified or included. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
+tags = ["classics", "cacowards", "community-projects", "megawad"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/japanese-community-project/ with source,
+# credit and permission text in SOURCES.toml beside them; the build embeds them
+# for card, detail and band.
+[[screenshots]]
+asset = "japanese-community-project/01.jpg"
+credit = "Japanese Community Project team"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "limit-removing"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Continuous DOOM II megawad (MAP01–MAP32). The bundled MAPINFO is ZDoom format, which
+# DSDA-Doom v0.30.1 ignores (removed in v0.30.0), so no episode list or warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-d.md §2 and §5",
+  "Downloaded jpcp.zip from three byte-identical mirrors; 13,575,267 bytes, SHA-256 2d9d54a4…; ZIP central directory has JPCP.txt (13,271 B), JPCP.wad (45,520,073 B) and JPCP_HUD.wad (33,600 B)",
+  "JPCP.wad: PWAD, 2,135 lumps, thirty-two map markers MAP01–MAP32, thirty-five D_* music lumps, one embedded DEHACKED lump and a ZDoom-format MAPINFO; no COMPLVL or UMAPINFO lump",
+  "JPCP_HUD.wad: PWAD, 23 graphics lumps only (STBAR, STBAR000, STARMS, STTNUM0–9, WINUM0–9); no maps, DEHACKED, MAPINFO or music",
+  "Authors' JPCP.txt: final version 2.3 dated 16/07/24, Map 01–Map 32, \"Advanced engine needed: Limit Removing\", \"Tested with PrBoom+ with doom 2 compatibility (-complevel 2)\", 13 credited level designers",
+  "Cacowards 2016 Top Ten, page 3: https://www.doomworld.com/cacowards/2016/ (edition page read at https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/best3.php; the page header reads \"Top Ten - Page 3\")",
+  "Cacowards 2016 screenshot: https://web.archive.org/web/2026id_/https://www.doomworld.com/23years/images/jcp.png",
+]
+notes = "Confirmed archive and member identities from downloads on www.gamers.org, mirrors.lug.mtu.edu and ftp.fu-berlin.de that return identical size and SHA-256; nothing downloaded was extracted to disk or executed. The map WAD embeds its DEHACKED patch (level names and intermission text) and all thirty-five music lumps, so no separate -deh member or soundtrack package is needed. The archive's JPCP.txt is not valid UTF-8 (a CP932 ellipsis byte at offset 9,547); the recipe pins its exact bytes and the kept file is never edited. No COMPLVL lump exists: complevel vanilla follows D-030's limit-removing convention and agrees with the authors' own \"PrBoom+ with doom 2 compatibility (-complevel 2)\" test note, since vanilla resolves to 2 on Doom II. The ZDoom-format MAPINFO is inert in DSDA-Doom v0.30.1 (ZDoom MAPINFO support was removed in v0.30.0), so the set plays as one continuous 32-map run. The optional JPCP_HUD.wad is declared as an add-on that replaces status-bar numbers/arms with Katakana/Kanji graphics, off by default; its 23 lumps were enumerated and none affects gameplay. Tags: cacowards = 2016 Top Ten winner, page 3 (23rd Annual Cacowards; canonical year URL https://www.doomworld.com/cacowards/2016/); megawad = 32 maps, MAP01–MAP32; community-projects = multi-author Japanese community project with a credited leader, mappers and musicians; classics = released 2016-07-24, over five years before this review. No gameplay test was performed."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.",
+  "ZDoom MAPINFO episode/par information is lost under DSDA-Doom v0.30.1; confirm the continuous MAP01–MAP32 run and the secret-map exits on the Deck.",
+  "Needs Deck Validation: the optional JPCP_HUD.wad Katakana/Kanji status bar, including whether DSDA-Doom draws the replaced numbers and arms as intended.",
+  "The bundled screenshot is a 1280x960 (4:3) Cacowards image, resized to 1066x800; confirm the card crop on the Deck.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/jpcp"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/jpcp.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/jpcp.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/jpcp.zip"]
+size = 13575267
+sha256 = "2d9d54a4092252031cc038197d6bddc25cd692f4071eec76726cdca4bb70ce63"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/jpcp.zip"
+
+[[packages.members]]
+id = "maps"
+path = "JPCP.wad"
+size = 45520073
+sha256 = "b994fbbab8a78f7133fc792679b95571b30ba2491503e35179eb49d77c29c4dd"
+keep = false
+
+[[packages.members]]
+id = "hud"
+path = "JPCP_HUD.wad"
+size = 33600
+sha256 = "beff29573bb665b597ad9b0671e6f95b08bba45cdae57304fc4091444d7a2009"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "JPCP.txt"
+size = 13271
+sha256 = "362a529fc38dc13ce6744472f3cbb1f41e2ee0cd8ed7bbb2975d15e9e1c5a349"
+keep = true
+
+[[components]]
+id = "main"
+label = "Japanese Community Project"
+description = "Main 32-map limit-removing megawad with its soundtrack, graphics and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
+
+[[components]]
+id = "japanese-hud"
+label = "Japanese HUD graphics (Katakana/Kanji)"
+description = "Optional JPCP_HUD.wad from the same archive. The authors' readme says loading it with the megawad enables a status bar in Katakana and Kanji; it replaces status-bar numbers, arms and bar graphics only. Off by default and loaded after the megawad."
+optional = true
+default = false
+position = 2
+
+[[components.members]]
+package = "free"
+member = "hud"
+role = "graphics"

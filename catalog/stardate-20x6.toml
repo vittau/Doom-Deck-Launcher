@@ -1,0 +1,91 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-d.md §3; gathered 2026-10-22.
+schema_version = 1
+id = "stardate-20x6"
+title = "Stardate 20X6"
+authors = ["Ribbiks"]
+release = "2013-02-06"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/stardate"
+description = "DOOM II: eight Boom-compatible maps (MAP01–MAP07 plus MAP31) in a purple space-station theme, with new music, graphics and an embedded DEHACKED patch."
+permission = "Authors MAY use the contents of this file as a base for modification or reuse; other authors' materials are credited in the text. You MAY distribute this file provided you include the text intact and unmodified, in any electronic format, and you may not charge for the contents. The text also credits GothicDM/Gothic2, Hexen, Plutonia and TNT resources. DDL downloads the unmodified archive and keeps the bundled text."
+tags = ["classics", "cacowards", "episode", "challenging"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/stardate-20x6/ with source, credit and
+# permission text in SOURCES.toml beside them; the build embeds them for card,
+# detail and band.
+[[screenshots]]
+asset = "stardate-20x6/01.jpg"
+credit = "Ribbiks"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Eight map slots (MAP01–MAP07 and MAP31) with a non-linear secret exit. The bundled
+# MAPINFO is ZDoom format, which DSDA-Doom v0.30.1 ignores (removed in v0.30.0), so no
+# episode list or warp is prescribed; the menu selects the map.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-d.md §3 and §5",
+  "Downloaded stardate.zip from three byte-identical mirrors; 4,995,637 bytes, SHA-256 4e2a73c6…; ZIP central directory has stardate20x6/stardate20x6.txt (7,262 B) and stardate20x6/stardate20x6.wad (14,650,225 B) plus directory and __MACOSX AppleDouble entries that are not declared",
+  "stardate20x6/stardate20x6.wad: PWAD, 638 lumps, eight map markers MAP01–MAP07 and MAP31, eleven D_* music lumps, one embedded DEHACKED lump and a ZDoom-format MAPINFO; no COMPLVL or UMAPINFO lump",
+  "Authors' stardate20x6.txt: release 06/02/2013, Doom 2, MAP01–MAP07 plus bonus MAP31, \"Boom-Compatible (tested in prb+ cl9, gzdoom)\", \"The maps are very difficult, with UV hopefully presenting a worthy challenge even for veteran doomers.\"",
+  "Cacowards 2013 Top Ten, page 3: https://www.doomworld.com/cacowards/2013/ (edition page read at https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/best3.php; the page header reads \"Top Ten - Page 3\")",
+  "Cacowards 2013 screenshot: https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/images/stardate.png",
+]
+notes = "Confirmed archive and member identities from downloads on www.gamers.org, mirrors.lug.mtu.edu and ftp.fu-berlin.de that return identical size and SHA-256; nothing downloaded was extracted to disk or executed. All declared members keep their exact case and the stardate20x6/ folder prefix; the archive's __MACOSX AppleDouble metadata is ignored and never loaded. The WAD embeds its DEHACKED patch (map names and intermission text) and all eleven music lumps, so no separate -deh member or soundtrack package is needed. No COMPLVL lump exists: complevel boom comes from the author's \"Boom-Compatible (tested in prb+ cl9, gzdoom)\" statement (cl9 is Boom's complevel 9). The bundled MAPINFO is ZDoom format and inert in DSDA-Doom v0.30.1 (ZDoom MAPINFO support was removed in v0.30.0). Tags: cacowards = 2013 Top Ten winner, page 3 (20th Annual Cacowards; canonical year URL https://www.doomworld.com/cacowards/2013/); episode = eight map slots, within the nine-or-fewer rule; classics = released 2013-02-06, over five years before this review; challenging = the author's own statement that the maps are \"very difficult\" and aimed to challenge \"veteran doomers\" on UV. No gameplay test was performed."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio, secret-exit progression and map selection.",
+  "ZDoom MAPINFO map names and intermission text are lost under DSDA-Doom v0.30.1; the embedded DEHACKED strings are the fallback.",
+  "The bundled screenshot is a 1280x960 (4:3) Cacowards image, resized to 1066x800; confirm the card crop on the Deck.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/stardate"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/stardate.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/s-u/stardate.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/s-u/stardate.zip"]
+size = 4995637
+sha256 = "4e2a73c60b1eab37bbb35a78706cb557020346f6532c293f45e1ec9c9ac3a0d4"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/s-u/stardate.zip"
+
+[[packages.members]]
+id = "maps"
+path = "stardate20x6/stardate20x6.wad"
+size = 14650225
+sha256 = "633d06668414de9fd20683b26924808e7b11f65a7e7b4546df68af691019b9ed"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "stardate20x6/stardate20x6.txt"
+size = 7262
+sha256 = "d7ba39b2a625f4b15fe08676cd56cfe529eaea128497051a522ad09e641fd8a7"
+keep = true
+
+[[components]]
+id = "main"
+label = "Stardate 20X6"
+description = "Main eight-map Boom set with its music, graphics and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
