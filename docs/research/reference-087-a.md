@@ -678,3 +678,76 @@ clippy results are recorded in `docs/reports/087-a.md`.
   to DSDA-Doom, and check the inert ZDoom MAPINFO's lost episode presentation and map lag.
 - **Artwork:** no in-game image is committed for any of the six titles; a later manual/owner-run
   capture under D-024 can fill the fallback without changing the recipes.
+
+---
+
+## 11. No Rest for the Living — minimal implementation assessment (spec 094 input)
+
+The owner supplied `/Users/vitor/Downloads/NERVE.WAD` for read-only assessment. It was hashed and
+parsed as data; nothing was executed, copied into the repository, downloaded or bundled.
+
+### 11.1 Identity (Confirmed from the supplied bytes)
+
+| | Value |
+| --- | --- |
+| Size | 3,819,855 bytes |
+| SHA-256 | `2d234de8700ee403375fda278e50ea17739b36703b3316e0429b05aca4458fa9` |
+| MD5 / SHA-1 / CRC-32 | `967d5ae23daf45196212ae1b605da3b0` / `3451288383fb16e196f273d9f85d58c1fda97bf4` / `ad7f9292` |
+| Header | `PWAD`, 108 lumps |
+| Maps | `MAP01`–`MAP09` (nine maps) |
+| Other lumps | `CWILV00`–`CWILV08` and the normal map groups; **no** `DEHACKED`, `COMPLVL`, `UMAPINFO` or `MAPINFO` |
+
+These hashes match the existing `nerve-bfg` row in `crates/ddl-core/data/iwads.toml` exactly
+(BFG Edition / XBLA / PSN; also the version bundled with Doom + Doom II). The `nerve-kex` row is a
+different 4,039,441-byte, 117-lump file and is not this supplied WAD. **Confirmed.**
+
+### 11.2 Required launch model
+
+- Use `base_game.game = "doom2"` and the Doom II IWAD. Do **not** model NERVE as a standalone
+  `base_game` or download it as an IWAD: the catalog's `Game` enum has no `Nerve`, and
+  `docs/research/iwad-identification.md` §1.5/§2 establishes that `NERVE.WAD` is a PWAD.
+- Load the imported file with `-file`. DSDA-Doom's `D_AddFile` forces `gamemission = pack_nerve`
+  for any filename ending `nerve.wad`; the pinned v0.30.1 source uses `strnicmp` (case-insensitive),
+  so the owner's uppercase `NERVE.WAD` works without renaming
+  ([d_main.c:914–940](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L914-L940)).
+  **Confirmed.**
+- Complevel: the table's `default_complevel = 2` and the no-`COMPLVL` WAD support the Doom II
+  `vanilla` alias (2), but gameplay is **Needs Deck Validation**.
+
+### 11.3 Minimal recipe shape
+
+A single required `main` component with `user_supplied = true`, one `maps` member with no
+package/member reference, nonempty `obtain` text naming the purchased BFG/Doom + Doom II copy, and
+`known_sha256 = ["2d234de8…458fa9"]`; zero packages. Tags: `episode` (nine maps) is the only
+obvious existing membership. Product copy should stay a plain nine-map Doom II expansion summary;
+technical details and limitations stay in verification.
+
+### 11.4 Current blockers (no shared code changed here)
+
+1. **Lint rejects zero packages.** `crates/ddl-core/src/catalog/lint.rs` unconditionally errors
+   when `r.packages.is_empty()`, even when every loaded thing is player-supplied and there is
+   nothing to download. Minimal fix: allow an empty package list only when every declared
+   non-keep member is `user_supplied` (or, more strictly, when the recipe has no downloadable
+   members), while still validating every package/member reference. This is a D-owned model/lint
+   boundary.
+2. **Setup locks the required main row.** `crates/ddl/src/runtime.rs` renders every required
+   component as `Locked` and makes the row non-actionable; the import branch for
+   `c.user_supplied` is unreachable for a required main. Minimal fix: a required `user_supplied`
+   main shows "Not provided" when not imported and opens the import sheet, then shows
+   "Imported"/"On" after import; it must remain impossible to toggle the required main off. This is
+   a D-owned runtime/UI change.
+3. **No new blocker in naming.** Import preserves the source basename, and the supplied uppercase
+   `NERVE.WAD` is accepted by DSDA's case-insensitive mission check. A test should still pin that
+   the launch `-file` path ends in `nerve.wad` case-insensitively.
+4. **No host, package, IWAD or dependency change is needed.** The file is never downloaded or
+   bundled; hosts.toml, iwads.toml and shared runtime code stay untouched by this worker.
+
+### 11.5 Needed tests (D or a follow-up A task)
+
+- Lint accepts a zero-package, user-supplied-only recipe and still rejects a zero-package recipe
+  with a download reference.
+- Setup/headless journey: required user-supplied main is importable, cannot be disabled, and
+  resolves to `ComponentNotProvided` before import and a `-file` after import.
+- Resolver/launch test: Doom II IWAD plus imported `NERVE.WAD`, `pack_nerve` filename rule and
+  `vanilla` complevel.
+- No network in any test; the file stays owner-supplied.

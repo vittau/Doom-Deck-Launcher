@@ -1,0 +1,53 @@
+# Confirmed bytes and release metadata: docs/research/no-rest-for-the-living.md; gathered 2026-10-22.
+schema_version = 1
+id = "no-rest-for-the-living"
+title = "No Rest for the Living"
+authors = ["Nerve Software"]
+release = "Xbox Live Arcade release, 2010-05-26; later BFG Edition and DOOM + DOOM II variants"
+page = "https://www.doomworld.com/cacowards/2010/"
+description = "A nine-map official DOOM II expansion from Nerve Software, with eight main maps and a secret level, continuing the fight on Earth after Hell's forces are defeated."
+permission = "Commercial id Software/Nerve Software content. No redistribution permission is claimed: DDL never downloads, bundles or redistributes NERVE.WAD. The player imports their own legally obtained copy for local use."
+tags = ["cacowards", "classics", "episode"]
+packages = []
+
+[[screenshots]]
+asset = "no-rest-for-the-living/01.jpg"
+credit = "Nerve Software (screenshot via DoomWiki)"
+
+[base_game]
+game = "doom2"
+variants = ["doom2-1.9", "doom2-1.9-kex-2024-08-06", "doom2-1.9-kex-2024-10-01"]
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Nine-map expansion played through Doom II; the map menu selects the level, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/no-rest-for-the-living.md §1–§6", "Owner-supplied NERVE.WAD read-only as data: size, MD5/SHA-1/CRC-32/SHA-256, WAD directory and map markers; no execution", "Pinned DSDA-Doom v0.30.1 D_AddFile mission source and the reviewed IWAD identification table"]
+notes = "Confirmed from the owner-supplied file: 3,819,855 bytes, 108 lumps, MAP01–MAP09, no DEHACKED/COMPLVL/UMAPINFO/MAPINFO, SHA-256 2d234de8700ee403375fda278e50ea17739b36703b3316e0429b05aca4458fa9; it matches the existing BFG/XBLA nerve-bfg row (MD5 967d5ae23daf45196212ae1b605da3b0). This is a player-supplied expansion PWAD, not an IWAD: the recipe requires Doom II and loads the imported file with -file; DSDA-Doom's D_AddFile selects pack_nerve for any filename ending nerve.wad (case-insensitive, pinned v0.30.1 source). The Steam/DOOM + DOOM II KEX variant is accepted as a player import using its reviewed published 4,039,441-byte size and MD5 23422eb42833ac7b0dd59c0c7ae18a6f, and the KEX SHA-256 is not published or inspected, so an imported KEX file is reported as an unrecognized hash rather than claimed verified. Original public date: 2010-05-26 (XBLA release; day precision) per the DoomWiki 2011 page and Wikipedia's Doom II Xbox 360 release date; later BFG Edition and DOOM + DOOM II re-releases are later variants. Tags: cacowards = 2010 Top Ten winner, https://www.doomworld.com/cacowards/2010/ (archived inventory docs/research/cacowards.md §2010); classics = 2010 release with that Cacoward recognition; episode = nine maps (eight main plus one secret)."
+limitations = ["Needs Deck Validation: Doom II IWAD selection, vanilla/2 behavior, NERVE mission selection, mission progression, gameplay, audio and controller import flow.", "The BFG/XBLA SHA-256 is known; the Steam/KEX variant's SHA-256 is not published or locally inspected, so its import is accepted only with the honest unknown-hash warning, never labelled verified.", "No redistribution: DDL never downloads or bundles NERVE.WAD; the player must own and import the commercial file."]
+
+[[components]]
+id = "main"
+label = "No Rest for the Living"
+description = "The nine-map expansion, imported from your own legally obtained copy."
+optional = false
+default = true
+position = 1
+user_supplied = true
+obtain = "Import your own legally obtained NERVE.WAD from Doom 3: BFG Edition, Doom Classic Complete, or DOOM + DOOM II. Keep a file name ending in nerve.wad. DDL copies it into your local install and never downloads or bundles it."
+known_sha256 = ["2d234de8700ee403375fda278e50ea17739b36703b3316e0429b05aca4458fa9"]
+
+[[components.members]]
+role = "maps"
