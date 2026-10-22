@@ -1,0 +1,6 @@
+# DoomDeckLauncher project website
+User-agent: *
+Allow: /
+Disallow: /repo/
+
+Sitemap: https://doomdecklauncher.com/sitemap.xml
