@@ -13,7 +13,7 @@ authors = [
 ]
 release = "V.2407 (author's 'Sunder 2407.zip' download; internal WAD file dated 2021-12-31, readme 2021-12-15)"
 page = "https://www.doomworld.com/forum/topic/46002-sunder-map21-actually-exists-right-now/"
-description = "DOOM II Boom-compatible slaughter mapset: 22 very large maps (MAP01–MAP20 plus MAP31/MAP32) with an embedded DeHackEd patch that adds the Hive Mother boss; first released in 2009 and still growing."
+description = "A landmark slaughter set of 22 enormous maps: cathedral-scale halls, lava fortresses and arenas that throw hundreds of demons at you, including the towering Hive Mother."
 permission = "Authors may use these levels as a base to build additional levels. Redistribution is permitted provided SunderReadMeV2.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "challenging"]
 
@@ -78,7 +78,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Sunder"
-description = "Main 22-slot Boom-compatible slaughter mapset with the Hive Mother and map titles supplied by the WAD's embedded DeHackEd patch."
+description = "The main 22-map set, from Python to Beneath the Waves of Styx, plus the two secret maps."
 optional = false
 default = true
 position = 1

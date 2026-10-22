@@ -9,7 +9,7 @@ authors = [
 ]
 release = "1.4, updated 2018-01-29 (first release 2016-11-28)"
 page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/neis"
-description = "Ultimate DOOM four-episode replacement: 38 map slots (E1M1–E4M9 plus the E1M0 and E4M0 extras) for limit-removing ports, with WAD-embedded DeHackEd level names and story text."
+description = "Four devious episodes for Ultimate Doom that twist familiar Phobos, Deimos and Hell themes, mixing 1994-style layouts with parallel worlds, derelict ships and two hidden bonus maps."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided NEIS.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "cacowards", "megawad"]
 
@@ -76,7 +76,7 @@ keep = true
 [[components]]
 id = "main"
 label = "No End in Sight"
-description = "Main four-episode Ultimate DOOM replacement with the level names and story text supplied by the WAD's embedded DeHackEd patch."
+description = "The full four-episode journey, including the hidden ExM0 extra maps."
 optional = false
 default = true
 position = 1

@@ -17,7 +17,7 @@ authors = [
 ]
 release = "1.0, finalized 2013-12-22 (release date 2013-11-07; archive re-uploaded for zip issues)"
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/d2twid"
-description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) plus a bonus MAP33, with a WAD-embedded DeHackEd patch for the level names and the Wolfenstein replacements."
+description = "A 32-map imaginary sequel in id's 1994 style: loading bays, flooded libraries, city streets and Hell itself, with a hidden bonus map for explorers."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided D2TWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "cacowards", "community-projects", "megawad"]
 
@@ -82,7 +82,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Doom II the Way id Did"
-description = "Main 32-map DOOM II megawad (MAP01–MAP32) with the level names and Wolfenstein replacements supplied by the WAD's embedded DeHackEd patch."
+description = "The main 32-map campaign, from Loading Bay to Hell on Earth."
 optional = false
 default = true
 position = 1
