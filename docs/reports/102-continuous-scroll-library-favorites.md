@@ -98,3 +98,13 @@ not physical input feel or Linux/Deck performance.
 
 No implementation requirements are deferred. Coordinator visual acceptance and
 physical Deck validation remain; no push, tag or release was performed.
+
+## Coordinator acceptance
+
+Reviewed the final code and all before/during/after Library frames plus Discover
+before/after frames. Neighboring rows remain visible as one additional row is
+revealed, and the final focused row fits. Accepted and merged as `724a99f`.
+The merge's app/test files match the worker's checked source byte-for-byte, so no
+tests were repeated after this conflict-free merge. Physical Deck validation above
+is still pending. A copy of the visual review page is retained in the coordinator's
+`.scratch/102-review/` before task-worktree cleanup.
