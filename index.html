@@ -149,6 +149,7 @@
                  as the owner-approved embed, with no third-party request. -->
             <div class="coffee-widget">
               <a
+                id="donate-link"
                 class="bmc-btn"
                 href="https://buymeacoffee.com/vittau"
                 target="_blank"
@@ -604,5 +605,16 @@
         their respective owners.
       </p>
     </footer>
+    <!-- One GA4 event for the Donate link (spec 085). The link navigates normally:
+         no preventDefault, no parameters, nothing sent when the tag is blocked. -->
+    <script>
+      (function () {
+        var donate = document.getElementById('donate-link');
+        if (!donate) return;
+        donate.addEventListener('click', function () {
+          if (typeof gtag === 'function') gtag('event', 'donate_click');
+        });
+      })();
+    </script>
   </body>
 </html>
