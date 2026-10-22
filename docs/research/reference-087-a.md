@@ -1,7 +1,8 @@
-# Reference research — Scythe II, Plutonia 2 and TNT: Revilution
+# Reference research — Scythe II, Plutonia 2, TNT: Revilution, Going Down: Turbo, The 10x10 Project and Speed of Doom
 
 **Status:** desk research for D-010 catalog recipes · **Gathered:** 2026-10-22 (UTC)
-**Workstream:** spec 087 worker A (Scythe II, Plutonia 2) and spec 088 worker A (TNT: Revilution)
+**Workstream:** spec 087 worker A (Scythe II, Plutonia 2), spec 088 worker A (TNT: Revilution) and
+spec 089 worker A (Going Down: Turbo, The 10x10 Project, Speed of Doom)
 **Scope:** the `/idgames` releases named below, the archive bytes, release text, embedded and
 external patches, and the evidence needed for each recipe. No archive content was executed and no
 IWAD was downloaded.
@@ -26,12 +27,19 @@ curl -fsSL --max-time 300 --max-filesize 60000000 -o pl2.zip \
   https://www.gamers.org/pub/idgames/levels/doom2/megawads/pl2.zip
 curl -fsSL --max-time 300 --max-filesize 60000000 -o tntr.zip \
   https://www.gamers.org/pub/idgames/levels/doom2/megawads/tntr.zip
+curl -fsSL --max-time 300 --max-filesize 60000000 -o gdturbo.zip \
+  https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/gdturbo.zip
+curl -fsSL --max-time 300 --max-filesize 60000000 -o 10x10.zip \
+  https://www.gamers.org/pub/idgames/levels/doom2/Ports/0-9/10x10.zip
+curl -fsSL --max-time 300 --max-filesize 60000000 -o sodfinal.zip \
+  https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/sodfinal.zip
 shasum -a 256 *.zip
 ```
 
-`youfailit.net` timed out (75 s, no connection) for both archives and is **not listed** in the
+`youfailit.net` timed out (75 s, no connection) for the archives tried and is **not listed** in the
 recipes. `ftp.fu-berlin.de` and `mirrors.lug.mtu.edu` were downloaded in full and are byte-identical
-to the archive master for all three packages.
+to the archive master for all six packages. The DSDA-hosted `gdturbo.zip` download was also
+byte-identical to the three `/idgames` copies, confirming the DSDA page points at the same release.
 
 ## Quick reference
 
@@ -49,6 +57,23 @@ to the archive master for all three packages.
 | Patch | embedded `DEHACKED` (5,812 B) | embedded `DEHACKED` (7,357 B); external `PL2.DEH` (7,359 B) not loaded | embedded `DEHACKED`/BEX (8,218 B); external `TNTR.deh` (10,372 B) not loaded |
 | Music | embedded `D_*` lumps | embedded `D_*` lumps; MAPINFO names tracks | 35 embedded `D_*` lumps |
 | Licence | no reuse as a base; distribute with text intact; non-commercial | no reuse as a base; distribute with text intact; team obtained permissions | reuse permitted; distribute with text intact; team obtained permissions |
+
+### Spec 089 additions (this worker)
+
+| | Going Down: Turbo | The 10x10 Project | Speed of Doom |
+| --- | --- | --- | --- |
+| Recipe id | `going-down-turbo` | `the-10x10-project` | `speed-of-doom` |
+| Release | 2nd bug-fix, 2024-07-11 (10th-anniversary edition) | 2022-06-15 | 2010-03-28 |
+| Author(s) | Cyriak Harris (mouldy) | lunchlunch | Josh "Joshy" Sealy, Darkwave0000 |
+| `/idgames` path | `levels/doom2/Ports/megawads/gdturbo.zip` | `levels/doom2/Ports/0-9/10x10.zip` | `levels/doom2/Ports/megawads/sodfinal.zip` |
+| Package size / SHA-256 | 11,635,723 / `c3323c3e…44e4a` | 6,399,619 / `1435ee1d…25fad` | 9,261,369 / `00528882…41e0` |
+| Main WAD | `gdturbo.wad`, 34,893,507 B | `10x10/10X10.wad`, 19,892,998 B | `SODfinal.wad`, 28,742,634 B |
+| IWAD | DOOM II | DOOM II | DOOM II |
+| Format / complevel | Boom → `boom` (9); `COMPLVL` says `boom` | Boom → `boom` (9) | Boom → `boom` (9) |
+| Maps | 32 (`MAP01`–`MAP32`) | 12 slots (`MAP01`–`MAP11`, `MAP31`) | 33 (`MAP01`–`MAP33`) |
+| Patch | embedded `DEHACKED` (6,263 B); UMAPINFO 4,359 B | embedded `DEHACKED` strings (490 B); UMAPINFO 1,509 B | embedded `DEHACKED` (3,412 B); ZDoom MAPINFO inert |
+| Music | 34 embedded `D_*` lumps | 13 embedded `D_*` lumps | 35 embedded `D_*` lumps |
+| Licence | CC BY-NC-ND 4.0 | reuse permitted; distribute with text intact | no reuse as a base; distribute with text intact |
 
 ---
 
@@ -319,33 +344,235 @@ and textures by the long list in the text. **Confirmed** from the release text. 
 
 ---
 
-## 4. Tag evidence (R3)
+## 4. Going Down: Turbo (`going-down-turbo`)
 
-| Tag | Scythe II | Plutonia 2 | TNT: Revilution |
+### 4.1 Release identity
+
+- **Canonical page:** <https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gdturbo>,
+  filename `levels/doom2/Ports/megawads/gdturbo.zip`. **Confirmed.**
+- `gdturbo.txt` title block: *"Title: Going Down Turbo"*, *"Release date: 7/11/2024"*,
+  *"Author: mouldy"*, and *"This is a 2nd bug-fix to update the existing wad file"* with
+  *"Update to: levels/doom2/Ports/megawads/gdturbo.zip"*. **Confirmed (quoted).**
+- The description calls it *"a special edition of Going Down I made for the 10th anniversary"*:
+  *"All maps have been tweaked and adjusted to play faster and the difficulty has been rebalanced to
+  make it a bit more forgiving."* It is a **distinct release**, not the 2014 `going-down` package;
+  the existing recipe is untouched. **Confirmed.**
+
+### 4.2 Archive and byte-identical mirrors
+
+| Host (allowlisted) | URL | Bytes | SHA-256 |
 | --- | --- | --- | --- |
-| `cacowards` | 2005 Top Ten winner — <https://www.doomworld.com/cacowards/2005/> | 2009 Top Ten winner and Mordeth Award — <https://www.doomworld.com/cacowards/2009/> | 2017 runner-up — <https://www.doomworld.com/cacowards/2017/> |
-| `megawad` | 32 maps (readme + WAD) | 32 maps (readme + WAD; MAP33 is MAPINFO-only) | 32 maps (readme + WAD) |
-| `classics` | 2005 release, Cacoward recognition | 2008 release, Cacoward recognition | 2017 release, Cacoward recognition |
-| `community-projects` | — (single author) | 22 contributors in PL2INFO.TXT §6.1 | Multi-author community project, credited in TNTR.txt |
-| `challenging` | Readme: "This wad is harder than the original Scythe"; "you WILL run into trouble on skill 4" | — | — |
+| `www.gamers.org` (archive master) | `https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/gdturbo.zip` | 11,635,723 | `c3323c3eb2974ce652ed0678027bab7e601804c2ba4e21256b7971b0b1644e4a` |
+| `mirrors.lug.mtu.edu` | `https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/gdturbo.zip` | 11,635,723 | same |
+| `ftp.fu-berlin.de` | `https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/gdturbo.zip` | 11,635,723 | same |
+| `dsdarchive.com` (download) | `https://dsdarchive.com/files/wads/doom2/4896/gdturbo.zip` | 11,635,723 | same |
+
+**Confirmed:** the four downloaded copies are byte-identical, so the DSDA page links the same
+release the `/idgames` mirrors serve.
+
+### 4.3 Archive contents (ZIP, 11,635,723 bytes)
+
+| Path (case-exact) | Bytes | SHA-256 | Role |
+| --- | --- | --- | --- |
+| `gdturbo.wad` | 34,893,507 | `bfa2fe8d81f4cdec5ddc365eb621ed289ae0f0721b7b15ac0241b04292f62739` | maps (main) |
+| `gdturbo.txt` | 3,091 | `1ff1ac3b0455941c5a04f6921fce35bea982afb1fafc304e628842894d298a61` | credits/permission (keep) |
+
+**Confirmed.** Flat layout, two Deflate entries, no symlinks, no traversal, no external patch.
+
+### 4.4 WAD inspection (read-only)
+
+`gdturbo.wad` — **PWAD**, 34,893,507 bytes, **574 lumps**, 32 map markers `MAP01`–`MAP32`.
+**Confirmed.**
+
+- **`COMPLVL` lump, 4 bytes: exact bytes `boom`.** This is the author's own complevel statement and
+  matches the readme's *"Advanced engine needed: Boom compatible"*. **Confirmed by inspection.**
+- **`UMAPINFO` lump, 4,359 bytes**, with 32 map entries, map titles and a `nextsecret` from MAP15 to
+  MAP31. A ZDoom `MAPINFO` (5,880 bytes) is also present but is inert under DSDA-Doom v0.30.1
+  (ZDoom MAPINFO support removed in v0.30.0). **Confirmed.**
+- **Embedded `DEHACKED` lump, 6,263 bytes** (DeHackEd v3.0, Doom version 21, patch format 6) with
+  thing/frame changes; there is **no external `.deh`**. **Confirmed.**
+- **34 `D_*` music lumps** are embedded in the WAD; no separate music file. **Confirmed.**
+
+### 4.5 Compatibility reasoning and permissions
+
+- **Base game: DOOM II** per *"Game: Doom 2"*. **Confirmed.**
+- **Family / complevel: Boom / `boom` (9).** The release text and the exact `COMPLVL` bytes both say
+  Boom; the author tested **DSDA-Doom 0.28.2**. **Confirmed; Needs Deck Validation for v0.30.1.**
+- **Known limits:** *"Some maps won't work with -nomonsters"* and *"May Not Run With: Non-boom
+  ports"*. DDL never passes `-nomonsters`. **Confirmed (quoted).**
+- **Licence:** Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
+  (**Confirmed, quoted in full in `gdturbo.txt`**). The recipe keeps `gdturbo.txt`.
+- **Tags:** `megawad` = 32 maps. This 2024 edition has no Cacoward of its own (the 2014 original is
+  the separate `going-down` recipe) and is under five years old, so neither `cacowards` nor
+  `classics` is claimed.
+
+---
+
+## 5. The 10x10 Project (`the-10x10-project`)
+
+### 5.1 Release identity
+
+- **Canonical page:** <https://www.doomworld.com/idgames/levels/doom2/Ports/0-9/10x10>, filename
+  `levels/doom2/Ports/0-9/10x10.zip`. **Confirmed.**
+- `10x10/10x10.txt` title block: *"Title: The 10x10 Project"*, *"Release date: 06/15/2022"*,
+  *"Author: lunchlunch"*. **Confirmed (quoted).**
+- The description calls it *"a modest set of 10 BOOM-compatible maps ... I restricted myself to
+  using ten stock textures and ten stock FLATs in each"* and adds *"there is a secret map"*.
+  `New levels: 11 (+1 no-exit stopper)`; `Map #: 01-10, 11, 31`. **Confirmed (quoted).**
+- The coordinator read the DoomWiki page at `oldid=576470` and reported **LunchLunch, Boom, Doom II,
+  12 map slots including ending and secret**. The page returned Cloudflare HTTP 403 from this host,
+  so that identity sentence is **reported, not re-read here**; the archive bytes below are
+  **Confirmed** independently.
+
+### 5.2 Archive and byte-identical mirrors
+
+| Host (allowlisted) | URL | Bytes | SHA-256 |
+| --- | --- | --- | --- |
+| `www.gamers.org` (archive master) | `https://www.gamers.org/pub/idgames/levels/doom2/Ports/0-9/10x10.zip` | 6,399,619 | `1435ee1d7cea48eb048ccf47545c780c0165cc98c588692d63bf7d7914925fad` |
+| `mirrors.lug.mtu.edu` | `https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/0-9/10x10.zip` | 6,399,619 | same |
+| `ftp.fu-berlin.de` | `https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/0-9/10x10.zip` | 6,399,619 | same |
+
+**Confirmed:** all three downloaded in full and byte-identical; the Cacowards inventory's 6.4 MB
+size matches.
+
+### 5.3 Archive contents (ZIP, 6,399,619 bytes)
+
+| Path (case-exact) | Bytes | SHA-256 | Role |
+| --- | --- | --- | --- |
+| `10x10/10X10.wad` | 19,892,998 | `1b5caf4d065839370877ae2f2e9382569a2a335fc14034f4c69e15fefd287d8e` | maps (main) |
+| `10x10/10x10.txt` | 6,998 | `7d6c6d242af62ccbe68377a03ed8a2da27a0308144b55d9f73333465631b0260` | credits/permission (keep) |
+| `10x10/Demos/*.lmp` | — | — | walkthrough demos, **not declared** |
+| `10x10/Demos/10x10_Walkthroughs.txt` | 52 | `47ccf718eaad3c04d72439ac628afd81f6b6d00addbab7a6d67187ffad794927` | demo note, **not declared** |
+
+**Confirmed.** The archive uses a `10x10/` directory prefix; the case-exact member paths are
+`10x10/10X10.wad` and `10x10/10x10.txt`. Demos are data-only extras and are not loaded.
+
+### 5.4 WAD inspection (read-only)
+
+`10X10.wad` — **PWAD**, 19,892,998 bytes, **272 lumps**, **12 map markers**:
+`MAP01`–`MAP11` and `MAP31`. **Confirmed.**
+
+- `MAP01`–`MAP10` are the ten main maps; `MAP11` is the **no-exit stopper** named *"No Exit, It's
+  Over"*; `MAP31` is the secret map *"The Anna Dream"*. This matches the readme's *"11 (+1 no-exit
+  stopper)"* and the coordinator's 12-slot DoomWiki reading. **Confirmed by the WAD/UMAPINFO.**
+- **`UMAPINFO` lump, 1,509 bytes**, with 12 map entries, no `episode` block, and `nextsecret =
+  "MAP31"` from MAP07. `MAP11` has `next = "MAP12"`, but no `MAP12` marker exists — the intended
+  no-exit stopper. **Confirmed.**
+- **Embedded `DEHACKED` lump, 490 bytes**, a `[STRINGS]` block with the 12 `HUSTR_*` map names and
+  intermission text. **No `COMPLVL` and no `MAPINFO`.** **Confirmed.**
+- **13 `D_*` music lumps** are embedded; no separate music WAD. **Confirmed.**
+
+### 5.5 Compatibility reasoning and permissions
+
+- **Base game: DOOM II** per *"Game: Doom 2"*. **Confirmed.**
+- **Family / complevel: Boom / `boom` (9).** The readme says *"Advanced engine needed:
+  Boom-compatible"* and *"Tested With: DSDA-Doom 0.21.3"*; the recipe uses the Boom convention and
+  the 9 alias. **Confirmed for the family; Proposed for the exact 9, Needs Deck Validation.**
+- **Pistol starts:** *"Pistol starts are intended but I won't put a gun to your head."* The recipe
+  sets the typed `pistol_start = true` player-profile suggestion, not a launch flag. **Confirmed.**
+- **Permission:** *"Authors MAY use the contents of this file as a base for modification or reuse.
+  Permissions have been obtained from original authors for any of their resources modified or
+  included in this file. You MAY distribute this file, provided you include this text file, with no
+  modifications."* **Confirmed (quoted).** The recipe keeps `10x10/10x10.txt`.
+- **Tags:** `cacowards` = 2022 Top Ten winner. `megawad` is **not** claimed (12 map slots is under
+  30); `episode` is **not** claimed (12 is over nine); `classics` is **not** claimed (2022 is under
+  five years old).
+
+---
+
+## 6. Speed of Doom (`speed-of-doom`)
+
+### 6.1 Release identity
+
+- **Canonical page:** <https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sodfinal>,
+  filename `levels/doom2/Ports/megawads/sodfinal.zip`. **Confirmed.**
+- `SODFINAL.txt` title block: *"Title: Speed of Doom"*, *"Release date: 03/28/10"*, *"Author:
+  Joshy and Darkwave0000"*, *"Description: 33 challenging maps of a megawad"*. **Confirmed
+  (quoted).**
+- `SODINFO.txt` lists `MAP01`–`MAP30` in three chapters, `MAP31`/`MAP32` secrets and
+  *"Map33: Descent to Nowhere"*, and its introduction calls the release *"a 32 level megawad ... made
+  by two of us"*. The WAD has 33 map markers, so this is a 33-map release with 32 main maps plus
+  the MAP33 bonus. **Confirmed.**
+
+### 6.2 Archive and byte-identical mirrors
+
+| Host (allowlisted) | URL | Bytes | SHA-256 |
+| --- | --- | --- | --- |
+| `www.gamers.org` (archive master) | `https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/sodfinal.zip` | 9,261,369 | `005288821f88e25977a40d817c23dbd5784caf5fe255376d7c6f04ad16b341e0` |
+| `mirrors.lug.mtu.edu` | `https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/sodfinal.zip` | 9,261,369 | same |
+| `ftp.fu-berlin.de` | `https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/sodfinal.zip` | 9,261,369 | same |
+
+**Confirmed:** all three downloaded in full and byte-identical.
+
+### 6.3 Archive contents (ZIP, 9,261,369 bytes)
+
+| Path (case-exact) | Bytes | SHA-256 | Role |
+| --- | --- | --- | --- |
+| `SODfinal.wad` | 28,742,634 | `f985edf85ebe5ed3c8ce72efcdb2ad2e891f3c957ed5981cfd172d3937bf74cc` | maps (main) |
+| `SODFINAL.txt` | 2,504 | `93116e8ddee2312c580071fe40041b13bbdddf1f3d002e86c4f7fc817798efff` | credits/permission (keep) |
+| `SODINFO.txt` | 40,649 | `742f4815adcec3a0caf41c4ad92753888821143228f10d392a452820aa0c6063` | manual/credits (keep) |
+
+**Confirmed.** Flat layout, three Deflate entries, no symlinks, no traversal, no external patch.
+
+### 6.4 WAD inspection (read-only)
+
+`SODfinal.wad` — **PWAD**, 28,742,634 bytes, **1,028 lumps**, **33 map markers** `MAP01`–`MAP33`.
+**Confirmed.**
+
+- **Embedded `DEHACKED` lump, 3,412 bytes** with thing/frame changes; there is no external `.deh`.
+- **ZDoom `MAPINFO`, 6,487 bytes**, inert under DSDA-Doom v0.30.1 (ZDoom MAPINFO support removed in
+  v0.30.0). **No `COMPLVL` and no `UMAPINFO`.** **Confirmed.**
+- **35 `D_*` music lumps** embedded in the WAD. **Confirmed.**
+- `SODINFO.txt` records the authors' tested limits: *"Speed of Doom is designed to be BOOM
+  Compatible ... It will crash on several maps if you try to run with BOOM or MBF. Glboom or
+  Prboom-plus is recommended."* **Confirmed (quoted); Needs Deck Validation on DSDA-Doom.**
+
+### 6.5 Compatibility reasoning and permissions
+
+- **Base game: DOOM II** per *"Game: Doom 2"*. **Confirmed.**
+- **Family / complevel: Boom / `boom` (9)** from the readme's *"Boom Compatible Ports"* and the Boom
+  convention; there is no `COMPLVL` or `UMAPINFO` to override it. **Confirmed for the family;
+  Proposed for the exact 9, Needs Deck Validation.**
+- **Difficulty:** *"33 challenging maps of a megawad"* and *"Difficulty is not suited for the faint
+  of hearts"*; SODINFO recommends skill 2/3 for most doomers. **Confirmed (quoted).**
+- **Permission:** *"Authors may NOT use the contents of this file as a base for modification or
+  reuse. ... You MAY distribute this file, provided you include this text file, with no
+  modifications."* **Confirmed (quoted).** The recipe keeps `SODFINAL.txt` and `SODINFO.txt`.
+- **Tags:** `cacowards` = 2010 Top Ten winner; `megawad` = 33 maps; `classics` = 2010 release with
+  the Cacoward as lasting recognition; `challenging` = the quoted readme/SODINFO statements.
+
+---
+
+## 7. Tag evidence (R3)
+
+| Tag | Scythe II | Plutonia 2 | TNT: Revilution | Going Down: Turbo | The 10x10 Project | Speed of Doom |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cacowards` | 2005 Top Ten winner — <https://www.doomworld.com/cacowards/2005/> | 2009 Top Ten winner and Mordeth Award — <https://www.doomworld.com/cacowards/2009/> | 2017 runner-up — <https://www.doomworld.com/cacowards/2017/> | — | 2022 Top Ten winner — <https://www.doomworld.com/cacowards/2022/> | 2010 Top Ten winner — <https://www.doomworld.com/cacowards/2010/> |
+| `megawad` | 32 maps (readme + WAD) | 32 maps (readme + WAD; MAP33 is MAPINFO-only) | 32 maps (readme + WAD) | 32 maps (readme + WAD) | — (12 map slots) | 33 maps (readme + WAD) |
+| `classics` | 2005 release, Cacoward recognition | 2008 release, Cacoward recognition | 2017 release, Cacoward recognition | — (2024 release) | — (2022 release) | 2010 release, Cacoward recognition |
+| `community-projects` | — (single author) | 22 contributors in PL2INFO.TXT §6.1 | Multi-author community project, credited in TNTR.txt | — (single author) | — (single author) | — (two authors) |
+| `challenging` | Readme: "This wad is harder than the original Scythe"; "you WILL run into trouble on skill 4" | — | — | — | — | Readme: "33 challenging maps"; SODINFO: "Difficulty is not suited for the faint of hearts" |
 
 The Cacowards rows come from the archived inventory in `docs/research/cacowards.md` (2005 line for
-Scythe 2, 2009 Top Ten and Mordeth rows for Plutonia 2, 2017 runner-up row for TNT: Revilution),
-which records the exact Wayback captures it read. **Confirmed from that archived inventory;
-doomworld.com blocks automated fetches, so the live pages were not read in this session.** The
-recipes say so in their notes rather than claiming a direct live read.
+Scythe 2, 2009 Top Ten and Mordeth rows for Plutonia 2, 2017 runner-up row for TNT: Revilution, 2022
+Top Ten row for The 10x10 Project and 2010 Top Ten row for Speed of Doom), which records the exact
+Wayback captures it read. **Confirmed from that archived inventory; doomworld.com blocks automated
+fetches, so the live pages were not read in this session.** The recipes say so in their notes rather
+than claiming a direct live read. Going Down: Turbo is a 2024 edition with no Cacoward of its own,
+so it is not tagged `cacowards` by inheritance from the 2014 original.
 
 No Cacowards claim is made for gameplay quality beyond the award itself; the recipes stay
 `inspected`, not `verified`.
 
-## 5. Artwork (R4) — unavailable source, fallback documented
+## 8. Artwork (R4) — unavailable source, fallback documented
 
-No compliant in-game screenshot was obtained for the three titles, so no screenshot directory or
+No compliant in-game screenshot was obtained for the six titles, so no screenshot directory or
 `SOURCES.toml` was committed and the recipes carry no `[[screenshots]]` entries. The existing
 painted fallback art remains. Evidence of the attempts, all on 2026-10-22:
 
-- **DoomWiki direct:** `https://doomwiki.org/w/images/...` and the MediaWiki API returned
-  Cloudflare HTTP 403 ("Just a moment…"); DoomWiki blocks automated fetches. **Confirmed.**
+- **DoomWiki direct:** `https://doomwiki.org/w/images/...`, the MediaWiki API and the 10x10 page at
+  `oldid=576470` returned Cloudflare HTTP 403 ("Just a moment…"); DoomWiki blocks automated fetches.
+  **Confirmed.**
 - **Scythe II DoomWiki page via Wayback:** the archived `Scythe_2` page was fetched and parsed; it
   shows a title picture (`Scythe2_titlepic.png`) and two monster sprites (`Scythe2-marine.PNG`,
   `Scythe2-afrit.PNG`), but no in-game map view. The title picture and sprites are excluded by
@@ -354,42 +581,46 @@ painted fallback art remains. Evidence of the attempts, all on 2026-10-22:
   (`Plutonia_2_title.png`); no in-game map view. **Confirmed.**
 - **Later Wayback CDX/direct requests:** the service began returning "Internet Archive:
   Temporarily Offline" and connection resets, so the remaining map-page images could not be
-  sourced within the bounded network budget. TNT: Revilution had no reachable candidate page.
+  sourced within the bounded network budget. TNT: Revilution, Going Down: Turbo, The 10x10 Project
+  and Speed of Doom had no reachable candidate image page.
 - **Doomworld and the authors' sites:** Doomworld is Cloudflare-blocked for automation, and the
   old official `rabotik.nl/pluto2.html` returns HTTP 404. **Confirmed.**
 
 The recipes omit `[[screenshots]]`; this is recorded in `docs/reports/087-a.md` as required by
-spec 087 R4/088 R3. No image was synthesized, upscaled from a title screen or captured from a
+spec 087 R4/088 R3/089 R4. No image was synthesized, upscaled from a title screen or captured from a
 window.
 
-## 6. Verification commands and results
+## 9. Verification commands and results
 
 Run from the repository root on the macOS arm64 dev host, with
 `CARGO_TARGET_DIR=/Users/vitor/git/Doom-Deck-Launcher/target` and `CARGO_BUILD_JOBS=2`:
 
 ```sh
 /Users/vitor/git/Doom-Deck-Launcher/target/debug/ddl catalog lint \
-  catalog/scythe-ii.toml catalog/plutonia-2.toml catalog/tnt-revilution.toml
+  catalog/scythe-ii.toml catalog/plutonia-2.toml catalog/tnt-revilution.toml \
+  catalog/going-down-turbo.toml catalog/the-10x10-project.toml catalog/speed-of-doom.toml
 # Catalog lint passed (offline).
 
 /Users/vitor/git/Doom-Deck-Launcher/target/debug/ddl catalog lint --fetch \
-  catalog/scythe-ii.toml catalog/plutonia-2.toml catalog/tnt-revilution.toml
+  catalog/scythe-ii.toml catalog/plutonia-2.toml catalog/tnt-revilution.toml \
+  catalog/going-down-turbo.toml catalog/the-10x10-project.toml catalog/speed-of-doom.toml
 # Catalog lint passed (fetched packages verified).
 
 CARGO_TARGET_DIR=… CARGO_BUILD_JOBS=2 \
   cargo test -p ddl-core --test catalog_087_a -- --test-threads=2
-# 5 passed; 0 failed.
+# 6 passed; 0 failed.
 ```
 
 The integration test freezes the package and member sizes/hashes, case-exact paths, one main
-component in order, the base game and `vanilla` alias (including the resolved 2/4/4 level), the
-tag sets and the cited Cacowards year, and proves the three assigned recipes appear exactly once in
-`Catalog::embedded` with no skipped entries. Formatting and core clippy results are recorded in
-`docs/reports/087-a.md`.
+component in order, the base game and the correct alias (vanilla resolving to 2/4/4 on Doom II,
+Plutonia and TNT, and Boom resolving to 9 on the Boom releases), the tag sets and the cited
+Cacowards year where one exists, the 10x10 pistol-start suggestion, and proves the six assigned
+recipes appear exactly once in `Catalog::embedded` with no skipped entries. Formatting and core
+clippy results are recorded in `docs/reports/087-a.md`.
 
-## 7. Open questions / Deck checks
+## 10. Open questions / Deck checks
 
-- **Needs Deck Validation (all three):** IWAD selection (Doom II, Plutonia, TNT), actual complevel
+- **Needs Deck Validation (all six):** IWAD selection (Doom II, Plutonia, TNT), actual complevel
   behaviour, embedded DEHACKED application (custom monsters, level names, story text), load order,
   audio, map selection and progression.
 - **Plutonia 2:** confirm the external `PL2.DEH` is not needed on DSDA-Doom and that the embedded
@@ -399,5 +630,11 @@ tag sets and the cited Cacowards year, and proves the three assigned recipes app
   README's MAP16/MAP22 visplane risk, savegame overflow and MAP30 telefrag compatibility note.
 - **Scythe II:** confirm the embedded patch's custom monsters and that the six text episodes play
   as one continuous 32-map run without UMAPINFO.
-- **Artwork:** no in-game image is committed for any of the three titles; a later manual/owner-run
+- **Going Down: Turbo:** confirm the `COMPLVL` `boom` value is honored, the UMAPINFO map titles and
+  MAP15 secret exit work, and the author's `-nomonsters` warning does not affect normal launch.
+- **The 10x10 Project:** confirm UMAPINFO progression, the MAP11 no-exit stopper, the MAP07→MAP31
+  secret route and the embedded DEHACKED map names; check the pistol-start profile suggestion.
+- **Speed of Doom:** confirm the author's warning that the WAD crashes under BOOM/MBF does not apply
+  to DSDA-Doom, and check the inert ZDoom MAPINFO's lost episode presentation and map lag.
+- **Artwork:** no in-game image is committed for any of the six titles; a later manual/owner-run
   capture under D-024 can fill the fallback without changing the recipes.

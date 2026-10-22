@@ -1,5 +1,6 @@
-//! Spec 087 worker A and spec 088 worker A: offline identity tests for the
-//! curated Scythe II, Plutonia 2 and TNT: Revilution recipes.
+//! Spec 087/088/089 worker A: offline identity tests for the curated Scythe II,
+//! Plutonia 2, TNT: Revilution, Going Down: Turbo, The 10x10 Project and
+//! Speed of Doom recipes.
 //!
 //! Every expected byte count and SHA-256 here came from the archives inspected
 //! in `docs/research/reference-087-a.md`. The tests only read the embedded
@@ -10,7 +11,23 @@ use ddl_core::catalog::{
     VerificationStatus,
 };
 
-const ASSIGNED: [&str; 3] = ["plutonia-2", "scythe-ii", "tnt-revilution"];
+const ASSIGNED: [&str; 6] = [
+    "going-down-turbo",
+    "plutonia-2",
+    "scythe-ii",
+    "speed-of-doom",
+    "the-10x10-project",
+    "tnt-revilution",
+];
+
+fn resolved(alias: ComplevelAlias, game: Game) -> u8 {
+    match alias {
+        ComplevelAlias::Vanilla => game.vanilla_complevel(),
+        ComplevelAlias::Boom => 9,
+        ComplevelAlias::Mbf => 11,
+        ComplevelAlias::Mbf21 => 21,
+    }
+}
 
 fn recipe<'a>(catalog: &'a Catalog, id: &str) -> &'a Recipe {
     catalog
@@ -18,7 +35,7 @@ fn recipe<'a>(catalog: &'a Catalog, id: &str) -> &'a Recipe {
         .unwrap_or_else(|| panic!("{id} must be embedded"))
 }
 
-/// A1/A3 for this worker: the three assigned recipes load from the embedded
+/// A1/A3 for this worker: the six assigned recipes load from the embedded
 /// catalog with no skipped entry and no duplicate id.
 #[test]
 fn assigned_recipes_embed_without_skips() {
@@ -146,6 +163,99 @@ fn assigned_packages_and_members_keep_their_inspected_bytes() {
             ],
             member_count: 2,
         },
+        Expected {
+            id: "going-down-turbo",
+            package_size: 11_635_723,
+            package_sha256: "c3323c3eb2974ce652ed0678027bab7e601804c2ba4e21256b7971b0b1644e4a",
+            idgames_path: "levels/doom2/Ports/megawads/gdturbo.zip",
+            urls: [
+                "https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/gdturbo.zip",
+                "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/gdturbo.zip",
+                "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/gdturbo.zip",
+            ],
+            members: [
+                (
+                    "maps",
+                    "gdturbo.wad",
+                    34_893_507,
+                    "bfa2fe8d81f4cdec5ddc365eb621ed289ae0f0721b7b15ac0241b04292f62739",
+                    false,
+                ),
+                (
+                    "credits",
+                    "gdturbo.txt",
+                    3_091,
+                    "1ff1ac3b0455941c5a04f6921fce35bea982afb1fafc304e628842894d298a61",
+                    true,
+                ),
+                ("", "", 0, "", false),
+            ],
+            member_count: 2,
+        },
+        Expected {
+            id: "the-10x10-project",
+            package_size: 6_399_619,
+            package_sha256: "1435ee1d7cea48eb048ccf47545c780c0165cc98c588692d63bf7d7914925fad",
+            idgames_path: "levels/doom2/Ports/0-9/10x10.zip",
+            urls: [
+                "https://www.gamers.org/pub/idgames/levels/doom2/Ports/0-9/10x10.zip",
+                "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/0-9/10x10.zip",
+                "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/0-9/10x10.zip",
+            ],
+            members: [
+                (
+                    "maps",
+                    "10x10/10X10.wad",
+                    19_892_998,
+                    "1b5caf4d065839370877ae2f2e9382569a2a335fc14034f4c69e15fefd287d8e",
+                    false,
+                ),
+                (
+                    "credits",
+                    "10x10/10x10.txt",
+                    6_998,
+                    "7d6c6d242af62ccbe68377a03ed8a2da27a0308144b55d9f73333465631b0260",
+                    true,
+                ),
+                ("", "", 0, "", false),
+            ],
+            member_count: 2,
+        },
+        Expected {
+            id: "speed-of-doom",
+            package_size: 9_261_369,
+            package_sha256: "005288821f88e25977a40d817c23dbd5784caf5fe255376d7c6f04ad16b341e0",
+            idgames_path: "levels/doom2/Ports/megawads/sodfinal.zip",
+            urls: [
+                "https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/sodfinal.zip",
+                "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/sodfinal.zip",
+                "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/sodfinal.zip",
+            ],
+            members: [
+                (
+                    "maps",
+                    "SODfinal.wad",
+                    28_742_634,
+                    "f985edf85ebe5ed3c8ce72efcdb2ad2e891f3c957ed5981cfd172d3937bf74cc",
+                    false,
+                ),
+                (
+                    "credits",
+                    "SODFINAL.txt",
+                    2_504,
+                    "93116e8ddee2312c580071fe40041b13bbdddf1f3d002e86c4f7fc817798efff",
+                    true,
+                ),
+                (
+                    "manual",
+                    "SODINFO.txt",
+                    40_649,
+                    "742f4815adcec3a0caf41c4ad92753888821143228f10d392a452820aa0c6063",
+                    true,
+                ),
+            ],
+            member_count: 3,
+        },
     ];
 
     let catalog = Catalog::embedded();
@@ -205,12 +315,51 @@ fn assigned_packages_and_members_keep_their_inspected_bytes() {
 fn assigned_recipes_pin_base_game_and_complevel() {
     let catalog = Catalog::embedded();
     let cases = [
-        ("scythe-ii", Game::Doom2, PortFamily::LimitRemoving, 2),
-        ("plutonia-2", Game::Plutonia, PortFamily::Vanilla, 4),
-        ("tnt-revilution", Game::Tnt, PortFamily::Vanilla, 4),
+        (
+            "scythe-ii",
+            Game::Doom2,
+            PortFamily::LimitRemoving,
+            ComplevelAlias::Vanilla,
+            2,
+        ),
+        (
+            "plutonia-2",
+            Game::Plutonia,
+            PortFamily::Vanilla,
+            ComplevelAlias::Vanilla,
+            4,
+        ),
+        (
+            "tnt-revilution",
+            Game::Tnt,
+            PortFamily::Vanilla,
+            ComplevelAlias::Vanilla,
+            4,
+        ),
+        (
+            "going-down-turbo",
+            Game::Doom2,
+            PortFamily::Boom,
+            ComplevelAlias::Boom,
+            9,
+        ),
+        (
+            "the-10x10-project",
+            Game::Doom2,
+            PortFamily::Boom,
+            ComplevelAlias::Boom,
+            9,
+        ),
+        (
+            "speed-of-doom",
+            Game::Doom2,
+            PortFamily::Boom,
+            ComplevelAlias::Boom,
+            9,
+        ),
     ];
 
-    for (id, game, family, resolved_complevel) in cases {
+    for (id, game, family, alias, resolved_complevel) in cases {
         let recipe = recipe(&catalog, id);
         assert_eq!(recipe.base_game.game, game, "{id} base game");
         assert!(
@@ -220,11 +369,11 @@ fn assigned_recipes_pin_base_game_and_complevel() {
         assert_eq!(recipe.compatibility.family, family, "{id} port family");
         assert_eq!(
             recipe.compatibility.complevel,
-            Complevel::Alias(ComplevelAlias::Vanilla),
-            "{id} names DSDA-Doom's vanilla alias"
+            Complevel::Alias(alias),
+            "{id} names the correct DSDA-Doom alias"
         );
         assert_eq!(
-            game.vanilla_complevel(),
+            resolved(alias, game),
             resolved_complevel,
             "{id} resolves the alias on this IWAD"
         );
@@ -278,25 +427,33 @@ fn assigned_recipes_load_one_main_wad_in_order() {
     }
 }
 
-/// R3: tags are evidence-backed memberships with the cited Cacowards year.
+/// R3: tags are evidence-backed memberships with the cited Cacowards year
+/// where the release earned one.
 #[test]
 fn assigned_recipes_keep_their_reviewed_tags() {
     let catalog = Catalog::embedded();
-    let cases = [
+    let cases: [(&str, &[&str], Option<&str>); 6] = [
         (
             "scythe-ii",
-            ["cacowards", "challenging", "classics", "megawad"],
-            "cacowards/2005",
+            &["cacowards", "challenging", "classics", "megawad"],
+            Some("cacowards/2005"),
         ),
         (
             "plutonia-2",
-            ["cacowards", "classics", "community-projects", "megawad"],
-            "cacowards/2009",
+            &["cacowards", "classics", "community-projects", "megawad"],
+            Some("cacowards/2009"),
         ),
         (
             "tnt-revilution",
-            ["cacowards", "classics", "community-projects", "megawad"],
-            "cacowards/2017",
+            &["cacowards", "classics", "community-projects", "megawad"],
+            Some("cacowards/2017"),
+        ),
+        ("going-down-turbo", &["megawad"], None),
+        ("the-10x10-project", &["cacowards"], Some("cacowards/2022")),
+        (
+            "speed-of-doom",
+            &["cacowards", "challenging", "classics", "megawad"],
+            Some("cacowards/2010"),
         ),
     ];
 
@@ -304,16 +461,43 @@ fn assigned_recipes_keep_their_reviewed_tags() {
         let recipe = recipe(&catalog, id);
         let mut tags = recipe.tags.clone();
         tags.sort_unstable();
-        assert_eq!(tags, expected, "{id} tags");
-        assert!(
-            recipe.verification.notes.contains(year),
-            "{id} cites its Cacowards page ({year})"
+        assert_eq!(
+            tags.iter().map(String::as_str).collect::<Vec<_>>(),
+            expected,
+            "{id} tags"
         );
+        if let Some(year) = year {
+            assert!(
+                recipe.verification.notes.contains(year),
+                "{id} cites its Cacowards page ({year})"
+            );
+        } else {
+            assert!(
+                !recipe.verification.notes.contains("cacowards/"),
+                "{id} must not cite a Cacoward it did not earn"
+            );
+        }
         for tag in &recipe.tags {
             assert!(
                 catalog.tags.get(tag).is_some(),
                 "{id} uses reviewed vocabulary only"
             );
         }
+    }
+}
+
+/// R2/R3: the 10x10 author intends pistol starts, expressed as the typed
+/// player-profile suggestion rather than an arbitrary launch flag.
+#[test]
+fn the_10x10_project_suggests_pistol_starts() {
+    let catalog = Catalog::embedded();
+    let ten_by_ten = recipe(&catalog, "the-10x10-project");
+    assert_eq!(ten_by_ten.compatibility.runtime.pistol_start, Some(true));
+    for id in ASSIGNED.iter().filter(|id| **id != "the-10x10-project") {
+        assert_eq!(
+            recipe(&catalog, id).compatibility.runtime.pistol_start,
+            None,
+            "{id} has no author-stated pistol-start default"
+        );
     }
 }
