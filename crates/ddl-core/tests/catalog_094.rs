@@ -7,7 +7,7 @@ use ddl_core::catalog::{Catalog, PortFamily, Role, VerificationStatus};
 const ID: &str = "no-rest-for-the-living";
 const BFG_SHA256: &str = "2d234de8700ee403375fda278e50ea17739b36703b3316e0429b05aca4458fa9";
 
-fn recipe<'a>(catalog: &'a Catalog) -> &'a ddl_core::catalog::Recipe {
+fn recipe(catalog: &Catalog) -> &ddl_core::catalog::Recipe {
     catalog
         .recipe(ID)
         .unwrap_or_else(|| panic!("{ID} must be embedded"))

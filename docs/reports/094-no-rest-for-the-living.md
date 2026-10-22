@@ -5,9 +5,8 @@
 Implemented spec 094 worker A: added `catalog/no-rest-for-the-living.toml`, an offline evidence test
 and the source research for the player-supplied Doom II expansion. The recipe has zero packages and
 one required, default-on `user_supplied` `main` maps component; it requires Doom II and never
-downloads, bundles or redistributes `NERVE.WAD` or an IWAD. Final offline lint and embedding checks
-are intentionally pending the coordinator's signal to merge worker D's zero-package/import
-capability.
+downloads, bundles or redistributes `NERVE.WAD` or an IWAD. Final offline lint and embedding checks ran after the coordinator's capability signal and merging
+worker D's zero-package/import work.
 
 | | No Rest for the Living |
 | --- | --- |
@@ -47,19 +46,13 @@ date is 2010-05-26 (day precision) from the XBLA Doom II release date and the ar
 release page; later BFG/Classic Complete/Unity/KEX releases are variants, not the original date. The
 full source notes are in `docs/research/no-rest-for-the-living.md`.
 
-## Capability dependency (worker D)
+## Capability integration (worker D)
 
-The recipe is authored and its independent test is committed, but it cannot pass catalog lint or
-embed until D's spec 094 R3/R4 work lands:
-
-- `catalog/lint.rs` currently rejects `packages = []` even when the required main is user-supplied
-  and no download exists.
-- Setup currently renders every required component as locked/non-actionable, so the required
-  user-supplied main cannot open the controller import sheet.
-
-D owns those shared changes and the zero-network/missing-file/argv/headless journey tests. This
-worker did not edit shared model/lint/runtime/UI or shared tests. Final lint/embedding will run
-after the coordinator signals the capability merge.
+D's spec 094 R3/R4 capability is merged into the integration branch: zero-package lint now allows a
+required user-supplied main when no downloadable member exists, and Setup exposes the required
+import row without offering an off toggle. The recipe embeds and passes offline lint with the
+rebuilt `ddl`; D still owns the production import/argv/headless journey checks. This worker did not
+edit shared model/lint/runtime/UI or shared tests.
 
 ## Verification
 
@@ -67,10 +60,11 @@ Focused checks only (shared target, `CARGO_BUILD_JOBS=2`, `--test-threads=2`):
 
 | Check | Result |
 | --- | --- |
-| `cargo test -p ddl-core --test catalog_094 -- --test-threads=2` | pending D capability (recipe is skipped by the current zero-package lint) |
+| `cargo test -p ddl-core --test catalog_094 -- --test-threads=2` | 5 passed, 0 failed |
 | `cargo fmt --all --check` | clean |
-| Offline catalog lint | pending D capability; no fetch lint is applicable because there are no downloads |
-| Full workspace/Slint checks | not run here (coordinator-owned) |
+| Offline catalog lint (rebuilt `ddl`) | `Catalog lint passed (offline).` |
+| `cargo clippy -p ddl-core --all-targets -- -D warnings` | clean |
+| Full workspace/Slint checks | not run here (coordinator-owned); no fetch lint because there are no downloads |
 
 `crates/ddl-core/tests/catalog_094.rs` is the independent offline test. It pins the Doom II/variant
 model, the single required user-supplied maps component, the BFG SHA-256, the preserved filename in
