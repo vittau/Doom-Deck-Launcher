@@ -95,6 +95,15 @@ data](https://developers.google.com/search/docs/appearance/structured-data/softw
 `WebSite` structured data is the primary site-name preference Google documents on the home page
 ([site names](https://developers.google.com/search/docs/appearance/site-names)).
 
+**Known audit finding (Semrush).** Semrush reports “aggregateRating or review is required” for the
+SoftwareApplication markup. That is the same Google rich-result rule quoted above, not a schema
+validity error: the JSON-LD parses and the entity fields are accurate. The project has no genuine
+ratings or reviews, so adding either would fabricate product facts and violate spec 083 R2. The
+finding is intentionally accepted and should be marked as such in Semrush; it does not affect
+indexing. It disappears only if the owner supplies real reviews or decides to drop the
+SoftwareApplication node (keeping `WebSite`), neither of which is a repository-side change to make
+unilaterally.
+
 Generated values are serialized with `json.dumps` and then `<`, `>`, `&` are replaced with JSON
 escape sequences, so the block stays valid JSON and cannot terminate the `script` element; HTML
 attribute escaping for the rest of the page is unchanged. `test_structured_data_survives_unsafe_generated_values`
