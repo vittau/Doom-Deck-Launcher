@@ -383,7 +383,12 @@ jobs:
           field() {
             python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1]) or "")' "$1"
           }
-          for attempt in $(seq 1 48); do
+          # Spec 097: observed Pages builds of `gh-pages` took 10 min 55 s and
+          # 9 min 04 s. Poll at most 120 times with a 10 s sleep: a nominal ~20
+          # minutes of waiting plus API time, not a wall-clock deadline, bounded
+          # by each curl timeout and the 120-minute job cap. The purge and
+          # verification below run only after a successful wait.
+          for attempt in $(seq 1 120); do
             body="$(curl -fsS --max-time 20 \
               -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               -H "Accept: application/vnd.github+json" \
@@ -401,7 +406,7 @@ jobs:
             echo "Pages status for $PAGES_COMMIT: ${status:-unknown} (attempt $attempt)"
             sleep 10
           done
-          echo "::error::Pages did not build $PAGES_COMMIT within 8 minutes"
+          echo "::error::Pages did not build $PAGES_COMMIT within 20 minutes"
           exit 1
 
       - name: Purge the Cloudflare cache prefix
