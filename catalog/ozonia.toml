@@ -1,0 +1,90 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-d.md §4; gathered 2026-10-22.
+schema_version = 1
+id = "ozonia"
+title = "Ozonia"
+authors = ["Deadwing", "Lorenz0", "riderr3", "antares031", "A2Rob"]
+release = "2021-12-23"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/ozonia"
+description = "DOOM II megawad: 32 short Boom-compatible maps in three episodes, with two new enemies, a new soundtrack, graphics and an embedded DEHACKED patch."
+permission = "Authors MAY use the contents of this file as a base for modification or reuse, and state that permissions were obtained from the original authors of any modified or included resources. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
+tags = ["cacowards", "megawad"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/ozonia/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "ozonia/01.jpg"
+credit = "Deadwing"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# The bundled UMAPINFO defines three episodes, so DSDA-Doom shows the episode menu and
+# no warp is prescribed. The older ZDoom-format MAPINFO is inert under v0.30.1.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-d.md §4 and §5",
+  "Downloaded ozonia.zip from three byte-identical mirrors; 17,180,670 bytes, SHA-256 f5bbc36e…; ZIP central directory has ozonia.txt (6,595 B) and ozonia.wad (55,559,897 B)",
+  "ozonia.wad: PWAD, 1,532 lumps, thirty-two map markers MAP01–MAP32, thirty-five D_* music lumps, one embedded DEHACKED lump, one UMAPINFO lump (episode definitions) and a ZDoom-format MAPINFO; no COMPLVL lump",
+  "Authors' ozonia.txt: release 23/12/2021, DOOM2, Map01–Map32, \"containing 32 carefully designed short maps with compatibility level 9\", \"Advanced engine needed: Prboom\", two new enemies, Dehacked/BEX Patch: Yes, Music: Yes",
+  "Cacowards 2022 Top Ten, page 1: https://www.doomworld.com/cacowards/2022/best1/ (page title \"Top Ten - Page 1\"; entry \"Ozonia - @Deadwing Doom 2, Boom-compatible, 32 maps\")",
+  "Cacowards 2022 screenshot: https://web.archive.org/web/2026id_/https://static.doomworld.com/pages_media/13_ozonia.png",
+]
+notes = "Confirmed archive and member identities from downloads on www.gamers.org, mirrors.lug.mtu.edu and ftp.fu-berlin.de that return identical size and SHA-256; nothing downloaded was extracted to disk or executed. The WAD embeds its DEHACKED patch (the two new enemies, Hierophant and Hellion), all thirty-five music lumps and a UMAPINFO that DSDA-Doom v0.30.1 reads for the three-episode menu; the older ZDoom-format MAPINFO is inert (ZDoom MAPINFO support was removed in v0.30.0). No COMPLVL lump exists: complevel boom comes from the author's own \"compatibility level 9\" and \"Advanced engine needed: Prboom\" statements. Tags: cacowards = 2022 Top Ten winner, page 1; megawad = 32 maps, MAP01–MAP32. Not tagged classics: released 2021-12-23, less than five years before this review. Not tagged challenging: the author compares the difficulty to Eviternity with a deliberate learning curve in the early maps, which is not an experienced-players-only claim. No gameplay test was performed."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, new-enemy behaviour, gameplay, audio and episode/map selection.",
+  "Needs Deck Validation: the UMAPINFO three-episode menu and intermission text under DSDA-Doom v0.30.1.",
+  "The readme's map list places Penitencia at MAP32 while its credits list map 31; the recipe credits the guest mappers without asserting slot authorship.",
+  "The bundled screenshot is a 1280x960 (4:3) Cacowards image, resized to 1066x800; confirm the card crop on the Deck.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/ozonia"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/ozonia.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/ozonia.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/ozonia.zip"]
+size = 17180670
+sha256 = "f5bbc36ecf8d79652275a98a91672ee6ed6062132ac727069471a28c8f007228"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/ozonia.zip"
+
+[[packages.members]]
+id = "maps"
+path = "ozonia.wad"
+size = 55559897
+sha256 = "18c8ae66abafba79ed03d4eaa382d41af8c1d862a6906cba27d071fbe4508fb8"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "ozonia.txt"
+size = 6595
+sha256 = "fb38dcf0da17da4b25fde66a03413a6454a583b650cb3221a547237946590275"
+keep = true
+
+[[components]]
+id = "main"
+label = "Ozonia"
+description = "Main 32-map Boom megawad with its two new enemies, soundtrack, graphics and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
