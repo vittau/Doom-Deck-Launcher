@@ -15,12 +15,12 @@ tag = sys.argv[1]
 if tag not in {
     "v0.0.5-screens.1", "v0.0.6-local", "v0.0.7-deck",
     "v0.0.8-upgrade", "v0.0.9-focus", "v0.0.10-audio",
-    "v0.0.11-polish",
+    "v0.0.11-polish", "v0.0.12-catalog",
 }:
     raise SystemExit("Review the scenario against the new tag before adding it to this generator")
 # Audio preferences and their serializer first shipped in spec 067. Keep the
 # reviewed set explicit: a tag joins it only after its serializers are checked.
-AUDIO_TAGS = {"v0.0.10-audio", "v0.0.11-polish"}
+AUDIO_TAGS = {"v0.0.10-audio", "v0.0.11-polish", "v0.0.12-catalog"}
 scratch = root / ".scratch" / tag
 if not scratch.exists():
     subprocess.run(["git", "worktree", "add", "--detach", str(scratch), tag], cwd=root, check=True)

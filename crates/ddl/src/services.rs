@@ -5710,6 +5710,7 @@ mod release_state_tests {
             "v0.0.9-focus",
             "v0.0.10-audio",
             "v0.0.11-polish",
+            "v0.0.12-catalog",
         ];
         for tag in required_tags {
             assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
@@ -5856,7 +5857,10 @@ mod release_state_tests {
             if let Some(setup) = snapshot.custom.first() {
                 assert_eq!(setup.name, "My custom setup");
             }
-            let has_audio = matches!(tag, "v0.0.10-audio" | "v0.0.11-polish");
+            let has_audio = matches!(
+                tag,
+                "v0.0.10-audio" | "v0.0.11-polish" | "v0.0.12-catalog"
+            );
             assert_eq!(tree.join("config/audio.json").is_file(), has_audio, "{tag}");
             assert_eq!(
                 services.soundfonts.preferences().unwrap().choice,

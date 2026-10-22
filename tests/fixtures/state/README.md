@@ -18,6 +18,7 @@ after generation (`git worktree remove --force .scratch/<tag>`).
 | v0.0.9-focus | f452c13 | Same scenario, profile default skill 4 and DSDA baseline 4. |
 | v0.0.10-audio | d1a39cc | Profile default skill 4, DSDA baseline 5, component dependency metadata and explicit Default audio choice. |
 | v0.0.11-polish | 7772da8 | Same audio-capable scenario: profile default skill 4, DSDA baseline 5 and explicit Default audio choice; the domain/Flatpak identity work does not change state serializers. |
+| v0.0.12-catalog | 409d6c5 | Same scenario and audio choice; embedded recipe snapshots include optional `original_release` date metadata, without changing saved-state field meanings or AppState schema 2. |
 
 Each config/data state tree contains a registered engine, two IWAD folder
 references and registry entries, two installed recipe snapshots with active and
@@ -37,7 +38,7 @@ installed generations, and current-shape save. Resolver failures for absent
 synthetic content are expected and do not erase installed metadata.
 
 `config/audio.json` exists only in the reviewed audio-capable fixtures
-(`v0.0.10-audio` and `v0.0.11-polish`). Each scenario calls that tag's
+(`v0.0.10-audio`, `v0.0.11-polish` and `v0.0.12-catalog`). Each scenario calls that tag's
 production `Soundfonts::select(Choice::Default)` serializer, so the guard checks
 an explicit choice survives loading. Earlier tags predate audio preferences and
 correctly load with no explicit choice. No soundfont is installed or bundled,
