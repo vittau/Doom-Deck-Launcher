@@ -73,7 +73,7 @@ jobs:
           git -C published add --all
           while IFS= read -r path; do
             case "$path" in
-              index.html|assets/*|CNAME) ;;
+              index.html|robots.txt|sitemap.xml|404.html|assets/*|CNAME) ;;
               *) echo "::error::Unexpected publication change: $path"; exit 1 ;;
             esac
           done < <(git -C published diff --cached --name-only)
@@ -190,7 +190,11 @@ jobs:
                && cmp -s "$RUNNER_TEMP/published.flatpakref" "$GITHUB_WORKSPACE/published/${APP_ID}.flatpakref" \
                && cmp -s "$RUNNER_TEMP/published.summary" "$GITHUB_WORKSPACE/published/repo/summary" \
                && curl -fsS --max-time 20 "${SITE_BASE}/assets/style.css${query}" -o "$RUNNER_TEMP/published.style.css" \
-               && cmp -s "$RUNNER_TEMP/published.style.css" "$GITHUB_WORKSPACE/published/assets/style.css"; then
+               && cmp -s "$RUNNER_TEMP/published.style.css" "$GITHUB_WORKSPACE/published/assets/style.css" \
+               && curl -fsS --max-time 20 "${SITE_BASE}/robots.txt${query}" -o "$RUNNER_TEMP/published.robots.txt" \
+               && curl -fsS --max-time 20 "${SITE_BASE}/sitemap.xml${query}" -o "$RUNNER_TEMP/published.sitemap.xml" \
+               && cmp -s "$RUNNER_TEMP/published.robots.txt" "$GITHUB_WORKSPACE/published/robots.txt" \
+               && cmp -s "$RUNNER_TEMP/published.sitemap.xml" "$GITHUB_WORKSPACE/published/sitemap.xml"; then
               served=1
               break
             fi
