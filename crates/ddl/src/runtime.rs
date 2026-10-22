@@ -4253,6 +4253,7 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Stalled => T::ErrorStalled,
         Problem::Update => T::UpdateError,
         Problem::Catalog => T::ErrorCatalog,
+        Problem::CatalogNeedsNewer { .. } => T::ErrorCatalogNeedsNewerUnknown,
         Problem::Checksum => T::ErrorChecksum,
         Problem::UnsafeArchive => T::ErrorArchive,
         Problem::Cancelled => T::ErrorCancelled,
@@ -4271,6 +4272,11 @@ fn problem_copy(p: &Problem) -> T {
 fn problem_text(ui: &AppWindow, problem: &Problem) -> slint::SharedString {
     if let Problem::NotVisible(path) = problem {
         return value(ui, T::NotVisible, path.display());
+    }
+    // Spec 098: name the version the catalog needs, so a user on an older DDL
+    // updates the app instead of retrying a check that can never succeed.
+    if let Problem::CatalogNeedsNewer { min: Some(min) } = problem {
+        return value(ui, T::ErrorCatalogNeedsNewer, min);
     }
     match problem_detail(problem) {
         Some(detail) => value(ui, T::ErrorEngineRuntime, detail),
@@ -4879,6 +4885,38 @@ mod visual_copy_tests {
 
         // Every other problem stays a static key.
         assert!(problem_detail(&Problem::Engine).is_none());
+    }
+
+    /// Spec 098, R2: a catalog that needs a newer DDL names the version and
+    /// asks for an app update instead of the "Connect and Retry" copy.
+    #[test]
+    fn a_catalog_that_needs_a_newer_ddl_asks_for_an_app_update() {
+        if crate::headless::isolated(
+            module_path!(),
+            "a_catalog_that_needs_a_newer_ddl_asks_for_an_app_update",
+        ) {
+            return;
+        }
+        let (_window, ui) = crate::headless::setup();
+
+        let named = problem_text(
+            &ui,
+            &Problem::CatalogNeedsNewer {
+                min: Some("0.0.12".to_owned()),
+            },
+        );
+        assert!(named.contains("0.0.12"), "{named}");
+        assert!(named.to_lowercase().contains("update ddl"), "{named}");
+        assert!(!named.to_lowercase().contains("retry"), "{named}");
+
+        let unnamed = problem_text(&ui, &Problem::CatalogNeedsNewer { min: None });
+        assert!(unnamed.to_lowercase().contains("update ddl"), "{unnamed}");
+        assert!(!unnamed.to_lowercase().contains("retry"), "{unnamed}");
+
+        // The retryable failure keeps its own copy.
+        let retry = problem_text(&ui, &Problem::Catalog);
+        assert!(retry.contains("Retry"), "{retry}");
+        assert!(!retry.to_lowercase().contains("update ddl"), "{retry}");
     }
 }
 
