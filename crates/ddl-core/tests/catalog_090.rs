@@ -238,7 +238,7 @@ fn equal_and_unknown_dates_tie_deterministically() {
     assert!(compare_browsing_order(alpha, bravo) == std::cmp::Ordering::Less);
     // An unknown date sorts after any known date, even with an earlier title.
     assert!(compare_browsing_order(bravo, unknown) == std::cmp::Ordering::Less);
-    let mut sorted = vec![unknown, bravo, alpha];
+    let mut sorted = [unknown, bravo, alpha];
     sorted.sort_by(|a, b| compare_browsing_order(a, b));
     assert_eq!(
         sorted.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(),
@@ -288,7 +288,7 @@ fn partial_precision_never_claims_january_or_the_first_of_the_month() {
     ]);
     assert!(catalog.skipped.is_empty(), "{:?}", catalog.skipped);
     let by_id = |id: &str| catalog.recipe(id).unwrap();
-    let mut sorted = vec![
+    let mut sorted = [
         by_id("year"),
         by_id("december"),
         by_id("may"),
@@ -428,4 +428,100 @@ fn legacy_bundles_and_caches_missing_the_field_load_but_old_clients_are_gated() 
         cached.catalog.recipe("legacy").unwrap().original_release,
         None
     );
+}
+
+/// Spec 094 R3: a recipe with no packages is valid only when its required main
+/// component is the player-imported file itself. Every downloaded member still
+/// has to resolve to a declared package.
+fn import_only_recipe(file_id: &str, main_optional: bool, with_package_ref: bool) -> String {
+    let reference = if with_package_ref {
+        "package = \"free\"\nmember = \"maps\""
+    } else {
+        ""
+    };
+    format!(
+        r#"
+schema_version = 1
+id = "{file_id}"
+title = "Player-supplied expansion"
+authors = ["Someone"]
+release = "1.0"
+original_release = {{ year = 2010 }}
+page = "https://www.doomworld.com/idgames/levels/doom2/a"
+description = "A player-supplied expansion."
+permission = "Local player use only; no redistribution."
+[base_game]
+game = "doom2"
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+[verification]
+status = "inspected"
+tester = "test"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["fixture"]
+notes = "fixture"
+limitations = []
+[[components]]
+id = "main"
+label = "Player-supplied mapset"
+description = "The player's own file."
+optional = {main_optional}
+default = true
+position = 1
+user_supplied = true
+obtain = "Import your own copy."
+[[components.members]]
+{reference}
+role = "maps"
+"#
+    )
+}
+
+#[test]
+fn zero_packages_are_valid_only_for_a_required_player_supplied_main() {
+    let hosts = Catalog::embedded().hosts;
+    let check = |file: &str, text: &str| {
+        let recipe: ddl_core::catalog::Recipe = toml::from_str(text).expect("fixture parses");
+        validate(&recipe, Path::new(file), &hosts)
+            .into_iter()
+            .map(|violation| violation.key)
+            .collect::<Vec<String>>()
+    };
+
+    // The capability: no download package, one required imported WAD.
+    let keys = check(
+        "import-only.toml",
+        &import_only_recipe("import-only", false, false),
+    );
+    assert!(keys.is_empty(), "{keys:?}");
+
+    // Same shape with an optional main is still a missing catalog package.
+    let keys = check(
+        "optional.toml",
+        &import_only_recipe("optional", true, false),
+    );
+    assert!(keys.contains(&"packages".to_string()), "{keys:?}");
+
+    // A required imported main cannot also reference a package that is absent.
+    let keys = check(
+        "referenced.toml",
+        &import_only_recipe("referenced", false, true),
+    );
+    assert!(
+        keys.iter().any(|key| key.starts_with("components")),
+        "{keys:?}"
+    );
+
+    // The loader applies the same rule, so a download-less invalid recipe is skipped.
+    let skipped = catalog_of(&[(
+        "optional.toml",
+        &import_only_recipe("optional", true, false),
+    )]);
+    assert_eq!(skipped.recipes.len(), 0);
+    assert_eq!(skipped.skipped.len(), 1);
 }
