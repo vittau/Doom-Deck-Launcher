@@ -433,16 +433,14 @@ fn assigned_recipes_pass_offline_lint_including_images() {
         let diagnostics = lint_paths(&[path], &hosts, None);
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
     }
-    // Doom the Way id Did references two committed screenshots, so image lint ran.
+    // These assigned recipes reference committed screenshots, so image lint ran.
     assert_eq!(recipe(&catalog, "doom-the-way-id-did").screenshots.len(), 2);
-    for id in [
-        "no-end-in-sight",
-        "doom-ii-the-way-id-did",
-        "deathless",
-        "sunder",
-        "rekkr",
-    ] {
-        assert!(recipe(&catalog, id).screenshots.is_empty());
+    for id in ["no-end-in-sight", "doom-ii-the-way-id-did", "rekkr"] {
+        assert_eq!(recipe(&catalog, id).screenshots.len(), 1, "{id}");
+    }
+    // These still have none, so their lint covers the text fields only.
+    for id in ["deathless", "sunder"] {
+        assert!(recipe(&catalog, id).screenshots.is_empty(), "{id}");
     }
 }
 
