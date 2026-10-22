@@ -3,10 +3,10 @@
 # `label` is the English source string (the UI translates by id), `order` is the
 # position of the tag's category in Discover. To propose a tag, edit this file
 # in the same pull request that first uses it (see CONTRIBUTING.md).
-# Spec 073, R5: orders 10–70 are the owner's requested Discover sequence
+# Spec 073, R5: orders 10–75 are the owner's requested Discover sequence
 # (Cacowards, Megawads, Community Projects, Doomer Boards, Classics, Episodes,
-# Challenging). Featured and Beginner Friendly keep their vocabulary but sit
-# outside that sequence (80, 90); spec 072 hides them from the category strip.
+# Challenging, Gimmick). Featured and Beginner Friendly keep their vocabulary but
+# sit outside that sequence (80, 90); spec 072 hides them from the category strip.
 schema_version = 1
 
 [[tags]]
@@ -50,6 +50,12 @@ id = "challenging"
 label = "Challenging"
 description = "Aimed at experienced players."
 order = 70
+
+[[tags]]
+id = "gimmick"
+label = "Gimmick"
+description = "Mapsets organized around an unusual explicit design constraint or playful central concept."
+order = 75
 
 [[tags]]
 id = "featured"
