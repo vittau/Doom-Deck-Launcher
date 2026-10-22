@@ -5,7 +5,7 @@ title = "Speed of Doom"
 authors = ["Josh \"Joshy\" Sealy", "Darkwave0000"]
 release = "Final release, 2010-03-28"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sodfinal"
-description = "DOOM II Boom-compatible megawad: 33 challenging maps (32 main maps plus the MAP33 bonus 'Descent to Nowhere'), with a custom soundtrack, graphics and an embedded DEHACKED patch."
+description = "A 33-map DOOM II campaign of fast, challenging combat in three difficulty chapters, ranging from small speedmap-style arenas to larger set-piece maps. It includes the bonus MAP33 'Descent to Nowhere' and its own soundtrack and graphics."
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided SODFINAL.txt travels with the file, unmodified and intact; the authors state they obtained permission from the original authors of any modified or included resources. DDL downloads the unmodified archive and keeps the bundled release text and manual."
 tags = ["cacowards", "megawad", "classics", "challenging"]
 
@@ -66,7 +66,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Speed of Doom"
-description = "Main 33-map Boom megawad with its own soundtrack, graphics and embedded DEHACKED patch."
+description = "All 33 maps in one campaign, with the set's own soundtrack and graphics."
 optional = false
 default = true
 position = 1

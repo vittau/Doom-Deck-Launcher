@@ -5,7 +5,7 @@ title = "Going Down: Turbo"
 authors = ["Cyriak Harris (mouldy)"]
 release = "Second bug-fix update, archive built 2025-06-23; first released 2024-11-05"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gdturbo"
-description = "10th-anniversary special edition of Going Down: 32 rebalanced Boom maps with par times for 100% kills and an embedded DEHACKED patch."
+description = "A 32-map remaster of Going Down with faster, more forgiving combat and optional par times for 100% kills. Each map is one floor of a UAC tower descent, with the set's own soundtrack."
 permission = "Licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. Redistribution is permitted with appropriate credit, a link to the licence and an indication of changes, for non-commercial use only, and the material may not be transformed or built upon for distribution. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["megawad"]
 
@@ -59,7 +59,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Going Down: Turbo"
-description = "Main 32-map Boom special edition with its own music, UMAPINFO and embedded DEHACKED patch."
+description = "All 32 remastered maps in one campaign, with the set's own soundtrack."
 optional = false
 default = true
 position = 1

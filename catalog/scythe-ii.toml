@@ -5,7 +5,7 @@ title = "Scythe II"
 authors = ["Erik Alm"]
 release = "Version 2, 2009-07-10 (first release 2005-06-07)"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/scythe2"
-description = "DOOM II limit-removing megawad: 32 maps in six author-labelled episodes, with a custom soundtrack, sky graphics and an embedded DEHACKED patch for its custom monsters."
+description = "A 32-map DOOM II campaign in six themed chapters, moving from castles and temples to tech bases and hellish gardens. The later maps are a serious difficulty step up, and the set has its own soundtrack and graphics."
 permission = "Authors may not use the contents as a base for modification or reuse without written permission from the author. Redistribution is permitted provided scythe2.txt travels with the file, unmodified and intact, and no commercial use is made without the author's agreement. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["cacowards", "megawad", "classics", "challenging"]
 
@@ -59,7 +59,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Scythe II"
-description = "Main 32-map limit-removing megawad with its own soundtrack, graphics and embedded DEHACKED patch."
+description = "All 32 maps in one campaign, with the set's own soundtrack and graphics."
 optional = false
 default = true
 position = 1

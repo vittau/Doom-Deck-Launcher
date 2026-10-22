@@ -486,6 +486,62 @@ fn assigned_recipes_keep_their_reviewed_tags() {
     }
 }
 
+/// R3 product copy: root/component descriptions are plain English and leave the
+/// engine, patch and lump details in verification where players do not see them.
+#[test]
+fn product_copy_stays_plain_english() {
+    let catalog = Catalog::embedded();
+    let banned = [
+        "dehacked",
+        "mapinfo",
+        "complevel",
+        "umapinfo",
+        "lump",
+        "boom",
+        "vanilla",
+        "limit-removing",
+        "bex",
+    ];
+    let technical_evidence = [
+        ("scythe-ii", "dehacked"),
+        ("plutonia-2", "mapinfo"),
+        ("tnt-revilution", "vanilla"),
+        ("going-down-turbo", "umapinfo"),
+        ("the-10x10-project", "umapinfo"),
+        ("speed-of-doom", "dehacked"),
+    ];
+
+    for id in ASSIGNED {
+        let recipe = recipe(&catalog, id);
+        let mut copy = vec![recipe.description.as_str()];
+        copy.extend(recipe.components.iter().map(|c| c.description.as_str()));
+        for text in &copy {
+            assert!(!text.trim().is_empty(), "{id} copy is not empty");
+            let lower = text.to_ascii_lowercase();
+            for term in banned {
+                assert!(
+                    !lower.contains(term),
+                    "{id} product copy leaks `{term}`: {text}"
+                );
+            }
+        }
+    }
+
+    for (id, term) in technical_evidence {
+        let recipe = recipe(&catalog, id);
+        let evidence = format!(
+            "{} {}",
+            recipe.verification.notes,
+            recipe.verification.limitations.join(" ")
+        )
+        .to_ascii_lowercase();
+        assert!(
+            evidence.contains(term),
+            "{id} keeps `{term}` in verification evidence"
+        );
+    }
+}
+
 /// R2/R3: the 10x10 author intends pistol starts, expressed as the typed
 /// player-profile suggestion rather than an arbitrary launch flag.
 #[test]

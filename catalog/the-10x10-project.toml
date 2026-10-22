@@ -5,7 +5,7 @@ title = "The 10x10 Project"
 authors = ["lunchlunch"]
 release = "2022-06-15"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/0-9/10x10"
-description = "Boom-compatible DOOM II mapset: ten main maps, a secret MAP31 and a no-exit MAP11 stopper, each main map restricted to ten stock textures and ten stock flats, with custom music and graphics."
+description = "A DOOM II set with ten main maps, a secret map and a no-exit finale (twelve map slots). Each main map is built from only ten stock textures and ten stock flats, and the combat ranges from Plutonia-style to Sunder-esque."
 permission = "Authors may use the contents as a base for modification or reuse, and the author states permission was obtained from the original authors of any modified or included resources. Redistribution is permitted provided 10x10.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["cacowards"]
 
@@ -60,7 +60,7 @@ keep = true
 [[components]]
 id = "main"
 label = "The 10x10 Project"
-description = "Main 12-slot Boom mapset with its own music, graphics, UMAPINFO and embedded DEHACKED strings."
+description = "All ten main maps, the secret map and the no-exit finale, with the set's own music and graphics."
 optional = false
 default = true
 position = 1
