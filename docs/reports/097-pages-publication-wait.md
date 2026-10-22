@@ -12,16 +12,19 @@ One step in `.github/workflows/flatpak-remote.yml`, `Wait for the Pages deployme
 | --- | --- | --- |
 | Attempts | `seq 1 48` | `seq 1 120` |
 | Poll cadence | `sleep 10` | `sleep 10` (unchanged) |
-| Wait window | 8 minutes (48 × 10 s) | **20 minutes** (120 × 10 s) |
-| Expiry message | `… within 8 minutes` | `… within 20 minutes` |
+| Wait budget | 48 polls × 10 s (nominal 8 minutes) | **120 polls × 10 s (nominal ~20 minutes)** |
+| Expiry message | `… within 8 minutes` | `… within 20 minutes` (wording only; no measured deadline is claimed) |
 | Job `timeout-minutes` | 120 | 120 (**unchanged**, margin verified below) |
 
-A comment records why the window is 20 minutes and that the following gates run only after a real
-success.
+A comment records the two observed build durations, states that 120 polls at 10 seconds is a nominal
+~20-minute budget plus API time rather than a wall-clock deadline, names what else bounds it (each
+request's `curl --max-time` and the 120-minute job cap), and says that the following gates run only
+after a successful wait.
 
 ## Observed evidence for 20 minutes
 
-`gh-pages` carries the whole signed Flatpak repository, so its Pages builds are slow:
+The two durations observed during the `v0.0.12-catalog` publication (`gh-pages` carries the whole
+signed Flatpak repository):
 
 | Pages build | Run | Created | Built | Duration |
 | --- | --- | --- | --- | --- |
@@ -29,15 +32,18 @@ success.
 | `bf7655cd` | `39798321701` (retry) | 14:51:12Z | 15:00:16Z | **9 min 04 s** |
 
 Both runs published correctly and then failed with `Pages did not build … within 8 minutes`, so
-`Purge the Cloudflare cache prefix` and `Verify the published files` were skipped in both. Twenty
-minutes is more than double the slowest observed build and still finite.
+`Purge the Cloudflare cache prefix` and `Verify the published files` were skipped in both. 120 polls
+at the existing 10-second cadence is a nominal ~20 minutes of waiting — above both observed builds —
+plus API time; the count stays finite, and each request is capped by `curl --max-time 20` while the
+whole job is capped by `timeout-minutes: 120`.
 
 ## Job budget
 
 Attempt 1's job ran **16 min 24 s** in total: `Install Flatpak tooling` 1 min 50 s, `Build the tagged
-tree` 4 min 33 s, and the 8 min 17 s wait that failed. Replacing that wait with a 20-minute maximum
-gives a worst case of roughly **28 minutes**, comfortably inside the existing
-`timeout-minutes: 120`. The job limit therefore needs no change, and none was made.
+tree` 4 min 33 s, and the 8 min 17 s wait that failed. Swapping that wait for the nominal ~20-minute
+budget puts the worst case at roughly **28 minutes** of waiting and steps, comfortably inside the
+existing `timeout-minutes: 120`. The job limit therefore needs no change, and none was made; the
+per-request `curl --max-time 20` bounds each poll on top of the attempt count.
 
 ## Gates that are unchanged
 

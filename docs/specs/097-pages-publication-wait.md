@@ -8,12 +8,13 @@ input required.
 ## Goal
 
 The signed Flatpak publication completes its own cache purge and canonical-file verification on
-every release, instead of skipping them because a Pages build takes longer than the workflow waits.
+every release, instead of skipping them when the Pages build outlasts the workflow's wait (observed
+on `v0.0.12-catalog`, `.scratch/catalog-publication-verification.md`).
 
 ## Observed evidence (why this exists)
 
-The `gh-pages` branch carries the whole signed Flatpak repository, so GitHub Pages builds of it are
-slow and variable:
+`gh-pages` carries the whole signed Flatpak repository. Its Pages builds have been slow and
+variable; these are the two durations observed during the `v0.0.12-catalog` publication:
 
 | Pages build | Created | Finished | Duration |
 | --- | --- | --- | --- |
@@ -28,17 +29,20 @@ about the wait window, not about content.
 
 ## Requirements
 
-- **R1 — Bounded wait.** Raise the wait window in `Wait for the Pages deployment`
-  (`.github/workflows/flatpak-remote.yml`) from 8 to **20 minutes**, leaving more than double the
-  slowest observed build. Keep it finite and bounded: a fixed attempt count, not an open-ended loop.
+- **R1 — Bounded wait.** Raise the wait in `Wait for the Pages deployment`
+  (`.github/workflows/flatpak-remote.yml`) from 48 to **120 polls** at the existing 10-second
+  cadence: a nominal ~20 minutes of waiting, above both observed builds (10 min 55 s and 9 min 04 s),
+  plus API time. Keep it finite and bounded: a fixed attempt count, not an open-ended loop and not a
+  measured wall-clock deadline.
 - **R2 — Behaviour preserved.** Do not change the polling cadence, the exact
   `commit == PAGES_COMMIT` and `status == "built"` success match, the immediate failure on
   `status == "errored"` for this commit, the trailing `::error::` + non-zero exit when the window
   expires, the Cloudflare prefix purge, or the canonical-file verification that follows it. No purge
   scope may be broadened and no verification weakened.
 - **R3 — Job budget.** Confirm the job's `timeout-minutes` still leaves margin for the longer wait
-  plus the build, signing, smoke test and verification steps; change it only if the margin is
-  insufficient.
+  plus the build, signing, smoke test and verification steps, and say what bounds the wait besides
+  the attempt count (each request's `curl --max-time`, and the job cap); change it only if the margin
+  is insufficient.
 - **R4 — Evidence.** Record the change and the observed 9–11-minute builds in the worker report,
   name the validation performed, and state explicitly that the 20-minute path itself can only be
   proven by a real publication run from the reviewed branch (coordinator, with `ref`
@@ -54,8 +58,9 @@ reversible timer adjustment; it needs no implementation-mirroring unit test and 
 
 ## Acceptance
 
-1. The workflow waits up to 20 minutes for the exact expected commit, with the same cadence, the same
-   success condition, the same immediate failure on an errored build and the same error message form.
+1. The workflow polls at most 120 times at the same 10-second cadence for the exact expected commit,
+   with the same success condition, the same immediate failure on an errored build and the same error
+   message form.
 2. `Purge the Cloudflare cache prefix` and `Verify the published files` remain in place, unchanged in
    scope, and still run only after a successful wait.
 3. The job `timeout-minutes` provably leaves margin for the longer wait.

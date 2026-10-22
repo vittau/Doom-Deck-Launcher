@@ -383,11 +383,11 @@ jobs:
           field() {
             python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1]) or "")' "$1"
           }
-          # Spec 097: `gh-pages` carries the whole signed Flatpak repository, so
-          # its Pages builds take 9-11 minutes (10 min 55 s and 9 min 04 s
-          # observed for v0.0.12-catalog). 120 attempts x 10 s = 20 minutes
-          # leaves more than double the slowest build while staying finite; the
-          # purge and canonical-file verification below run only after success.
+          # Spec 097: observed Pages builds of `gh-pages` took 10 min 55 s and
+          # 9 min 04 s. Poll at most 120 times with a 10 s sleep: a nominal ~20
+          # minutes of waiting plus API time, not a wall-clock deadline, bounded
+          # by each curl timeout and the 120-minute job cap. The purge and
+          # verification below run only after a successful wait.
           for attempt in $(seq 1 120); do
             body="$(curl -fsS --max-time 20 \
               -H "Authorization: Bearer ${GITHUB_TOKEN}" \
