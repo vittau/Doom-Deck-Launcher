@@ -4,6 +4,8 @@ id = "spaceballs-the-quest-for-more-dbp-maps"
 title = "Spaceballs: The Quest For More DBP Maps (Doomer Boards Project 24)"
 authors = ["Doomer Boards Project 24"]
 release = "2020-05-31"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2020, month = 5, day = 31 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp24_sb"
 description = "DOOM II: MAP01–MAP10 (10 maps). Screening now in reputable forums near you. Grab your popcorn and helmets and play it soon!."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."

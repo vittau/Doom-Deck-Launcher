@@ -17,6 +17,8 @@ authors = [
   "Ola \"ukiro\" Björling",
 ]
 release = "Final version (v1.0), 2019-02-10"
+# First public release (spec 090): reference-eviternity.md §1, release-thread opening post 2018-12-10 (pinned final v1.0 2019-02-10).
+original_release = { year = 2018, month = 12, day = 10 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity"
 description = "DOOM II megawad: 32 maps (six 5-map chapters plus two secret maps), MBF format with bundled OTEX textures, MIDI music and an embedded DEHACKED patch."
 permission = "Licensed CC BY-NC-ND 4.0. DDL downloads the unmodified archive from its canonical /idgames source; no modification, repackaging or commercial use, and the bundled credits and changelog are kept intact and unedited. See the kept text members for the full terms and resource credits."

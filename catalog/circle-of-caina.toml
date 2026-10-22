@@ -4,6 +4,8 @@ id = "circle-of-caina"
 title = "Circle of Caina (Doomer Boards Project 2)"
 authors = ["Doomer Boards Project 2"]
 release = "2018-04-30"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2018, month = 4, day = 30 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_02"
 description = "DOOM II: MAP01–MAP08 (8 maps). Embark on a mysterious journey through the icy wilderness in search of a coveted relic, facing danger at every turn."
 permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."

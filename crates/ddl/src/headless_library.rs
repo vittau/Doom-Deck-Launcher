@@ -176,7 +176,16 @@ fn library_owner_scene_renders() {
     r.sync(&ui);
     assert_eq!(ui.get_scroll_offset(), 0.);
     write_png("061-library-top.png", &capture());
-    for (name, focus) in [("row-two", 13), ("row-three", 16)] {
+    // Spec 090 R2: the grid is in release order, so pick the first card of the
+    // second and third displayed rows by position, not by a fixed snapshot id.
+    let displayed: Vec<i32> = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.kind == 1 && n.actionable && n.w >= 380.)
+        .map(|n| n.id)
+        .collect();
+    for (name, index) in [("row-two", 3usize), ("row-three", 6usize)] {
+        let focus = displayed[index];
         r.focus = focus;
         r.sync(&ui);
         let node = ui.get_nodes().iter().find(|n| n.id == focus).unwrap();

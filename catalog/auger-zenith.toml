@@ -4,6 +4,8 @@ id = "auger-zenith"
 title = "AUGER;ZENITH (Doomer Boards Project 37)"
 authors = ["Doomer Boards Project 37"]
 release = "2021-07-26"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2021, month = 7, day = 26 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/dbp37_augzen"
 description = "DOOM II: MAP01–MAP22 (21 levels and a credits map). Optional blaster replacements."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."

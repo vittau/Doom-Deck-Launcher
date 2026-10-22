@@ -4,6 +4,8 @@ id = "legend-of-the-hidden-tech"
 title = "Legend of the Hidden Tech (Doomer Boards Project 9)"
 authors = ["Doomer Boards Project 9"]
 release = "2019-03-03"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2019, month = 3, day = 3 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_09"
 description = "DOOM II: MAP01–MAP09 (9 maps). Who knew those 'accidental' injuries weren't part of the prize package on this violent game show?."
 permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."

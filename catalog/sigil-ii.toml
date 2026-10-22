@@ -4,6 +4,8 @@ id = "sigil-ii"
 title = "SIGIL II"
 authors = ["John Romero", "James Paddock (MIDI soundtrack)"]
 release = "1.0"
+# First public release (spec 090): reference-sigil.md SIGIL II §1 (v1.0, 2023-12-10).
+original_release = { year = 2023, month = 12, day = 10 }
 page = "https://romero.com/sigil"
 description = "Episode 6 for DOOM with a free MIDI soundtrack by James Paddock."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."

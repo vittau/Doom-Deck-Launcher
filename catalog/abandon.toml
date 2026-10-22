@@ -4,6 +4,8 @@ id = "abandon"
 title = "Abandon"
 authors = ["Bemused", "Benjogami", "Scotty"]
 release = "2023-05-07 update (original 2020 release)"
+# First public release (spec 090): the 2020 Cacowards Top Ten page 1 covers the original 2020 release; the pinned 2023 archive text is a later update, and no day is evidenced. See docs/research/catalog-release-dates.md.
+original_release = { year = 2020 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/abandon"
 description = "DOOM II: 17 Boom-compatible slaughter maps (MAP01–MAP17) in sombre, oppressive settings, plus a short closing map; aimed at experienced players."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse; permissions were obtained from the original authors of any resources modified or included. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."

@@ -4,6 +4,8 @@ id = "xenomorph-base"
 title = "Xenomorph Base (Doomer Boards Project 4)"
 authors = ["Doomer Boards Project 4"]
 release = "2018-07-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2018, month = 7, day = 1 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp_04"
 description = "DOOM II: MAP01–MAP08 (6 maps). Unearthly horrors from the likes of HR Giger lurk meanacingly beneath the surface of the xenomorph home planet..."
 permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."

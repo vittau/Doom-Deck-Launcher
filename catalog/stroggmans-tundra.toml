@@ -4,6 +4,8 @@ id = "stroggmans-tundra"
 title = "Stroggman's Tundra (Doomer Boards Project 35)"
 authors = ["Doomer Boards Project 35"]
 release = "2021-05-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2021, month = 5, day = 1 }
 page = "https://dsdarchive.com/wads/dbp_35"
 description = "DOOM II: MAP01–MAP10 (10 maps). Beware: this military stronghold in the icy tundra is armed to the teeth and ready for bloodshed."
 permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."

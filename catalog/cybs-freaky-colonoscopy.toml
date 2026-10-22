@@ -4,6 +4,8 @@ id = "cybs-freaky-colonoscopy"
 title = "Cyb's Freaky Colonoscopy (Doomer Boards Project 16)"
 authors = ["Doomer Boards Project 16"]
 release = "2019-10-05"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2019, month = 10, day = 5 }
 page = "https://dsdarchive.com/wads/dbp16_v0_99a"
 description = "DOOM II: MAP01–MAP12 (12 maps). Did you know that Ass Demons are one of the leading causes of death for cybernetically enhanced demons over 3,000 eons of age?."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

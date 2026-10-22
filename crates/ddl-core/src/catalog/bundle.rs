@@ -49,9 +49,15 @@ pub const BUNDLE_SCHEMA: u32 = 1;
 ///
 /// Raised from `0.0.4` to `0.0.11` for spec 077, R6: the catalog now holds 92
 /// recipes, and clients before 0.0.11 only accept card ids `10..=99`, so the
-/// global list's last cards would be unreachable for them. Future recipe-only
-/// updates keep `0.0.11` until they genuinely need a new client capability.
-pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.11";
+/// global list's last cards would be unreachable for them.
+///
+/// Raised from `0.0.11` to `0.0.12` for spec 090, R3/R4: every dated recipe now
+/// carries the optional `original_release` table. A pre-0.0.12 reader refuses
+/// unknown recipe fields, so it would drop those recipes one by one and show a
+/// silently reduced catalog; the bundle gate must refuse the whole document
+/// instead, leaving that client on its embedded or cached catalog. This is an
+/// actual capability change (D-038), not a version-follow-Cargo bump.
+pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.12";
 
 /// Largest bundle DDL accepts, matching spec 019 R3's ≤ 2 MiB bound.
 pub const MAX_BUNDLE_BYTES: u64 = 2 * 1024 * 1024;
@@ -830,28 +836,29 @@ limitations = []
         assert!(load_cache(dir.path()).is_none());
     }
 
-    /// Spec 077, R6: the published catalog's stable minimum client is the
-    /// 0.0.11 release that can reach every card of a 92-recipe list; an older
-    /// client rejects the bundle offline instead of showing an unreachable tail.
+    /// Spec 090, R3/R4: the published catalog's stable minimum client is the
+    /// 0.0.12 release that understands the optional `original_release` field. A
+    /// pre-0.0.12 client refuses the bundle whole instead of dropping every dated
+    /// recipe through its `deny_unknown_fields` reader.
     #[test]
-    fn the_stable_minimum_client_is_the_card_reachability_release() {
-        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.11");
+    fn the_stable_minimum_client_is_the_release_date_capability_release() {
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.12");
         let bundle = bundle_with(
             900,
             DEFAULT_MIN_DDL_VERSION,
             &[("good.toml", &recipe("good", "www.gamers.org"))],
         );
         assert_eq!(
-            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.10").unwrap_err(),
+            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.11").unwrap_err(),
             BundleRejection::TooNew {
-                min: "0.0.11".into(),
-                running: "0.0.10".into(),
+                min: "0.0.12".into(),
+                running: "0.0.11".into(),
             },
-            "an older client is refused whole, offline"
+            "the release that cannot parse `original_release` is refused whole, offline"
         );
         assert!(
-            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.11").is_ok(),
-            "the reachability release accepts it"
+            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.12").is_ok(),
+            "the release-date release accepts it"
         );
         // A later recipe-only bundle keeps the same stable minimum.
         let later = bundle_with(
@@ -859,7 +866,7 @@ limitations = []
             DEFAULT_MIN_DDL_VERSION,
             &[("good.toml", &recipe("good", "www.gamers.org"))],
         );
-        assert_eq!(later.min_ddl_version, "0.0.11");
+        assert_eq!(later.min_ddl_version, "0.0.12");
     }
 
     #[test]
@@ -900,9 +907,10 @@ limitations = []
         // Spec 019 review fix: the minimum is a deliberate constant, not the
         // building binary's version, so a Cargo.toml bump cannot make installed
         // DDLs reject every published bundle.
-        // Spec 077, R6 raised it to 0.0.11 for the card-reachability fix; it
-        // stays a deliberate constant, not the building binary's version.
-        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.11");
+        // Spec 077, R6 raised it to 0.0.11 for the card-reachability fix and
+        // spec 090, R4 to 0.0.12 for the `original_release` capability; it stays
+        // a deliberate constant, not the building binary's version.
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.12");
         assert!(semver::Version::parse(DEFAULT_MIN_DDL_VERSION).is_ok());
         let bundle = bundle_with(
             200,
@@ -966,8 +974,10 @@ limitations = []
         // The mechanism that applies is the per-recipe drop, not the bundle gate: a
         // v0.0.6 client still passes `min_ddl_version`.
         assert!(accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.6").is_ok());
-        let current = accept_bundle(&bundle, HOSTS_EMBEDDED, 100, env!("CARGO_PKG_VERSION"))
-            .expect("accepted");
+        // The reader that introduced `original_release` (spec 090's 0.0.12 gate)
+        // keeps every recipe; `env!("CARGO_PKG_VERSION")` may still be 0.0.11 in
+        // this branch, so name the capability release explicitly.
+        let current = accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.12").expect("accepted");
         assert_eq!(current.dropped(), &[], "today's reader keeps every recipe");
         assert_eq!(current.catalog.recipes.len(), recipes.len());
     }

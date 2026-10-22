@@ -4,6 +4,8 @@ id = "zeppelin-armada"
 title = "Zeppelin Armada (Doomer Boards Project 59)"
 authors = ["Doomer Boards Project 59"]
 release = "2023-07-03"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2023, month = 7, day = 3 }
 page = "https://doomer.boards.net/thread/3272/zeppelin-armada"
 description = "DOOM II: MAP01–MAP18 (18 maps). Play as Dexter Hornbuckle on his steampunk time travelling adventure."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

@@ -4,6 +4,8 @@ id = "wretched-morrow"
 title = "Wretched Morrow (Doomer Boards Project 72)"
 authors = ["Doomer Boards Project 72"]
 release = "2025-04-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2025, month = 4, day = 1 }
 page = "https://doomer.boards.net/thread/3931/wretched-morrow"
 description = "DOOM II: MAP01–MAP07 (7 maps). The demons have taken refuge in derelict castles built over a toxic swamp."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

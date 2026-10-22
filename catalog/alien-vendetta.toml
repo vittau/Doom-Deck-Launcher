@@ -18,6 +18,8 @@ authors = [
   "Lee Szymanski",
 ]
 release = "Compet-N edition (second release), 2002-12-24"
+# First public release (spec 090): reference-alien-vendetta.md §1 (2001-12-24; the pinned archive is the 2002 Compet-N edition).
+original_release = { year = 2001, month = 12, day = 24 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/av"
 description = "DOOM II megawad: 32 vanilla-format maps by a team of authors, with an external DEHACKED patch that supplies the intermission level names and story text."
 permission = "Authors may not use the levels as a base for new levels, and the AV-specific graphics may not be reused. Redistribution is permitted provided AV.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits and changelog files."

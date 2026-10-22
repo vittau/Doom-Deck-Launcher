@@ -12,6 +12,10 @@ struct StoredRecipe {
     title: String,
     authors: Vec<String>,
     release: String,
+    /// Spec 090: optional first-public-release date. Old machine-written copies
+    /// omit it (unknown); current copies carry it and must read back unchanged.
+    #[serde(default)]
+    original_release: Option<ReleaseDate>,
     page: String,
     description: String,
     permission: String,
@@ -64,6 +68,7 @@ impl From<StoredRecipe> for Recipe {
             title: old.title,
             authors: old.authors,
             release: old.release,
+            original_release: old.original_release,
             page: old.page,
             description: old.description,
             permission: old.permission,

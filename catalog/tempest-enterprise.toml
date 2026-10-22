@@ -4,6 +4,8 @@ id = "tempest-enterprise"
 title = "Tempest Enterprise (Doomer Boards Project 61)"
 authors = ["Doomer Boards Project 61"]
 release = "2023-09-02"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2023, month = 9, day = 2 }
 page = "https://doomer.boards.net/thread/3330/tempest-enterprise"
 description = "DOOM II: MAP01–MAP14 (14 maps). A rapidly reproducing organism is devouring an orbital sattelite."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

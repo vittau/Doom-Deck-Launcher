@@ -27,6 +27,8 @@ authors = [
   "David P. Shaw (music)",
 ]
 release = "1996-07-27"
+# First public release (spec 090): reference-memento-mori.md §1 (1996-07-27).
+original_release = { year = 1996, month = 7, day = 27 }
 page = "https://www.doomworld.com/idgames/themes/mm/mm2"
 description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) by 23 authors with new graphics, plus Mark Klem and David Shaw's original MIDI soundtrack loaded after the maps."
 permission = "Released free to everyone. Commercial distribution (putting MM2 on a CD and selling it) requires the crew's written permission first. The songs in MM2MUS.WAD are original compositions and may not be extracted or reproduced without the two composers' consent. DDL downloads the unmodified archive and keeps the bundled readme and credits; the DOS MM2.BAT launcher is never extracted or executed."

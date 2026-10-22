@@ -4,6 +4,8 @@ id = "uac-ultra"
 title = "UAC Ultra"
 authors = ["40oz", "Super Jamie"]
 release = "v1.2 (2010-03-29)"
+# First public release (spec 090): uacultra.txt; docs/research/reference-087-d.md §1.
+original_release = { year = 2010, month = 3, day = 29 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/uacultra"
 description = "DOOM II: an 11½-map Boom-compatible campaign (MAP01–MAP12) through a besieged underground UAC installation on Mars, with new textures, a new monster and new music."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse, and state that permissions were obtained from the original authors of any modified or included resources. You MAY distribute this file provided you include this text file with no modifications, in any electronic format, as long as the file is intact. DDL downloads the unmodified archive and keeps the bundled text."

@@ -26,6 +26,8 @@ authors = [
   "Mark Klem",
 ]
 release = "Updated version, February 1996 (idgames file dated 1996-02-21; first release 1995-12-10)"
+# First public release (spec 090): reference-memento-mori.md §1 (1995-12-10; the pinned archive is the February 1996 update).
+original_release = { year = 1995, month = 12, day = 10 }
 page = "https://www.doomworld.com/idgames/themes/mm/mm_allup"
 description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) built for co-op by 21 authors, with Mark Klem's original MIDI soundtrack loaded after the maps."
 permission = "Authors may not use these levels as a base without contacting the original author of each map, and the set is not to be split. Redistribution is permitted provided MM.TXT travels with the file, unmodified and intact; commercial use requires the crew's agreement, and the text also excludes Microsoft Network from redistributing it. DDL downloads the unmodified archive and keeps the bundled texts."

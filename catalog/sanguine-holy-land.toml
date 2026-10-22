@@ -4,6 +4,8 @@ id = "sanguine-holy-land"
 title = "Sanguine Holy Land (Doomer Boards Project 65)"
 authors = ["Doomer Boards Project 65"]
 release = "2024-04-13"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2024, month = 4, day = 13 }
 page = "https://doomer.boards.net/thread/3531/dbp65-sanguine-holy-land"
 description = "DOOM II: MAP01–MAP14 (14 maps). Enter the dark, gothic fortresses, shadowed under the dim red light of the sky."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

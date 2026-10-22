@@ -4,6 +4,8 @@ id = "back-to-saturn-x-e2"
 title = "Back to Saturn X E2: Tower in the Fountain of Sparks"
 authors = ["Sarah \"Esselfortium\" Mancuso (project lead)", "Back to Saturn X team"]
 release = "1.0.1 (2020-08-13)"
+# First public release (spec 090): 2014 Cacowards Top Ten for the original public release; the pinned 1.0.1 archive is dated 2020-08-13 and the exact first day is not evidenced (docs/research/catalog-release-dates.md).
+original_release = { year = 2014 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e2"
 description = "DOOM II: vanilla-compatible Episode 2 (map slots MAP01–MAP27 and MAP31) with a custom texture set and MIDI music; the release splits its content across two WADs that must be loaded together, and bundles a MAP20 patch for old ports."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."
