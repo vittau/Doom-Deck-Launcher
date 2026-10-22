@@ -4,8 +4,8 @@ id = "sigil"
 title = "SIGIL"
 authors = ["John Romero"]
 release = "1.23"
-# First public release (spec 090): reference-sigil.md §1 version history (1.0, first free release 2019-05-01).
-original_release = { year = 2019, month = 5, day = 1 }
+# First public release (spec 090): B's audit 42ebdc5: Romero's blog 'I uploaded the free version on May 31, 2019'; 2019-05-01 is an internal readme date.
+original_release = { year = 2019, month = 5, day = 31 }
 page = "https://romero.com/sigil"
 description = "Episode 5 for DOOM with the free MIDI soundtrack, an optional paid Buckethead soundtrack, and a COMPAT edition for older ports. DSDA-Doom plays the normal Episode 5 maps directly."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified. See kept credits/readme members for full terms and resource credits."

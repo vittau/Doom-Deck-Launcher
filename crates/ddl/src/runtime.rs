@@ -263,6 +263,38 @@ impl Runtime {
     fn item(&self) -> Option<&Item> {
         self.snapshot.as_ref()?.items.get(self.selected)
     }
+    /// Adopts a fresh snapshot while keeping the selected mapset and card focus
+    /// by recipe identity (spec 090 R5). A catalog insertion, reorder or update
+    /// must not silently move the user to a different mapset; when the selected
+    /// recipe disappeared, the selection clamps to a valid neighbour.
+    fn replace_snapshot(&mut self, snapshot: Snapshot) {
+        let selected_id = self
+            .snapshot
+            .as_ref()
+            .and_then(|old| old.items.get(self.selected))
+            .map(|item| item.recipe.id.clone());
+        let card_focus = matches!(self.screen, Screen::Discover | Screen::Library)
+            && (CARD..=CARD_LAST).contains(&self.focus);
+        self.snapshot = Some(snapshot);
+        let Some(snapshot) = self.snapshot.as_ref() else {
+            return;
+        };
+        if snapshot.items.is_empty() {
+            self.selected = 0;
+            return;
+        }
+        let Some(id) = selected_id else {
+            return;
+        };
+        self.selected = snapshot
+            .items
+            .iter()
+            .position(|item| item.recipe.id == id)
+            .unwrap_or_else(|| self.selected.min(snapshot.items.len() - 1));
+        if card_focus {
+            self.focus = CARD + self.selected as i32;
+        }
+    }
     fn root(&self) -> bool {
         matches!(
             self.screen,
@@ -487,7 +519,7 @@ impl Runtime {
                     match result {
                         Ok(snapshot) => {
                             if let Some(snapshot) = snapshot {
-                                self.snapshot = Some(*snapshot);
+                                self.replace_snapshot(*snapshot);
                                 self.unreadable.clear();
                                 self.recovery_attempts = 0;
                                 self.local_finished(ui, &command);
@@ -581,10 +613,38 @@ impl Runtime {
                                     self.screen = self.return_to.0;
                                     self.focus = self.return_to.1;
                                 }
-                                Some(Command::Import(..)) => {
+                                Some(Command::Import(id, component, _)) => {
                                     self.screen = Screen::Setup;
                                     self.focus = 50;
                                     self.history.pop();
+                                    // Spec 094 R4: an unrecognized import is
+                                    // usable but must be reported honestly.
+                                    let unrecognized = self
+                                        .snapshot
+                                        .as_ref()
+                                        .and_then(|snapshot| {
+                                            snapshot.items.iter().find(|item| item.recipe.id == id)
+                                        })
+                                        .is_some_and(|item| {
+                                            let known = item
+                                                .recipe
+                                                .components
+                                                .iter()
+                                                .find(|candidate| candidate.id == component)
+                                                .map(|candidate| candidate.known_sha256.as_slice())
+                                                .unwrap_or(&[]);
+                                            item.manifest
+                                                .as_ref()
+                                                .and_then(|manifest| {
+                                                    manifest.find_imported(&component)
+                                                })
+                                                .is_some_and(|member| {
+                                                    !known.iter().any(|hash| hash == &member.sha256)
+                                                })
+                                        });
+                                    if unrecognized {
+                                        ui.invoke_show_toast(text(ui, T::UnknownFile));
+                                    }
                                 }
                                 Some(Command::Uninstall(id, _)) => {
                                     ui.invoke_show_toast(value(ui, T::Uninstalled, &id));
@@ -2714,10 +2774,23 @@ impl Runtime {
                             // the file; every other required row stays locked.
                             let actionable = c.optional || c.user_supplied;
                             let detail = if c.user_supplied {
-                                if imported {
+                                if !imported {
+                                    text(ui, T::NotProvided)
+                                } else if !c.optional {
+                                    // A required imported main always reports its
+                                    // imported state; it has no off switch.
                                     text(ui, T::On)
                                 } else {
-                                    text(ui, T::NotProvided)
+                                    // An optional import follows the profile: a
+                                    // disabled file shows Off, not unconditional On.
+                                    text(
+                                        ui,
+                                        if item.profile.components.contains(&c.id) {
+                                            T::On
+                                        } else {
+                                            T::Off
+                                        },
+                                    )
                                 }
                             } else if !c.optional {
                                 text(ui, T::Locked)
@@ -4066,7 +4139,6 @@ fn problem_copy(p: &Problem) -> T {
         Problem::Engine => T::ErrorEngine,
         Problem::Config => T::ErrorConfig,
         Problem::Audio => T::ErrorAudio,
-        Problem::UnknownFile => T::UnknownFile,
         Problem::Launch => T::ErrorLaunch,
         Problem::Busy => T::ErrorBusy,
         Problem::EngineRuntime(_) => T::ErrorEngineRuntime,
@@ -5311,5 +5383,44 @@ mod startup_and_pistol_tests {
 
         // Another profile's row is never touched.
         assert_eq!(runtime.patch_pistol_value("other", true), None);
+    }
+    /// Spec 090 R5: a fresh snapshot keeps the selected mapset and the Discover
+    /// card focus by recipe identity, even when the catalog inserted or
+    /// reordered recipes (Event::Finished overwrites the previous snapshot).
+    #[test]
+    fn a_fresh_snapshot_remaps_selection_and_card_focus_by_recipe_id() {
+        let mut runtime = Runtime::new(test_environment());
+        let mut first = snapshot_with_sigil(false);
+        let scythe = Catalog::embedded()
+            .recipe("scythe")
+            .expect("scythe")
+            .clone();
+        let mut other = first.items[0].clone();
+        other.recipe = scythe;
+        other.profile = Profile::new("scythe-default", "Default", "scythe");
+        first.items.push(other);
+        runtime.snapshot = Some(first);
+        runtime.screen = Screen::Discover;
+        runtime.selected = 1;
+        runtime.focus = CARD + 1;
+
+        // A new snapshot puts scythe first (the catalog gained a newer/older
+        // entry or the order changed): the selection must follow the recipe.
+        let mut second = runtime.snapshot.clone().unwrap();
+        second.items.reverse();
+        runtime.replace_snapshot(second);
+        assert_eq!(
+            runtime.snapshot.as_ref().unwrap().items[0].recipe.id,
+            "scythe"
+        );
+        assert_eq!(runtime.selected, 0, "selected mapset follows its id");
+        assert_eq!(runtime.focus, CARD, "card focus follows the same card");
+
+        // If the selected recipe disappears, the index clamps to a valid one.
+        let mut third = runtime.snapshot.clone().unwrap();
+        third.items.remove(0);
+        runtime.replace_snapshot(third);
+        assert!(runtime.selected < runtime.snapshot.as_ref().unwrap().items.len());
+        assert_eq!(runtime.focus, CARD + runtime.selected as i32);
     }
 }

@@ -59,14 +59,14 @@ The comment above each recipe field carries the same source in short form.
 | `alien-vendetta` | 2001-12-24 | day | reference-alien-vendetta.md §1 (2001-12-24; the pinned archive is the 2002 Compet-N edition). |
 | `alone` | 2019-10-31 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `ancient-aliens` | 2016-05-08 | day | reference-ancient-aliens.md §1 (v1, 2016-05-08; the pinned archive is v1.2). |
-| `antaresian-reliquary` | 2020-08-24 | day | reference-antaresian-reliquary.md §1 (2020-08-24). |
+| `antaresian-reliquary` | 2020-05-17 | day | B's audit 42ebdc5: author release thread 2020-05-17; 2020-08-24 is a later DECORATE-only update. |
 | `aquatic-wonder` | 2021-06-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `arrival` | 2021-04-16 | day | reference-087-c.md §8: arrival.txt Release date 4/16/2021; the 2022-10-07 archive is later. |
 | `auger-zenith` | 2021-07-26 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `augustland-barrens` | 2023-02-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `avpvtvjvvhvss` | 2022-06-04 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
-| `back-to-saturn-x-e1` | 2013 | year | 2013 Cacowards Top Ten for the episode's original public release; the pinned 1.1.6 archive is dated 2020-08-13 and the exact first day is not evidenced (docs/research/catalog-release-dates.md). |
-| `back-to-saturn-x-e2` | 2014 | year | 2014 Cacowards Top Ten for the original public release; the pinned 1.0.1 archive is dated 2020-08-13 and the exact first day is not evidenced (docs/research/catalog-release-dates.md). |
+| `back-to-saturn-x-e1` | 2012-12-10 | day | B's audit 42ebdc5: author thread first post 2012-12-10 (2013 is only the Cacoward year); pinned 1.1.6 is the 2020-08-13 build. |
+| `back-to-saturn-x-e2` | 2014-09-01 | day | B's audit 42ebdc5: author thread's public beta 2014-09-01; pinned 1.0.1 is the 2020-08-13 final. |
 | `biotech-is-godzilla` | 2020-03-31 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `carnage-oasis` | 2021-09-02 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `caustic-industry` | 2024-12-16 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
@@ -94,7 +94,7 @@ The comment above each recipe field carries the same source in short form.
 | `fuck-global-warming-this-is-hell` | 2019-09-03 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `funnelcake-apparitions` | 2021-10-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `going-down-turbo` | 2024-11-05 | day | reference-087-a.md original-date table: DoomWiki first released November 5, 2024; the pinned archive is the 2025-06-23 bug-fix. |
-| `going-down` | 2014-09-14 | day | reference-going-down.md §1, first complete release 2014-09-14 (pinned third bug-fix 2015-08-21). |
+| `going-down` | 2013-10-22 | day | B's audit 42ebdc5: first public 11-level version 2013-10-22; 2014-09-14 is the later complete release. |
 | `grief-arbiter` | 2025-03-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `haste` | 2021-09-22 | day | docs/research/haste.md §original public date: Haste.txt 22/09/2021, day-first; the 2022-01-08 archive is later. |
 | `haunting-hollow` | 2023-10-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
@@ -139,7 +139,7 @@ The comment above each recipe field carries the same source in short form.
 | `scythe` | 2003-04-08 | day | reference-scythe.md §1 (2003-04-08; idgames entry 2003-04-10). |
 | `shatter-realm` | 2023-03-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `sigil-ii` | 2023-12-10 | day | reference-sigil.md SIGIL II §1 (v1.0, 2023-12-10). |
-| `sigil` | 2019-05-01 | day | reference-sigil.md §1 version history (1.0, first free release 2019-05-01). |
+| `sigil` | 2019-05-31 | day | B's audit 42ebdc5: Romero's blog 'I uploaded the free version on May 31, 2019'; 2019-05-01 is an internal readme date. |
 | `slime-on-earth` | 2021-12-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `spaceballs-the-quest-for-more-dbp-maps` | 2020-05-31 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `speed-of-doom` | 2010-03-28 | day | reference-087-a.md original-date table: SODFINAL.txt Release date 03/28/10. |
@@ -148,7 +148,7 @@ The comment above each recipe field carries the same source in short form.
 | `steamy-bathhouse` | 2022-12-03 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `stroggmans-tundra` | 2021-05-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `sunder` | 2009-04-20 | day | reference-087-b.md original-date table: DoomWiki first release April 20, 2009; the pinned V.2407 is a later build. |
-| `sunlust` | 2015-08-07 | day | reference-sunlust.md §1 (2015-08-07). |
+| `sunlust` | 2015-06-13 | day | B's audit 42ebdc5: first public beta 2015-06-13; 2015-08-07 is the readme/final date. |
 | `swim-with-the-whales` | 2013-11-20 | day | docs/research/swim-with-the-whales.md §5: release-thread first post 2013-11-20; the readme (2013-12-02) and archive (2013-12-21) are later. |
 | `tempest-enterprise` | 2023-09-02 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `ten-day-vacation` | 2020-09-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
@@ -170,9 +170,19 @@ The comment above each recipe field carries the same source in short form.
 | `wretched-morrow` | 2025-04-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `xenomorph-base` | 2018-07-01 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
 | `zeppelin-armada` | 2023-07-03 | day | release-thread first post, docs/research/doomer-boards-projects.md inventory. |
+## Independent audit (2026-10-22)
+
+B's audit (`docs/research/catalog-release-date-audit.md`, commit 42ebdc5 on
+`vittau/pwads-087-b`) independently checked 16 non-DBP titles against this draft and
+confirmed ten values. Six were corrected after it: BTSX E1 2012-12-10 (2013 was only the
+Cacoward year), BTSX E2 2014-09-01 (public beta), SIGIL 2019-05-31 (Romero's upload date,
+not the internal 2019-05-01 readme date), Going Down 2013-10-22 (first public 11-level
+release), Sunlust 2015-06-13 (first public beta) and Antaresian Reliquary 2020-05-17
+(author thread, not the later DECORATE-only update). The audit's rule — first public
+availability, never an award year or a final/repack date — is the one this document and
+the recipes follow.
 
 ## Counts
 
-- **118 recipes**, every one with a date: 115 day-precision, 0 month-precision, 3 year-precision.
-- No shipped recipe relies on an unstated date. The only coarser-than-day entries are the ones
-  whose source itself stops at a year/month (see the table).
+- **118 recipes**, every one with a date: 117 day-precision, 0 month-precision, 1 year-precision.
+- No shipped recipe relies on an unstated date; every value records the first public availability.

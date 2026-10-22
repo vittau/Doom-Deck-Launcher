@@ -4,8 +4,8 @@ id = "back-to-saturn-x-e1"
 title = "Back to Saturn X E1: Get Out Of My Stations"
 authors = ["Sarah \"Esselfortium\" Mancuso (project lead)", "Back to Saturn X team"]
 release = "1.1.6 (2020-08-13)"
-# First public release (spec 090): 2013 Cacowards Top Ten for the episode's original public release; the pinned 1.1.6 archive is dated 2020-08-13 and the exact first day is not evidenced (docs/research/catalog-release-dates.md).
-original_release = { year = 2013 }
+# First public release (spec 090): B's audit 42ebdc5: author thread first post 2012-12-10 (2013 is only the Cacoward year); pinned 1.1.6 is the 2020-08-13 build.
+original_release = { year = 2012, month = 12, day = 10 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1"
 description = "DOOM II: 27 vanilla-compatible maps (MAP01–MAP25, MAP31–MAP32) with a custom texture set and MIDI music; the release splits its content across two WADs that must be loaded together."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."

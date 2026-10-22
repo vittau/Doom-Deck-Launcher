@@ -53,7 +53,6 @@ pub enum Problem {
     Cancelled,
     Engine,
     Config,
-    UnknownFile,
     Launch,
     /// Another DDL process is changing the same state (spec 014, R2).
     Busy,
@@ -101,7 +100,6 @@ impl fmt::Display for Problem {
             Self::Cancelled => f.write_str("cancelled"),
             Self::Engine => f.write_str("the engine operation failed"),
             Self::Config => f.write_str("the DSDA configuration operation failed"),
-            Self::UnknownFile => f.write_str("the file is not a component DDL recognizes"),
             Self::Launch => f.write_str("the engine could not be launched"),
             Self::Busy => {
                 f.write_str("another DDL process is changing DDL's state; close it and try again")
@@ -2549,8 +2547,18 @@ impl Services {
                         .map_err(install_error)?
                 };
                 if !outcome.matched {
-                    tracing::warn!(sha256=%outcome.sha256,component,"unrecognized imported component was stored but not enabled");
-                    return Err(Problem::UnknownFile);
+                    tracing::warn!(sha256=%outcome.sha256,component,"unrecognized imported component was stored");
+                    // D-014: an optional unknown file is kept but stays off. A
+                    // required main (spec 094) keeps the import enabled; the UI
+                    // reports the unrecognized hash either way.
+                    let required = recipe
+                        .components
+                        .iter()
+                        .find(|candidate| candidate.id == component)
+                        .is_some_and(|candidate| !candidate.optional);
+                    if !required {
+                        return Ok(());
+                    }
                 }
                 self.profiles
                     .save(&profile)
@@ -5032,6 +5040,76 @@ mod tests {
         assert_eq!(backups.len(), 1);
         assert_eq!(fs::read(backups[0].path()).unwrap(), b"broken");
         assert!(s.config.state().is_ok());
+    }
+    /// Spec 094 R4/R5: the player-supplied expansion installs with no package or
+    /// HTTP request, blocks Play until its required file exists, and a KEX-like
+    /// unknown-hash import stays stored, enabled and usable — never a fatal
+    /// problem that discards the refreshed state.
+    #[test]
+    fn a_metadata_only_expansion_imports_an_unknown_nerve_file_and_stays_usable() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut services = Services::open(env.clone()).unwrap();
+        let token = CancellationToken::new();
+        services
+            .execute(
+                Command::Install("no-rest-for-the-living".into()),
+                &token,
+                &mut |_| {},
+            )
+            .expect("metadata-only install");
+        let snapshot = services.snapshot().unwrap();
+        let item = snapshot
+            .items
+            .iter()
+            .find(|item| item.recipe.id == "no-rest-for-the-living")
+            .expect("the expansion is in the embedded catalog");
+        let manifest = item.manifest.as_ref().expect("install recorded");
+        assert!(manifest.packages.is_empty(), "no package can be fetched");
+        assert!(
+            !manifest.has_imports(),
+            "installing does not import a private file on its own"
+        );
+        assert!(
+            !matches!(item.launch, Ok(_)),
+            "Play stays blocked until the required file exists"
+        );
+
+        // A KEX-like file: the published identification data has no SHA-256, so
+        // this import is accepted with the honest unknown-hash warning.
+        let dir = env.home.join("nerve");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("NERVE.WAD");
+        fs::write(&path, b"synthetic KEX-like NERVE.WAD fixture").unwrap();
+        services
+            .execute(
+                Command::Import("no-rest-for-the-living".into(), "main".into(), path.clone()),
+                &token,
+                &mut |_| {},
+            )
+            .expect("an unknown hash is stored and enabled, not a fatal problem");
+
+        let snapshot = services.snapshot().unwrap();
+        let item = snapshot
+            .items
+            .iter()
+            .find(|item| item.recipe.id == "no-rest-for-the-living")
+            .expect("the expansion survives the refresh");
+        let imported = item
+            .manifest
+            .as_ref()
+            .and_then(|manifest| manifest.find_imported("main"))
+            .expect("the imported file is recorded");
+        assert_eq!(
+            imported.path.file_name().and_then(|name| name.to_str()),
+            Some("NERVE.WAD"),
+            "the source basename is preserved for DSDA's mission selection"
+        );
+        assert_eq!(item.recipe.base_game.game, ddl_core::catalog::Game::Doom2);
+        assert!(
+            item.profile.components.iter().all(|held| held != "main"),
+            "the required main is implicit, never an optional selection"
+        );
     }
 }
 

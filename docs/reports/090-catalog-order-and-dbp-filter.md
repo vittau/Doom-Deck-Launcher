@@ -38,6 +38,13 @@ The existing `015` production journey now compares each category against the fil
 - All 118 recipes carry a date: 115 day precision, 3 year precision (Abandon 2020, BTSX E1 2013,
   BTSX E2 2014 — each source stops at that granularity), 0 month-only. The evidence and the
   first-release-vs-update reasoning are in `docs/research/catalog-release-dates.md`.
+- **Independent audit applied (B, commit 42ebdc5).** Six values were corrected after the audit:
+  BTSX E1 2012-12-10 (2013 was only the Cacoward year), BTSX E2 2014-09-01 (public beta),
+  SIGIL 2019-05-31 (Romero's upload date, not the internal 2019-05-01 readme date), Going Down
+  2013-10-22 (first public 11-level release), Sunlust 2015-06-13 (first public beta) and
+  Antaresian Reliquary 2020-05-17 (author thread, not the later DECORATE-only update). The
+  audit citation and rule ("first public availability, never an award year or a final/repack
+  date") are recorded in `docs/research/catalog-release-dates.md`.
 - Date normalisation recorded: Stardate 20X6 = 2013-06-02 (readme `06/02/2013`, ZIP text member
   2013-06-02 17:50:00, WAD 2013-05-31), Abandon = 2023-05-07 (text member), Going Down /
   Overboard / Headless Chicken use the authors' day-first convention (proved by inline
@@ -60,6 +67,29 @@ The existing `015` production journey now compares each category against the fil
   with no packages is still rejected. Installing is metadata-only (no package exists to fetch),
   Play is blocked with `ComponentNotProvided`, and the required Setup row imports/replaces with
   no Off toggle. A's real NERVE import/hash and argv tests remain in `catalog_094.rs`.
+
+## Review follow-ups (all covered)
+
+- **(a) Optional imported component shows Off when disabled.** The Setup row detail now
+  follows the profile for an optional user-supplied import (On only when selected) and reports
+  the imported state only for a required main. Proven by the headless journey
+  `imported_component_sheet_actions`, which asserts the imported-but-disabled SIGIL soundtrack
+  row reads `Off` before opening its sheet.
+- **(b) Selection and focus survive a fresh snapshot.** `Runtime::replace_snapshot` records the
+  selected recipe id (and a card focus range) before adopting the snapshot built at
+  `Event::Finished`, then re-finds that recipe and remaps both `selected` and the card node id;
+  a removed recipe clamps. Proven by
+  `runtime::startup_and_pistol_tests::a_fresh_snapshot_remaps_selection_and_card_focus_by_recipe_id`.
+- **(c) Real import path for the player-supplied expansion.** A synthetic `NERVE.WAD` (never
+  commercial bytes) exercises `Services`: metadata-only install with no package and no HTTP,
+  blocked launch, import preserving the `NERVE.WAD` basename, and a KEX-like unknown hash that
+  is stored, reported by a warning toast, and leaves the refreshed state usable instead of
+  failing with a discarded `UnknownFile` problem. Proven by
+  `services::tests::a_metadata_only_expansion_imports_an_unknown_nerve_file_and_stays_usable`
+  and `resolver::tests::a_player_supplied_expansion_blocks_until_imported_then_loads_its_nerve_filename`
+  (Doom II base game, one `-file` entry, original filename preserved).
+- The unknown-file warning copy is now component-neutral: "This file is not recognized by DDL.
+  Optional imports stay off; a required file keeps its imported state."
 
 ## R5 — Checks run (focused)
 
@@ -92,6 +122,18 @@ ok   # metadata-only install, blocked Play, focusable Import row, file picker
 
 $ cargo test -p ddl --bin ddl required_import_sheet_has_no_toggle -- --test-threads=1
 ok   # required main: Import + Done, never On/Off; confirming does not toggle
+
+$ cargo test -p ddl --bin ddl imported_component_sheet_actions -- --test-threads=1
+ok   # imported optional disabled row reads Off; unknown import warns without a problem sheet
+
+$ cargo test -p ddl --bin ddl a_fresh_snapshot_remaps_selection_and_card_focus_by_recipe_id
+ok   # selection/focus follow the recipe id across a snapshot replacement
+
+$ cargo test -p ddl --bin ddl a_metadata_only_expansion_imports_an_unknown_nerve_file
+ok   # real Services install/import, unknown KEX-like hash stays usable
+
+$ cargo test -p ddl-core a_player_supplied_expansion_blocks_until_imported
+ok   # resolver: ComponentNotProvided, then NERVE.WAD basename in the -file plan
 ```
 
 Fetch lint is not applicable to the import-only entry (no downloads) and was not re-run for
