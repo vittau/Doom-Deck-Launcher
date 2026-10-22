@@ -78,10 +78,23 @@ No new application release or tag was created for this integration.
 
 ## Integrated-source Linux checks
 
-Pending the main push after the successful combined host checks. The read-only
-OpenCode worker will report workflows for that exact source commit; publication
-of the older immutable tag is separate evidence and is not a Linux test of the
-new compact UI.
+The coordinator fast-forwarded and pushed `main` at
+`b598f00ae45957a3548306e9612dcef45fa466d0` after the host checks. Both automatically
+triggered workflows passed for that exact source:
+
+- [CI 39805075655](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39805075655):
+  Linux format, workspace Clippy with denied warnings and **984 tests, 0 failed,
+  0 ignored**, plus the Steam Runtime release build. The checks job took 16m 39s;
+  the release build took 2m 20s. Catalog publication detected no recipe changes
+  and made no publication; offline catalog lint was skipped by its PR-only gate.
+- [Flatpak 39805075851](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39805075851):
+  bundle build, install and version smoke passed (`ddl 0.0.12`), with
+  `ddl-flatpak-x86_64` and the build log uploaded. The bundle job took 8m 49s.
+
+The published-tag e2e remains separate evidence; no extra network e2e was triggered
+for this UI/test-only integration. Subsequent status/report edits are documentation
+only and excluded by the existing CI path filters. No implementation check remains
+open; physical Deck validation and a future application release remain separate.
 
 ## Remaining validation and resource ownership
 
@@ -89,8 +102,11 @@ Physical Select mapping, LCD legibility, Gaming Mode navigation and perceived
 responsiveness remain **Needs Deck Validation** (CV1–CV5 in `deck-testing.md`).
 No Windows/macOS port work or new `/idgames` browse implementation was started.
 The latter's responsiveness requirements are recorded separately in specs 051/053.
+The next release-state scenario must include an explicit saved Cards/List choice
+through that new tag's own preference writer; the v0.0.12 tag predates this file.
 
-The fixture worker's terminal was released. Orca marked the settled UI terminal
+The fixture worker's terminal was released and its merged worktree removed. Orca marked the settled UI terminal
 `user_owned` / `user_takeover`, so its terminal and worktree are preserved rather
-than forcibly closed. The existing OpenCode conversation is reused for read-only
-integrated-source CI verification; no settled resource lacks an ownership decision.
+than forcibly closed. The existing OpenCode conversation completed read-only
+integrated-source CI verification and was released; no settled resource lacks an
+ownership decision.

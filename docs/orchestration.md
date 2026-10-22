@@ -206,7 +206,8 @@ below are the ones most easily lost between sessions.
 ## Open follow-ups (keep this list current)
 
 - Tagged serializer fixtures through `v0.0.12-catalog` are complete (070/078/096). After the next
-  pre-release, add its saved-state fixture and update the release guard (055 R4).
+  pre-release, add its saved-state fixture and update the release guard (055 R4), including
+  an explicit saved Cards/List choice through that tag's new `view.json` writer (095).
 - Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
   from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
 - Current integration 2026-10-22: catalog additions 087–094 shipped as `v0.0.12-catalog`, with

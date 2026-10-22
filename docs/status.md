@@ -83,7 +83,10 @@ The shared Cards/List view below follows this immutable release and is not inclu
   writer and normal teardown finishes the last save after the UI loop stops. Production renders
   were reviewed and shown to the owner before merge; 1,000-entry model/focus and 2,000-change
   persistence regressions pass. Combined format, workspace Clippy and **984 workspace tests**
-  passed after integrating 095/096/097; Linux CI on the integrated source follows. Eight tagged
+  passed after integrating 095/096/097. Integrated-source Linux CI `39805075655` passed on
+  `b598f00`, including all 984 tests and the Steam Runtime build; Flatpak `39805075851`
+  passed bundle install/version smoke and uploaded its artifact. No new application release
+  was created. Eight tagged
   state fixtures now include `v0.0.12-catalog` (096), with all earlier fixture bytes preserved.
   Physical Select, LCD legibility and Gaming Mode responsiveness remain **Needs Deck Validation**
   (`deck-testing.md`, CV1–CV5). The future /idgames browse specs (051/053) also require bounded background

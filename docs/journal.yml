@@ -1011,3 +1011,14 @@
     v0.0.12 tag; integrated-source Linux CI and physical Deck validation follow separately.
   refs: [docs/reports/095-shared-compact-list-view.md, docs/reports/096-release-state-v012.md,
     docs/deck-testing.md]
+- date: 2026-10-22
+  type: finding
+  summary: >-
+    Integrated source b598f00 passed Linux CI 39805075655: format, denied-warning workspace
+    Clippy, all 984 tests with zero failures/ignored tests, and the Steam Runtime release
+    build. Flatpak artifact run 39805075851 passed build/install/version smoke and uploaded
+    its bundle and log. Catalog publication correctly made no change because recipes were
+    unchanged. Shared compact browsing is ready in main for a future release; the published
+    v0.0.12 tag remains immutable at 409d6c5. Physical Deck checks remain pending. The merged
+    fixture worktree was removed; Orca's user-owned UI worktree was preserved.
+  refs: [docs/reports/095-097-integration.md, docs/status.md]
