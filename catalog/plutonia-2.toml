@@ -1,0 +1,77 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-a.md §5–§8; gathered 2026-10-22.
+schema_version = 1
+id = "plutonia-2"
+title = "Plutonia 2"
+authors = ["Plutonia 2 Team"]
+release = "Version 1.0, 2008-12-31"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/pl2"
+description = "The Plutonia Experiment megawad sequel: 32 maps plus a MAPINFO-only bonus map, with custom music and graphics and an embedded DEHACKED patch for level names and story text."
+permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided PL2.TXT travels with the file, unmodified and intact; the team states it obtained permission from the original authors of any modified or included content. DDL downloads the unmodified archive and keeps the bundled release text and manual."
+tags = ["cacowards", "megawad", "classics", "community-projects"]
+
+[base_game]
+game = "plutonia"
+variants = []
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous Plutonia mapset (MAP01–MAP32, no UMAPINFO). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-a.md §5–§8", "Archive, member, WAD lump, MAPINFO, embedded DEHACKED and external PL2.DEH inspection; PL2.TXT and PL2INFO.TXT; DSDA-Doom v0.30.1 source and release notes"]
+notes = "Confirmed archive/member identities and the base game: PL2INFO.TXT says to use PLUTONIA.WAD as the IWAD and that DOOM2.WAD causes errors. The WAD has MAP01–MAP32 plus a MAP33 bonus defined only in ZDoom MAPINFO, and an embedded DEHACKED lump. Complevel vanilla follows the release's DOOM2.EXE target, 'should run with any Doom engine' and the manual's 'vanilla form with Chocolate Doom' statement; the vanilla alias resolves to 4 on Plutonia (D-030). The external PL2.DEH (7,359 B) differs from the embedded lump (7,357 B) in one level name and one Text length; the embedded lumps match the MAPINFO/manual 'Emerald Eve', are applied automatically by DSDA-Doom, and the recipe does not load the external file twice. Tags: cacowards = 2009 Cacowards Top Ten winner and Mordeth Award, https://www.doomworld.com/cacowards/2009/ (page not read live in this session; archived inventory docs/research/cacowards.md §2009); megawad = 32 maps per PL2.TXT, with MAP33 reachable only through ZDoom MAPINFO; classics = released 2008-12-31, over five years before this review, with the Cacowards as lasting recognition; community-projects = the credited Plutonia 2 team listed in PL2INFO.TXT §6.1."
+limitations = ["Needs Deck Validation: Plutonia IWAD selection, complevel, embedded DEHACKED application, load order, gameplay, audio and map selection.", "MAP33 'Chocolate' is defined only in the ZDoom MAPINFO lump; DSDA-Doom removed ZDoom MAPINFO support in v0.30.0, so the bonus map is not reachable without a separate UMAPINFO (not supplied by the release).", "The external PL2.DEH is deliberately not declared; confirm on the Deck that the WAD's embedded DEHACKED level names and story text appear."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/pl2"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/pl2.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/megawads/pl2.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/megawads/pl2.zip"]
+size = 5375859
+sha256 = "bb925d13119e6d5dfea69a5ffe17d8954cdc3f2da0a6128a58f6ff6a366a0c66"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/pl2.zip"
+
+[[packages.members]]
+id = "maps"
+path = "PL2.WAD"
+size = 18131932
+sha256 = "9495a54ecfd5ab2dde4fed22eb4a1dd3e70296899df835f5aa74d8a8cc6f253e"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "PL2.TXT"
+size = 3915
+sha256 = "c19728b15488d00ca1f86973ad4508506c99a996617e7c66b1ac164a298f218d"
+keep = true
+
+[[packages.members]]
+id = "manual"
+path = "PL2INFO.TXT"
+size = 66591
+sha256 = "e79112f2be34943f249a68e960bb6cf577253d670e1d7d28773b5b423ba4028c"
+keep = true
+
+[[components]]
+id = "main"
+label = "Plutonia 2"
+description = "Main 32-map Plutonia megawad with its own music, graphics and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
