@@ -943,7 +943,7 @@ fn library_favorites_group_in_both_layouts_and_toggle_keeps_identity() {
     {
         item.favorite = i % 2 == 1;
         item.recipe.original_release = (i < 5).then_some(ddl_core::catalog::ReleaseDate {
-            year: 2000,
+            year: if matches!(i, 1 | 4) { 2001 } else { 2000 },
             month: None,
             day: None,
         });
@@ -964,7 +964,7 @@ fn library_favorites_group_in_both_layouts_and_toggle_keeps_identity() {
         r.view_format = format;
         r.focus = 16;
         r.sync(&ui);
-        assert_eq!(order(&ui), [13, 11, 15, 14, 12, 10, 16]);
+        assert_eq!(order(&ui), [13, 11, 15, 12, 10, 14, 16]);
         assert!(ui.get_nodes().iter().any(|n| n.id == 6300));
         assert!(ui.get_nodes().iter().any(|n| n.id == 6101));
     }
@@ -981,10 +981,10 @@ fn library_favorites_group_in_both_layouts_and_toggle_keeps_identity() {
     // synthetic installed snapshot; persistence has its existing service tests.
     assert_eq!(r.focus, 16);
     assert_eq!(r.snapshot.as_ref().unwrap().items[6].recipe.id, identity);
-    assert_eq!(order(&ui), [13, 11, 16, 15, 14, 12, 10]);
+    assert_eq!(order(&ui), [13, 11, 16, 15, 12, 10, 14]);
     r.action(&ui, Action::ToggleView);
     assert_eq!(r.focus, 16);
-    assert_eq!(order(&ui), [13, 11, 16, 15, 14, 12, 10]);
+    assert_eq!(order(&ui), [13, 11, 16, 15, 12, 10, 14]);
     r.action(&ui, Action::ToggleView);
     assert_eq!(order(&ui).len(), INSTALLED);
     let selected = ui.get_nodes().iter().find(|n| n.id == r.focus).unwrap();
