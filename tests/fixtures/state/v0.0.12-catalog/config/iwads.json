@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "/ddl-fixture/iwads-one/doom2.wad",
+      "variant": "doom2-1.9",
+      "game": "doom2",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 12,
+      "mtime": {
+        "secs": 1700000000,
+        "nanos": 0
+      },
+      "source": "userfolder"
+    },
+    {
+      "path": "/ddl-fixture/iwads-two/doom2.wad",
+      "variant": "doom2-1.9",
+      "game": "doom2",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 12,
+      "mtime": {
+        "secs": 1700000000,
+        "nanos": 0
+      },
+      "source": "userfolder"
+    }
+  ]
+}
