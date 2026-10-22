@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (1280x720 JPEG).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://static.doomworld.com/pages_media/13_overboard.png?_cb=1670528046"
+source_page = "https://www.doomworld.com/cacowards/2022/best3/"
+credit = "Cyriak Harris (mouldy)"
+original_size = "1280x960"
+retrieved = "2026-10-22"
+permission = "In-game screenshot published with the Doomworld 2022 Cacowards feature (see source_page); no separate image licence text was found. Bundled as a representative in-game view under decision D-024; removed on the author's request."

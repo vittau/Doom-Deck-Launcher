@@ -1,0 +1,78 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-c.md §5; gathered 2026-10-22.
+schema_version = 1
+id = "overboard"
+title = "Overboard"
+authors = ["Cyriak Harris (mouldy)"]
+release = "2022-04-08 (readme); idgames archive file dated 2022-09-27, an update fixing multiplayer issues"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/overboard"
+description = "DOOM II Boom mapset: six island-hopping maps, a game-over map and a harder New Game Plus run, fifteen slots in all (MAP01–MAP14 plus MAP31), with an embedded DEHACKED patch for level names and pickups."
+permission = "Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0): redistribution is permitted with credit and a link to the licence, no commercial use and no distribution of modified material. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["cacowards"]
+
+# Bundled screenshot (spec 023, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/overboard/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "overboard/01.jpg"
+credit = "Cyriak Harris (mouldy)"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP14 and MAP31, no UMAPINFO or COMPLVL).
+# The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-c.md §5", "Archive and member sizes/SHA-256; WAD lump inventory (fifteen map markers MAP01–MAP14 and MAP31, embedded DEHACKED, no MAPINFO/UMAPINFO/COMPLVL); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 prboom2/src/p_spec.c generalized-linedef dispatch"]
+notes = "Confirmed package/member identities from three byte-identical mirrors and the fifteen map markers MAP01–MAP14 plus MAP31. Complevel boom is the author's own statement: '6 maps of island-hopping mayhem for Doom 2 (boom format, complevel 9)', with 'Advanced engine needed: Boom' and 'May Not Run With: non-boom ports'; the maps use Boom generalized linedef types. The embedded DEHACKED changes level names, pickup text and a few frames. Progression uses DSDA-Doom's hardcoded Doom II next-map table (legacy.c): the author's 'game over' map and New Game Plus flow are ordinary custom maps, and after MAP14 the run continues into the base IWAD's MAP15 unless the player quits. Tags: cacowards = 2022 Top Ten (page 3) winner, https://www.doomworld.com/cacowards/2022/best3/ (read through the Wayback capture of 2022-12-10). The Cacowards blurb counts '6 maps'; the release and the WAD have fifteen slots, so the <=9-map episode tag is not claimed. Not tagged challenging: the author calls the difficulty 'average'. Needs Deck Validation: IWAD/complevel, DEHACKED application, New Game Plus flow, gameplay, audio, map selection and the post-MAP14 transition."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio and map selection.", "New Game Plus continues past the MAP07 'game over' map into the harder MAP08–MAP13 variants; confirm the intended transition, MAP14 'the actual end' and MAP31 on the Deck.", "No UMAPINFO or COMPLVL exists. The hardcoded Doom II progression continues from the custom MAP14 into the base IWAD's MAP15; quit from the intermission to stop after the author's ending map.", "Some maps are documented by the author as not working with -nomonsters; DDL does not pass that flag.", "No separate DEHACKED member exists: the patch is embedded in overboard.wad and its hash is covered by the member identity."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/overboard"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/overboard.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/overboard.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/megawads/overboard.zip"]
+size = 7728312
+sha256 = "9dddda5bb754192c97507646c65f214a378206015d5fa1995bf75269bb02356a"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/overboard.zip"
+
+[[packages.members]]
+id = "maps"
+path = "overboard.wad"
+size = 25265537
+sha256 = "608218886e8a61086040d28045d81644801c33d1265f343cd6cf62d36f7b3e95"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "overboard.txt"
+size = 3135
+sha256 = "b4cf202073939a044f361fa1180e23b789becf6b9c82f42996fd96a5d37f3ce2"
+keep = true
+
+[[components]]
+id = "main"
+label = "Overboard"
+description = "Main fifteen-slot Boom mapset with an embedded DEHACKED patch and the author's soundtrack."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
