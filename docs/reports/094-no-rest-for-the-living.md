@@ -17,7 +17,7 @@ capability.
 | Packages | none (metadata-only; no dummy package) |
 | Imported BFG file | 3,819,855 bytes; SHA-256 `2d234de8…458fa9`; MD5 `967d5ae2…b3b0` |
 | Steam/KEX variant | reviewed published 4,039,441 bytes / MD5 `23422eb4…a6f`; no published or inspected SHA-256 |
-| Format / complevel | vanilla / `vanilla` (2); Needs Deck Validation |
+| Port family / complevel | limit-removing / `vanilla` (2); Needs Deck Validation |
 | Tags | `cacowards`, `classics`, `episode` |
 | Original public date | **2010-05-26**, day precision (XBLA release) |
 | Artwork | one sourced in-game DoomWiki screenshot (`01.jpg`, 800×600, 80,715 B) with recorded provenance; fallback otherwise |
