@@ -1,6 +1,6 @@
 # Catalog expansion and browsing integration — specs 087–094
 
-**Status:** Done — 2026-10-22; combined checks green, local only (no push, tag or release).
+**Status:** Done — 2026-10-22; combined checks green and published as `v0.0.12-catalog`.
 **Date:** 2026-10-22. **Coordinator branch:** `verify/087-pwads`.
 
 ## Result and scope
@@ -84,7 +84,8 @@ network access.
 
 Combined checks on the integrated branch: `cargo fmt --all --check` clean,
 `cargo clippy --workspace --all-targets -- -D warnings` clean and
-`cargo test --workspace -- --test-threads=2` green. The complete
+`cargo test --workspace -- --test-threads=2` green (**974 tests**, 0 failed, across 22
+targets; the `ddl` binary target alone runs 226 headless/integration tests in ~11 minutes). The complete
 catalog lints offline with all 118 recipes embedded, and the read-only
 integration audit reported: 118 unique recipes; all 92 previous recipes unchanged
 apart from chronological metadata; all 25 downloadable additions matching the
@@ -109,8 +110,8 @@ physical Deck playthrough has not been run against them.
 
 No new dependency or engine is introduced. The reader capability and bundle
 minimum moved to `0.0.12` for the `original_release` and zero-package/import
-capabilities (D-038 permits the gate for a real capability change). Remaining
-work is Deck-side: controller navigation and focus after the order/filter change,
-the import picker while replacing a required file, and NRFTL with each accepted
-NERVE variant. Publishing the new catalog bundle, a release and a physical Deck
-playthrough are explicitly out of this local integration.
+capabilities (D-038 permits the gate for a real capability change). The catalog
+bundle, the Linux tarball release and the signed Flatpak repository are published
+from this branch. Remaining work is Deck-side: controller navigation and focus
+after the order/filter change, the import picker while replacing a required file,
+and NRFTL with each accepted NERVE variant.
