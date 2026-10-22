@@ -164,7 +164,7 @@ pub struct Runtime {
     category_chosen: bool,
     /// First strip chip drawn when the strip is wider than the grid.
     strip_start: usize,
-    scroll_anchor: Option<(Screen, Option<local_ui::View>, i32)>,
+    scroll_anchor: Option<(Screen, Option<local_ui::View>, i32, f32, f32)>,
     updates: Vec<String>,
     updates_checked: bool,
     pub last_exit: Option<ddl_core::engines::dsda::LaunchOutcome>,
@@ -1580,8 +1580,8 @@ impl Runtime {
         shown.sort_by(|&a, &b| compare_browsing_order(&s.items[a].recipe, &s.items[b].recipe));
         shown
     }
-    /// Snapshot indexes shown on Library: installed mapsets, oldest first (spec
-    /// 090, R2). Favorites never reorder this list either.
+    /// Installed favorites lead Library in both layouts (spec 102), retaining
+    /// the chronological/title order within each group.
     fn library_items(&self) -> Vec<usize> {
         let Some(s) = &self.snapshot else {
             return vec![];
@@ -1589,7 +1589,12 @@ impl Runtime {
         let mut shown: Vec<usize> = (0..s.items.len())
             .filter(|&i| s.items[i].manifest.is_some())
             .collect();
-        shown.sort_by(|&a, &b| compare_browsing_order(&s.items[a].recipe, &s.items[b].recipe));
+        shown.sort_by(|&a, &b| {
+            s.items[b]
+                .favorite
+                .cmp(&s.items[a].favorite)
+                .then_with(|| compare_browsing_order(&s.items[a].recipe, &s.items[b].recipe))
+        });
         shown
     }
     /// Moves the category by `delta` with wrapping; the strip chip keeps focus
@@ -3829,22 +3834,48 @@ impl Runtime {
         }
         let setup = self.screen == Screen::Setup && self.local.view.is_none();
         let discover = self.screen == Screen::Discover;
-        let viewport =
-            (ui.window().size().height as f32 - if discover { 298. } else { 294. }).max(64.);
+        let list = matches!(self.screen, Screen::Discover | Screen::Library)
+            && self.local.view.is_none()
+            && self.view_format == services::ViewFormat::List;
+        let viewport = (ui.window().size().height as f32
+            - if discover {
+                298.
+            } else if list {
+                278.
+            } else {
+                294.
+            })
+        .max(64.);
         let focus_inset = if discover { 24. } else { 12. };
         let plane: Vec<&ViewNode> = self.nodes.iter().filter(|n| !setup || n.x < 700.).collect();
-        let offset = plane
-            .iter()
-            .find(|n| n.id == self.focus)
-            .map_or(0., |n| follow_offset(&plane, n, viewport, focus_inset));
-        let anchor = (self.screen, self.local.view, self.focus);
+        let focused = plane.iter().find(|n| n.id == self.focus).copied();
+        // Geometry is part of the anchor: a favorite toggle can move the same
+        // selected item. A neutral refresh with unchanged geometry preserves
+        // manual scrolling, even when the selected item is off screen.
+        let (focus_y, focus_h) = focused.map_or((0., 0.), |n| (n.y, n.h));
+        let anchor = (self.screen, self.local.view, self.focus, focus_y, focus_h);
         let focus_changed = self.scroll_anchor != Some(anchor);
+        // Update bounds before changing offset, so Flickable never clamps an
+        // entering list against the previous screen's extent.
+        ui.set_content_height(plane.iter().map(|n| n.y + n.h + 20.).fold(0_f32, f32::max));
+        ui.set_continuous_list(list);
         if focus_changed {
-            ui.set_scroll_offset(if self.local.view == Some(local_ui::View::Picker) {
+            let offset = if self.local.view == Some(local_ui::View::Picker) {
                 0.
+            } else if list {
+                focused.map_or(0., |n| {
+                    continuous_offset(&plane, n, viewport, ui.get_presented_scroll_offset())
+                })
             } else {
-                offset
-            });
+                focused.map_or(0., |n| follow_offset(&plane, n, viewport, focus_inset))
+            };
+            // Animate only navigation inside an existing list. Entering a tab,
+            // changing layout or returning from detail reveals focus immediately.
+            let smooth = list
+                && self
+                    .scroll_anchor
+                    .is_some_and(|previous| previous.0 == anchor.0 && previous.1 == anchor.1);
+            ui.invoke_follow_scroll(offset, smooth);
             ui.invoke_reset_scroll_x();
             self.scroll_anchor = Some(anchor);
         }
@@ -4041,6 +4072,25 @@ impl Runtime {
         }
     }
 }
+/// Reveal the focus ring with the least possible movement (spec 102).
+/// Nodes render with an 8 px inset; compact rings extend 8 px beyond the row.
+/// Unlike Cards, lists never reserve a trailing viewport just to top-align focus.
+fn continuous_offset(plane: &[&ViewNode], focus: &ViewNode, viewport: f32, current: f32) -> f32 {
+    let extent = plane.iter().map(|n| n.y + n.h + 20.).fold(0_f32, f32::max);
+    let limit = (extent - viewport).max(0.);
+    let current = current.clamp(0., limit);
+    let top = focus.y.max(0.);
+    let bottom = focus.y + focus.h + 16.;
+    let destination = if top < current || bottom - top > viewport {
+        top
+    } else if bottom > current + viewport {
+        bottom - viewport
+    } else {
+        current
+    };
+    destination.clamp(0., limit)
+}
+
 /// Keep whole items at the top after focus navigation. Nodes have an 8 px
 /// inset in the main plane; card frames extend 8 px and focus rings 16 px.
 /// Prefer the preceding section heading when it fits with the focused item.
@@ -4100,6 +4150,37 @@ mod scroll_tests {
             actionable: true,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn continuous_follow_moves_only_at_edges_and_clamps_both_bounds() {
+        let rows: Vec<_> = (0..30).map(|i| card(12. + 82. * i as f32, 72.)).collect();
+        let plane: Vec<_> = rows.iter().collect();
+        let mut offset = 0.;
+        for row in &rows {
+            let next = continuous_offset(&plane, row, 502., offset);
+            assert!((0. ..=82.).contains(&(next - offset)));
+            assert!(row.y + 4. >= next);
+            assert!(row.y + row.h + 12. <= next + 502.);
+            offset = next;
+        }
+        assert!(offset > 3. * 502., "several viewports traversed");
+        for row in rows.iter().rev() {
+            let next = continuous_offset(&plane, row, 502., offset);
+            assert!((0. ..=82.).contains(&(offset - next)));
+            offset = next;
+        }
+        assert_eq!(continuous_offset(&plane, &rows[0], 502., -100.), 0.);
+        let limit = rows.last().unwrap().y + 72. + 20. - 502.;
+        assert_eq!(
+            continuous_offset(&plane, rows.last().unwrap(), 502., 10000.),
+            limit
+        );
+        assert_eq!(
+            continuous_offset(&plane, &rows[2], 502., 37.),
+            37.,
+            "visible row retains manual offset"
+        );
     }
 
     #[test]

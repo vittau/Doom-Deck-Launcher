@@ -11,27 +11,45 @@ import { VectorFrame } from "assets/ember/frame.slint";
 export { WiringStrings } from "wiring-strings.slint";
 export { Strings } from "strings.slint";
 // One bounded plane for pointer and controller scrolling. Offsets are logical pixels.
-// `offset` is the single source of truth for the vertical position: `scroll()` never
-// reads `content-y`, which lags `offset` until the change handler runs (a stale read
-// on the 60 Hz stick poll used to overwrite the focus-follow offset, spec 061).
+// `offset` is the immediate destination; `presented-offset` is its current visual
+// position. Neither neutral ticks nor focus-follow presentation read a stale
+// `content-y` back into the destination (specs 061/102).
 component ScrollPlane inherits Flickable {
     in-out property <float> offset: 0;
+    // The destination stays immediate for focus/actions. Only its presentation
+    // interpolates, and a fresh destination retargets the current animation.
+    property <bool> smooth-follow: false;
+    out property <float> presented-offset: offset;
+    animate presented-offset { duration: smooth-follow ? 120ms : 0ms; easing: ease-out; }
+    public function follow(destination: float, smooth: bool) {
+        smooth-follow = smooth;
+        offset = destination;
+    }
+    in property <bool> bounded: false;
     in property <float> extent-height;
     in property <float> extent-width;
     // Focus-follow can align the final item at the top. Reserve its trailing
     // viewport space so Flickable does not clamp that landing back to a partial
     // previous row. Manual scrolling remains bounded by the current extent.
-    content-height: max(max(self.height, extent-height * 1px), self.height + offset * 1px);
+    content-height: bounded ? max(self.height, extent-height * 1px) : max(max(self.height, extent-height * 1px), self.height + offset * 1px);
     content-width: max(self.width, extent-width * 1px);
-    content-y: -offset * 1px;
-    changed content-y => { offset = -self.content-y / 1px; }
-    changed offset => { self.content-y = -self.offset * 1px; }
+    content-y: -presented-offset * 1px;
+    changed content-y => {
+        // Animated presentation is not manual input. A wheel/drag changes
+        // content-y away from that binding and takes over immediately.
+        if abs(-self.content-y / 1px - self.presented-offset) > 0.01 {
+            self.smooth-follow = false;
+            self.offset = -self.content-y / 1px;
+        }
+    }
+    changed presented-offset => { self.content-y = -self.presented-offset * 1px; }
     public function scroll(dx: float, dy: float) {
         self.content-x = clamp(self.content-x - dx * 1px, min(0px, self.width - self.content-width), 0px);
         // A neutral tick also preserves a focus-aligned final row when its top
         // lies past the normal manual-scroll limit (the remainder still fits).
         if dy != 0 {
-            self.offset = clamp(self.offset + dy, 0, max(0, (self.content-height - self.height) / 1px));
+            self.smooth-follow = false;
+            self.offset = clamp(self.presented-offset + dy, 0, max(0, (self.content-height - self.height) / 1px));
         }
     }
 }
@@ -326,7 +344,11 @@ export component AppWindow inherits Window {
     in property <bool> install-pulse: false;
     in property <bool> discover-screen: false;
     out property <bool> tabs-enabled: root-screen && !sheet-open && !input-locked;
+    in property <bool> continuous-list: false;
     in-out property <float> scroll-offset: 0;
+    out property <float> presented-scroll-offset: main-plane.presented-offset;
+    callback follow-scroll(float, bool);
+    follow-scroll(destination, smooth) => { main-plane.follow(destination, smooth); }
     in property <float> content-height: 518;
     in property <float> content-width: 1240;
     in property <float> setup-content-height: 518;
@@ -433,6 +455,7 @@ export component AppWindow inherits Window {
         main-plane := ScrollPlane {
         width: parent.width; height: parent.height;
         extent-width: root.content-width; extent-height: root.content-height;
+        bounded: root.continuous-list;
         offset <=> root.scroll-offset;
         for item in root.nodes: Node { x: (item.x + 8) * 1px; y: (item.y + 8) * 1px; visible: !root.setup-screen || item.x < 700; item: item; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }

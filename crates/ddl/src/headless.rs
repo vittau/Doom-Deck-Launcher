@@ -36,6 +36,9 @@ pub(crate) fn pump_events() {
         event();
     }
 }
+// Timed animation evidence can opt out of real renderer/PNG wall time in its
+// isolated child process; ordinary journeys retain their existing clock.
+static MOCK_TIME_ONLY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static TIME_OFFSET: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 fn advance_time(ms: u64) {
     slint::platform::update_timers_and_animations();
@@ -45,7 +48,12 @@ fn advance_time(ms: u64) {
 impl Platform for HeadlessPlatform {
     fn duration_since_start(&self) -> std::time::Duration {
         static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
-        START.get_or_init(std::time::Instant::now).elapsed()
+        let elapsed = if MOCK_TIME_ONLY.load(std::sync::atomic::Ordering::SeqCst) {
+            std::time::Duration::ZERO
+        } else {
+            START.get_or_init(std::time::Instant::now).elapsed()
+        };
+        elapsed
             + std::time::Duration::from_millis(
                 TIME_OFFSET.load(std::sync::atomic::Ordering::SeqCst),
             )
