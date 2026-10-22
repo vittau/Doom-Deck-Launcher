@@ -26,6 +26,16 @@ and how the frame-pacing keys interact. Steam Input itself is still manual; the
 / glibc constraint. The layout is **Proposed** until the deck test confirms it;
 physical Deck results remain **Needs Deck Validation**.
 
+## Launcher view shortcut
+
+On Discover or Library, press **Select (View)** to switch between illustrated cards
+and compact list rows. Both tabs share the choice and save it immediately in the
+background for the next launch. The footer names the next format: **List view** or
+**Card view**. On a physical keyboard, press **V** (release before pressing again).
+The shortcut also works while a tab, category or Library setup control has focus;
+it is inactive on details, setup, dialogs, other screens and while a game runs.
+**Needs Deck Validation:** physical Select mapping, row legibility and responsiveness.
+
 ## Install (from a GitHub Release)
 
 1. On the Steam Deck, download **`ddl-linux-x86_64.tar.gz`** from the

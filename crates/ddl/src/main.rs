@@ -163,20 +163,23 @@ fn run(options: cli::Options) -> Result<(), Box<dyn std::error::Error>> {
     let weak = ui.as_weak();
     let timer = slint::Timer::default();
     let mut gamepads = input::Gamepads::new();
+    let input_state = state.clone();
     timer.start(slint::TimerMode::Repeated, input::CONFIG.poll, move || {
         if let Some(ui) = weak.upgrade() {
             let (actions, connections, (scroll_x, scroll_y)) =
-                gamepads.poll(ui.get_input_active() && !state.borrow().playing);
-            state.borrow_mut().neutral_poll(actions.is_empty());
+                gamepads.poll(ui.get_input_active() && !input_state.borrow().playing);
+            input_state.borrow_mut().neutral_poll(actions.is_empty());
             for connected in connections {
-                state.borrow().hotplug(&ui, connected);
+                input_state.borrow().hotplug(&ui, connected);
             }
             ui.invoke_scroll(scroll_x, scroll_y);
             for action in actions {
-                state.borrow_mut().action(&ui, action);
+                input_state.borrow_mut().action(&ui, action);
             }
         }
     });
-    ui.run()?;
+    let result = ui.run();
+    state.borrow_mut().finish_preferences();
+    result?;
     Ok(())
 }

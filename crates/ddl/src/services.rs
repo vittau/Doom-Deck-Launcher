@@ -4,7 +4,10 @@
 pub(crate) mod flatpak_tests;
 #[path = "state_recovery.rs"]
 mod state_recovery;
+#[path = "view_preferences.rs"]
+mod view_preferences;
 pub use state_recovery::{UnreadableFile, start_fresh};
+pub use view_preferences::{ViewFormat, ViewWriter, load_view_format};
 
 use ddl_core::{
     catalog::{Catalog, Game, Recipe, TagVocabulary},
@@ -626,6 +629,7 @@ impl Command {
 }
 #[derive(Debug)]
 pub enum Event {
+    ViewFormat(ViewFormat),
     Progress(InstallProgress),
     Working,
     Playing,
@@ -2179,6 +2183,9 @@ impl Services {
         match command {
             Command::Local(_) => unreachable!(),
             Command::Startup => {
+                emit(Event::ViewFormat(
+                    load_view_format(&self.env).unwrap_or_default(),
+                ));
                 if let Err(error) = self
                     .config
                     .provision()
@@ -4242,6 +4249,75 @@ fn enable_component(recipe: &Recipe, profile: &mut Profile, id: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn compact_preference_survives_reopen_and_stale_catalog_state() {
+        use super::view_preferences::save_view_format;
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let mut stale = Services::open(env.clone()).unwrap();
+        assert_eq!(load_view_format(&env).unwrap(), ViewFormat::Cards);
+        for format in [ViewFormat::List, ViewFormat::Cards, ViewFormat::List] {
+            save_view_format(&env, format).unwrap();
+            let mut reopened = Services::open(env.clone()).unwrap();
+            let mut restored = None;
+            reopened
+                .execute(Command::Startup, &CancellationToken::new(), &mut |e| {
+                    if let Event::ViewFormat(value) = e {
+                        restored = Some(value);
+                    }
+                })
+                .unwrap();
+            assert_eq!(restored, Some(format));
+        }
+        stale.record_catalog_attempt(123).unwrap();
+        stale.save().unwrap();
+        assert_eq!(load_view_format(&env).unwrap(), ViewFormat::List);
+        // An additive legacy UI state also defaults to Cards.
+        fs::write(
+            env.paths.config.join("view.json"),
+            br#"{"schema_version":1}"#,
+        )
+        .unwrap();
+        assert_eq!(load_view_format(&env).unwrap(), ViewFormat::Cards);
+    }
+
+    #[test]
+    fn compact_writer_coalesces_and_finishes_at_teardown_without_ui_tick() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        let (done, completion) = std::sync::mpsc::channel();
+        let writer = ViewWriter::new(env.clone(), move || {
+            let _ = done.send(());
+        });
+        for _ in 0..1000 {
+            writer.set(ViewFormat::Cards);
+            writer.set(ViewFormat::List);
+        }
+        writer.set(ViewFormat::List);
+        writer.finish();
+        assert_eq!(load_view_format(&env).unwrap(), ViewFormat::List);
+        assert!(
+            completion.try_recv().is_ok(),
+            "the worker delivered completion"
+        );
+    }
+
+    #[test]
+    fn compact_writer_reports_failed_atomic_save() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = env(temp.path());
+        fs::create_dir_all(env.paths.config.join("view.json")).unwrap();
+        let (done, completion) = std::sync::mpsc::channel();
+        let writer = ViewWriter::new(env, move || {
+            let _ = done.send(());
+        });
+        writer.set(ViewFormat::List);
+        completion
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .unwrap();
+        assert_eq!(writer.take_result(), Some(Err(Problem::Storage)));
+    }
+
     fn env(root: &Path) -> Environment {
         let home = root.join("home");
         fs::create_dir_all(&home).unwrap();

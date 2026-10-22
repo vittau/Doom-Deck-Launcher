@@ -18,6 +18,7 @@ pub enum Action {
     PreviousCategory,
     NextCategory,
     Menu,
+    ToggleView,
     Tab(usize),
 }
 impl Action {
@@ -36,6 +37,7 @@ impl Action {
             10 => Self::Menu,
             11 => Self::PreviousCategory,
             12 => Self::NextCategory,
+            13 => Self::ToggleView,
             20..=23 => Self::Tab((code - 20) as usize),
             _ => return None,
         })
@@ -182,8 +184,9 @@ impl Mapper {
                 };
             }
             Signal::Button(button, down) => {
+                let was_down = pad.buttons.contains(&button);
                 if down {
-                    if !pad.buttons.contains(&button) {
+                    if !was_down {
                         pad.buttons.push(button);
                     }
                 } else {
@@ -201,6 +204,7 @@ impl Mapper {
                     pad.dpad[i] = down;
                 } else if !matches!(button, Button::LeftTrigger2 | Button::RightTrigger2)
                     && down
+                    && !was_down
                     && !pad.blocked
                 {
                     return match button {
@@ -211,6 +215,7 @@ impl Mapper {
                         Button::LeftTrigger => Some(Action::PreviousTab),
                         Button::RightTrigger => Some(Action::NextTab),
                         Button::Start => Some(Action::Menu),
+                        Button::Select => Some(Action::ToggleView),
                         _ => None,
                     };
                 }
@@ -473,6 +478,37 @@ mod tests {
             Signal::from(EventType::Disconnected),
             Signal::Disconnected
         ));
+    }
+    #[test]
+    fn select_is_edge_triggered_and_never_repeats() {
+        let mut mapper = Mapper::default();
+        assert_eq!(Action::from_code(13), Some(Action::ToggleView));
+        for _ in 0..3 {
+            assert_eq!(
+                mapper.event(0, Signal::Button(Button::Select, true), Duration::ZERO),
+                Some(Action::ToggleView)
+            );
+            assert_eq!(
+                mapper.event(0, Signal::Button(Button::Select, true), CONFIG.delay),
+                None
+            );
+            assert!(mapper.repeat(Duration::from_secs(10)).is_empty());
+            assert_eq!(mapper.event(0, Signal::Ignore, CONFIG.delay), None);
+            assert_eq!(
+                mapper.event(0, Signal::Button(Button::Select, false), CONFIG.delay),
+                None
+            );
+        }
+        mapper.suspend();
+        assert_eq!(
+            mapper.event(0, Signal::Button(Button::Select, true), CONFIG.delay),
+            None
+        );
+        mapper.event(0, Signal::Button(Button::Select, false), CONFIG.delay);
+        assert_eq!(
+            mapper.event(0, Signal::Button(Button::Select, true), CONFIG.delay),
+            Some(Action::ToggleView)
+        );
     }
     #[test]
     fn buttons_map_once_and_hotplug_clears_hold() {

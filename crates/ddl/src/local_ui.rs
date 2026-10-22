@@ -1313,7 +1313,71 @@ impl Runtime {
                 }
             }
         }
-        if self.screen == Screen::Library {
+        if self.screen == Screen::Library && self.view_format == services::ViewFormat::List {
+            b.nodes.clear();
+            b.button(NEW, 12., 12., 1200., c.get_new(), false);
+            if let Some(s) = &self.snapshot {
+                let mut y = 84.;
+                if !s.base_games.is_empty() {
+                    b.title(12., y, 1200., 38., "Base games".into(), 28.);
+                    y += 44.;
+                    for (index, item) in s.base_games.iter().enumerate() {
+                        b.compact(
+                            BASE + index as i32,
+                            12.,
+                            y,
+                            item.base.title().into(),
+                            text(ui, T::BaseReady),
+                            text(ui, T::Installed),
+                            false,
+                        );
+                        y += 82.;
+                    }
+                }
+                b.title(12., y, 1200., 38., "Mapsets and custom setups".into(), 28.);
+                y += 44.;
+                for i in self.library_items() {
+                    let item = &s.items[i];
+                    b.compact(
+                        card_id(i),
+                        12.,
+                        y,
+                        display_title(&item.recipe).into(),
+                        format!(
+                            "{} · {} · {}",
+                            game(ui, item.recipe.base_game.game),
+                            item_availability(ui, s, item),
+                            item.recipe.authors.join(", ")
+                        )
+                        .into(),
+                        format!(
+                            "{} · {}",
+                            text(ui, T::Installed),
+                            profile_count(ui, item.profiles.len())
+                        )
+                        .into(),
+                        item.favorite,
+                    );
+                    y += 82.;
+                }
+                for (index, setup) in s.custom.iter().enumerate() {
+                    b.compact(
+                        CUSTOM + index as i32,
+                        12.,
+                        y,
+                        setup.name.clone().into(),
+                        c.get_badge(),
+                        Default::default(),
+                        false,
+                    );
+                    y += 82.;
+                }
+                if self.library_items().is_empty() && s.custom.is_empty() {
+                    b.label(24., y, 1100., 32., "No installed mapsets yet".into(), 22.);
+                }
+            }
+        }
+        if self.screen == Screen::Library && self.view_format == services::ViewFormat::Cards {
             if self.library_items().is_empty()
                 && self.snapshot.as_ref().is_some_and(|s| !s.custom.is_empty())
             {
@@ -1338,6 +1402,7 @@ impl Runtime {
             }
         }
         if self.screen == Screen::Library
+            && self.view_format == services::ViewFormat::Cards
             && let Some(s) = &self.snapshot
             && !s.base_games.is_empty()
         {
@@ -1368,7 +1433,7 @@ impl Runtime {
                 "Mapsets and custom setups".into(),
                 28.,
             );
-            if !b.nodes.iter().any(|n| n.id == self.focus && n.actionable) {
+            if self.focus >= 0 && !b.nodes.iter().any(|n| n.id == self.focus && n.actionable) {
                 // Validate only after the base-game cards exist, so a refresh
                 // preserves focus on any Library entry.
                 // Mapsets keep first focus (specs 010/015); base games take it only
@@ -1376,7 +1441,7 @@ impl Runtime {
                 self.focus = self
                     .library_items()
                     .first()
-                    .map(|&i| 10 + i as i32)
+                    .map(|&i| card_id(i))
                     .or_else(|| (!s.custom.is_empty()).then_some(CUSTOM))
                     .unwrap_or(BASE);
             }

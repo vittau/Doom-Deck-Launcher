@@ -114,15 +114,27 @@ component Node inherits Rectangle {
     callback activate(int);
     x: item.x * 1px; y: item.y * 1px;
     width: item.w * 1px; height: item.h * 1px;
-    background: root.disabled-control ? Tokens.deep : item.kind == 1 || item.kind == 4 ? Tokens.surface : item.kind == 2 || item.kind == 3 || item.kind == 8 || item.kind == 9 || item.kind == 14 ? (root.primary-fill ? root.primary-ink : Tokens.raised) : transparent;
+    background: root.disabled-control ? Tokens.deep : item.kind == 1 || item.kind == 4 || item.kind == 24 ? Tokens.surface : item.kind == 2 || item.kind == 3 || item.kind == 8 || item.kind == 9 || item.kind == 14 ? (root.primary-fill ? root.primary-ink : Tokens.raised) : transparent;
     border-radius: item.kind == 1 || item.kind == 4 ? Tokens.card-radius : Tokens.row-radius;
-    border-width: item.kind == 1 ? 1px : 0px;
+    border-width: item.kind == 1 || item.kind == 24 ? 1px : 0px;
     border-color: Tokens.steel-edge;
     if focused && !root.disabled-control: Rectangle {
         x: root.item.kind == 1 ? -16px : -8px; y: root.item.kind == 1 ? -16px : -8px;
         width: parent.width + (root.item.kind == 1 ? 32px : 16px); height: parent.height + (root.item.kind == 1 ? 32px : 16px);
         background: Tokens.deep; border-radius: 16px; border-color: Tokens.focus; border-width: 4px;
         if root.item.kind != 1: Rectangle { x: 8px; y: 8px; width: parent.width - 16px; height: parent.height - 16px; background: root.primary-fill ? root.primary-ink : Tokens.raised-focus; border-radius: Tokens.row-radius; }
+    }
+    if item.kind == 24: Rectangle {
+        FittedText {
+            x: 16px; y: 5px; width: parent.width - 320px; height: 34px;
+            label: root.item.label; base-size: 28px; smaller-size: 24px;
+            multiline: false;
+        }
+        FittedText {
+            x: 16px; y: 42px; width: parent.width - 320px; height: 28px;
+            label: root.item.detail; base-size: 20px; smaller-size: 20px;
+            multiline: false; display: false; strong: false; ink: Tokens.muted;
+        }
     }
     if item.kind == 1: Frame { x: -8px; y: -8px; width: parent.width + 16px; height: parent.height + 16px; }
     if item.kind == 2 || item.kind == 3 || item.kind == 8 || item.kind == 16: Rectangle {
@@ -218,7 +230,7 @@ component Node inherits Rectangle {
         title-slot: root.item.kind != 23;
         ink: root.item.kind == 21 ? Tokens.muted : Tokens.text;
     }
-    if item.detail != "": Text {
+    if item.detail != "" && item.kind != 24: Text {
         x: item.kind == 16 ? 56px : 16px; y: 38px; width: parent.width - (item.kind == 16 ? 72px : 32px); height: parent.height - 42px;
         text: item.detail; color: root.disabled-control ? Tokens.locked-ink : Tokens.muted; font-size: Tokens.metadata; wrap: word-wrap;
     }
@@ -290,6 +302,9 @@ export component AppWindow inherits Window {
     in property <bool> favorite-hint: false;
     in property <string> favorite-label: @tr("Favorite");
     in property <bool> category-hint: false;
+    in property <bool> view-hint: false;
+    in property <bool> list-view: false;
+    property <bool> view-key-held: false;
     in property <bool> import-hint: false;
     in property <bool> local-add-hint: false;
     in property <bool> local-remove-hint: false;
@@ -517,7 +532,7 @@ export component AppWindow inherits Window {
         HorizontalLayout {
             visible: !root.input-locked;
             y: 18px; width: parent.width; height: 28px; alignment: start;
-            padding-left: 40px; padding-right: 40px; spacing: 24px;
+            padding-left: root.view-hint ? 28px : 40px; padding-right: root.view-hint ? 28px : 40px; spacing: root.view-hint ? 16px : 24px;
             Hint { badge: @tr("A"); label: @tr("Select"); }
             Hint { badge: @tr("B"); label: root.sheet-back-later ? @tr("Later") : root.quit-hint ? @tr("Quit") : @tr("Back"); }
             if root.favorite-hint && !root.sheet-open: Hint { badge: @tr("X"); label: root.favorite-label; }
@@ -527,6 +542,7 @@ export component AppWindow inherits Window {
             if root.import-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: @tr("Import"); }
             if root.profile-hint: Hint { badge: @tr("L1/R1"); label: @tr("Profile"); pill: true; }
             if root.root-screen && !root.sheet-open: Hint { badge: @tr("L1/R1"); label: @tr("Tabs"); pill: true; }
+            if root.view-hint: Hint { badge: @tr("Select"); label: root.list-view ? @tr("Card view") : @tr("List view"); pill: true; }
             if root.category-hint && !root.sheet-open: Hint { badge: @tr("L2/R2"); label: @tr("Category"); pill: true; }
             if !root.sheet-open || root.local-confirm-hint: Hint { badge: @tr("Start"); label: root.local-confirm-hint ? LocalStrings.confirm : LocalStrings.quit; pill: true; }
         }
@@ -543,7 +559,15 @@ export component AppWindow inherits Window {
         }
     }
     keys := FocusScope {
+        key-released(event) => {
+            if event.text == "v" { root.view-key-held = false; return accept; }
+            return reject;
+        }
         key-pressed(event) => {
+            if event.text == "v" {
+                if !root.view-key-held { root.view-key-held = true; root.action(13); }
+                return accept;
+            }
             if event.text == Key.UpArrow { root.action(0); return accept; }
             if event.text == Key.DownArrow { root.action(1); return accept; }
             if event.text == Key.LeftArrow { root.action(2); return accept; }
