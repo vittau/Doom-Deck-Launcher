@@ -884,6 +884,19 @@ fn continuous_lists_retarget_preserve_manual_offsets_and_render_motion() {
         ui.invoke_scroll(0., -25.);
         advance_time(160);
         assert!((ui.get_presented_scroll_offset() - (moving - 25.)).abs() < 0.1);
+        r.action(&ui, Action::Down);
+        advance_time(30);
+        let moving = ui.get_presented_scroll_offset();
+        window.dispatch_event(WindowEvent::PointerScrolled {
+            position: slint::LogicalPosition::new(600., 500.),
+            delta_x: 0.,
+            delta_y: 19.,
+        });
+        advance_time(160);
+        assert!(
+            (ui.get_presented_scroll_offset() - (moving - 19.)).abs() < 0.1,
+            "native wheel interrupts focus interpolation"
+        );
         ui.invoke_scroll(0., 100000.);
         let limit = (ui.get_content_height() - viewport).max(0.);
         assert!(
@@ -955,6 +968,13 @@ fn library_favorites_group_in_both_layouts_and_toggle_keeps_identity() {
         assert!(ui.get_nodes().iter().any(|n| n.id == 6300));
         assert!(ui.get_nodes().iter().any(|n| n.id == 6101));
     }
+    r.action(&ui, Action::Down);
+    assert_eq!(
+        r.focus, 6100,
+        "Down reaches local setups after reordered mapsets"
+    );
+    r.action(&ui, Action::Up);
+    assert_eq!(r.focus, 16);
     let identity = r.snapshot.as_ref().unwrap().items[6].recipe.id.clone();
     r.action(&ui, Action::X);
     // Inspect the optimistic reorder before the service result replaces the

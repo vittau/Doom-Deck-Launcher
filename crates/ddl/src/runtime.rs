@@ -3852,12 +3852,20 @@ impl Runtime {
         // Geometry is part of the anchor: a favorite toggle can move the same
         // selected item. A neutral refresh with unchanged geometry preserves
         // manual scrolling, even when the selected item is off screen.
-        let (focus_y, focus_h) = focused.map_or((0., 0.), |n| (n.y, n.h));
+        let (focus_y, focus_h) = if matches!(self.screen, Screen::Discover | Screen::Library)
+            && self.local.view.is_none()
+        {
+            focused.map_or((0., 0.), |n| (n.y, n.h))
+        } else {
+            (0., 0.)
+        };
         let anchor = (self.screen, self.local.view, self.focus, focus_y, focus_h);
         let focus_changed = self.scroll_anchor != Some(anchor);
         // Update bounds before changing offset, so Flickable never clamps an
         // entering list against the previous screen's extent.
-        ui.set_content_height(plane.iter().map(|n| n.y + n.h + 20.).fold(0_f32, f32::max));
+        if list {
+            ui.set_content_height(plane.iter().map(|n| n.y + n.h + 20.).fold(0_f32, f32::max));
+        }
         ui.set_continuous_list(list);
         if focus_changed {
             let offset = if self.local.view == Some(local_ui::View::Picker) {
