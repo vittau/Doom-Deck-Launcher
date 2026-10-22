@@ -5,7 +5,7 @@ title = "Micro-Slaughter Community Project"
 authors = ["Bauul (project lead)", "Antares031", "Aurelius", "Bdubzzz", "BridgeBurner56", "Danlex", "Dragonfly", "Dreadopp", "Guardsoul", "Liberation", "Lord_Z", "Pegleg", "Remmirath", "RonnieJamesDiner", "Walter"]
 release = "1b, 2021-01-27 (readme); idgames archive file dated 2026-09-07"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/mscp_v1b"
-description = "DOOM II: nineteen Boom-compatible slaughter maps (MAP01–MAP17 plus MAP31/MAP32) designed as five-minute combat puzzles — intense but manageable, with a 300-second par time on every map."
+description = "DOOM II: nineteen slaughter maps across a main run and two secret levels, designed as five-minute combat puzzles — intense but manageable, with a 300-second par time on every map."
 permission = "Authors may NOT use the contents as a base for modification or reuse; permissions were obtained from the original authors of included resources. Redistribution is permitted provided MSCP_v1b.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["community-projects"]
 
@@ -60,7 +60,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Micro-Slaughter Community Project"
-description = "The nineteen-map campaign, including the MAP17 epilogue and the two secret maps."
+description = "The nineteen-map campaign, including the epilogue and the two secret maps."
 optional = false
 default = true
 position = 1
