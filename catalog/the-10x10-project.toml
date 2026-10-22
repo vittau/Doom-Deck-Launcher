@@ -11,6 +11,13 @@ description = "A DOOM II set with ten main maps, a secret map and a no-exit fina
 permission = "Authors may use the contents as a base for modification or reuse, and the author states permission was obtained from the original authors of any modified or included resources. Redistribution is permitted provided 10x10.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["cacowards", "gimmick"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/the-10x10-project/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "the-10x10-project/01.jpg"
+credit = "lunchlunch"
+
 [base_game]
 game = "doom2"
 variants = []

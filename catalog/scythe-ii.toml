@@ -11,6 +11,13 @@ description = "A 32-map DOOM II campaign in six themed chapters, moving from cas
 permission = "Authors may not use the contents as a base for modification or reuse without written permission from the author. Redistribution is permitted provided scythe2.txt travels with the file, unmodified and intact, and no commercial use is made without the author's agreement. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["cacowards", "megawad", "classics", "challenging"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/scythe-ii/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "scythe-ii/01.jpg"
+credit = "Erik Alm"
+
 [base_game]
 game = "doom2"
 variants = []

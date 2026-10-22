@@ -23,6 +23,13 @@ description = "A 32-map imaginary sequel in id's 1994 style: loading bays, flood
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided D2TWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "cacowards", "community-projects", "megawad"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/doom-ii-the-way-id-did/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "doom-ii-the-way-id-did/01.jpg"
+credit = "Doom 2 The Way id Did team"
+
 [base_game]
 game = "doom2"
 # The readme says it may not run with Doom II prior to 1.9.

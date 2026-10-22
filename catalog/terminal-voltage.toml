@@ -11,6 +11,13 @@ description = "DOOM II: MAP01–MAP09 (9 maps). An OSHA inspector's dream comes 
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
 tags = ["community-projects", "doomer-boards", "episode"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/terminal-voltage/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "terminal-voltage/01.jpg"
+credit = "Doomer Boards Project 63 team"
+
 [base_game]
 game = "doom2"
 variants = []

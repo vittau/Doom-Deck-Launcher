@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (scripts/lean-image.sh).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://static.doomworld.com/monthly_2024_11/gd-1.jpg.1e50c480aa525696781ff1b69a209948.jpg"
+source_page = "https://www.doomworld.com/forum/topic/149336-going-down-turbo-10th-birthday-special-edition-rc1-7"
+credit = "Cyriak Harris (mouldy)"
+original_size = "800x396"
+retrieved = "2026-10-22"
+permission = "Screenshot published in the mapset's release thread (see source_page). No separate image licence text was found there. Bundled as a representative in-game view under decision D-024, credited to the mapset authors, and removed on their request. doomworld.com and static.doomworld.com return HTTP 403 to automated fetches, so the page and the image were read through Wayback Machine captures on 2026-10-22."
