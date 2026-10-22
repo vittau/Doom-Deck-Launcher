@@ -363,6 +363,13 @@ declares only the map WAD; DSDA-Doom applies the embedded patch automatically (a
 **Complevel (Proposed):** `vanilla` alias (3 on Ultimate Doom), family `vanilla`, from the
 author's "Advanced engine needed: None" and the Chocolate Doom test credit.
 
+**Secondary confirmation (DoomWiki):** https://doomwiki.org/wiki/REKKR returned HTTP 403 to
+the live request and was read through the Wayback Machine on 2026-10-22. It describes REKKR
+as a four-episode total conversion by Matthew Little (Revae) et al., with `Ports: Vanilla
+Ultimate Doom, GZDoom`, `IWAD: Ultimate Doom`, `Year: 2018`, and states "This mod received
+one of the 2018 Cacowards on Doomworld". This agrees with the recipe's base game, port class
+and award; it was not used for any byte identity.
+
 **Tags:** `cacowards` = 2018 Cacowards **Top Ten Page 2 winner**; canonical
 https://www.doomworld.com/cacowards/2018/ returned 403 and was read through its Wayback
 copy on 2026-10-22 (that feature also names Revae Creator of the Year). `classics` = first
