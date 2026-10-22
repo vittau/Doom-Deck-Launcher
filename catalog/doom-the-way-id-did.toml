@@ -1,0 +1,117 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §1–§6; gathered 2026-10-22.
+schema_version = 1
+id = "doom-the-way-id-did"
+title = "Doom the Way id Did"
+authors = [
+  "Hellbent (founder and project manager)",
+  "Xaser (project manager)",
+  "ellmo (project manager)",
+  "Alfonzo",
+  "Captain Toenail",
+  "Daimon (Walter Confalonieri)",
+  "Esselfortium",
+  "Hobomaster",
+  "Icytux",
+  "iori",
+  "Lutz",
+  "Marcaek",
+  "Megalyth",
+  "Pcorf",
+  "Phobus",
+  "Processingcontrol",
+  "Stewboy (Forty-Two)",
+  "Use3d",
+  "Kracov (artist)",
+]
+release = "1.1a, revised 2012-02-05 (first release 2011-12-10)"
+page = "https://www.doomworld.com/idgames/levels/doom/megawads/dtwid"
+description = "DOOM episode replacement: 27 vanilla-format maps in E1M1–E3M9 that recreate id's 1994 mapping style, with a WAD-embedded DeHackEd patch for the level names."
+permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided DTWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
+tags = ["classics", "cacowards", "community-projects"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/doom-the-way-id-did/ with source, credit and
+# permission text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "doom-the-way-id-did/01.jpg"
+credit = "Doom the Way id Did team (official project site)"
+[[screenshots]]
+asset = "doom-the-way-id-did/02.jpg"
+credit = "Doom the Way id Did team (official project site)"
+
+[base_game]
+game = "doom"
+# The readme says it may not run with Doom prior to 1.9. It replaces E1–E3 only,
+# so registered Doom 1.9 and Ultimate Doom (including the KEX re-release) both work.
+variants = [
+  "doom-1.9",
+  "doom-1.9ud",
+  "doom-1.9ud-kex-2024-08-06",
+  "doom-1.9ud-kex-2024-10-01",
+]
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Three episode replacements (E1M1–E3M9); the menu selects the episode, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-b.md §1–§6",
+  "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
+  "DTWID.wad lump directory read as data: 398 lumps, MAP markers E1M1–E3M9 (27 maps), one 1,286-byte embedded DEHACKED lump, no COMPLVL or UMAPINFO lump",
+  "DTWID.txt release text: 27 new levels, Game: Doom, Map #: E1M1-E3M9, no external files required, Doom prior to 1.9 excluded",
+  "DTWID.deh (2,047 bytes, 2011-12-11) compared with the WAD's embedded DEHACKED (1,286 bytes, published 2012-02-07): the embedded patch carries the revised BEX [STRINGS] names",
+]
+notes = "Confirmed archive/member identities and source inspection. The WAD embeds its own DEHACKED patch, which DSDA-Doom applies to explicitly loaded PWADs even under -noautoload, so the recipe does not add a separate -deh argument; the older external DTWID.deh would re-apply superseded level names and is therefore not declared. Complevel vanilla (3 on Doom/Ultimate Doom) follows the authors' vanilla Doom 1.9 target and the absence of any source-port requirement; no gameplay test performed. Tags: cacowards = Doomworld's 2012 Cacowards (19th annual) Top Ten Page 1 winner, https://www.doomworld.com/cacowards/2012/, read through the Wayback Machine copy of the legacy /19years/ page on 2026-10-22 because the live site returns 403; classics = released 2011-12-10, over five years old, with that Cacoward and the 2013 sequel as cited recognition; community-projects = 19 mappers and managers credited in DTWID.txt. Not tagged megawad: the release is 27 maps, below the 30-map definition, even though Cacowards prose loosely calls it a megaWAD. Not tagged episode: the release spans 27 maps, above the nine-map definition."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode selection.",
+  "E4 is not replaced: with Ultimate Doom the original E4M1–E4M9 remain selectable and unchanged.",
+  "An optional Mr. Freeze soundtrack was distributed separately from this archive (Cacowards prose only); it is not part of the inspected package and is not declared.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom/megawads/dtwid"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom/megawads/dtwid.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom/megawads/dtwid.zip"]
+size = 2005606
+sha256 = "122b50713026a05423776e5c1330770f74a371d4236c63497f0f7f64bc9a62cb"
+kind = "zip"
+idgames_path = "levels/doom/megawads/dtwid.zip"
+
+[[packages.members]]
+id = "maps"
+path = "DTWID.wad"
+size = 5073423
+sha256 = "5fcec0759a85aa3860ade5cb745cd2930c825eecaea3d823dc9f63840c5ceab5"
+keep = false
+
+[[packages.members]]
+id = "readme"
+path = "DTWID.txt"
+size = 8448
+sha256 = "d58e57291240e31a6df14d2323e15a70c18bc7d2376669fcbec22440e1849dee"
+keep = true
+
+[[components]]
+id = "main"
+label = "Doom the Way id Did"
+description = "Main 27-map three-episode replacement for vanilla Doom 1.9, with the level names supplied by the WAD's embedded DeHackEd patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
