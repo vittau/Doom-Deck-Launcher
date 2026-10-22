@@ -977,3 +977,14 @@
     isolated worktree; implementation, visual review, checks and Deck validation remain open.
   refs: [docs/reports/051-053-idgames-performance-contract.md,
     docs/specs/095-shared-compact-list-view.md]
+- date: 2026-10-22
+  type: change
+  summary: >-
+    Published v0.0.12-catalog: the 118-recipe bundle on the catalog branch with a 0.0.12
+    minimum-client gate, the Linux tarball release with a verified checksum, and the signed
+    Flatpak repository with the canonical site now identifying v0.0.12 (2026-10-22). CI
+    39793971539 and release 39793977054 passed; the Flatpak repository publication is being
+    re-dispatched (39798321701) because its first run timed out waiting 8 minutes for the
+    Pages build, which skipped the Cloudflare purge and canonical-file verification. No
+    launcher telemetry was added and the site events remain D-040 scope.
+  refs: [docs/reports/087-094-catalog-integration.md, docs/status.md]

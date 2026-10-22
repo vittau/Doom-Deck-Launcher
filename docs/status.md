@@ -52,7 +52,7 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   declarations, one `gtag('event'` call site. The owner confirmed both events arriving in
   Analytics on 2026-10-22. D-040 records that they measure intent only: they are deliberately not
   key events, and the donation outcome stays in the Buy Me a Coffee dashboard.
-- **Catalog expansion integrated locally (local only, not published):** the shipped catalog is
+- **Catalog expansion published as v0.0.12-catalog (2026-10-22):** the shipped catalog is
   now **118 recipes** — the previous 92 plus 25 downloadable mapsets (specs 087–089, 092, 093) and
   the player-supplied No Rest for the Living expansion (094). Browsing is ascending first-public
   release chronology with an optional validated `original_release` (117 day precision, 1 year,
@@ -64,8 +64,15 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   no established DSDA support); Sunder is pinned to the author's V.2407 build. Combined fmt,
   workspace Clippy and workspace tests pass on `verify/087-pwads`, and the integration audit
   re-checked all 25 downloaded archives against the inspected pins. Deck navigation, the import
-  picker with each NERVE variant, and gameplay remain **Needs Deck Validation**. Nothing was
-  pushed, tagged, released or published to the catalog branch.
+  picker with each NERVE variant, and gameplay remain **Needs Deck Validation**. Published on
+  2026-10-22: the catalog bundle on the `catalog` branch (118 recipes, `min_ddl_version` 0.0.12,
+  source commit `409d6c5`), the GitHub pre-release `v0.0.12-catalog` with
+  `ddl-linux-x86_64.tar.gz` and its verified checksum, and the signed Flatpak repository plus
+  canonical site (now v0.0.12, 2026-10-22). CI run `39793971539` passed on Linux including the
+  catalog-bundle job; release run `39793977054` passed. The first Flatpak publication timed out
+  awaiting Pages after publishing its content; run `39798321701` repeats publication to complete
+  the skipped Cloudflare purge and canonical-file checks. Real-network e2e run `39797198619`
+  and a physical Deck playthrough remain pending.
 - **Shared compact browsing in progress:** spec 095 defines a Select toggle between cards and
   a compact list in Discover and Library, one persisted preference, preserved focus/filter/order
   and no toggle effect in other screens or sheets. A supervised Codex UI worker implements it
