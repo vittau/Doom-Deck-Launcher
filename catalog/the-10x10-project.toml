@@ -1,0 +1,71 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-a.md §17–§20; gathered 2026-10-22.
+schema_version = 1
+id = "the-10x10-project"
+title = "The 10x10 Project"
+authors = ["lunchlunch"]
+release = "2022-06-15"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/0-9/10x10"
+description = "A DOOM II set with ten main maps, a secret map and a no-exit finale (twelve map slots). Each main map is built from only ten stock textures and ten stock flats, and the combat ranges from Plutonia-style to Sunder-esque."
+permission = "Authors may use the contents as a base for modification or reuse, and the author states permission was obtained from the original authors of any modified or included resources. Redistribution is permitted provided 10x10.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["cacowards"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Twelve map slots (MAP01–MAP11 plus MAP31) with UMAPINFO. The menu selects the map, so no warp is prescribed.
+pistol_start = true
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-a.md §17–§20", "Archive, member, WAD lump, UMAPINFO and embedded DEHACKED inspection; 10x10/10x10.txt; coordinator-provided DoomWiki oldid=576470 identity; DSDA-Doom v0.30.1 source and release notes"]
+notes = "Confirmed archive/member identities. The WAD has twelve map markers — MAP01–MAP10, the no-exit stopper MAP11 and the secret MAP31 — matching the readme's '11 (+1 no-exit stopper)' and the coordinator-provided DoomWiki page (12 map slots including ending and secret). It carries a 1,509-byte UMAPINFO, an embedded 490-byte DEHACKED [STRINGS] patch and 13 D_* music lumps, with no COMPLVL and no separate music WAD. The readme says Boom-compatible and tested DSDA-Doom 0.21.3, so family boom and complevel boom (9) follow the author and the Boom convention. Tags: cacowards = 2022 Cacowards Top Ten winner, https://www.doomworld.com/cacowards/2022/ (page not read live in this session; archived inventory docs/research/cacowards.md §2022). megawad is not claimed (12 map slots is under 30), episode is not claimed (12 is over the nine-map limit), and classics is not claimed (2022 is under five years old). The author says pistol starts are intended, so the recipe sets the typed player-profile suggestion."
+limitations = ["Needs Deck Validation: IWAD selection, complevel, UMAPINFO progression, embedded DEHACKED strings, load order, gameplay, audio and map selection.", "MAP11 'No Exit, It's Over' is a no-exit stopper (its UMAPINFO 'next' target MAP12 does not exist) and MAP31 'The Anna Dream' is the secret map; confirm the intended end and secret route on the Deck.", "The author's DoomWiki oldid=576470 page could not be read directly from this host (Cloudflare HTTP 403); its identity facts came from the coordinator's reading, while the archive/readme facts were inspected here."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/0-9/10x10"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/0-9/10x10.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/0-9/10x10.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/0-9/10x10.zip"]
+size = 6399619
+sha256 = "1435ee1d7cea48eb048ccf47545c780c0165cc98c588692d63bf7d7914925fad"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/0-9/10x10.zip"
+
+[[packages.members]]
+id = "maps"
+path = "10x10/10X10.wad"
+size = 19892998
+sha256 = "1b5caf4d065839370877ae2f2e9382569a2a335fc14034f4c69e15fefd287d8e"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "10x10/10x10.txt"
+size = 6998
+sha256 = "7d6c6d242af62ccbe68377a03ed8a2da27a0308144b55d9f73333465631b0260"
+keep = true
+
+[[components]]
+id = "main"
+label = "The 10x10 Project"
+description = "All ten main maps, the secret map and the no-exit finale, with the set's own music and graphics."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
