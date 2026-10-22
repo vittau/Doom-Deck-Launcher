@@ -251,20 +251,47 @@ fn base_game_and_complevel_match_the_author_text() {
     );
 }
 
-/// ZDoom MAPINFO and Eternity EMAPINFO are not Boom formats and DSDA-Doom
-/// v0.30.1 does not read them; progression is the engine's hardcoded table.
+/// Product copy stays plain: DEHACKED/MAPINFO/EMAPINFO/UMAPINFO/COMPLVL and
+/// engine-source talk belongs in verification, not in descriptions. The same
+/// test keeps the ZDoom-MAPINFO correction and the hardcoded progression
+/// evidence in place.
 #[test]
-fn zdoom_mapinfo_is_not_claimed_as_boom_and_progression_falls_back() {
+fn descriptions_are_product_copy_and_technical_evidence_stays_in_verification() {
+    for id in ASSIGNED {
+        let r = recipe(id);
+        assert!(
+            r.description.starts_with("DOOM II:"),
+            "{id} description should open with the game and read as product copy: {}",
+            r.description
+        );
+        for jargon in [
+            "DEHACKED", "MAPINFO", "EMAPINFO", "UMAPINFO", "COMPLVL", "lump", "DSDA", "legacy.c",
+        ] {
+            assert!(
+                !r.description.contains(jargon),
+                "{id} root description must not carry {jargon}: {}",
+                r.description
+            );
+            for component in &r.components {
+                assert!(
+                    !component.description.contains(jargon),
+                    "{id} component `{}` must not carry {jargon}: {}",
+                    component.id,
+                    component.description
+                );
+            }
+        }
+        assert!(
+            !r.verification.notes.trim().is_empty(),
+            "{id} keeps the technical evidence in verification.notes"
+        );
+    }
+
     for id in ["vanguard", "lunatic"] {
         let r = recipe(id);
         assert!(
-            !r.description.contains("Boom MAPINFO"),
-            "{id} must not call the ZDoom MAPINFO a Boom format: {}",
-            r.description
-        );
-        assert!(
-            r.description.contains("ZDoom") || r.verification.notes.contains("ZDoom syntax"),
-            "{id} names the ZDoom syntax"
+            r.verification.notes.contains("ZDoom syntax"),
+            "{id} names the ZDoom syntax in its evidence"
         );
         assert!(
             r.verification
@@ -309,6 +336,49 @@ fn releases_without_umapinfo_document_the_stock_map_fallback() {
         assert!(
             recipe(id).verification.notes.contains("UMAPINFO"),
             "{id} documents its UMAPINFO-driven progression"
+        );
+    }
+}
+
+/// The two release labels that were normalised wrongly are fixed, with the
+/// evidence kept in verification (spec 090 chronology is worker D's field).
+#[test]
+fn corrected_release_labels_hold_their_sourced_dates() {
+    let overboard = recipe("overboard");
+    assert!(
+        overboard.release.contains("2022-08-04"),
+        "Overboard is 4 August 2022 (readme 04/08/22, day/month): {}",
+        overboard.release
+    );
+    assert!(
+        !overboard.release.contains("2022-04-08"),
+        "the April reading was a normalisation error: {}",
+        overboard.release
+    );
+
+    let chicken = recipe("headless-chicken");
+    assert!(
+        chicken.release.contains("2023-12-09"),
+        "Headless Chicken RC1 is 9 December 2023 (readme 9/12/2023, day/month): {}",
+        chicken.release
+    );
+    assert!(
+        !chicken.release.contains("2023-09-12"),
+        "the September reading was a normalisation error: {}",
+        chicken.release
+    );
+
+    for (id, date) in [
+        ("arrival", "2021-04-16"),
+        ("vanguard", "2011-05-11"),
+        ("lunatic", "2011-08-11"),
+        ("micro-slaughter-community-project", "2021-01-27"),
+    ] {
+        let r = recipe(id);
+        assert!(
+            r.release.contains(date),
+            "{id} keeps its sourced original date {date}: {}",
+            r.release
         );
     }
 }
