@@ -75,6 +75,27 @@ byte-identical to the three `/idgames` copies, confirming the DSDA page points a
 | Music | 34 embedded `D_*` lumps | 13 embedded `D_*` lumps | 35 embedded `D_*` lumps |
 | Licence | CC BY-NC-ND 4.0 | reuse permitted; distribute with text intact | no reuse as a base; distribute with text intact |
 
+## Original public release dates (spec 090 input)
+
+These are the dates this worker recommends for chronological browsing. They are the **original
+public release**, not the later fixed archive or the free-form `release` label, and no schema field
+or package identity was changed here.
+
+| Recipe | Original public date | Precision | Evidence | Later archive/update dates |
+| --- | --- | --- | --- | --- |
+| `scythe-ii` | **2005-06-06** | day | DoomWiki *Scythe 2* cites Erik Alm's Doomworld release thread *"released - Scythe 2"* dated 6 June 2005. The bundled `scythe2.txt` says June 7, 2005 (likely the file date). | Version 2 re-release 2009-07-10 (`scythe2.txt`; the inspected archive). |
+| `plutonia-2` | **2008-12-31** | day | `PL2.TXT` *"Version 1.0, December 31, 2008"*; DoomWiki *Plutonia 2* says it was *"released on December 31, 2008"*. | No later package in the inspected archive. |
+| `tnt-revilution` | **2017-05-29** | day | `TNTR.txt` *"Release date: 05/29/2017"*; DoomWiki says it was *"uploaded to the /idgames archive on 29 May, 2017"*. | Version 1.20 update 2017-07-08 (`TNTR.txt` *"Updated: 07/08/2017"*). |
+| `going-down-turbo` | **2024-11-05** | day | DoomWiki *Going Down: Turbo* says it *"was first released on November 5, 2024"*. | The inspected archive is the 2nd bug-fix, built 2025-06-23; DoomWiki records a 2025-03-01 idgames upload; the readme's `7/11/2024` is ambiguous and is not used. |
+| `the-10x10-project` | **2022-06-15** | day | `10x10/10x10.txt` *"Release date: 06/15/2022"*; the ZIP's internal timestamps are 2022-06-15. | DoomWiki records the idgames release on 2022-06-22 and the partial first-half/remaining postings on 2021-11-15 and 2022-03-03. |
+| `speed-of-doom` | **2010-03-28** | day | `SODFINAL.txt` *"Release date: 03/28/10"*; the ZIP's internal timestamps are 2010-03-28. | The inspected *"Final release"* is this archive; no later fixed package. |
+
+All six dates are day-precision. The Scythe II day differs by one between the public release thread
+(June 6) and the readme (June 7); the earliest public date is used. The 10x10 date is the author's
+complete-release date; a later idgames upload date and earlier partial postings are recorded rather
+than substituted. These are the values a spec 090 date field should consume; this worker did not
+add the field.
+
 ---
 
 ## 1. Scythe II (`scythe-ii`)
