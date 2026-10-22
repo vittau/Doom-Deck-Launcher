@@ -11,6 +11,13 @@ description = "A 32-map community sequel to TNT: Evilution that carries the figh
 permission = "Authors may use the contents as a base for modification or reuse, and the team states it obtained permission from the original authors of any modified or included resources. Redistribution is permitted provided TNTR.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["cacowards", "megawad", "classics", "community-projects"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/tnt-revilution/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "tnt-revilution/01.jpg"
+credit = "TNT: Revilution team"
+
 [base_game]
 game = "tnt"
 variants = []

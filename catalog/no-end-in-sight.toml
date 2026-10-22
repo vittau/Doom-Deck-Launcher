@@ -15,6 +15,13 @@ description = "Four devious episodes for Ultimate Doom that twist familiar Phobo
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided NEIS.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "cacowards", "megawad"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/no-end-in-sight/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "no-end-in-sight/01.jpg"
+credit = "NaturalTvventy, Xaser and Lutz"
+
 [base_game]
 game = "doom"
 # E4 needs Ultimate Doom; the KEX re-release carries the same episode data.

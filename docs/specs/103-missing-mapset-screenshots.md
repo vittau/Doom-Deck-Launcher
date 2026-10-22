@@ -1,6 +1,6 @@
 # 103 — Fill missing mapset screenshots from real public sources
 
-**Status:** Ready · **Depends on:** 023, 035, 037
+**Status:** Implemented — 12 of 26 added, 14 unresolved · **Depends on:** 023, 035, 037
 **Origin:** owner, 2026-10-22: try to find screenshots for mapsets that lack them,
 using an OpenCode worker.
 

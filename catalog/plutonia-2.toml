@@ -11,6 +11,13 @@ description = "A 32-map sequel to The Plutonia Experiment that continues Plutoni
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided PL2.TXT travels with the file, unmodified and intact; the team states it obtained permission from the original authors of any modified or included content. DDL downloads the unmodified archive and keeps the bundled release text and manual."
 tags = ["cacowards", "megawad", "classics", "community-projects"]
 
+# Bundled screenshot (spec 103, D-024): the image lives under
+# crates/ddl/ui/assets/screenshots/plutonia-2/ with source, credit and permission
+# text in SOURCES.toml beside it; the build embeds it for card, detail and band.
+[[screenshots]]
+asset = "plutonia-2/01.jpg"
+credit = "Plutonia 2 Team"
+
 [base_game]
 game = "plutonia"
 variants = []
