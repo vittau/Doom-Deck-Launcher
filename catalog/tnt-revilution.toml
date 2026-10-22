@@ -4,6 +4,8 @@ id = "tnt-revilution"
 title = "TNT: Revilution"
 authors = ["TNT: Revilution Team"]
 release = "Version 1.20, 2017-07-08 (first release 2017-05-29)"
+# First public release (spec 090): reference-087-a.md original-date table: TNTR.txt Release date 05/29/2017; the pinned 1.20 update is 2017-07-08.
+original_release = { year = 2017, month = 5, day = 29 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/tntr"
 description = "A 32-map community sequel to TNT: Evilution that carries the fight from an Io thermal power station to a demonic fleet, with custom music, graphics and sounds."
 permission = "Authors may use the contents as a base for modification or reuse, and the team states it obtained permission from the original authors of any modified or included resources. Redistribution is permitted provided TNTR.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."

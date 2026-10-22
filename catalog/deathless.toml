@@ -13,6 +13,8 @@ authors = [
   "Vader (ASH edits, cyber/spider doors)",
 ]
 release = "1.1, 2020-05-25"
+# First public release (spec 090): reference-087-b.md original-date table: author release post November 9, 2018; the pinned 1.1 is the 2020-05-25 update.
+original_release = { year = 2018, month = 11, day = 9 }
 page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/deathless"
 description = "Jimmy's four-episode Ultimate Doom campaign: 36 fast, classic maps that move from infested tech bases to a drowned, demon-held Earth, with familiar monsters turned up a notch."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse. Redistribution is permitted provided deathless1.1.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."

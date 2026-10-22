@@ -12,6 +12,8 @@ authors = [
   "WereKnight, Elend (tree, grass, lilypad and banister assets)",
 ]
 release = "V.2407 (author's 'Sunder 2407.zip' download; internal WAD file dated 2021-12-31, readme 2021-12-15)"
+# First public release (spec 090): reference-087-b.md original-date table: DoomWiki first release April 20, 2009; the pinned V.2407 is a later build.
+original_release = { year = 2009, month = 4, day = 20 }
 page = "https://www.doomworld.com/forum/topic/46002-sunder-map21-actually-exists-right-now/"
 description = "A landmark slaughter set of 22 enormous maps: cathedral-scale halls, lava fortresses and arenas that throw hundreds of demons at you, including the towering Hive Mother."
 permission = "Authors may use these levels as a base to build additional levels. Redistribution is permitted provided SunderReadMeV2.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."

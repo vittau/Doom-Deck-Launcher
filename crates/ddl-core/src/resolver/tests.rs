@@ -1066,3 +1066,56 @@ fn profile_extras_load_after_the_recipe_files_and_patches() {
         .is_ok()
     );
 }
+
+/// Spec 094 R4/R5: the player-supplied expansion blocks until its required main
+/// is imported, then loads that file with its source filename intact (DSDA
+/// recognises `nerve.wad` case-insensitively for the expansion missions).
+#[test]
+fn a_player_supplied_expansion_blocks_until_imported_then_loads_its_nerve_filename() {
+    let dir = TempDir::new().unwrap();
+    let data = dir.path();
+    let recipe = embedded("no-rest-for-the-living");
+    let registry = iwad_registry(data, "doom2-1.9", IwadsGame::Doom2, b"doom2 bytes");
+    let (engine, _) = engine(data);
+    let config = config(data);
+    let iwads = Iwads::new(data, &registry);
+    let profile = Profile::new("p1", "Play", "no-rest-for-the-living");
+    let mut manifest = empty_manifest(&recipe);
+
+    let blocker = resolve(&recipe, &profile, &iwads, &manifest, Some(&engine), &config)
+        .expect_err("the required import is missing");
+    assert!(
+        matches!(blocker, Blocker::ComponentNotProvided { .. }),
+        "{blocker:?}"
+    );
+
+    let path = data
+        .join("library")
+        .join(&recipe.id)
+        .join(&recipe.release)
+        .join("imports")
+        .join("main")
+        .join("NERVE.WAD");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let bytes = b"imported nerve fixture";
+    fs::write(&path, bytes).unwrap();
+    manifest.members.push(InstalledMember {
+        package: None,
+        member: None,
+        component: Some("main".to_owned()),
+        path: path.clone(),
+        size: bytes.len() as u64,
+        sha256: Sha256::of(bytes).to_hex(),
+        keep: false,
+    });
+
+    let resolution = resolve(&recipe, &profile, &iwads, &manifest, Some(&engine), &config)
+        .expect("resolves once the required file is imported");
+    let plan = resolution.plan();
+    assert_eq!(plan.files, vec![path.clone()]);
+    assert_eq!(
+        plan.files[0].file_name().and_then(|name| name.to_str()),
+        Some("NERVE.WAD"),
+        "the imported basename is preserved for DSDA's mission selection"
+    );
+}

@@ -4,6 +4,8 @@ id = "no-rest-for-the-living"
 title = "No Rest for the Living"
 authors = ["Nerve Software"]
 release = "Xbox Live Arcade release, 2010-05-26; later BFG Edition and DOOM + DOOM II variants"
+# First public release (spec 090): spec 094 and docs/research/no-rest-for-the-living.md §4: Doom II Xbox Live Arcade release 2010-05-26; later BFG, Unity and KEX releases are variants.
+original_release = { year = 2010, month = 5, day = 26 }
 page = "https://www.doomworld.com/cacowards/2010/"
 description = "A nine-map official DOOM II expansion from Nerve Software, with eight main maps and a secret level, continuing the fight on Earth after Hell's forces are defeated."
 permission = "Commercial id Software/Nerve Software content. No redistribution permission is claimed: DDL never downloads, bundles or redistributes NERVE.WAD. The player imports their own legally obtained copy for local use."

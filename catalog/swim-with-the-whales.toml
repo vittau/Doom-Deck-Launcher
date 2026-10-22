@@ -4,6 +4,8 @@ id = "swim-with-the-whales"
 title = "Swim With The Whales"
 authors = ["Ribbiks"]
 release = "2013-12-02 readme date; first public release 2013-11-20; idgames archive file dated 2013-12-21"
+# First public release (spec 090): docs/research/swim-with-the-whales.md §5: release-thread first post 2013-11-20; the readme (2013-12-02) and archive (2013-12-21) are later.
+original_release = { year = 2013, month = 11, day = 20 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/swtw"
 description = "DOOM II: three maps through abstract blue otherworlds — sunken fortresses, cathedral-like ruins and a volcanic wasteland turned to water — with elaborate secrets, a hidden joke map and a difficulty curve the author asks even veteran players to begin on HMP."
 permission = "Authors MAY use the contents as a base for modification or reuse; the credited authors of included resources are listed in the text file. Redistribution is permitted provided swtw.txt travels with the file, unmodified and intact, and the contents are not charged for. DDL downloads the unmodified archive and keeps the bundled text file."

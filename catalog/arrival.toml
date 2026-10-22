@@ -4,6 +4,8 @@ id = "arrival"
 title = "Arrival"
 authors = ["Walker \"Pavera\" Wright", "Brayden \"AD_79\" Hart"]
 release = "1.1.1, 2021-04-16 (declared in the readme); idgames archive file dated 2022-10-07"
+# First public release (spec 090): reference-087-c.md §8: arrival.txt Release date 4/16/2021; the 2022-10-07 archive is later.
+original_release = { year = 2021, month = 4, day = 16 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/a-c/arrival"
 description = "DOOM II: eleven maps on a surreal journey through verdant, otherworldly facilities, built on stock DOOM II resources with new skies, ending in a secret bonus map."
 permission = "Authors MAY NOT use the maps as a base for modification or reuse. The music may be reused only for strictly non-commercial use as specified by the artist. Redistribution is permitted provided arrival.txt travels with the file, unmodified and intact; the author states permission was obtained for included resources. DDL downloads the unmodified archive and keeps the bundled text file."

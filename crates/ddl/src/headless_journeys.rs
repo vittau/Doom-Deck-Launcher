@@ -257,6 +257,35 @@ fn categories_favorites_and_screenshots() {
 }
 
 /// Spec 074: card insets, frame clearance and two tag rows in Discover.
+/// Spec 094 R4: the metadata-only player-supplied expansion installs, blocks
+/// Play and keeps its required import row reachable.
+#[test]
+fn player_supplied_expansion_imports_its_required_file() {
+    if isolated(
+        module_path!(),
+        "player_supplied_expansion_imports_its_required_file",
+    ) {
+        return;
+    }
+    let scene = production::scene();
+    replay(&scene, 2);
+    let capture = |name: &str| scene.capture(name);
+    production::player_supplied_expansion(&scene, &capture);
+}
+
+/// Spec 094 R4: the required main's sheet imports/replaces and closes, never
+/// offering an off toggle.
+#[test]
+fn required_import_sheet_has_no_toggle() {
+    if isolated(module_path!(), "required_import_sheet_has_no_toggle") {
+        return;
+    }
+    let scene = production::scene();
+    replay(&scene, 2);
+    let capture = |name: &str| scene.capture(name);
+    production::required_import_sheet_has_no_toggle(&scene, &capture);
+}
+
 #[test]
 fn cards_keep_roomy_insets_and_two_tag_rows() {
     if isolated(module_path!(), "cards_keep_roomy_insets_and_two_tag_rows") {

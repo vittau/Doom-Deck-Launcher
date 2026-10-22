@@ -4,6 +4,8 @@ id = "headless-chicken"
 title = "Headless Chicken"
 authors = ["Luca 'Chookum' Pavone"]
 release = "RC1 2023-12-09, RC14 2026-01-19 (readme, day-first date); idgames archive file dated 2026-02-02"
+# First public release (spec 090): reference-087-c.md §8: RC1 9/12/2023 (day-first proven by 19/01/2026); the 2026 archive is RC14.
+original_release = { year = 2023, month = 12, day = 9 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/hdlschkn"
 description = "DOOM II: a 33-map comedic arcade-action megawad in five episodes, following Doomguy through demon-held South America and beyond while chickens give chase."
 permission = "Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) as stated in the readme: redistribution is permitted with credit, a link to the licence and no commercial use. DDL downloads the unmodified archive and keeps the bundled text file."

@@ -4,6 +4,8 @@ id = "micro-slaughter-community-project"
 title = "Micro-Slaughter Community Project"
 authors = ["Bauul (project lead)", "Antares031", "Aurelius", "Bdubzzz", "BridgeBurner56", "Danlex", "Dragonfly", "Dreadopp", "Guardsoul", "Liberation", "Lord_Z", "Pegleg", "Remmirath", "RonnieJamesDiner", "Walter"]
 release = "1b, 2021-01-27 (readme); idgames archive file dated 2026-09-07"
+# First public release (spec 090): reference-087-c.md §8: MSCP_v1b.txt Release date 27th Jan 2021; the 2026 archive is the v1b replacement.
+original_release = { year = 2021, month = 1, day = 27 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/mscp_v1b"
 description = "DOOM II: nineteen slaughter maps across a main run and two secret levels, designed as five-minute combat puzzles — intense but manageable, with a 300-second par time on every map."
 permission = "Authors may NOT use the contents as a base for modification or reuse; permissions were obtained from the original authors of included resources. Redistribution is permitted provided MSCP_v1b.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
