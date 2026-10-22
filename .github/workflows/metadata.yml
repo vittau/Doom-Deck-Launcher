@@ -1,0 +1,53 @@
+# Offline, dependency-free packaging checks. No Rust, SDK or publication.
+name: Packaging metadata
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packaging/flatpak/**'
+      - 'scripts/flatpak/**'
+      - '.github/workflows/**'
+      - 'Cargo.toml'
+  pull_request:
+    paths:
+      - 'packaging/flatpak/**'
+      - 'scripts/flatpak/**'
+      - '.github/workflows/**'
+      - 'Cargo.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metadata-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline helper tests (Python standard library and bash)
+        run: |
+          python3 -m unittest discover -s scripts/flatpak -p 'test_*.py'
+          bash scripts/flatpak/test_served_urls.sh
+      - name: XML well-formedness and checked-in release version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import tomllib
+          import xml.etree.ElementTree as ET
+
+          root = Path('packaging/flatpak')
+          for path in root.rglob('*.xml'):
+              ET.parse(path)
+              print(f'XML OK: {path}')
+          metainfo = root / 'com.doomdecklauncher.DoomDeckLauncher.metainfo.xml'
+          release = ET.parse(metainfo).getroot().find('releases/release')
+          version = tomllib.loads(Path('Cargo.toml').read_text())['workspace']['package']['version']
+          if release is None or release.get('version') != version:
+              raise SystemExit(f'First AppStream release must match workspace version {version}')
+          print(f'First AppStream release matches workspace {version}')
+          PY

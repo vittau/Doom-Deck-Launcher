@@ -4,7 +4,9 @@
 # the real DSDA-Doom AppImage and the real mapset packages from upstream. It is
 # triggered by hand when someone wants to exercise the download, verification,
 # extraction, AppImage and launch-planning paths on a real Linux machine before
-# a Deck test.
+# a Deck test. Opt in for relevant downloader/archive/engine investigation;
+# this diagnostic is not a metadata, copy, catalog-only or UI release gate.
+# Upstream failures remain failures: do not skip cases or relax verification.
 #
 # Two jobs, deliberately:
 #   * `build` builds `ddl` (with the e2e IWAD seam) inside the same pinned

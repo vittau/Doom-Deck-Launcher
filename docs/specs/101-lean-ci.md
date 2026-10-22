@@ -1,6 +1,6 @@
 # 101 — Keep routine CI proportional to the change
 
-**Status:** Ready · **Depends on:** 001, 014, 062, 100
+**Status:** Implemented · **Depends on:** 001, 014, 062, 100
 **Origin:** owner, 2026-10-22: CI takes too long; avoid redundant tests and tests that
 do not apply to the change. The real-network e2e timed out twice on the unchanged
 archive.org Terminal Voltage download during the 0.0.13 verification.
