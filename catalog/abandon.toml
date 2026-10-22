@@ -5,7 +5,7 @@ title = "Abandon"
 authors = ["Bemused", "Benjogami", "Scotty"]
 release = "2023-05-07 update (original 2020 release)"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/abandon"
-description = "DOOM II: 17 Boom-compatible slaughter maps (MAP01–MAP17) plus a small ending map at MAP18, with an embedded DEHACKED patch, new graphics and a bundled MIDI soundtrack."
+description = "DOOM II: 17 Boom-compatible slaughter maps (MAP01–MAP17) in sombre, oppressive settings, plus a short closing map; aimed at experienced players."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse; permissions were obtained from the original authors of any resources modified or included. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
 tags = ["cacowards", "challenging"]
 
@@ -80,7 +80,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Abandon"
-description = "Main 17-map Boom slaughter set plus the MAP18 ending map, with its music, graphics and embedded DEHACKED patch."
+description = "The seventeen-map campaign and its closing map."
 optional = false
 default = true
 position = 1

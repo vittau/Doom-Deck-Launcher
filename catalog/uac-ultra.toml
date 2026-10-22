@@ -5,7 +5,7 @@ title = "UAC Ultra"
 authors = ["40oz", "Super Jamie"]
 release = "v1.2 (2010-03-29)"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/uacultra"
-description = "DOOM II: a 12-map Boom-compatible levelset (MAP01–MAP12, described by the authors as an \"11 (and a half)\" map set) with new textures, a new monster, new music and an embedded DEHACKED patch."
+description = "DOOM II: an 11½-map Boom-compatible campaign (MAP01–MAP12) through a besieged underground UAC installation on Mars, with new textures, a new monster and new music."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse, and state that permissions were obtained from the original authors of any modified or included resources. You MAY distribute this file provided you include this text file with no modifications, in any electronic format, as long as the file is intact. DDL downloads the unmodified archive and keeps the bundled text."
 tags = ["classics", "cacowards"]
 
@@ -77,7 +77,7 @@ keep = true
 [[components]]
 id = "main"
 label = "UAC Ultra"
-description = "Main 12-map Boom levelset with its new textures, new monster, music and embedded DEHACKED patch."
+description = "The full twelve-map campaign."
 optional = false
 default = true
 position = 1

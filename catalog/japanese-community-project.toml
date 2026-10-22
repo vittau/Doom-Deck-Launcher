@@ -5,7 +5,7 @@ title = "Japanese Community Project"
 authors = ["Tatsurd-Cacocaco and the Japanese Community Project team"]
 release = "v2.3 final (2016-07-24)"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/jpcp"
-description = "DOOM II megawad: 32 limit-removing maps (MAP01–MAP32) by a credited team of Japanese mappers, with a new soundtrack, graphics and an embedded DEHACKED patch; the archive also carries an optional Katakana/Kanji status HUD."
+description = "DOOM II: a 32-map limit-removing megawad by thirteen Japanese mappers, with a new soundtrack and graphics."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse; permissions were obtained from the original authors of any resources modified or included. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
 tags = ["classics", "cacowards", "community-projects", "megawad"]
 
@@ -88,7 +88,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Japanese Community Project"
-description = "Main 32-map limit-removing megawad with its soundtrack, graphics and embedded DEHACKED patch."
+description = "The full thirty-two-map megawad."
 optional = false
 default = true
 position = 1
@@ -101,7 +101,7 @@ role = "maps"
 [[components]]
 id = "japanese-hud"
 label = "Japanese HUD graphics (Katakana/Kanji)"
-description = "Optional JPCP_HUD.wad from the same archive. The authors' readme says loading it with the megawad enables a status bar in Katakana and Kanji; it replaces status-bar numbers, arms and bar graphics only. Off by default and loaded after the megawad."
+description = "Optional Japanese HUD: load it with the megawad to show the status bar in Katakana and Kanji."
 optional = true
 default = false
 position = 2

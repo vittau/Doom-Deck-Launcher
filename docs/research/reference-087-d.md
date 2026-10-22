@@ -27,7 +27,8 @@ inference; **Needs Deck Validation** = cannot be settled on this host.
   index was temporarily unavailable during this session).
 - **Date normalization.** Where a readme writes a numeric date ambiguous between day/month and
   month/day, the ZIP member timestamps decide it and the literal string is quoted anyway. This
-  affects Stardate 20X6 (`06/02/2013` = 2013-06-02; WAD timestamp 2013-05-31, text 2013-06-02) and
+  affects Stardate 20X6 (`06/02/2013` = 2013-06-02; WAD timestamp 2013-05-31 20:29:28, text
+  2013-06-02 17:50:00) and
   Abandon (`05/07/2023` = 2023-05-07; `Abandon.txt` timestamp 2023-05-07). Where the archive was
   packaged after the readme's stated release (Ozonia), both dates are recorded.
 - Verification commands and results are in `docs/reports/087-d.md`.
@@ -187,8 +188,11 @@ directory entries, `__MACOSX/`, `__MACOSX/stardate20x6/`, an AppleDouble
 The folder prefix is case-exact. The `__MACOSX` metadata is not declared and never loaded.
 
 **Release text — Confirmed, quoted.** `Title: Stardate 20X6`; `Release date: 06/02/2013` — the
-readme writes month/day, so the normalized date is **2013-06-02**: the ZIP's WAD member is dated
-2013-05-31 and its folder/text members 2013-06-02. The literal string stays quoted above;
+readme writes month/day, so the normalized date is **2013-06-02**: the ZIP's text member is dated
+2013-06-02 17:50:00, the WAD member 2013-05-31 20:29:28 and the folder 2013-06-02 16:42:40. The
+literal string stays quoted above. The coordinator's independent inspection of the same archive
+reported the same two timestamps (2013-06-02 17:50:00 and 2013-05-31), which corroborates the
+month/day reading;
 `Author: Ribbiks`; `Advanced engine needed: Boom-Compatible (tested in prb+ cl9, gzdoom)`;
 `Stardate 20X6 is a set of 8 boom-compatible levels`; `Map #: MAP01 - MAP07, bonus: MAP31`;
 `Other: DEHACKED and MAPINFO lumps included.`; `Music: Yes`; `Dehacked/BEX Patch: Yes`.
