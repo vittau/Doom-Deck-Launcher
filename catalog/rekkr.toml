@@ -1,0 +1,102 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §9; gathered 2026-10-22.
+schema_version = 1
+id = "rekkr"
+title = "REKKR"
+authors = [
+  "Revae (lead, maps, textures, sounds)",
+  "Tom Jensen (Hexenmapper, music)",
+  "TerminusEst13 (sounds, E3M7 layout)",
+  "AngrySaint (E2M5)",
+  "AD_79 (E3M4)",
+  "lupinx-Kassman (E1M7, iwad packaging)",
+  "SuperCupcakeTactics (E1M4)",
+  "Jaws In Space (E2M4 layout)",
+  "Velcrosasquatch (E2M6)",
+  "Bzzrak (original E4M1)",
+  "Jimmy (E3M7 layout)",
+]
+release = "1.17 (first release 2018-07-09; this archive's WAD dated 2025-01-19)"
+page = "https://www.doomworld.com/idgames/levels/doom/megawads/rekkr"
+description = "REKKR: a 36-map total conversion for Ultimate Doom v1.9 (E1M1–E4M9) with new monsters, weapons, textures, sounds and music, run as a free PWAD over the player's own Doom IWAD."
+permission = "Licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (https://creativecommons.org/licenses/by-nc/4.0/): redistribution is allowed with credit and a link to the licence, and commercial use is not. DDL downloads the unmodified archive and keeps the bundled readme and credits files."
+tags = ["classics", "cacowards", "community-projects", "megawad"]
+
+[base_game]
+game = "doom"
+# A total conversion for Ultimate Doom v1.9; the KEX re-release carries the same episode data.
+variants = ["doom-1.9ud", "doom-1.9ud-kex-2024-08-06", "doom-1.9ud-kex-2024-10-01"]
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Four episodes (E1–E4); the menu selects the episode, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-b.md §9",
+  "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
+  "REKKR.wad lump directory read as data: 3,330 lumps, 36 map markers E1M1–E4M9, one 61,321-byte embedded DEHACKED lump, MAPINFO 5,036 and DECORATE 1,204 for GZDoom-family ports, no COMPLVL or UMAPINFO lump",
+  "The embedded DEHACKED lump is byte-identical to the archive's external REKKR.deh (same 61,321 bytes and SHA-256), so no separate -deh load is declared",
+  "REKKR.txt: 'a total conversion for Ultimate Doom v1.9', 36 new levels, Game: Doom, Map #: All, Advanced engine needed: None, Other files required: None, tested with Chocolate Doom, GZDoom, Zandronum, PRBoom(+) and Eternity",
+  "REK_CREDS.txt: per-map and per-resource credits, used for the author list; REKKR.txt carries the CC BY-NC 4.0 terms",
+]
+notes = "Confirmed archive/member identities and source inspection. This is the original free PWAD edition from /idgames, not the standalone IWAD or paid Sunken Land release: the readme requires no other files and the WAD is a PWAD over the player's Ultimate Doom IWAD, which DDL never bundles or downloads. The WAD embeds its DEHACKED patch and the archive's external REKKR.deh is byte-identical, so the recipe loads only the map WAD under DSDA-Doom's automatic embedded-patch handling. Complevel vanilla (3 on Ultimate Doom) follows the author's 'Advanced engine needed: None' statement and the Chocolate Doom test credit; no gameplay test performed. Tags: cacowards = 2018 Cacowards Top Ten Page 2 winner, https://www.doomworld.com/cacowards/2018/, read through the Wayback Machine on 2026-10-22 because the live site returns 403 (the same feature names Revae Creator of the Year); classics = first released 2018-07-09, over five years old, with that Cacoward as cited recognition; community-projects = nine credited mappers plus music, sounds and testing contributors; megawad = 36 maps counted from the WAD and the author's list."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode/map selection.",
+  "REKKR is a total conversion: DSDA-Doom must apply the embedded DeHackEd patch (new monsters, weapons and strings) for the game to behave as intended; the visible result was not played on Deck.",
+  "The free PWAD edition is the only edition declared; the standalone IWAD and paid Sunken Land releases are out of scope and are not downloaded.",
+  "No screenshot bundled: the official site is behind a bot challenge and no compliant in-game image was obtainable, so the painted fallback applies.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom/megawads/rekkr"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom/megawads/rekkr.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom/megawads/rekkr.zip"]
+size = 14152590
+sha256 = "c28a32699a58c976c135f8d5bcc270f2801a88019fc8a1d7b4805a54cb0b8429"
+kind = "zip"
+idgames_path = "levels/doom/megawads/rekkr.zip"
+
+[[packages.members]]
+id = "maps"
+path = "REKKR.wad"
+size = 41960202
+sha256 = "fadf0b0ddb492c56e19ba5f56c8ac2e77413f287e8436cbcab31f2d41d7e9b0f"
+keep = false
+
+[[packages.members]]
+id = "readme"
+path = "REKKR.txt"
+size = 3188
+sha256 = "ad736135c000c80d348cb1dc5b12eed69980dd0e45dfa10207ebf77b7c377cae"
+keep = true
+
+[[packages.members]]
+id = "credits"
+path = "REK_CREDS.txt"
+size = 4848
+sha256 = "e8e8b89970f957996cf44013c0df9939c6f1c130dfe1bf8aeb2579d6d0b640e8"
+keep = true
+
+[[components]]
+id = "main"
+label = "REKKR"
+description = "Main 36-map total conversion with the new monsters, weapons, graphics, sounds and music supplied by the WAD's embedded DeHackEd patch and lumps."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
