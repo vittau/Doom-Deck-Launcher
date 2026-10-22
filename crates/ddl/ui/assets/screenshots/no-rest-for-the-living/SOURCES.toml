@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://web.archive.org/web/20111028081413id_/http://www.doomwiki.org/w/images/2/23/No_Rest_for_the_Living_Map01_Castle2.PNG"
+source_page = "https://doomwiki.org/wiki/MAP01:_The_Earth_Base_(No_Rest_for_the_Living)"
+credit = "Nerve Software (screenshot via DoomWiki)"
+original_size = "800x600"
+retrieved = "2026-10-22"
+permission = "Public DoomWiki map screenshot: DoomWiki text is CC BY-SA 4.0; the in-game imagery is commercial id Software/Nerve Software content. No separate image licence was found. Bundled as a representative in-game view under decision D-024 and removed on the author's or rights holder's request."
