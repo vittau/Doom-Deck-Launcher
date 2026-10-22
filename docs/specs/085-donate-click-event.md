@@ -4,6 +4,10 @@
 and accepted an explicit `donate_click` event. Spec 082 deliberately forbade custom events; this
 narrow spec amends that for exactly one event on one link and leaves the rest of 082 in force.
 
+**Amended by spec 086:** the closed set of custom events grew to `{donate_click, install_click}`,
+and the per-link `id` used here became the declarative `data-ga-event` attribute. The guarantees
+below (no parameters, no navigation change, no event on other pages) still hold.
+
 ## Scope
 
 The landing page hero carries the only donation link on the site (spec 083 R7). GA4 already
