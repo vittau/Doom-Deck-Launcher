@@ -66,6 +66,23 @@ pub(crate) const CARD: i32 = 10;
 /// Last card id. Kept below `CHIP` so cards and category chips never collide
 /// (spec 072 R4: every mapset in the 90+ recipe catalog stays reachable).
 pub(crate) const CARD_LAST: i32 = 199;
+/// Overflow IDs avoid every category, base-game and local-control range.
+fn card_id(index: usize) -> i32 {
+    if index < 190 {
+        CARD + index as i32
+    } else {
+        1_000_000 + index as i32
+    }
+}
+fn card_index(id: i32) -> Option<usize> {
+    if (CARD..=CARD_LAST).contains(&id) {
+        Some((id - CARD) as usize)
+    } else if id >= 1_000_190 {
+        Some((id - 1_000_000) as usize)
+    } else {
+        None
+    }
+}
 /// First node id of the category strip; chip `k` has id `CHIP + k`.
 const CHIP: i32 = 200;
 const CHIPS_MAX: usize = 30;
@@ -108,6 +125,9 @@ enum Sheet {
 }
 pub struct Runtime {
     env: Environment,
+    pub(crate) view_format: services::ViewFormat,
+    view_loaded: bool,
+    view_writer: Option<services::ViewWriter>,
     local: LocalUi,
     pub screen: Screen,
     pub focus: i32,
@@ -178,6 +198,9 @@ impl Runtime {
     pub fn new(env: Environment) -> Self {
         Self {
             env,
+            view_format: services::ViewFormat::Cards,
+            view_loaded: false,
+            view_writer: None,
             local: LocalUi::default(),
             screen: Screen::Loading,
             focus: 1,
@@ -268,13 +291,17 @@ impl Runtime {
     /// must not silently move the user to a different mapset; when the selected
     /// recipe disappeared, the selection clamps to a valid neighbour.
     fn replace_snapshot(&mut self, snapshot: Snapshot) {
+        let focused_index = card_index(self.focus);
+        let focused_id = focused_index
+            .and_then(|index| self.snapshot.as_ref()?.items.get(index))
+            .map(|item| item.recipe.id.clone());
         let selected_id = self
             .snapshot
             .as_ref()
             .and_then(|old| old.items.get(self.selected))
             .map(|item| item.recipe.id.clone());
         let card_focus = matches!(self.screen, Screen::Discover | Screen::Library)
-            && (CARD..=CARD_LAST).contains(&self.focus);
+            && card_index(self.focus).is_some();
         self.snapshot = Some(snapshot);
         let Some(snapshot) = self.snapshot.as_ref() else {
             return;
@@ -292,7 +319,14 @@ impl Runtime {
             .position(|item| item.recipe.id == id)
             .unwrap_or_else(|| self.selected.min(snapshot.items.len() - 1));
         if card_focus {
-            self.focus = CARD + self.selected as i32;
+            let index = focused_id
+                .and_then(|id| snapshot.items.iter().position(|item| item.recipe.id == id))
+                .unwrap_or_else(|| {
+                    focused_index
+                        .unwrap_or(self.selected)
+                        .min(snapshot.items.len() - 1)
+                });
+            self.focus = card_id(index);
         }
     }
     fn root(&self) -> bool {
@@ -428,6 +462,13 @@ impl Runtime {
     }
     /// Same completion path is drained by the Slint event-loop callback and headless tests.
     pub fn drain(&mut self, ui: &AppWindow) {
+        if let Some(Err(problem)) = self
+            .view_writer
+            .as_ref()
+            .and_then(|writer| writer.take_result())
+        {
+            ui.invoke_show_toast(problem_text(ui, &problem));
+        }
         let events: Vec<_> = self
             .rx
             .as_ref()
@@ -457,6 +498,12 @@ impl Runtime {
         for event in events {
             match event {
                 Event::Working => {}
+                Event::ViewFormat(format) => {
+                    if !self.view_loaded {
+                        self.view_format = format;
+                        self.view_loaded = true;
+                    }
+                }
                 Event::Progress(p) => self.progress = Some(p),
                 Event::Playing => {
                     self.playing = true;
@@ -756,7 +803,40 @@ impl Runtime {
             ));
         }
     }
+    /// Normal teardown runs this after Slint stops, never in an interactive callback.
+    pub fn finish_preferences(&mut self) {
+        if let Some(writer) = self.view_writer.take() {
+            writer.finish();
+        }
+    }
+    fn can_toggle_view(&self) -> bool {
+        matches!(self.screen, Screen::Discover | Screen::Library)
+            && self.local.view.is_none()
+            && self.local.dialog.is_none()
+            && self.sheet.is_none()
+            && !self.playing
+            && !self.neutral
+    }
+    fn write_view_format(&mut self, ui: &AppWindow, format: services::ViewFormat) {
+        if self.view_writer.is_none() {
+            let weak = ui.as_weak();
+            self.view_writer = Some(services::ViewWriter::new(self.env.clone(), move || {
+                let _ = weak.upgrade_in_event_loop(|ui| ui.invoke_services_ready());
+            }));
+        }
+        self.view_writer.as_ref().unwrap().set(format);
+    }
     pub fn action(&mut self, ui: &AppWindow, action: Action) {
+        if action == Action::ToggleView {
+            if self.can_toggle_view() {
+                self.view_format = self.view_format.toggled();
+                self.view_loaded = true;
+                self.scroll_anchor = None;
+                self.write_view_format(ui, self.view_format);
+                self.sync(ui);
+            }
+            return;
+        }
         if self.playing {
             return;
         }
@@ -932,9 +1012,7 @@ impl Runtime {
             }
             // The strip is entered at the selected chip and left for the first card, so
             // the way in and out never depends on column geometry.
-            Action::Up
-                if self.screen == Screen::Discover && (CARD..=CARD_LAST).contains(&self.focus) =>
-            {
+            Action::Up if self.screen == Screen::Discover && card_index(self.focus).is_some() => {
                 self.move_focus(ui, action);
                 if (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
                     self.focus = CHIP + self.category_index() as i32;
@@ -945,7 +1023,7 @@ impl Runtime {
                     && (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus)
                     && !self.discover_items().is_empty() =>
             {
-                self.focus = CARD + self.discover_items()[0] as i32;
+                self.focus = card_id(self.discover_items()[0]);
             }
             Action::Up | Action::Down | Action::Left | Action::Right => self.move_focus(ui, action),
             Action::PreviousCategory | Action::NextCategory if self.screen == Screen::Discover => {
@@ -1116,7 +1194,7 @@ impl Runtime {
                     self.category = category.clone();
                 }
                 if let Some(&first) = self.discover_items().first() {
-                    self.focus = CARD + first as i32;
+                    self.focus = card_id(first);
                 }
             }
             (Screen::Discover, BROWSE) => {
@@ -1129,7 +1207,7 @@ impl Runtime {
                     self.focus = self.discover_entry_focus();
                 }
             }
-            (Screen::Discover | Screen::Library, CARD..=CARD_LAST) => {
+            (Screen::Discover | Screen::Library, id) if card_index(id).is_some() => {
                 if self.screen == Screen::Library
                     && self
                         .snapshot
@@ -1139,7 +1217,7 @@ impl Runtime {
                     self.screen = Screen::Discover;
                     self.focus = self.discover_entry_focus();
                 } else {
-                    self.selected = (self.focus - CARD) as usize;
+                    self.selected = card_index(self.focus).unwrap();
                     self.enter(Screen::Detail, 1);
                 }
             }
@@ -1484,7 +1562,7 @@ impl Runtime {
     fn discover_entry_focus(&self) -> i32 {
         self.discover_items()
             .first()
-            .map_or(CHIP + self.category_index() as i32, |&i| CARD + i as i32)
+            .map_or(CHIP + self.category_index() as i32, |&i| card_id(i))
     }
     /// Snapshot indexes shown on Discover in the current category, oldest first
     /// (spec 090, R1/R2). Community Projects hides `doomer-boards` recipes, and a
@@ -1527,7 +1605,7 @@ impl Runtime {
             self.focus = self
                 .discover_items()
                 .first()
-                .map_or(CHIP + next as i32, |&i| CARD + i as i32);
+                .map_or(CHIP + next as i32, |&i| card_id(i));
         } else {
             self.focus = CHIP + next as i32;
         }
@@ -1736,8 +1814,8 @@ impl Runtime {
             return;
         }
         let target = match self.screen {
-            Screen::Discover | Screen::Library if (CARD..=CARD_LAST).contains(&self.focus) => {
-                Some((self.focus - CARD) as usize)
+            Screen::Discover | Screen::Library if card_index(self.focus).is_some() => {
+                Some(card_index(self.focus).unwrap())
             }
             Screen::Detail => Some(self.selected),
             _ => None,
@@ -2079,7 +2157,7 @@ impl Runtime {
             self.category = first_available(&available);
             self.category_chosen = true;
             if self.screen == Screen::Discover
-                && ((CARD..=CARD_LAST).contains(&self.focus)
+                && (card_index(self.focus).is_some()
                     || (CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus))
             {
                 self.focus = self.discover_entry_focus();
@@ -2337,10 +2415,39 @@ impl Runtime {
                     let top = if discover { STRIP_HEIGHT } else { 0. };
                     if let Some(s) = &self.snapshot {
                         for (visible, &i) in shown.iter().enumerate() {
+                            if !discover && self.view_format == services::ViewFormat::List {
+                                break;
+                            }
                             let item = &s.items[i];
+                            if self.view_format == services::ViewFormat::List {
+                                let y = 12. + top + 84. * visible as f32;
+                                let status = item_availability(ui, s, item);
+                                b.compact(
+                                    card_id(i),
+                                    12.,
+                                    y,
+                                    display_title(&item.recipe).into(),
+                                    format!(
+                                        "{} · {status} · {}",
+                                        game(ui, item.recipe.base_game.game),
+                                        item.recipe.authors.join(", ")
+                                    )
+                                    .into(),
+                                    text(
+                                        ui,
+                                        if item.manifest.is_some() {
+                                            T::Installed
+                                        } else {
+                                            T::NotInstalled
+                                        },
+                                    ),
+                                    item.favorite,
+                                );
+                                continue;
+                            }
                             let x = 12. + 408. * (visible % 3) as f32;
                             let y = 12. + top + 438. * (visible / 3) as f32;
-                            b.card(CARD + i as i32, x, y, 384., 410.);
+                            b.card(card_id(i), x, y, 384., 410.);
                             // Spec 074: a 28 px inset on every side keeps the art,
                             // text and chips clear of the 20 px ornamental frame and
                             // leaves room for two chip rows above the bottom edge.
@@ -3770,11 +3877,11 @@ impl Runtime {
                 .map_or_else(|| text(ui, T::Open), |n| n.label.clone()),
         );
         let card_focus = matches!(self.screen, Screen::Discover | Screen::Library)
-            && (CARD..=CARD_LAST).contains(&self.focus);
+            && card_index(self.focus).is_some();
         let marked = if card_focus {
             self.snapshot
                 .as_ref()
-                .and_then(|s| s.items.get((self.focus - CARD) as usize))
+                .and_then(|s| s.items.get(card_index(self.focus).unwrap()))
         } else {
             self.item()
         }
@@ -3790,6 +3897,8 @@ impl Runtime {
                 T::FavoriteAdd
             },
         ));
+        ui.set_view_hint(self.can_toggle_view());
+        ui.set_list_view(self.view_format == services::ViewFormat::List);
         ui.set_category_hint(self.screen == Screen::Discover && !self.playing);
         ui.set_detail_hint(false);
         ui.set_import_hint(false);
@@ -4097,6 +4206,17 @@ fn game(ui: &AppWindow, game: ddl_core::catalog::Game) -> SharedString {
             ddl_core::catalog::Game::Doom2 => T::Doom2,
             ddl_core::catalog::Game::Tnt => T::Tnt,
             ddl_core::catalog::Game::Plutonia => T::Plutonia,
+        },
+    )
+}
+fn item_availability(ui: &AppWindow, snapshot: &Snapshot, item: &Item) -> SharedString {
+    text(
+        ui,
+        match item.recipe_status {
+            ddl_core::library::RecipeStatus::Removed => T::RecipeRemoved,
+            ddl_core::library::RecipeStatus::Update(_) if !item.update_dismissed => T::RecipeUpdate,
+            _ if base_ready(snapshot, &item.recipe) => T::BaseReady,
+            _ => T::BaseMissingShort,
         },
     )
 }
@@ -4440,6 +4560,23 @@ impl Nodes {
             }
         }
         start
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn compact(
+        &mut self,
+        id: i32,
+        x: f32,
+        y: f32,
+        title: SharedString,
+        secondary: SharedString,
+        status: SharedString,
+        favorite: bool,
+    ) {
+        self.push(id, x, y, 1200., 76., 24, title, secondary, true, false);
+        self.author(x + 958., y + 25., 224., 28., status, 20.);
+        if favorite {
+            self.favorite(x + 908., y + 22.);
+        }
     }
     fn card(&mut self, id: i32, x: f32, y: f32, w: f32, h: f32) {
         self.push(
@@ -4951,6 +5088,116 @@ mod startup_and_pistol_tests {
         );
         assert!(!auto_check_due(true, false, false), "automatic updates off");
         assert!(!auto_check_due(false, false, true), "tests and dev builds");
+    }
+
+    #[test]
+    fn compact_toggle_contexts_empty_lists_and_save_failure_remain_usable() {
+        with_ui(|ui| {
+            let temp = tempfile::tempdir().unwrap();
+            let mut env = test_environment();
+            env.paths.config = temp.path().join("config");
+            let mut r = Runtime::new(env.clone());
+            r.catalog_checked = true;
+            for screen in [
+                Screen::Loading,
+                Screen::FirstRun,
+                Screen::Recovery,
+                Screen::Home,
+                Screen::Settings,
+                Screen::Detail,
+                Screen::Setup,
+                Screen::Progress,
+                Screen::Review,
+                Screen::Browser,
+            ] {
+                r.screen = screen;
+                r.action(ui, Action::ToggleView);
+                assert_eq!(r.view_format, services::ViewFormat::Cards, "{screen:?}");
+                assert!(r.view_writer.is_none());
+            }
+            r.screen = Screen::Discover;
+            let mut empty = snapshot_with_sigil(false);
+            empty.items.clear();
+            r.snapshot = Some(empty);
+            r.choose_category(Category::Favorites);
+            r.focus = CHIP;
+            r.action(ui, Action::ToggleView);
+            assert_eq!(r.view_format, services::ViewFormat::List);
+            assert_eq!(r.focus, CHIP, "empty category control survives");
+            r.screen = Screen::Library;
+            r.focus = -2;
+            r.action(ui, Action::ToggleView);
+            assert_eq!(r.view_format, services::ViewFormat::Cards);
+            assert_eq!(r.focus, -2);
+            r.playing = true;
+            r.action(ui, Action::ToggleView);
+            r.playing = false;
+            r.neutral = true;
+            r.action(ui, Action::ToggleView);
+            r.neutral = false;
+            r.sheet = Some(Sheet::Quit);
+            r.action(ui, Action::ToggleView);
+            r.sheet = None;
+            r.local.dialog = Some(local_ui::Dialog::Saves);
+            r.action(ui, Action::ToggleView);
+            r.local.dialog = None;
+            for view in [
+                local_ui::View::New,
+                local_ui::View::Base,
+                local_ui::View::Detail,
+                local_ui::View::BaseSetup,
+                local_ui::View::Picker,
+            ] {
+                r.local.view = Some(view);
+                r.action(ui, Action::ToggleView);
+            }
+            assert_eq!(r.view_format, services::ViewFormat::Cards);
+            r.local.view = None;
+            r.finish_preferences();
+            assert_eq!(
+                services::load_view_format(&env).unwrap(),
+                services::ViewFormat::Cards
+            );
+            std::fs::remove_file(env.paths.config.join("view.json")).unwrap();
+            std::fs::create_dir(env.paths.config.join("view.json")).unwrap();
+            r.action(ui, Action::ToggleView);
+            assert_eq!(r.view_format, services::ViewFormat::List);
+            for _ in 0..200 {
+                r.drain(ui);
+                if !ui.get_toast().is_empty() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            assert_eq!(ui.get_toast(), text(ui, T::ErrorStorage));
+            assert_eq!(
+                r.view_format,
+                services::ViewFormat::List,
+                "failed save keeps the usable layout"
+            );
+            assert!(!r.busy && r.pending.is_none());
+            r.finish_preferences();
+        });
+    }
+
+    #[test]
+    fn compact_layout_survives_stale_snapshot_and_preserves_separate_focus_identity() {
+        let mut r = Runtime::new(test_environment());
+        let mut first = snapshot_with_sigil(false);
+        let mut other = first.items[0].clone();
+        other.recipe.id = "another".into();
+        first.items.push(other);
+        r.snapshot = Some(first.clone());
+        r.screen = Screen::Discover;
+        r.selected = 0;
+        r.focus = CARD + 1;
+        r.view_loaded = true;
+        r.view_format = services::ViewFormat::List;
+        first.items.swap(0, 1);
+        r.replace_snapshot(first);
+        assert_eq!(r.focus, CARD);
+        assert_eq!(r.selected, 1);
+        assert_eq!(r.view_format, services::ViewFormat::List);
     }
 
     fn test_environment() -> Environment {
