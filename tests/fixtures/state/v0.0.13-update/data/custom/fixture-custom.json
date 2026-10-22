@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "fixture-custom",
+  "name": "My custom setup",
+  "iwad": {
+    "source": "identified",
+    "variant": "doom2-1.9"
+  },
+  "compatibility": "auto",
+  "created_at": 1700000000,
+  "updated_at": 1700000000
+}
