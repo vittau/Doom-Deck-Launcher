@@ -1331,7 +1331,7 @@ impl Runtime {
                             text(ui, T::Installed),
                             false,
                         );
-                        y += 84.;
+                        y += 82.;
                     }
                 }
                 b.title(12., y, 1200., 38., "Mapsets and custom setups".into(), 28.);
@@ -1358,7 +1358,7 @@ impl Runtime {
                         .into(),
                         item.favorite,
                     );
-                    y += 84.;
+                    y += 82.;
                 }
                 for (index, setup) in s.custom.iter().enumerate() {
                     b.compact(
@@ -1370,7 +1370,7 @@ impl Runtime {
                         Default::default(),
                         false,
                     );
-                    y += 84.;
+                    y += 82.;
                 }
                 if self.library_items().is_empty() && s.custom.is_empty() {
                     b.label(24., y, 1100., 32., "No installed mapsets yet".into(), 22.);

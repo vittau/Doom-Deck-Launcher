@@ -2420,7 +2420,7 @@ impl Runtime {
                             }
                             let item = &s.items[i];
                             if self.view_format == services::ViewFormat::List {
-                                let y = 12. + top + 84. * visible as f32;
+                                let y = 12. + top + 82. * visible as f32;
                                 let status = item_availability(ui, s, item);
                                 b.compact(
                                     card_id(i),
@@ -4572,7 +4572,7 @@ impl Nodes {
         status: SharedString,
         favorite: bool,
     ) {
-        self.push(id, x, y, 1200., 76., 24, title, secondary, true, false);
+        self.push(id, x, y, 1200., 74., 24, title, secondary, true, false);
         self.author(x + 958., y + 25., 224., 28., status, 20.);
         if favorite {
             self.favorite(x + 908., y + 22.);

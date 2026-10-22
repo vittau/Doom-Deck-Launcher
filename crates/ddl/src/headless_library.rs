@@ -453,6 +453,30 @@ fn compact_view_scenes_and_identity_journey() {
     );
     window.dispatch_event(WindowEvent::KeyReleased { text: "v".into() });
     assert_eq!(state.borrow().focus, 11);
+    let first_row = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.kind == 24)
+        .min_by(|a, b| a.y.total_cmp(&b.y))
+        .unwrap()
+        .id;
+    state.borrow_mut().focus = first_row;
+    state.borrow_mut().sync(&ui);
+    capture("095-discover-list-category.png");
+    let offset = ui.get_scroll_offset();
+    assert_eq!(
+        offset, 0.,
+        "the normal category and first row fit without scrolling"
+    );
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .filter(|n| n.kind == 24 && n.y + 8. >= offset && n.y + n.h + 8. - offset <= 502.)
+            .count()
+            >= 5
+    );
+    state.borrow_mut().focus = 11;
+    state.borrow_mut().sync(&ui);
     capture("095-discover-list-long-title.png");
     let offset = ui.get_scroll_offset();
     assert!(
