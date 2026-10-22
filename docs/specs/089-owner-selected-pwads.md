@@ -1,17 +1,19 @@
 # 089 — Further owner-selected PWADs
 
 **Status:** Ready. **Origin:** owner explicitly requested Going Down: Turbo,
-Headless Chicken, Abandon, Sunder and The 10x10 Project while the four OpenCode workers were running.
+Headless Chicken, Abandon, Sunder, The 10x10 Project and Micro Slaughter Community
+Project while the four OpenCode workers were running.
 
 ## Goal
 
-Add the five named releases alongside specs 087 and 088: twenty new recipes,
-112 total curated PWADs. Going Down: Turbo is its own recipe and must preserve
+Add the six named releases alongside specs 087 and 088: twenty-one new recipes,
+113 total curated PWADs. Going Down: Turbo is its own recipe and must preserve
 the original Going Down entry, package identity and installed profiles.
 
 ## Requirements
 
-- **R1:** Add `going-down-turbo`, `headless-chicken`, `abandon`, `sunder` and `the-10x10-project`, one
+- **R1:** Add `going-down-turbo`, `headless-chicken`, `abandon`, `sunder`,
+  `the-10x10-project` and `micro-slaughter-community-project`, one
   self-contained recipe per exact requested release. Use the user-provided pages
   below to establish identity, then inspect canonical release/readme/archive
   bytes. Record a specific release/version/date and package/member SHA-256;
@@ -35,7 +37,7 @@ the original Going Down entry, package identity and installed profiles.
   capture the screen, and document unavailable sources/fallback honestly.
 - **R5:** Extend the existing worker-specific integration tests, research and
   reports. Coordinator owns global expected-id registration, combined offline
-  lint, fmt/clippy/workspace checks and final 112-entry embedding verification.
+  lint, fmt/clippy/workspace checks and final 113-entry embedding verification.
 
 ## Parallel ownership extension
 
@@ -48,7 +50,7 @@ spec commit together with the worker branches. Merge local main before final che
 | --- | --- | --- |
 | A | catalog/going-down-turbo.toml; catalog/the-10x10-project.toml and matching screenshot directories | reference-087-a.md, reports/087-a.md, catalog_087_a.rs |
 | B | catalog/sunder.toml and matching screenshot directory | reference-087-b.md, reports/087-b.md, catalog_087_b.rs |
-| C | catalog/headless-chicken.toml and matching screenshot directory | reference-087-c.md, reports/087-c.md, catalog_087_c.rs |
+| C | catalog/headless-chicken.toml; catalog/micro-slaughter-community-project.toml and matching screenshot directories | reference-087-c.md, reports/087-c.md, catalog_087_c.rs |
 | D | catalog/abandon.toml and matching screenshot directory | reference-087-d.md, reports/087-d.md, catalog_087_d.rs |
 
 ## Source leads
@@ -64,18 +66,19 @@ spec commit together with the worker branches. Merge local main before final che
   [DSDA identity/download page](https://dsdarchive.com/wads/sunder).
 - [The 10x10 Project](https://doomwiki.org/wiki/The_10x10_Project);
   [DSDA identity/download page](https://dsdarchive.com/wads/10x10).
+- [Micro Slaughter Community Project](https://doomwiki.org/wiki/Micro_Slaughter_Community_Project).
 
 DoomWiki returned HTTP 403 to the coordinator. Do not invent its contents;
 use the actual author's release text and accessible archive mirrors. Source leads
-are not claims that this coordinator has inspected these five archives.
+are not claims that this coordinator has inspected these six archives.
 
 ## Acceptance criteria
 
-- [ ] **A1 (R1–R2):** all five exact releases have passing offline and real-fetch
+- [ ] **A1 (R1–R2):** all six exact releases have passing offline and real-fetch
   lint and offline tests for their byte identities, composition and IWAD/complevel.
 - [ ] **A2 (R3–R4):** scope, tags, permissions, artwork and limits have sources;
   no unmeasured Deck-performance claims or gameplay verification badges.
-- [ ] **A3 (R5):** 112 unique recipes embed without skips; combined fmt, workspace
+- [ ] **A3 (R5):** 113 unique recipes embed without skips; combined fmt, workspace
   clippy and workspace tests pass. Original Going Down is preserved.
 - [ ] **A4:** all four expanded worker reports and coordinator report cover
   these additions and remaining physical Deck validation honestly.
