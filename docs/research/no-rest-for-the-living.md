@@ -4,7 +4,7 @@
 **Gathered:** 2026-10-22 (UTC) · **Workstream:** spec 094 worker A
 **Scope:** the owner-supplied `/Users/vitor/Downloads/NERVE.WAD`, its read-only identity, the
 Doom II + `-file` launch model, the reviewed BFG and Steam/KEX variants, release/tag evidence and
-screenshot fallback. The commercial file is never downloaded, copied into the repository or bundled.
+screenshot provenance. The commercial file is never downloaded, copied into the repository or bundled.
 
 Labels used throughout:
 
@@ -103,8 +103,8 @@ verified. The KEX size/MD5 are recorded here and in the recipe comments; no KEX 
 - The existing catalog currently rejects an empty package list in `catalog/lint.rs`, and Setup marks
   required rows as locked/non-actionable. Spec 094 R3/R4 assigns those narrow capability changes to
   worker D; this worker does not edit shared model/lint/runtime/UI code.
-- The recipe is authored and tested now, but final offline lint/embedding must wait for D's
-  capability merge and the coordinator's signal.
+- D's zero-package/import capability is merged; the recipe now passes offline lint and its
+  independent test.
 
 ## 6. Artwork
 
