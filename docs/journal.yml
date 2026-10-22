@@ -934,3 +934,10 @@
     key-event marking remain owner work.
   refs: [docs/specs/085-donate-click-event.md, docs/specs/086-install-click-event.md,
     docs/reports/085-donate-click-event.md, docs/reports/086-install-click-event.md]
+- date: 2026-10-22
+  type: finding
+  summary: >-
+    Owner confirmed donate_click and install_click arriving in Google Analytics, so the published
+    event handler and the property agree in practice. Key-event marking in the property stays
+    optional owner work.
+  refs: [docs/reports/086-install-click-event.md]

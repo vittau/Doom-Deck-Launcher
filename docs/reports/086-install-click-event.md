@@ -81,6 +81,10 @@ The Donate event (spec 085) is already live: the "Project website" run for `c6e4
 `https://doomdecklauncher.com/` serves the page containing `donate_click`. This spec's change
 reaches the site through the same workflow after it is merged to `main`.
 
+**Confirmed:** the owner observed both `donate_click` and `install_click` arriving in Google
+Analytics on 2026-10-22, so the markup, the handler and the property all agree in practice, not
+just in the tests.
+
 ## Not done / owner follow-ups
 
 - **Reception is owner-verified.** After publication, click each button once and confirm
