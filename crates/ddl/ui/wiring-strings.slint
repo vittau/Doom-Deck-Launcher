@@ -211,6 +211,8 @@ export global WiringStrings {
     out property <string> update-error: @tr("Could not check for updates. Connect and Retry; installed engine preserved.");
     out property <string> search-standard-folders: @tr("Search standard Linux folders");
     out property <string> error-catalog: @tr("Could not check for catalog updates. Your installed mapsets are safe. Connect and Retry.");
+    out property <string> error-catalog-needs-newer: @tr("This catalog needs DDL {} or newer. Update DDL to get it.", root.value);
+    out property <string> error-catalog-needs-newer-unknown: @tr("This catalog needs a newer DDL. Update DDL to get it.");
     out property <string> catalog-summary: @tr("Catalog: {} ({})", root.value, root.other);
     out property <string> catalog-summary-simple: @tr("Catalog: {}", root.value);
     out property <string> check-catalog-updates: @tr("Check for catalog updates");

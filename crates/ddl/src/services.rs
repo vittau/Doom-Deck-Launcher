@@ -51,6 +51,13 @@ pub enum Problem {
     Update,
     /// Spec 019: the catalog update check failed.
     Catalog,
+    /// Spec 098: the published catalog needs a newer DDL than this one, so
+    /// retrying cannot help; `min` is the oldest DDL the bundle supports when
+    /// it states one.
+    CatalogNeedsNewer {
+        /// The oldest DDL version the catalog supports, when the bundle says.
+        min: Option<String>,
+    },
     Checksum,
     UnsafeArchive,
     Cancelled,
@@ -98,6 +105,13 @@ impl fmt::Display for Problem {
             ),
             Self::Update => f.write_str("the update check failed"),
             Self::Catalog => f.write_str("the catalog update check failed"),
+            Self::CatalogNeedsNewer { min: Some(min) } => write!(
+                f,
+                "the catalog needs DDL {min} or newer; update DDL to get it"
+            ),
+            Self::CatalogNeedsNewer { min: None } => {
+                f.write_str("the catalog needs a newer DDL; update DDL to get it")
+            }
             Self::Checksum => f.write_str("a downloaded file failed its checksum"),
             Self::UnsafeArchive => f.write_str("an archive was refused as unsafe"),
             Self::Cancelled => f.write_str("cancelled"),
@@ -263,6 +277,26 @@ fn logged(kind: Problem, error: impl std::fmt::Display) -> Problem {
     tracing::warn!(%error, ?kind, "application operation failed");
     kind
 }
+
+/// Spec 098: a catalog rejection that means "update DDL itself", as opposed to
+/// a transport or bundle problem a retry could fix. An unknown bundle format
+/// counts too: the design raises `min_ddl_version` with every schema change, so
+/// an unknown schema also means this DDL is too old.
+fn catalog_needs_newer(error: &ddl_core::catalog::CatalogUpdateError) -> Option<Problem> {
+    use ddl_core::catalog::{BundleRejection, CatalogUpdateError};
+    match error {
+        CatalogUpdateError::Rejected(BundleRejection::TooNew { min, .. }) => {
+            Some(Problem::CatalogNeedsNewer {
+                min: Some(min.clone()),
+            })
+        }
+        CatalogUpdateError::Rejected(BundleRejection::UnknownSchema { .. }) => {
+            Some(Problem::CatalogNeedsNewer { min: None })
+        }
+        CatalogUpdateError::Fetch(_) | CatalogUpdateError::Rejected(_) => None,
+    }
+}
+
 fn download_error(error: &ddl_core::downloads::Error) -> Problem {
     use ddl_core::downloads::Error as E;
     match error {
@@ -2130,7 +2164,12 @@ impl Services {
                 if self.record_catalog_attempt(now).is_err() {
                     tracing::warn!("could not record the catalog check attempt");
                 }
-                Err(logged(Problem::Catalog, error))
+                // Spec 098: a bundle this DDL is too old for is an app update,
+                // not a retryable failure.
+                Err(match catalog_needs_newer(&error) {
+                    Some(problem) => logged(problem, error),
+                    None => logged(Problem::Catalog, error),
+                })
             }
         }
     }
@@ -5577,6 +5616,75 @@ mod catalog_tests {
         assert_eq!(hits.load(Ordering::SeqCst), 2, "a failure never throttles");
 
         assert!(run(&mut s, Command::CatalogCheck).is_err());
+    }
+
+    /// Spec 098, R1: only a bundle this DDL is too old for asks for an app
+    /// update; transport and bundle problems keep the retryable wording.
+    #[test]
+    fn only_a_newer_client_rejection_asks_for_a_ddl_update() {
+        use ddl_core::catalog::{BundleRejection, CatalogUpdateError};
+        let too_new = CatalogUpdateError::Rejected(BundleRejection::TooNew {
+            min: "0.0.12".into(),
+            running: "0.0.10".into(),
+        });
+        assert_eq!(
+            catalog_needs_newer(&too_new),
+            Some(Problem::CatalogNeedsNewer {
+                min: Some("0.0.12".into())
+            })
+        );
+        let schema = CatalogUpdateError::Rejected(BundleRejection::UnknownSchema { got: 2 });
+        assert_eq!(
+            catalog_needs_newer(&schema),
+            Some(Problem::CatalogNeedsNewer { min: None })
+        );
+        for other in [
+            CatalogUpdateError::Fetch("offline".into()),
+            CatalogUpdateError::Rejected(BundleRejection::Oversize { limit: 1, got: 2 }),
+            CatalogUpdateError::Rejected(BundleRejection::Malformed { detail: "x".into() }),
+            CatalogUpdateError::Rejected(BundleRejection::NotNewer {
+                serial: 1,
+                embedded: 2,
+            }),
+        ] {
+            assert_eq!(catalog_needs_newer(&other), None, "{other}");
+        }
+    }
+
+    /// Spec 098, R1/R3: the manual check on a bundle with a too-new
+    /// `min_ddl_version` names the version and asks for a DDL update — the
+    /// same line `ddl catalog update` prints — while the catalog in use, the
+    /// cache and the silent startup check stay untouched.
+    #[test]
+    fn a_bundle_that_needs_a_newer_ddl_is_reported_as_an_app_update() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut bundle: Bundle = serde_json::from_slice(&bundle_json(500)).unwrap();
+        bundle.min_ddl_version = "99.0.0".into();
+        let served = serde_json::to_vec(&bundle).unwrap();
+        let server = Server::start(move |_r| Response::ok(served.clone()));
+        let env = environment(temp.path(), server.url("/catalog.json"));
+        let mut s = Services::open(env.clone()).unwrap();
+
+        let problem = run(&mut s, Command::CatalogCheck).unwrap_err();
+        assert_eq!(
+            problem,
+            Problem::CatalogNeedsNewer {
+                min: Some("99.0.0".into())
+            }
+        );
+        assert!(problem.to_string().contains("99.0.0"), "{problem}");
+        assert!(problem.to_string().contains("update DDL"), "{problem}");
+        assert!(!s.catalog_info().updated, "the catalog in use is untouched");
+        assert!(s.catalog_info().last_check.is_some(), "attempt recorded");
+        assert!(!ddl_core::catalog::cache_path(&env.paths.data).exists());
+
+        let failure = s.catalog_update().unwrap_err();
+        assert!(failure.to_string().contains("99.0.0"), "{failure}");
+        assert!(failure.to_string().contains("update DDL"), "{failure}");
+
+        // R4: the automatic startup check stays silent about it.
+        let mut next = Services::open(env).unwrap();
+        assert_eq!(startup(&mut next).updated, None);
     }
 
     /// Spec 077, R1: the network wait must not overwrite user state saved while
