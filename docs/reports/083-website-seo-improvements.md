@@ -8,7 +8,8 @@ operator asked to replace the blocking third-party donation script with a local 
 the same visual. The root `robots.txt`/`sitemap.xml`, JSON-LD, Q&A copy, responsive WebP assets,
 credits metadata and branded 404 are unchanged by that final step. No Rust code, shared PNG,
 README branding, coordinator document, signed repository artifact, workflow secret, console or
-external account was touched, and nothing was pushed, tagged or released by the worker.
+external account was touched. Publication happened only later in the same session, under explicit
+operator authorization after the coordinator went offline (record at the end of this report).
 
 All 37 offline website tests pass (24 pre-existing, 13 new), as do the 23 `scripts/flatpak` tests
 and the `served_urls.sh` test. Three headless local Lighthouse runs move total lab transfer from
@@ -343,3 +344,24 @@ site-name pages were re-checked while writing this report:
 - `target/preview-083/offline-donate.js` — blocked-network load test (115 ms, full page, button present).
 - `target/preview-083/lh-old-{1,2,3}.json`, `lh-final-{1,2,3}.json`, `lh-localdonate-{1,2,3}.json` — Lighthouse lab runs.
 - `target/preview-083/measure.js` — viewport/`scrollWidth`/selected-image measurement used above.
+
+## Publication record (operator-authorized)
+
+With the coordinator offline, the operator explicitly asked for integration and publication.
+Neither step was taken before that instruction.
+
+| Step | Evidence |
+| --- | --- |
+| Discovery/delivery merge | main `99b52c2`; Project website run [39701209346](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39701209346) — success |
+| Local donation button merge | main `a0e801e`; Project website run [39706639740](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39706639740) — success, including the served-file byte comparison and Cloudflare purge |
+
+Live checks after the second run (2026-10-22 ≈01:40 UTC) returned `200` for `/`, `/robots.txt`,
+`/sitemap.xml`, `/assets/credits.html`, `/assets/bmc-logo.svg`, `/assets/Cookie-Regular.woff2` and
+`/assets/hero-1920.webp` with the expected content types (`text/plain`, `application/xml`,
+`image/svg+xml`, `font/woff2`, `image/webp`); a missing path returns the 1 646-byte branded 404.
+The live homepage contains the local `.bmc-btn`, JSON-LD, Q&A and apex canonical, and contains no
+`cdnjs.buymeacoffee.com` or `fonts.googleapis.com` request. A live headless load with every
+non-site request aborted reached `readyState=complete` in 897 ms (network round trip included),
+`scrollWidth` 390 px, the 44 px Donate button present and only the asynchronous GA tag blocked.
+No credentials, console settings, releases or tags were touched; the page-only workflow performed
+the publication itself.
