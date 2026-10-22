@@ -3,13 +3,12 @@
 ## Outcome
 
 Implemented the repository-side recommendations from report 080 for the project website and
-added one owner follow-up request (R7): root `robots.txt` and `sitemap.xml`, accurate
-`WebSite`/`SoftwareApplication` JSON-LD and social metadata, a factual product paragraph plus six
-question-shaped answers, responsive WebP delivery for the hero and screenshots, credits-page
-metadata, a small branded 404, and the official Donate widget moved out of the header to below the
-hero release line. Both publication paths now allow and retain the new root files. No Rust code,
-shared PNG, README branding, coordinator document, signed repository artifact, workflow secret,
-console or external account was touched, and nothing was pushed, tagged or released.
+added two owner follow-ups: R7 moved the Donate widget below the hero release line, and then the
+operator asked to replace the blocking third-party donation script with a local button that keeps
+the same visual. The root `robots.txt`/`sitemap.xml`, JSON-LD, Q&A copy, responsive WebP assets,
+credits metadata and branded 404 are unchanged by that final step. No Rust code, shared PNG,
+README branding, coordinator document, signed repository artifact, workflow secret, console or
+external account was touched, and nothing was pushed, tagged or released by the worker.
 
 All 37 offline website tests pass (24 pre-existing, 13 new), as do the 23 `scripts/flatpak` tests
 and the `served_urls.sh` test. Three headless local Lighthouse runs move total lab transfer from
@@ -23,12 +22,14 @@ results, not field data, and nothing here promises indexing, rankings or citatio
 | `scripts/flatpak/render-site.py` | Renders `robots.txt`, `sitemap.xml`, JSON-LD (serialized, script-boundary safe), the 404 page and the WebP derivative copies; still standard library only |
 | `scripts/flatpak/generate-site-images.py` | New reproducible `cwebp` generator/checker for committed website derivatives |
 | `packaging/flatpak/site/images/` | 18 committed WebP derivatives + `manifest.json` (encoder, source hashes, dimensions, quality, output hashes/bytes) |
-| `packaging/flatpak/site/index.html` | JSON-LD, social metadata, product lead sentence, six Q&A articles, responsive `<picture>` delivery, Donate moved below the release line |
-| `packaging/flatpak/site/credits.html` | Meta description and self-referencing canonical |
+| `packaging/flatpak/site/index.html` | JSON-LD, social metadata, product lead sentence, six Q&A articles, responsive `<picture>` delivery, local Donate button below the release line |
+| `packaging/flatpak/site/bmc-logo.svg` | Official Buy Me a Coffee cup glyph from the vendor button bundle, coloured for the owner configuration |
+| `packaging/flatpak/site/fonts/` | Self-hosted Cookie Regular (WOFF2) and its SIL OFL 1.1 notice |
+| `packaging/flatpak/site/credits.html` | Meta description, self-referencing canonical and Cookie font credit |
 | `packaging/flatpak/site/404.html` | New small branded 404 with absolute asset URLs |
-| `packaging/flatpak/site/style.css` | Hero `<picture>` layering, Q&A grid, Donate placement/spacing, 404 layout |
+| `packaging/flatpak/site/style.css` | Hero `<picture>` layering, Q&A grid, local Donate button styling/spacing, 404 layout |
 | `packaging/flatpak/site/test_discovery.py` | New discovery, JSON-LD, image-delivery and publication-preservation tests |
-| `packaging/flatpak/site/test_render.py`, `test_identity.py` | Updated Donate placement contract and new allowlist/cleanup expectations |
+| `packaging/flatpak/site/test_render.py`, `test_identity.py` | Local Donate contract (no third-party script, placement, branding) and allowlist/cleanup expectations |
 | `.github/workflows/project-site.yml` | Root allowlist accepts `robots.txt`, `sitemap.xml`, `404.html`; verification compares the served discovery files |
 | `.github/workflows/flatpak-remote.yml` | Root cleanup retains the discovery files and 404; verification compares them too |
 
@@ -148,10 +149,17 @@ Staleness is guarded in three places: the manifest records source and output has
 `test_webp_derivatives_are_current_and_cache_versioned` / `test_stale_derivative_manifest_is_rejected`
 fail CI when a shared PNG changes without regenerated derivatives.
 
-The official Buy Me a Coffee embed keeps its exact owner configuration (slug `vittau`, `#FFDD00`,
-Cookie font, official script, `<noscript>` link). No `defer`/preconnect was added: local runs did
-not reproduce report 080's Google-Fonts render block, so changing the embed would have been an
-unmeasured branding edit.
+The Donate widget is now a **local static button**, by explicit operator decision after the
+third-party loader was measured blocking. It keeps the owner-approved look (yellow `#FFDD00`,
+official cup glyph, black text/outline, Cookie typeface, compact 44 px height) and links to
+`https://buymeacoffee.com/vittau`, but needs no third-party script, stylesheet or font. The glyph
+comes from the vendor's published button bundle (the official `logo-coffee`/`logo-outline` paths)
+and is served as a versioned local SVG; Cookie Regular (OFL 1.1, Ania Kruk) is self-hosted with its
+license notice copied into `assets/`. This supersedes the earlier “keep the official script”
+constraint only because the blocking risk was measured, not assumed: with cdnjs unreachable the
+live page's `load` event did not fire within 45 s and the widget never appeared; with every
+external request blocked the new page reaches `readyState=complete` and shows the button in 115 ms
+(only the asynchronous GA tag remains external).
 
 ### R5 — credits page and branded 404
 
@@ -198,7 +206,7 @@ no horizontal overflow, so that was a screenshot-timing artifact, not a layout d
 Lighthouse 12.8.2, mobile emulation, headless, six local runs against a localhost copy of the
 rendered tree (three pre-change, three final). These are lab numbers from one machine:
 
-| Metric | Pre-change (3 runs) | Final (3 runs) |
+| Metric | Pre-change (3 runs) | After discovery + images (3 runs) |
 | --- | --- | --- |
 | Performance | 72–74 (median 74) | 95 / 95 / 95 |
 | Accessibility / SEO / Best practices | 100 / 100 / 100 | 100 / 100 / 100 |
@@ -210,13 +218,16 @@ rendered tree (three pre-change, three final). These are lab numbers from one ma
 | Responsive-image savings | 1 396 265 B | 171 667 B |
 | Modern-format savings | 2 228 307 B | 0 B |
 
-The final three runs scored identically; only TBT moved, so treat the score as stable **for this
-localhost setup only**. Report 080's public-network runs varied far more (performance 70–71, LCP
-5.4–10.3 s), and a single Lighthouse run is not a ranking or field-data signal. The remaining
-responsive estimate is the gap between the 960w candidate and mobile DPR×slot sizing; a 720w tier
-was considered and skipped (below). CLS rose from 0.001 to 0.008, still far inside the “good”
-threshold, after the donation button moved into the hero; no layout shift was visible in the
-renders.
+The three “after” runs scored identically; only TBT moved. Later runs of the **local-button**
+version, in a different session and with a different observed RTT sample (12 ms versus 137 ms),
+scored 89 / 89 / 89 with FCP 2 109 ms, LCP 3 459 ms and **760 KiB** transfer. Core assets are
+identical apart from the button swap (local cup glyph 8.3 KB + self-hosted Cookie 14.6 KB replace
+the vendor script 6.0 KB + Google Fonts CSS 0.8 KB + Cookie 15.0 KB), so the score move is lab
+noise, not a regression, and no performance claim is made from it. The decisive evidence is the
+blocked-network test above. Report 080's public-network runs varied even more (performance 70–71,
+LCP 5.4–10.3 s), and none of this is field data or a ranking signal. The remaining responsive
+estimate is the gap between the 960w candidate and mobile DPR×slot sizing; a 720w tier was
+considered and skipped (below).
 
 ## Tests run
 
@@ -233,24 +244,40 @@ No Rust build or test was run; no Rust file changed. `git diff` against `696dc7d
 change under `docs/screenshots/`, `docs/design/`, `README.md`, the 080 report or coordinator
 documents.
 
-## R7 follow-up — Donate placement
+## R7 follow-up — Donate placement and local button
 
-The single official widget now renders in `.hero-copy` immediately after the version/publication
-date paragraph and before the “See the setup steps” link; the header contains three navigation
-links only. Install remains the primary button above it. The embed attributes, yellow `#FFDD00`,
-official logo, Cookie font, 44 px compact height and `<noscript>` fallback are unchanged, and
-`test_render.py` now pins one instance outside the header with this order. Desktop and 390 px
-renders confirm the widget fits, stays on-brand and leaves sensible spacing. Moving it out of the
-header also took the third-party embed out of the initial render-critical path; the final
-Lighthouse runs above were taken after this change (same tree before it scored 78–90 with LCP
-3.6–5.9 s).
+The single Donate button renders in `.hero-copy` immediately after the version/publication date
+paragraph and before the “See the setup steps” link; the header contains three navigation links
+only. Install remains the primary button above it. The button is a plain anchor (`target="_blank"`,
+`rel="noopener"`) with the official cup SVG and the owner colours; the local Cookie font is
+declared with `font-display: swap`, and the 44 px compact height keeps the header-height budget.
+No donation-related script, stylesheet or font is fetched from a third party, so the CTA works
+with JavaScript disabled and cannot delay the document.
+
+`test_render.py` pins one instance outside the header, its order after the release line, the link
+target, the local glyph/version query, the white cup and black outline, the self-hosted Cookie
+font and its OFL notice, and that no `cdnjs.buymeacoffee.com`, `button.prod.min.js`,
+`data-name="bmc-button"` or `fonts.googleapis.com` remains in the page.
+
+Measured evidence for the switch: `https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js`
+timed out after 8 s from this host while Google Fonts and the site answered; a headless load of the
+live page then never fired `load` within 45 s and the widget slot stayed empty. With Playwright
+aborting **every** non-file request, the new page reaches `readyState=complete` in 115 ms,
+`scrollWidth` equals 390 px, the Q&A section exists and the Donate button is present below the
+release line. The only remaining external request is the asynchronous GA tag from spec 082.
+
+The R7 placement was requested in coordinator follow-up `msg_372c25a9a081`; the local-button
+decision came from the operator after the coordinator went offline, and the updated spec text was
+not present on `origin/main` (`5bb62b9`) when the branch first merged it.
 
 ## Publication and handoff
 
-Publication remains root-owned and independent: this branch only changes the source templates,
-renderer, workflows, committed derivatives and tests. After merge, the page-only workflow refreshes
-the site without a signed Flatpak release, and the next signed publication regenerates the same
-root files. No console submission, credential use, outreach, push, tag or release happened here.
+Publication holds the same guard rails: the page-only workflow refreshes the site without a signed
+Flatpak release, and the next signed publication regenerates the same root files. No credential
+use, console submission, outreach, tag or release happened in this work. Integration and the site
+publication were performed from this session only after the operator explicitly authorized it
+while the coordinator was offline; the exact merge commit, workflow run and live checks are
+recorded at the end of this report.
 
 Owner-only work that remains:
 
@@ -271,9 +298,12 @@ Owner-only work that remains:
 - **A 720w screenshot tier** — would shave part of the remaining 171 KB responsive estimate but
   adds five more committed assets for a narrow DPR band; the 640/960/1280 ladder covers Deck 1×,
   desktop 1× and 2×.
-- **Preconnect / deferred donation embed** — the owner-approved embed works as configured and the
-  local runs did not show the Google-Fonts render block report 080 measured on the public network;
-  no speculative change to branding behavior.
+- **Keeping or re-adding the third-party donation script** — rejected after measurement: with the
+  vendor CDN unreachable the live page's `load` event stalled beyond 45 s while the script blocked
+  the widget slot. The local button preserves the approved look and link target without that risk;
+  `defer`/`async` were not options because the official bundle calls `document.write`.
+- **Preconnect to the vendor CDN** — moot once the script is gone; no third-party donation request
+  remains to warm up.
 - **`lastmod` in the sitemap** — the app release date is not page-modification provenance, and the
   spec forbids inventing it.
 - **Credits `noindex`** — the spec keeps the credits page indexable and in the sitemap; it also
@@ -300,6 +330,8 @@ site-name pages were re-checked while writing this report:
 | [MDN — `<picture>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/picture) | Responsive WebP with PNG fallback |
 | [web.dev — `fetchpriority`](https://web.dev/articles/fetch-priority) | Above-fold image priority |
 | [SPDX — GPL-3.0-or-later](https://spdx.org/licenses/GPL-3.0-or-later.html) | License identifier URL used in JSON-LD |
+| [SIL Open Font License 1.1](https://openfontlicense.org/open-font-license-official-text/) | License of the self-hosted Cookie Regular font (notice copied to `packaging/flatpak/site/fonts/Cookie-OFL.txt`) |
+| [Buy Me a Coffee](https://buymeacoffee.com/) | Donation destination and the vendor's official button glyph, reused to keep the approved look |
 
 ## Preview artifacts (git-ignored, in this worktree)
 
@@ -307,5 +339,7 @@ site-name pages were re-checked while writing this report:
 - `target/preview-083/final-desktop-1440.png` (1440×4907), `final-tablet-768.png` (768×5689),
   `final-narrow-390.png` (390×8737), `final-credits.png`, `final-404-local.png`.
 - `target/preview-083/r7-desktop-hero.png`, `r7-narrow-donate.png` — Donate placement.
-- `target/preview-083/lh-old-{1,2,3}.json`, `lh-final-{1,2,3}.json` — Lighthouse lab runs.
+- `target/preview-083/local-donate-desktop.png`, `local-donate-crop.png` — final local button.
+- `target/preview-083/offline-donate.js` — blocked-network load test (115 ms, full page, button present).
+- `target/preview-083/lh-old-{1,2,3}.json`, `lh-final-{1,2,3}.json`, `lh-localdonate-{1,2,3}.json` — Lighthouse lab runs.
 - `target/preview-083/measure.js` — viewport/`scrollWidth`/selected-image measurement used above.
