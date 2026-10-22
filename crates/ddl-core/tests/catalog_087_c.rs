@@ -229,7 +229,6 @@ fn base_game_and_complevel_match_the_author_text() {
         "vanguard",
         "lunatic",
         "overboard",
-        "headless-chicken",
         "micro-slaughter-community-project",
     ] {
         let r = recipe(id);
@@ -240,6 +239,14 @@ fn base_game_and_complevel_match_the_author_text() {
             "{id} uses the boom alias"
         );
     }
+
+    // The owner's Deck run crashed at Boom; the embedded DEHACKED is MBF21.
+    let headless = recipe("headless-chicken");
+    assert_eq!(headless.compatibility.family, PortFamily::Mbf21);
+    assert_eq!(
+        headless.compatibility.complevel,
+        Complevel::Alias(ComplevelAlias::Mbf21)
+    );
 
     assert_eq!(
         recipe("micro-slaughter-community-project")
@@ -476,18 +483,14 @@ fn bundled_screenshots_are_referenced() {
             "Walker \"Pavera\" Wright & Brayden \"AD_79\" Hart",
         ),
         ("overboard", "Cyriak Harris (mouldy)"),
+        ("headless-chicken", "Luca 'Chookum' Pavone"),
     ] {
         let r = recipe(id);
         assert_eq!(r.screenshots.len(), 1, "{id}");
         assert_eq!(r.screenshots[0].asset, format!("{id}/01.jpg"), "{id}");
         assert_eq!(r.screenshots[0].credit, credit, "{id}");
     }
-    for id in [
-        "vanguard",
-        "lunatic",
-        "headless-chicken",
-        "micro-slaughter-community-project",
-    ] {
+    for id in ["vanguard", "lunatic", "micro-slaughter-community-project"] {
         assert!(
             recipe(id).screenshots.is_empty(),
             "{id} uses the painted fallback art: no obtainable source was found"

@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://static.doomworld.com/monthly_2022_12/doom308.png.e80846b035e9bf998f8e596588b149fe.png"
+source_page = "https://www.doomworld.com/forum/topic/128633-boom-cl-9extras-on-idgames-headless-chicken-delicious-33-map-boom-megawad/"
+credit = "Luca 'Chookum' Pavone"
+original_size = "1280x720"
+retrieved = "2026-10-22"
+permission = "In-game screenshot posted in the project's Doomworld release thread (see source_page). The WAD readme licenses the project under CC BY-NC-ND 4.0; no separate image licence text was found. Bundled as a representative in-game view under decision D-024, credited to the author, and removed on request. static.doomworld.com returns HTTP 403 to automated fetches, so the image was read through a Wayback Machine capture on 2026-10-22. Re-saved at JPEG quality 60."

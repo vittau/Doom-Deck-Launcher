@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "http://img80.imageshack.us/img80/8233/sod10dc0.jpg"
+source_page = "https://www.doomworld.com/forum/topic/45138-speed-of-doom-megawad-project-fixed-released/"
+credit = "Josh \"Joshy\" Sealy and Darkwave0000"
+original_size = "1280x1024"
+retrieved = "2026-10-22"
+permission = "In-game screenshot posted in the project's Doomworld release thread (see source_page). No separate image licence text was found. Bundled as a representative in-game view under decision D-024, credited to the authors, and removed on request. The original ImageShack host is gone; the image was read through its 2009 Wayback Machine capture on 2026-10-22. Re-saved at JPEG quality 60 and fitted to the 1280x800 asset bound."

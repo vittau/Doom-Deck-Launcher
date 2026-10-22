@@ -11,6 +11,10 @@ description = "A 33-map DOOM II campaign of fast, challenging combat in three di
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided SODFINAL.txt travels with the file, unmodified and intact; the authors state they obtained permission from the original authors of any modified or included resources. DDL downloads the unmodified archive and keeps the bundled release text and manual."
 tags = ["cacowards", "megawad", "classics", "challenging"]
 
+[[screenshots]]
+asset = "speed-of-doom/01.jpg"
+credit = "Josh \"Joshy\" Sealy and Darkwave0000"
+
 [base_game]
 game = "doom2"
 variants = []
