@@ -244,40 +244,53 @@ class RenderTests(unittest.TestCase):
                 without_scripts = re.sub(r"(?is)<script\b.*?</script>", "", text)
                 self.assertIn(marker, without_scripts)
 
-    def test_donate_click_sends_one_named_event_without_parameters(self):
-        """Spec 085: the Donate link reports one named event, and nothing else changes."""
+    def test_named_action_events_cover_donate_and_install(self):
+        """Specs 085/086: two named events, declared in markup, with no parameters."""
         text = self.render()
-        call = "gtag('event', 'donate_click')"
+        doc = Document(text)
+        # One call site serves every measured link, and the payload is the name only.
+        call = "gtag('event', link.getAttribute('data-ga-event'))"
         self.assertEqual(text.count("gtag('event'"), 1)
         self.assertEqual(text.count(call), 1)
-        # The event name is the whole payload: no parameters, identifiers or destination.
         self.assertNotRegex(text, r"gtag\('event',[^)]*\{")
         for forbidden in ("user_id", "page_location", "send_to", "link_url"):
-            self.assertNotIn(forbidden, text[text.index(call):])
-        # The anchor keeps its navigation contract untouched.
-        buttons = [a for tag, a in Document(text).elements
-                   if tag == "a" and a.get("class") == "bmc-btn"]
-        self.assertEqual(len(buttons), 1)
-        self.assertEqual(buttons[0]["id"], "donate-link")
-        self.assertEqual(buttons[0]["href"], "https://buymeacoffee.com/vittau")
-        self.assertEqual(buttons[0]["target"], "_blank")
-        self.assertEqual(buttons[0]["rel"], "noopener")
+            self.assertNotIn(forbidden, text[text.index("gtag('event'"):])
+        # The measured set is closed: both install buttons, then the Donate link.
+        measured = [(tag, a) for tag, a in doc.elements if "data-ga-event" in a]
+        self.assertTrue(all(tag == "a" for tag, _ in measured))
+        self.assertEqual([a["data-ga-event"] for _, a in measured],
+                         ["install_click", "donate_click", "install_click"])
+        for _, attrs in measured:
+            if attrs["data-ga-event"] == "install_click":
+                self.assertIn("download", attrs)
+                self.assertTrue(attrs["href"].endswith(f"/{APP_ID}.flatpakref"))
+                self.assertEqual(attrs["class"], "button primary")
+            else:
+                self.assertEqual(attrs["class"], "bmc-btn")
+                self.assertEqual(attrs["href"], "https://buymeacoffee.com/vittau")
+                self.assertEqual(attrs["target"], "_blank")
+                self.assertEqual(attrs["rel"], "noopener")
         # The handler is the page's own plain script: it guards a blocked tag and never
-        # cancels or delays the click, so the link still works without analytics.
+        # cancels or delays the click, so every link still works without analytics.
         handler = re.search(r"(?is)<script>\s*\(function \(\) \{.*?</script>", text).group()
-        self.assertIn("document.getElementById('donate-link')", handler)
+        self.assertIn("querySelectorAll('[data-ga-event]')", handler)
         self.assertIn("addEventListener('click'", handler)
         self.assertIn("typeof gtag === 'function'", handler)
         self.assertNotIn("preventDefault", handler)
         self.assertNotIn("googletagmanager", handler)
-        self.assertLess(text.index('id="donate-link"'), text.index(call))
+        self.assertNotIn("donate_click", handler, "names live in markup, not in the script")
+        self.assertNotIn("install_click", handler)
         self.assertLess(text.index(call), text.index("</body>"))
-        # Only the landing page measures the action.
+        # Only the landing page measures actions, and it still works without scripts.
+        without_scripts = re.sub(r"(?is)<script\b.*?</script>", "", text)
+        self.assertEqual(without_scripts.count('data-ga-event="install_click"'), 2)
         for page in ("assets/credits.html", "404.html"):
             with self.subTest(page=page):
                 other = (self.out / page).read_text()
                 self.assertNotIn("gtag('event'", other)
+                self.assertNotIn("data-ga-event", other)
                 self.assertNotIn("donate_click", other)
+                self.assertNotIn("install_click", other)
 
     def test_favicon_provenance_root_and_cache_version_on_both_pages(self):
         self.render()

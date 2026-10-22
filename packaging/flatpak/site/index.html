@@ -106,6 +106,7 @@
               class="button primary"
               href="@@SITE_BASE@@/@@APP_ID@@.flatpakref"
               download
+              data-ga-event="install_click"
               ><span aria-hidden="true">↓</span> Install on Steam Deck</a
             >
 
@@ -120,11 +121,11 @@
                  as the owner-approved embed, with no third-party request. -->
             <div class="coffee-widget">
               <a
-                id="donate-link"
                 class="bmc-btn"
                 href="https://buymeacoffee.com/vittau"
                 target="_blank"
                 rel="noopener"
+                data-ga-event="donate_click"
                 ><img
                   class="bmc-logo"
                   src="assets/bmc-logo.svg?v=@@BMC_LOGO_HASH@@"
@@ -301,6 +302,7 @@
               class="button primary"
               href="@@SITE_BASE@@/@@APP_ID@@.flatpakref"
               download
+              data-ga-event="install_click"
               ><span aria-hidden="true">↓</span> Install on Steam Deck</a
             >
             <p class="download-note">
@@ -576,14 +578,18 @@
         their respective owners.
       </p>
     </footer>
-    <!-- One GA4 event for the Donate link (spec 085). The link navigates normally:
-         no preventDefault, no parameters, nothing sent when the tag is blocked. -->
+    <!-- Named GA4 events (specs 085, 086): each measured link declares its event in
+         data-ga-event. Links navigate normally — no preventDefault, no parameters,
+         nothing sent when the tag is blocked. -->
     <script>
       (function () {
-        var donate = document.getElementById('donate-link');
-        if (!donate) return;
-        donate.addEventListener('click', function () {
-          if (typeof gtag === 'function') gtag('event', 'donate_click');
+        var links = document.querySelectorAll('[data-ga-event]');
+        Array.prototype.forEach.call(links, function (link) {
+          link.addEventListener('click', function () {
+            if (typeof gtag === 'function') {
+              gtag('event', link.getAttribute('data-ga-event'));
+            }
+          });
         });
       })();
     </script>
