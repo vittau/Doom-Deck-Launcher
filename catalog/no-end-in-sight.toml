@@ -1,4 +1,4 @@
-# Confirmed bytes and release metadata: docs/research/reference-087-b.md §7–§12; gathered 2026-10-22.
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §4–§5; gathered 2026-10-22.
 schema_version = 1
 id = "no-end-in-sight"
 title = "No End in Sight"
@@ -35,7 +35,7 @@ tester = "DDL desk research"
 date = "2026-10-22"
 engine_version = "0.30.1"
 inspected = [
-  "docs/research/reference-087-b.md §7–§12",
+  "docs/research/reference-087-b.md §4–§5",
   "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
   "NEIS.wad lump directory read as data: 1,110 lumps, 38 map markers E1M0–E4M9 including the two ExM0 extras, one 3,233-byte embedded DEHACKED lump, MAPINFO and EMAPINFO lumps, no COMPLVL or UMAPINFO lump",
   "NEIS.txt release text: Game: Doom, Map #: E1M1-E4M9 with extras on E1M0 and E4M0, 'Limit-removing for E4; E1-E3 are vanilla-compat', external NEIS.deh only for Vanilla/Chocolate Doom, Doom prior to 1.9 excluded",

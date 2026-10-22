@@ -1,4 +1,4 @@
-# Confirmed bytes and release metadata: docs/research/reference-087-b.md §1–§6; gathered 2026-10-22.
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §1–§3; gathered 2026-10-22.
 schema_version = 1
 id = "doom-the-way-id-did"
 title = "Doom the Way id Did"
@@ -67,7 +67,7 @@ tester = "DDL desk research"
 date = "2026-10-22"
 engine_version = "0.30.1"
 inspected = [
-  "docs/research/reference-087-b.md §1–§6",
+  "docs/research/reference-087-b.md §1–§3",
   "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
   "DTWID.wad lump directory read as data: 398 lumps, MAP markers E1M1–E3M9 (27 maps), one 1,286-byte embedded DEHACKED lump, no COMPLVL or UMAPINFO lump",
   "DTWID.txt release text: 27 new levels, Game: Doom, Map #: E1M1-E3M9, no external files required, Doom prior to 1.9 excluded",

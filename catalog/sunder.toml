@@ -1,4 +1,4 @@
-# Confirmed bytes and release metadata: docs/research/reference-087-b.md §25–§31; gathered 2026-10-22.
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §8; gathered 2026-10-22.
 schema_version = 1
 id = "sunder"
 title = "Sunder"
@@ -38,7 +38,7 @@ tester = "DDL desk research"
 date = "2026-10-22"
 engine_version = "0.30.1"
 inspected = [
-  "docs/research/reference-087-b.md §25–§31",
+  "docs/research/reference-087-b.md §8",
   "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
   "Sunder 2407.wad lump directory read as data: 2,530 lumps, 22 map markers MAP01–MAP20 plus MAP31/MAP32, one 6,734-byte embedded DEHACKED lump (WhackEd4 BETA) naming every map and defining the Hive Mother, a ZDoom-format MAPINFO lump, no COMPLVL or UMAPINFO lump",
   "SunderReadMeV2.TXT: 'For DOOM II', 'should work in any Boom compatible port', 'extremely difficult maps', 'Map #: Map 01 - Map 19 (+ 31 & 32)', 'Map 15 is extremely system intensive. Map 32 might also cause slow down on older machines', 'Date Finished: It's not. Still mapping!'",

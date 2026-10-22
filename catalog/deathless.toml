@@ -1,4 +1,4 @@
-# Confirmed bytes and release metadata: docs/research/reference-087-b.md §19–§24; gathered 2026-10-22.
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §7; gathered 2026-10-22.
 schema_version = 1
 id = "deathless"
 title = "Deathless"
@@ -40,7 +40,7 @@ tester = "DDL desk research"
 date = "2026-10-22"
 engine_version = "0.30.1"
 inspected = [
-  "docs/research/reference-087-b.md §19–§24",
+  "docs/research/reference-087-b.md §7",
   "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
   "deathless.wad lump directory read as data: 700 lumps, 36 map markers E1M1–E4M9, one 2,131-byte embedded DEHACKED lump, ZMAPINFO/EMAPINFO/DECORATE lumps, no COMPLVL or UMAPINFO lump",
   "deathless1.1.txt release text: version 1.1 dated 25 May 2020, Game: The Ultimate Doom, New levels E1M1-M9 through E4M1-M9, 'Advanced engine needed: Limit-removing', vanilla/Chocolate Doom explicitly unsupported, DEHACKED changes to lost soul and spiderdemon, no external patch file shipped",

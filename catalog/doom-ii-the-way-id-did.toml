@@ -1,4 +1,4 @@
-# Confirmed bytes and release metadata: docs/research/reference-087-b.md §13–§18; gathered 2026-10-22.
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §6; gathered 2026-10-22.
 schema_version = 1
 id = "doom-ii-the-way-id-did"
 title = "Doom II the Way id Did"
@@ -43,7 +43,7 @@ tester = "DDL desk research"
 date = "2026-10-22"
 engine_version = "0.30.1"
 inspected = [
-  "docs/research/reference-087-b.md §13–§18",
+  "docs/research/reference-087-b.md §6",
   "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
   "D2TWID.wad lump directory read as data: 732 lumps, 33 map markers MAP01–MAP33 with complete map lumps, one 6,384-byte embedded DEHACKED lump, MAPINFO/ZMAPINFO/EMAPINFO lumps, no COMPLVL or UMAPINFO lump",
   "D2TWID.txt release text: 32 new levels, Game: Doom 2, Map #: MAP01-MAP32, Doom 2 prior to 1.9 excluded, MAP33 absent from the authors' map list",
