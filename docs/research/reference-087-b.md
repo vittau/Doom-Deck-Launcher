@@ -449,15 +449,18 @@ what the source says.
 | Doom the Way id Did (`doom-the-way-id-did`) | 2011-12-10 | day | `DTWID.txt` "Release date : 12/10/11" (the inspected v1.1a is a 2012-02-05 revision) | 1.1a, revised 2012-02-05 |
 | No End in Sight (`no-end-in-sight`) | 2016-11-28 | day | `NEIS.txt` "Release date : 11/28/16" (the inspected v1.4 is the 2018-01-29 update) | 1.4, updated 2018-01-29 |
 | Doom II the Way id Did (`doom-ii-the-way-id-did`) | 2013-11-07 | day | `D2TWID.txt` "Release date : 11/7/13 (finalized 12/22/13)" | 1.0, finalized 2013-12-22 |
-| Deathless (`deathless`) | 2019-11-09 | day | DoomWiki (Wayback copy read 2026-10-22): the full megawad's "initial version … was shared on November 9th" 2019, after the July 2018 E4-only predecessor Griefless (a different release). The inspected v1.1 archive is the selected update, uploaded to /idgames on 2020-05-25. | 1.1, 2020-05-25 |
+| Deathless (`deathless`) | 2018-11-09 | day | DoomWiki infobox `Year 2018` and text "initial version of the full megawad was shared on November 9th", plus the author's release post dated "November 9, 2018" (`doomworld.com/forum/topic/103075-deathless-an-ultimate-doom-megawad-rc3/`). The selected v1.1 update is 2020-05-25; the July 2018 E4-only predecessor Griefless is a different release. | 1.1, 2020-05-25 |
 | Sunder (`sunder`) | 2009-04-20 | day | DoomWiki (Wayback copy read 2026-10-22): "first release on April 20, 2009"; the project thread was also started 2009-04-20. The inspected build is V.2407, not the first upload. | V.2407 |
 | REKKR (`rekkr`) | 2018-07-09 | day | `REKKR.txt` "Release date : 7/9/2018" (the inspected 1.17 update is later; first public release is the original free edition) | 1.17 |
 
 Where only a day-precision date exists, it is used as-is. No title in this group relies on
 an inferred month or year: each has an author-stated date or a dated public release/thread.
 
-**Correction applied 2026-10-22 (coordinator review):** the earlier Deathless row used the
-selected v1.1 update date (2020-05-25) as if it were the original release. The original full
-megawad was first shared on 2019-11-09; 2020-05-25 is the /idgames v1.1 upload of the selected
-archive. The predecessor Griefless (July 2018) is an E4-only release and is not the same
-title. The recipe's version label and hashes are unchanged.
+**Correction applied 2026-10-22 (second coordinator review):** the earlier row used the
+selected v1.1 update date (2020-05-25) as the original release, and a first correction wrongly
+said 2019-11-09. The primary sources fix the year as 2018: the author's release post is dated
+"November 9, 2018" and DoomWiki's infobox says `Year 2018`, with "the initial version of the
+full megawad … shared on November 9th" during the first NaNoWADMo. The honest value is
+**2018-11-09 (day precision)**; 2020-05-25 remains the selected v1.1 upload. The predecessor
+Griefless (July 2018) is an E4-only release and is not the same title. The recipe's version
+label and hashes are unchanged.

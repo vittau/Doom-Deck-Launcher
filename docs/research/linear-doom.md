@@ -1,8 +1,8 @@
 # Linear Doom — author publication and policy assessment (spec 091, R3–R4)
 
-**Verdict: no recipe.** The author's v1.2 archive cannot be obtained through a
-policy-compliant, reproducible download, and without its bytes the map/lump inventory
-needed to claim DSDA-Doom compatibility cannot be inspected. The evidence below records
+**Verdict: no recipe.** No v1.2 archive bytes could be obtained through the tested
+policy-compliant routes, and without the bytes the map/lump inventory needed to claim
+DSDA-Doom compatibility cannot be inspected. The evidence below records
 the identity we could confirm and the exact blocker. Nothing was executed, no IWAD was
 downloaded and no anti-bot/authentication control was bypassed.
 
@@ -14,7 +14,9 @@ downloaded and no anti-bot/authentication control was bypassed.
 | Author / uploader | DeXiaZ | ModDB mod and file pages |
 | Publication | https://www.moddb.com/mods/linear-doom | ModDB |
 | Description | "a jokewad which makes all classic Doom 1 levels straightened into one line" | ModDB mod page |
-| Original release | 2019-03-31 | task brief and the file page's "Added" metadata for the original file; the mod header rounds it to "Released Apr 1, 2019" |
+| Original release | 2019-03-31 | ModDB original file page "Added Mar 31st, 2019" (Wayback capture `20240913200632`); the mod header rounds it to "Released Apr 1, 2019" |
+| Original archive | `Linear_Doom.7z`, 275,143 bytes, MD5 `488637b2a879ea933b62f819a1fba47f` | ModDB original file page |
+| Original notes | "All Doom Levels are Straight Line now. No more mazes. Tested with GZDoom 2.4.0" | ModDB original file page |
 | Update 1.1 | 2019-04-02, "Fixed version (E1M8 HOM and E3M6' exit door). All Doom Levels are Straight Line now. No more mazes. Tested with GZDoom 2.4.0" | ModDB downloads page |
 | Selected update 1.2 | 2019-04-06, "Fixed HOM in E1M4, added chaingun in E2M4 (there were no chainguns in Episode 2 before, somehow)" | ModDB v1.2 file page |
 | Archive | `Linear_Doom_v1.2.7z` (7z format — not supported by the recipe schema, which accepts ZIP or a bare WAD) | ModDB v1.2 file page |
@@ -38,19 +40,21 @@ nor DSDA-Doom compatibility.
 | `https://www.moddb.com/mods/linear-doom/downloads/linear-doom-v12` | HTTP 403, same challenge |
 | `https://www.moddb.com/mods/linear-doom/downloads/linear-doom-v12/start` | HTTP 403, same challenge |
 | `https://www.moddb.com/members/dexiaz/downloads` | HTTP 403, same challenge |
-| `https://dsdarchive.com/wads/linear-doom` | HTTP 404 (no DSDA entry, so no alternate byte source) |
+| `https://dsdarchive.com/wads/linear-doom` | HTTP 404 (no DSDA entry) |
 | Wayback capture `20190407110150` of the mod page | HTTP 200 HTML, metadata usable |
 | Wayback capture `20190406152828` of the downloads page | HTTP 200 HTML, metadata usable |
 | Wayback capture `20240913200609` of the v1.2 file page | HTTP 200 HTML: filename, size, MD5, dates, notes |
+| Wayback capture `20240913200632` of the original file page | HTTP 200 HTML: filename, size, MD5, "Added Mar 31st, 2019" |
 | Wayback capture of `https://www.moddb.com/downloads/start/176643` | not archived (Wayback's generic "not archived" page) |
 | Wayback CDX search for the archive/file name | CDX endpoint reported "Temporarily Offline" during the check; direct snapshot URLs above were used instead |
 
 The newest Wayback snapshots of the mod pages are themselves Cloudflare challenge pages;
 the 2019/2024 captures used here predate that and contain the real metadata. No request
 used browser emulation, cookies, JS execution, CAPTCHA solving or any other anti-bot
-workaround.
+workaround. **No archive bytes were obtained**: the live pages answered 403 and the Wayback
+captures contain HTML metadata only.
 
-## 3. Why the download is not reproducible under current policy (R4)
+## 3. Why no recipe can be added under current policy (R4)
 
 0. **Unsupported archive format.** The author publishes a **7z** archive
    (`Linear_Doom_v1.2.7z`). The recipe schema accepts only `kind = "zip"` or a bare WAD, and
@@ -62,17 +66,16 @@ workaround.
    endpoint (`/downloads/start/176643`). DDL's downloader is a bounded HTTPS client: it
    follows at most five redirects, validates HTTPS and an exact download host at each hop,
    and cannot solve a JS challenge. The gate answered HTTP 403 to direct requests.
-2. **No observable durable target.** The eventual file URL is a per-request CDN address
-   issued after that gate. It was not observable without passing the challenge, so no exact
-   host or durable URL can be recorded; R4 forbids adding expiring links, wildcards or a
-   downloader exception, and wildcard/anti-bot workarounds are out of scope.
-3. **No reviewed host covers it.** `catalog/hosts.toml` lists exact hosts. Adding
-   `www.moddb.com` would still produce a 403 at the download step, and adding a CDN host
-   without observing its exact name would violate the exact-host rule. No host change was
+2. **No observed direct target.** The start endpoint is an HTML gate; none of the tested
+   pages exposed a direct file URL and no attempt was made to bypass the challenge. The form
+   or lifetime of any eventual download target was therefore **not determined**, so no exact
+   host or URL can be recorded as a recipe URL. Adding `www.moddb.com` to the allowlist
+   would not by itself give DDL's bounded HTTPS client a fetchable file. No host change was
    made.
-4. **No alternate compliant source.** The file is not on `/idgames` under a known path and
-   DSDA has no `linear-doom` entry. A third-party mirror would be a new trust decision, not
-   an existing-host mirror verification.
+3. **No alternate source tested.** DSDA returned HTTP 404 for `linear-doom` and no
+   `/idgames` path was found on the tested mirrors. Other mirrors were not searched, so this
+   is not a claim that no alternate source exists; a third-party mirror would in any case be
+   a new trust decision rather than an existing-host mirror verification.
 
 The MD5 and byte size published on the file page are useful identity pins, but the schema
 requires SHA-256 for the package and every named member, plus a fetchable package URL; no
@@ -105,13 +108,18 @@ future entry.
 
 ## 7. What would unblock a recipe
 
-Any one of:
+These are separate needs; solving one does not solve the others:
 
-- the author (or the coordinator) publishes the same v1.2 archive on an already-reviewed
-  host with a durable HTTPS URL, or supplies the archive for local hashing; or
-- the owner approves a reviewed download policy that can handle ModDB's interactive gate
-  (explicitly out of scope for this task); or
-- a reviewed, byte-identical mirror appears on an existing allowlisted host.
+- **A local/supplied copy of the v1.2 archive** would let us inspect the WAD directory,
+  compute package/member SHA-256 and settle the map count, lump inventory and engine
+  compatibility. On its own it would **not** provide the automatic catalog download (a
+  durable URL on an allowlisted host is still required) and would **not** solve the 7z
+  limitation.
+- **An author republish of the same bytes as a ZIP or bare WAD on an already-reviewed host**
+  would address the format and download blockers together; fetch lint could then verify the
+  pinned bytes.
+- **An owner-approved policy able to handle ModDB's interactive gate** is a separate policy
+  decision and remains out of scope for this task.
 
 Until then the acceptance criterion is met by this blocker report: no `catalog/linear-doom.toml`
 is added and the playable catalog is unchanged.

@@ -15,7 +15,7 @@ inspected. A precise primary-evidence blocker report is in
 | `crates/ddl-core/tests/catalog_091.rs` | New standalone offline tests: reviewed label/order/description, unique orders, vocabulary validation, Discover ordering (after Challenging, before Featured/Beginner Friendly), embedded-vocabulary acceptance, a real recipe carrying `gimmick` passing full validation, unknown/duplicate still rejected, and a forward-compatible assertion that The 10x10 Project carries the tag once Worker A's recipe is integrated |
 | `docs/research/linear-doom.md` | Primary-evidence identity/date/size/MD5 table, retrieval attempts and statuses, policy analysis, compatibility limits and unblock options |
 | `docs/reports/091-gimmick-and-linear-doom.md` | This report |
-| `docs/research/reference-087-b.md` | Chronology correction: Deathless original full release 2019-11-09, selected v1.1 update 2020-05-25 (see §5) |
+| `docs/research/reference-087-b.md` | Chronology correction: Deathless original full release **2018-11-09** (author post and DoomWiki), selected v1.1 update 2020-05-25 (see §5) |
 
 Not changed: any of the six settled recipes, `catalog/hosts.toml`, `catalog/linear-doom.toml`
 (not created), shared `crates/ddl-core/src/catalog/tests.rs`, runtime/UI, CONTRIBUTING,
@@ -26,18 +26,19 @@ dependencies or coordinator docs. No screenshot directory was created.
 The author is DeXiaZ; the ModDB v1.2 file page records `Linear_Doom_v1.2.7z`, 274,927 bytes,
 MD5 `4f758b008649e7424ea634c615f34de7`, added 2019-04-06, described as a jokewad that
 "makes all classic Doom 1 levels straightened into one line", with notes referencing E1M4,
-E1M8, E2M4 and E3M6. The original publication is 2019-03-31; the page header rounds it to
-"Released Apr 1, 2019".
+E1M8, E2M4 and E3M6. The original file page records `Linear_Doom.7z`, 275,143 bytes, MD5
+`488637b2a879ea933b62f819a1fba47f`, "Added Mar 31st, 2019" (the mod header rounds it to
+"Released Apr 1, 2019"), so both the original and v1.2 are 7z archives.
 
 Three independent blockers; resolving one does not remove the others:
 
-1. **Host/access — no fetchable, durable URL.** Every live ModDB page (mod, downloads, v1.2
-   file, start endpoint, member downloads) answered HTTP 403 with a Cloudflare challenge on
-   2026-10-22. The file is served only through an interactive `/downloads/start/176643` gate;
-   the eventual CDN address is per-request and expiring and was not observable without
-   bypassing the challenge, which is explicitly out of scope. Adding `www.moddb.com` would
-   still hit the 403, and adding an unobserved CDN host would violate the exact-host rule;
-   `catalog/hosts.toml` is therefore unchanged.
+1. **Host/access — no downloadable bytes observed.** The tested live ModDB URLs (mod page,
+   downloads page, v1.2 file page, start endpoint, member downloads) all answered HTTP 403
+   with a Cloudflare challenge on 2026-10-22. The start endpoint is an HTML gate; no direct
+   file URL appeared on the tested pages, and no bypass was attempted. The form or lifetime
+   of any eventual download target is **not determined**, so no exact host or durable URL can
+   be recorded. Adding `www.moddb.com` to the allowlist would not by itself make the file
+   fetchable by DDL's client; `catalog/hosts.toml` is unchanged.
 2. **Archive format — 7z is not supported.** The published file is
    `Linear_Doom_v1.2.7z`. The recipe schema accepts `kind = "zip"` or a bare WAD only, and
    DDL's reader has no 7z support. Even with a perfect URL, the package could not be
@@ -47,8 +48,9 @@ Three independent blockers; resolving one does not remove the others:
    variant and lump inventory are unknown. DSDA-Doom 0.30.1 runs Doom-format/Boom/MBF/MBF21
    data plus UMAPINFO and ignores GZDoom-only `ZMAPINFO`/`MAPINFO`/`DECORATE`/ACS content;
    the author's "Tested with GZDoom 2.4.0" note is neither a requirement nor proof of DSDA
-   support. Claiming either would be invented. There is also no alternate compliant source:
-   DSDA has no `linear-doom` entry (HTTP 404) and no `/idgames` path was found.
+   support, and no GZDoom dependency is inferred. DSDA has no `linear-doom` entry (HTTP 404)
+   and no `/idgames` path was found, but other sources were not searched — this is not a
+   claim that none exists.
 
 The coordinator's independent read of the same file page agrees with the identity recorded
 here: DeXiaZ, 2019-04-06, `Linear_Doom_v1.2.7z`, 274,927 bytes, MD5
@@ -57,22 +59,29 @@ here: DeXiaZ, 2019-04-06, `Linear_Doom_v1.2.7z`, 274,927 bytes, MD5
 Published MD5 and byte size are recorded as identity evidence, but the schema needs SHA-256
 for the package and every named member plus a fetchable URL, so the recipe cannot be pinned.
 
-Unblock options (any one): a durable author-hosted URL on an already-reviewed host or the
-archive supplied for hashing; an owner-approved policy able to handle ModDB's interactive
-gate; or a reviewed byte-identical mirror on an existing allowlisted host.
+Unblock options, which are separate needs: a **local/supplied copy** of the v1.2 archive
+would allow byte inspection, hashing and a compatibility verdict, but would not by itself
+provide the automatic catalog download and would not solve the 7z format limitation; an
+**author republish as ZIP or bare WAD on an already-reviewed host** would solve the download
+and format blockers together; an **owner-approved policy for ModDB's gate** is a separate
+decision outside this task. "All sources ruled out" is not claimed.
 
 ## Dates for spec 090
 
 - Linear Doom original public release: **2019-03-31** (day precision); selected update v1.2
   **2019-04-06**. Research only — no recipe, so no chronology metadata is exposed.
 
-## Deathless chronology correction
+## Deathless chronology correction (final)
 
 The earlier research row used the selected v1.1 upload date (2020-05-25) as the original
-release. DoomWiki (Wayback copy read 2026-10-22) records that the full megawad's initial
-version was shared on **2019-11-09**, after the July 2018 E4-only predecessor *Griefless*,
-which is a different release. The row now says 2019-11-09 (day precision) and keeps
-2020-05-25 as the selected v1.1 update; the recipe's version label and hashes are unchanged.
+release, and a first correction wrongly said 2019-11-09. Primary evidence fixes the year as
+2018: the author's release post is dated **"November 9, 2018"**
+(`https://www.doomworld.com/forum/topic/103075-deathless-an-ultimate-doom-megawad-rc3/`,
+Wayback copy read 2026-10-22), and DoomWiki's infobox reads `Year 2018` with "the initial
+version of the full megawad … shared on November 9th" during the first NaNoWADMo. The row now
+says **2018-11-09** (day precision) and keeps 2020-05-25 as the selected v1.1 update; the
+July 2018 E4-only predecessor *Griefless* is a different release. The recipe's version label
+and hashes are unchanged.
 
 ## Verification
 
