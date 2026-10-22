@@ -87,10 +87,10 @@ just in the tests.
 
 ## Not done / owner follow-ups
 
-- **Reception is owner-verified.** After publication, click each button once and confirm
-  `install_click` (twice) and `donate_click` (once) in Realtime or DebugView.
-- **Optional key event.** Admin → Events → `install_click` → *Mark as key event* makes downloads
-  of the launcher read as the site's conversion next to `donate_click`.
+- **Reception is owner-verified.** The owner confirmed both events in Analytics on 2026-10-22.
+- **Not key events (D-040).** The owner's call: a click proves intent, not an install or a payment,
+  so neither event is marked as a key event. Read them as funnel steps next to the Buy Me a Coffee
+  supporter counts; installations are not measured.
 - **Clicks, not installs.** `install_click` measures intent: the browser accepts the `.flatpakref`
   download, and whether Discover installs it is outside the website's visibility. Do not read it
   as an install count.

@@ -941,3 +941,11 @@
     event handler and the property agree in practice. Key-event marking in the property stays
     optional owner work.
   refs: [docs/reports/086-install-click-event.md]
+- date: 2026-10-22
+  type: decision
+  summary: >-
+    D-040 — website events measure intent, never outcomes. donate_click and install_click stay
+    parameter-free and are deliberately not key events; the donation result lives in the Buy Me a
+    Coffee dashboard and installations are not measured, because launcher telemetry stays out and
+    a request-count proxy was not pursued. Any further site event needs a new decision.
+  refs: [docs/decisions.md, docs/reports/086-install-click-event.md]

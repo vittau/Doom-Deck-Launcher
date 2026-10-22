@@ -50,7 +50,8 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   parameter-free handler; credits and 404 stay event-free. Website runs `39720643613` and
   `39720898607` deployed and the served page was checked: one Donate declaration, two install
   declarations, one `gtag('event'` call site. The owner confirmed both events arriving in
-  Analytics on 2026-10-22; marking them as key events remains optional property work.
+  Analytics on 2026-10-22. D-040 records that they measure intent only: they are deliberately not
+  key events, and the donation outcome stays in the Buy Me a Coffee dashboard.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.
