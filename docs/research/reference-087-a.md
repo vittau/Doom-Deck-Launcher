@@ -503,6 +503,10 @@ size matches.
   the 9 alias. **Confirmed for the family; Proposed for the exact 9, Needs Deck Validation.**
 - **Pistol starts:** *"Pistol starts are intended but I won't put a gun to your head."* The recipe
   sets the typed `pistol_start = true` player-profile suggestion, not a launch flag. **Confirmed.**
+- **Gimmick:** the author describes the mapset as mapping exercises where he *"restricted myself to
+  using ten stock textures and ten stock FLATs in each (with some universal textures such as
+  switches, doors, DOORTRAK, lights, etc.)"*. That ten-texture/ten-flat central design constraint is
+  the `gimmick` tag; the WAD/readme were inspected here. **Confirmed (quoted).**
 - **Permission:** *"Authors MAY use the contents of this file as a base for modification or reuse.
   Permissions have been obtained from original authors for any of their resources modified or
   included in this file. You MAY distribute this file, provided you include this text file, with no
@@ -585,6 +589,7 @@ size matches.
 | `classics` | 2005 release, Cacoward recognition | 2008 release, Cacoward recognition | 2017 release, Cacoward recognition | — (2024 release) | — (2022 release) | 2010 release, Cacoward recognition |
 | `community-projects` | — (single author) | 22 contributors in PL2INFO.TXT §6.1 | Multi-author community project, credited in TNTR.txt | — (single author) | — (single author) | — (two authors) |
 | `challenging` | Readme: "This wad is harder than the original Scythe"; "you WILL run into trouble on skill 4" | — | — | — | — | Readme: "33 challenging maps"; SODINFO: "Difficulty is not suited for the faint of hearts" |
+| `gimmick` | — | — | — | — | Author: each main map restricted to ten stock textures and ten stock FLATs, plus universal textures | — |
 
 The Cacowards rows come from the archived inventory in `docs/research/cacowards.md` (2005 line for
 Scythe 2, 2009 Top Ten and Mordeth rows for Plutonia 2, 2017 runner-up row for TNT: Revilution, 2022
@@ -595,7 +600,9 @@ than claiming a direct live read. Going Down: Turbo is a 2024 edition with no Ca
 so it is not tagged `cacowards` by inheritance from the 2014 original.
 
 No Cacowards claim is made for gameplay quality beyond the award itself; the recipes stay
-`inspected`, not `verified`.
+`inspected`, not `verified`. The 10x10 Project's `gimmick` tag is sourced from the author's quoted
+ten-texture/ten-flat constraint, not from its Cacoward; the shared `gimmick` vocabulary entry is
+owned by worker B and is not edited here.
 
 ## 8. Artwork (R4) — unavailable source, fallback documented
 
