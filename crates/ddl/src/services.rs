@@ -5896,6 +5896,7 @@ mod release_state_tests {
             "v0.0.11-polish",
             "v0.0.12-catalog",
             "v0.0.13-update",
+            "v0.0.14-browse",
         ];
         for tag in required_tags {
             assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
@@ -6044,7 +6045,11 @@ mod release_state_tests {
             }
             let has_audio = matches!(
                 tag,
-                "v0.0.10-audio" | "v0.0.11-polish" | "v0.0.12-catalog" | "v0.0.13-update"
+                "v0.0.10-audio"
+                    | "v0.0.11-polish"
+                    | "v0.0.12-catalog"
+                    | "v0.0.13-update"
+                    | "v0.0.14-browse"
             );
             assert_eq!(tree.join("config/audio.json").is_file(), has_audio, "{tag}");
             assert_eq!(
@@ -6065,7 +6070,7 @@ mod release_state_tests {
                 snapshot.audio.warning.is_none(),
                 "{tag}: audio preferences readable"
             );
-            let has_view = tag == "v0.0.13-update";
+            let has_view = matches!(tag, "v0.0.13-update" | "v0.0.14-browse");
             assert_eq!(tree.join("config/view.json").is_file(), has_view, "{tag}");
             assert_eq!(
                 load_view_format(&env).unwrap(),

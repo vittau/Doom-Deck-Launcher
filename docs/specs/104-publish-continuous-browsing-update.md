@@ -1,6 +1,6 @@
 # 104 — Publish continuous browsing and reviewed screenshot additions
 
-**Status:** Ready · **Depends on:** 099, 100, 101, 102, 103
+**Status:** Published and verified; physical Deck checks pending · **Depends on:** 099, 100, 101, 102, 103
 **Origin:** owner, 2026-10-22: finish, commit, push and publish updates as necessary;
 followed by requests for continuous scrolling, Library favorites first and an OpenCode
 worker to try missing screenshots.

@@ -1,28 +1,34 @@
 # 104 — Continuous browsing update publication
 
-## Current state
+## Result
 
-Publication is being prepared; **0.0.14 is not yet claimed published**.
+**Published and verified:** `v0.0.14-browse` at `58e83b8c8dabdb550633faee002fa6ba977da7ab`
+as a GitHub prerelease and as the signed Flatpak repository. The canonical site serves
+`0.0.14`, and the served OSTree commit records the same source Git SHA. Physical Deck
+checks remain pending.
+
 Reviewed continuous scrolling and favorite-first Library behavior was merged as
-`724a99f` after the focused evidence in report102.
+`724a99f` after the focused evidence in report102. Screenshot work (spec103) was reviewed
+and integrated as `5e31a91`: **12 of the 26** baseline recipes gained a verified in-game
+JPEG and **14 remain honestly unresolved**. Workspace/lockfile package versions and
+checked-in AppStream name `0.0.14`; older releases and tags are untouched.
 
-Screenshot work (spec103) is complete and integrated as `5e31a91`: **12 of the 26**
-baseline recipes gained a verified in-game JPEG and **14 remain honestly unresolved**.
-All 12 assets are within the asset bounds, reproduce byte-for-byte from their preserved
-originals with `scripts/lean-image.sh`, and the merged tree passed one offline
-`ddl catalog lint catalog/` (`Catalog lint passed (offline)`). The merge changed only the
-12 recipe screenshot blocks, the new `crates/ddl/ui/assets/screenshots/<id>/` files,
-spec103 status and report103 (38 files, no Rust/UI/version/workflow change). The integration
-branch tree is identical to the verified task branch.
+## Integration
 
-Workspace/lockfile package versions and checked-in AppStream now name `0.0.14`.
-The intended new immutable prerelease is `v0.0.14-browse`; previous tags stay intact.
+The 12 screenshot recipes, their new assets, spec103 status and report103 were merged on a
+scratch branch from `main` with `--no-ff`; the resulting tree was identical to the verified
+task branch. Merge `5e31a91` brought the work in and `305c5fd` added this report update
+before `main` was fast-forwarded. The merged diff changed only the 12 recipe screenshot
+blocks, 24 new asset/source files, report103 and spec103 (38 files; no Rust/UI/version
+change), and its single offline `ddl catalog lint catalog/` passed.
 
 ## Screenshot coverage
 
 Added: caustic-industry, doom-ii-the-way-id-did, going-down-turbo,
 hell-revealed-3-pt-1, jolly-junkyard, no-end-in-sight, plutonia-2, rekkr, scythe-ii,
-terminal-voltage, the-10x10-project and tnt-revilution (1,323,209 bytes total).
+terminal-voltage, the-10x10-project and tnt-revilution (1,323,209 bytes total). All 12
+JPEGs are within 640×360–1280×800 and 192 KiB and reproduce byte-for-byte from their
+preserved originals with `scripts/lean-image.sh`.
 
 Unresolved: deathless, headless-chicken, japanese-valentines, lunatic, memento-mori,
 memento-mori-ii, micro-slaughter-community-project, mindblood-genesis,
@@ -30,24 +36,36 @@ santas-outback-bender, spaceballs-the-quest-for-more-dbp-maps, speed-of-doom, su
 tomatomania and vanguard. Exact links, candidates, dimensions and blockers are recorded
 in report103; no image was generated, enlarged or substituted from another mapset.
 
-## Verification and publication
+## Checks and publications
 
-Version/helper checks passed locally: 27 dependency-free Python helper tests,
-the served-URL shell tests, XML parsing, workspace/lockfile/AppStream equality
-at 0.0.14, `git diff --check`, and unmodified `appstreamcli validate --no-net`
-(successful with one pedantic hint). The metainfo helper was run locally with
-the UTC date 2026-10-22; the existing 0.0.13 and older releases were preserved.
+Version/helper checks had already passed locally: 27 dependency-free Python helper tests,
+the served-URL shell tests, XML parsing, workspace/lockfile/AppStream equality at 0.0.14,
+`git diff --check`, and unmodified `appstreamcli validate --no-net` (successful with one
+pedantic hint). The metainfo helper ran with the UTC date 2026-10-22 and preserved older
+releases.
 
-Pending: integrated ordinary Linux CI, paired release/Flatpak runs, canonical provenance
-and checksum checks, and the tag-specific saved-state fixture. The screenshot batch review
-and its single offline catalog lint are complete. No exhaustive test replay or network e2e
-is planned for this UI/asset/metadata update. Exact results will replace this preparation
-record as they become available.
+| Check / run | Result |
+| --- | --- |
+| CI `39840683250` at `305c5fd` | **Failed**, honestly recorded: the spec-087 guard still expected `no-end-in-sight`, `doom-ii-the-way-id-did` and `rekkr` to have no screenshots. Fixed in test-only `58e83b8` and the focused `catalog_087_b`, `catalog_087_c` and `catalog_087_d` tests passed. |
+| CI `39841850278` at `58e83b8` | **Success**: fmt, denied-warning Clippy, ordinary offline tests and catalog lint; catalog bundle publication also succeeded. |
+| Packaging metadata `39840683094` at `305c5fd` | **Success**. The only later change was a test-only expectation, so metadata was not rerun. |
+| Tag `v0.0.14-browse` | Annotated tag on `58e83b8`; peeled remote SHA verified identical. |
+| Release `39843171382` | **Success**, prerelease `https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.14-browse`; assets `ddl-linux-x86_64.tar.gz` and its `.sha256`; release notes replaced with the final text. |
+| Flatpak `39843171571` | Attempt 1 reached a successful Pages build but failed the wait gate on GitHub's transient zero-second `errored` Pages API row. Attempt 2 **succeeded** with the same `58e83b8` source, including signature verification, installed Flatpak/binary version `0.0.14`, OSTree/source SHA smoke checks, Pages wait, Cloudflare purge and published-file verification. |
+| Release tarball | Downloaded 24,442,709 bytes; computed SHA-256 `4a92d934085459372126029101b66adcef90a7bd223f45d202dd2d19d6f933c8` matches the published `.sha256`. Nothing was executed. |
+| Canonical provenance | Stable ref commit `17c823862355100e6ab839dfb31b97fb98bfb577a007c89ce5230446f401be06`; decoded commit body records source Git SHA `58e83b8c8dabdb550633faee002fa6ba977da7ab`. `https://doomdecklauncher.com/` serves `0.0.14`. |
+| Saved-state fixture | `tests/fixtures/state/v0.0.14-browse` generated by the tag's own serializers (`generate.py v0.0.14-browse`, compile 16.81 s; scenario passed) and the focused `release_state_trees_remain_readable` guard passed. Older fixture bytes are unchanged. |
+
+The Flatpak workflow attempt 1 is not claimed as green: its Pages wait failed, even though
+GitHub then built the same commit. Attempt 2 is the authoritative green run and is the one
+whose provenance was verified. No exhaustive test replay, title-fit matrix, local SDK
+build or network e2e was run for this UI/asset/metadata release.
 
 ## Remaining physical checks
 
-**Needs Deck Validation:** controller repeat/scroll feel, real trackpad/wheel/drag
-inertia, actual Discover displayed version and upgrade preservation of the owner's
-library/settings. See the CB checks in `docs/deck-testing.md`.
+**Needs Deck Validation:** controller repeat/scroll feel, real trackpad/wheel/drag inertia,
+how the 12 new images render in Discover and detail on the Deck, actual Discover displayed
+version and upgrade preservation of the owner's library/settings. See CB1–CB5 in
+`docs/deck-testing.md`.
 
 No dependencies or protected project status/decision/journal/overview files changed.
