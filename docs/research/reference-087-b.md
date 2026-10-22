@@ -437,3 +437,21 @@ CARGO_TARGET_DIR=<shared> CARGO_BUILD_JOBS=2 \
   was not played on Deck; only the free PWAD edition over Ultimate Doom is declared.
 - **Artwork:** only Doom the Way id Did has bundled screenshots; the other five record
   unavailable compliant sources and keep the painted fallback.
+
+## 13. Original first-public dates for spec 090 chronology (research only)
+
+Recorded for worker D's ascending release-order metadata; no schema field, recipe date or
+version label was changed here. Precision is stated per title so sorting never overstates
+what the source says.
+
+| Title (recipe id) | Original first public date | Precision | Source | Version label kept in the recipe |
+| --- | --- | --- | --- | --- |
+| Doom the Way id Did (`doom-the-way-id-did`) | 2011-12-10 | day | `DTWID.txt` "Release date : 12/10/11" (the inspected v1.1a is a 2012-02-05 revision) | 1.1a, revised 2012-02-05 |
+| No End in Sight (`no-end-in-sight`) | 2016-11-28 | day | `NEIS.txt` "Release date : 11/28/16" (the inspected v1.4 is the 2018-01-29 update) | 1.4, updated 2018-01-29 |
+| Doom II the Way id Did (`doom-ii-the-way-id-did`) | 2013-11-07 | day | `D2TWID.txt` "Release date : 11/7/13 (finalized 12/22/13)" | 1.0, finalized 2013-12-22 |
+| Deathless (`deathless`) | 2020-05-25 | day | `deathless1.1.txt` "Release date : 25 May 2020" (v1.1 readme; v1.1 is the inspected archive) | 1.1, 2020-05-25 |
+| Sunder (`sunder`) | 2009-04-20 | day | DoomWiki (Wayback copy read 2026-10-22): "first release on April 20, 2009"; the project thread was also started 2009-04-20. The inspected build is V.2407, not the first upload. | V.2407 |
+| REKKR (`rekkr`) | 2018-07-09 | day | `REKKR.txt` "Release date : 7/9/2018" (the inspected 1.17 update is later; first public release is the original free edition) | 1.17 |
+
+Where only a day-precision date exists, it is used as-is. No title in this group relies on
+an inferred month or year: each has an author-stated date or a dated public release/thread.
