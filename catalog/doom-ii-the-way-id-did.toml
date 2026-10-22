@@ -1,0 +1,93 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §13–§18; gathered 2026-10-22.
+schema_version = 1
+id = "doom-ii-the-way-id-did"
+title = "Doom II the Way id Did"
+authors = [
+  "Alfonzo (project manager, maps)",
+  "Xaser (project manager, maps)",
+  "Esselfortium",
+  "Jimmy",
+  "Marcaek",
+  "Megalyth",
+  "Pavera",
+  "Purist",
+  "Rottking",
+  "Tarnsman",
+  "Blackgaze (MAP33 \"Hexsoil\", per the bundled MAPINFO)",
+]
+release = "1.0, finalized 2013-12-22 (release date 2013-11-07; archive re-uploaded for zip issues)"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/d2twid"
+description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) plus a bonus MAP33, with a WAD-embedded DeHackEd patch for the level names and the Wolfenstein replacements."
+permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided D2TWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
+tags = ["classics", "cacowards", "community-projects", "megawad"]
+
+[base_game]
+game = "doom2"
+# The readme says it may not run with Doom II prior to 1.9.
+variants = ["doom2-1.9", "doom2-1.9-kex-2024-08-06", "doom2-1.9-kex-2024-10-01"]
+
+[compatibility]
+family = "vanilla"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP32). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-b.md §13–§18",
+  "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
+  "D2TWID.wad lump directory read as data: 732 lumps, 33 map markers MAP01–MAP33 with complete map lumps, one 6,384-byte embedded DEHACKED lump, MAPINFO/ZMAPINFO/EMAPINFO lumps, no COMPLVL or UMAPINFO lump",
+  "D2TWID.txt release text: 32 new levels, Game: Doom 2, Map #: MAP01-MAP32, Doom 2 prior to 1.9 excluded, MAP33 absent from the authors' map list",
+  "D2TWID.deh (7,272 bytes) compared with the WAD's embedded DEHACKED (6,384 bytes, WhackEd4): the embedded BEX [STRINGS]/[PARS] patch is the newer form and names MAP33",
+]
+notes = "Confirmed archive/member identities and source inspection. The WAD embeds its own DEHACKED patch, so the recipe does not add a separate -deh argument; the older external D2TWID.deh would re-apply superseded level names. Complevel vanilla (2 on Doom II) follows the authors' Doom II 1.9 target and the absence of any source-port requirement; no gameplay test performed. Tags: cacowards = Doomworld's 2013 Cacowards (20th annual) Top Ten Page 1 winner, https://www.doomworld.com/cacowards/2013/, read through the Wayback Machine copy of the legacy /20years/ page on 2026-10-22 because the live site returns 403; classics = released 2013-11-07 and finalized 2013-12-22, over five years old, with that Cacoward as cited recognition; community-projects = ten credited level designers plus their managers; megawad = 32 credited maps, and 33 map markers counted from the WAD."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and map selection.",
+  "MAP33 \"Hexsoil\" is not in the authors' 32-map list. The bundled MAPINFO/ZMAPINFO/EMAPINFO route it from MAP02's secret exit only in ZDoom, ZDaemon or Eternity; DSDA-Doom ignores those lumps and keeps vanilla MAP02 → MAP31 progression, so MAP33 reachability in DDL's launch needs Deck validation.",
+  "No screenshot bundled: no source under the contribution rules provided a compliant in-game image, so the painted fallback applies.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/megawads/d2twid"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/megawads/d2twid.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/megawads/d2twid.zip"]
+size = 1964344
+sha256 = "e5ef240143640e537ab5b47239967ec9e70ba84a314ee40d3a2acb66757aed32"
+kind = "zip"
+idgames_path = "levels/doom2/megawads/d2twid.zip"
+
+[[packages.members]]
+id = "maps"
+path = "D2TWID.wad"
+size = 6753456
+sha256 = "128a613717fee36b08b72ff5e54cf0e689136b25ab6fe7460f6ab634226f0e7f"
+keep = false
+
+[[packages.members]]
+id = "readme"
+path = "D2TWID.txt"
+size = 5938
+sha256 = "019df270d2b644cacec330729bcebfe322396d40b0e81fd005ef0010f3481c77"
+keep = true
+
+[[components]]
+id = "main"
+label = "Doom II the Way id Did"
+description = "Main 32-map DOOM II megawad (MAP01–MAP32) with the level names and Wolfenstein replacements supplied by the WAD's embedded DeHackEd patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

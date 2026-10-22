@@ -1,0 +1,90 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §19–§24; gathered 2026-10-22.
+schema_version = 1
+id = "deathless"
+title = "Deathless"
+authors = [
+  "Jimmy (maps, graphics, music)",
+  "Fuzzball (E2/E4 sky, testing)",
+  "Mechadon (titlepic sky)",
+  "Eradrop (E1/E3 interpic skies)",
+  "Sodaholic (Doom alpha sky edit)",
+  "Simon666 (E3 sky)",
+  "ItsNatureToDie (MARBCYB* and SLAD falls textures)",
+  "Vader (ASH edits, cyber/spider doors)",
+]
+release = "1.1, 2020-05-25"
+page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/deathless"
+description = "Ultimate DOOM four-episode replacement: 36 limit-removing maps (E1M1–E4M9) by Jimmy, with an embedded DeHackEd patch that buffs the lost soul and spiderdemon."
+permission = "Authors MAY use the contents of this file as a base for modification or reuse. Redistribution is permitted provided deathless1.1.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
+tags = ["classics", "megawad"]
+
+[base_game]
+game = "doom"
+# Four episodes need Ultimate Doom; the KEX re-release carries the same episode data.
+variants = ["doom-1.9ud", "doom-1.9ud-kex-2024-08-06", "doom-1.9ud-kex-2024-10-01"]
+
+[compatibility]
+family = "limit-removing"
+complevel = "vanilla"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Four episodes (E1–E4); the menu selects the episode, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-b.md §19–§24",
+  "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
+  "deathless.wad lump directory read as data: 700 lumps, 36 map markers E1M1–E4M9, one 2,131-byte embedded DEHACKED lump, ZMAPINFO/EMAPINFO/DECORATE lumps, no COMPLVL or UMAPINFO lump",
+  "deathless1.1.txt release text: version 1.1 dated 25 May 2020, Game: The Ultimate Doom, New levels E1M1-M9 through E4M1-M9, 'Advanced engine needed: Limit-removing', vanilla/Chocolate Doom explicitly unsupported, DEHACKED changes to lost soul and spiderdemon, no external patch file shipped",
+]
+notes = "Confirmed archive/member identities and source inspection. The WAD embeds its own DEHACKED patch, which DSDA-Doom applies to explicitly loaded PWADs even under -noautoload, so the recipe does not add a separate -deh argument; the archive ships no external patch. Complevel vanilla (3 on Ultimate Doom) follows the author's statement that the set needs a limit-removing engine while remaining a Doom-format mapset; that is the limit-removing convention. The bundled ZMAPINFO/EMAPINFO/DECORATE exist for GZDoom-family ports and are not read by DSDA-Doom. No gameplay test performed. Tags: classics = released 2020-05-25, over five years old, with the author's credited inclusion as an official DOOM + DOOM II add-on as lasting recognition (deathless1.1.txt, corroborated by https://bethesda.net/en-US/news/add-ons-for-doom-doom-ii-2022); megawad = 36 maps counted from the WAD and the author's map list. Not tagged cacowards: no award could be confirmed for this release, so the claim is not made."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode/map selection.",
+  "The embedded DeHackEd patch changes monster balance (lost soul 70 HP, spiderdemon 3,500 HP with altered speed and pain chance); its actual feel in DSDA-Doom was not played and needs Deck validation.",
+  "The author recommends Crispy Doom for the intended experience and notes the difficulty is deliberately easy early on; DDL runs DSDA-Doom, so parity is unverified.",
+  "No screenshot bundled: no source under the contribution rules provided a compliant in-game image, so the painted fallback applies.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/deathless"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom/Ports/megawads/deathless.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom/Ports/megawads/deathless.zip"]
+size = 1743823
+sha256 = "47481ee568d7fada97ffb15ffd308dd3d9085f974ca3687e154c6b9f06e7c9ee"
+kind = "zip"
+idgames_path = "levels/doom/Ports/megawads/deathless.zip"
+
+[[packages.members]]
+id = "maps"
+path = "deathless.wad"
+size = 5212998
+sha256 = "295efe40a40e5f93a913b762e1c6052220dab3ed8d409a0e758c1abac49600c3"
+keep = false
+
+[[packages.members]]
+id = "readme"
+path = "deathless1.1.txt"
+size = 6950
+sha256 = "e0540ba517e70a9b29abaab7b4fe39c315c4fea7b8bbe6ffc1ca0584db897495"
+keep = true
+
+[[components]]
+id = "main"
+label = "Deathless"
+description = "Main 36-map four-episode Ultimate DOOM replacement with the monster rebalance and level names supplied by the WAD's embedded DeHackEd patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

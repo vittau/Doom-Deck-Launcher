@@ -1,0 +1,89 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-b.md §25–§31; gathered 2026-10-22.
+schema_version = 1
+id = "sunder"
+title = "Sunder"
+authors = [
+  "Insane_Gazebo (maps, art, textures)",
+  "TheMisterCat (Hive Mother model, animation and textures)",
+  "Antares (DeHackEd conversion of the Hive Mother)",
+  "Ribbiks (MAP15 reject table, music source)",
+  "Ukiro (OTEX textures)",
+  "Dragonfly (custom palette)",
+  "WereKnight, Elend (tree, grass, lilypad and banister assets)",
+]
+release = "V.2407 (author's 'Sunder 2407.zip' download; internal WAD file dated 2021-12-31, readme 2021-12-15)"
+page = "https://www.doomworld.com/forum/topic/46002-sunder-map21-actually-exists-right-now/"
+description = "DOOM II Boom-compatible slaughter mapset: 22 very large maps (MAP01–MAP20 plus MAP31/MAP32) with an embedded DeHackEd patch that adds the Hive Mother boss; first released in 2009 and still growing."
+permission = "Authors may use these levels as a base to build additional levels. Redistribution is permitted provided SunderReadMeV2.TXT travels with the WAD, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
+tags = ["classics", "challenging"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Single continuous DOOM II mapset (MAP01–MAP20 plus secret MAP31/MAP32). The menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-b.md §25–§31",
+  "Package and member paths, sizes and SHA-256 computed from the downloaded archive (nothing executed)",
+  "Sunder 2407.wad lump directory read as data: 2,530 lumps, 22 map markers MAP01–MAP20 plus MAP31/MAP32, one 6,734-byte embedded DEHACKED lump (WhackEd4 BETA) naming every map and defining the Hive Mother, a ZDoom-format MAPINFO lump, no COMPLVL or UMAPINFO lump",
+  "SunderReadMeV2.TXT: 'For DOOM II', 'should work in any Boom compatible port', 'extremely difficult maps', 'Map #: Map 01 - Map 19 (+ 31 & 32)', 'Map 15 is extremely system intensive. Map 32 might also cause slow down on older machines', 'Date Finished: It's not. Still mapping!'",
+  "Readme Map Notes: an author-reported GZDoom software-mode drop to '6 - 8 FPS in one especially bad section' of MAP15 (author measurement, not a Deck measurement)",
+]
+notes = "Confirmed archive/member identities and source inspection. The selected release is V.2407, the author's Dropbox-hosted public build linked as 'Sunder V.2407' from the project's Doomworld thread; the newer V.2512 announcement (2025-10-02, adding MAP21) points at a OneDrive link, which the current download allowlist does not cover, so it is deliberately not substituted and host policy was not changed. The readme header still says 'Map 01 - Map 19 (+31 & 32)' while the WAD bytes contain MAP20 as well; the recipe describes the inspected 22-slot scope and the readme's Map 20 section. The WAD embeds its DEHACKED patch, so the recipe adds no separate -deh argument; the bundled MAPINFO is ZDoom-format and is not read by DSDA-Doom. Complevel boom (9) comes from the author's 'should work in any Boom compatible port' statement and the Boom-compatible feature set; no gameplay test performed. Tags: classics = first released 2009-04-20, over five years old, and featured in Doomworld's 2018 Top 25 Missed Cacowards as an influential slaughter release (DoomWiki, read through the Wayback Machine); challenging = the author calls the set 'extremely difficult maps' and it is a slaughter mapset. Not tagged megawad: the pinned release has 22 maps, below the 30-map definition. Not tagged cacowards: the Top 25 Missed Cacowards feature is not a winner or runner-up award."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, gameplay and map selection.",
+  "Performance is unmeasured on Deck: the author reports MAP15 as 'extremely system intensive' and MAP32 as a possible slowdown on older machines, with a GZDoom software-mode 6-8 FPS section in MAP15. No Steam Deck FPS or battery figure is claimed.",
+  "The pinned V.2407 build is not the author's newest V.2512 (2025-10-02), which adds MAP21 through a OneDrive link outside the current download allowlist; scope is 22 maps, not the 23 maps of the newest build.",
+  "The readme's own map-count line is stale (says Map 01-19 + 31/32) although MAP20 is present and documented in its Map 20 section.",
+  "No screenshot bundled: no source under the contribution rules provided a compliant in-game image, so the painted fallback applies.",
+]
+
+[[packages]]
+id = "author"
+page = "https://www.doomworld.com/forum/topic/46002-sunder-map21-actually-exists-right-now/"
+urls = ["https://www.dropbox.com/s/vi47z1a4e4c4980/Sunder%202407.zip?dl=1"]
+size = 49972580
+sha256 = "c11bb7bb6f601b0badbed58f23d04e8b8f352795ebee66074645329d3f17fd2e"
+kind = "zip"
+
+[[packages.members]]
+id = "maps"
+path = "Sunder 2407.wad"
+size = 167039763
+sha256 = "b58787ea6390da29a5f2c2fd3488065a4979a30dc684d67e5a6d7ae26834005c"
+keep = false
+
+[[packages.members]]
+id = "readme"
+path = "SunderReadMeV2.TXT"
+size = 34421
+sha256 = "4c67a6f5c798840953dc2d20344e3760627016f926c26d2f1cfbc5e9948b0e40"
+keep = true
+
+[[components]]
+id = "main"
+label = "Sunder"
+description = "Main 22-slot Boom-compatible slaughter mapset with the Hive Mother and map titles supplied by the WAD's embedded DeHackEd patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "author"
+member = "maps"
+role = "maps"
