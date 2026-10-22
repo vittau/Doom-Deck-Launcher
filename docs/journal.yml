@@ -923,3 +923,14 @@
     reception remains for owner observation. SEO proposals remain documented recommendations.
   refs: [docs/reports/080-seo-and-ai-discovery-audit.md, docs/reports/081-readme-brand.md,
     docs/reports/082-site-google-analytics.md]
+- date: 2026-10-22
+  type: change
+  summary: >-
+    Owner asked whether Donate clicks were measured. They were not: 082 allowed page_view only.
+    Added one declared-event handler to the landing page — a link opts in with data-ga-event and
+    a single gtag('event', …) call sends the name with no parameters — covering donate_click on
+    the Donate link (085) and install_click on both install buttons (086). Website runs
+    39720643613 and 39720898607 deployed and the served page was verified. Realtime reception and
+    key-event marking remain owner work.
+  refs: [docs/specs/085-donate-click-event.md, docs/specs/086-install-click-event.md,
+    docs/reports/085-donate-click-event.md, docs/reports/086-install-click-event.md]

@@ -45,6 +45,12 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   Analytics event reception and private index coverage remain unobserved. The reviewed SEO/AI
   search audit is `reports/080-seo-and-ai-discovery-audit.md`; sitemap, entity metadata and image
   optimization are recommendations, not implemented behavior.
+- **Two named website events live:** the Donate link sends `donate_click` (085) and both install
+  buttons send `install_click` (086), declared with `data-ga-event` and dispatched by one
+  parameter-free handler; credits and 404 stay event-free. Website runs `39720643613` and
+  `39720898607` deployed and the served page was checked: one Donate declaration, two install
+  declarations, one `gtag('event'` call site. Real reception is still an owner observation in
+  Realtime, and the property-side key-event marking is not done.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
   self-hosted signed installation and Discover update path rather than the older Flathub plan.
