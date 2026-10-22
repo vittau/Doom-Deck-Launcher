@@ -56,7 +56,6 @@ limitations = [
   "Performance is unmeasured on Deck: the author reports MAP15 as 'extremely system intensive' and MAP32 as a possible slowdown on older machines, with a GZDoom software-mode 6-8 FPS section in MAP15. No Steam Deck FPS or battery figure is claimed.",
   "The pinned V.2407 build is not the author's newest V.2512 (2025-10-02), which adds MAP21 through a OneDrive link outside the current download allowlist; scope is 22 maps, not the 23 maps of the newest build.",
   "The readme's own map-count line is stale (says Map 01-19 + 31/32) although MAP20 is present and documented in its Map 20 section.",
-  "No screenshot bundled: no source under the contribution rules provided a compliant in-game image, so the painted fallback applies.",
 ]
 
 [[packages]]

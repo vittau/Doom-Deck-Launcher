@@ -56,7 +56,6 @@ limitations = [
   "Needs Deck Validation: IWAD/complevel, load order, gameplay, audio and episode/map selection.",
   "The embedded DeHackEd patch changes monster balance (lost soul 70 HP, spiderdemon 3,500 HP with altered speed and pain chance); its actual feel in DSDA-Doom was not played and needs Deck validation.",
   "The author recommends Crispy Doom for the intended experience and notes the difficulty is deliberately easy early on; DDL runs DSDA-Doom, so parity is unverified.",
-  "No screenshot bundled: no source under the contribution rules provided a compliant in-game image, so the painted fallback applies.",
 ]
 
 [[packages]]
