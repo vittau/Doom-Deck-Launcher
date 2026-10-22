@@ -24,6 +24,13 @@ https://doomwiki.org/wiki/No_Rest_for_the_Living and https://doomwiki.org/wiki/N
   map count, permissions (local player use, no redistribution claim), earned tags
   and original-date precision with honest sources. Gameplay remains Needs Deck
   Validation. Sourced screenshots follow D-024, otherwise document fallback.
+  The owner explicitly also requires the DOOM + DOOM II Steam/KEX variant:
+  support importing that player's file over the already recognized Steam Doom II
+  IWAD, preserving its filename. Existing reviewed metadata records 4,039,441
+  bytes and MD5 `23422eb42833ac7b0dd59c0c7ae18a6f`. Do not invent its SHA-256 or
+  claim local byte/gameplay inspection when only the supplied BFG file was read.
+  Distinguish accepted imports and published identification evidence from actual
+  inspected/known SHA-256 status in the recipe and report.
 - **R3 — Import-only capability.** Allow a recipe with no packages only when its
   required main component is user-supplied and every non-user-supplied member
   still has a valid declared package reference. Retain all current validation
