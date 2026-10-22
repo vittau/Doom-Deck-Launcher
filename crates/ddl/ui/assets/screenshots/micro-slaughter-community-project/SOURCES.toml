@@ -1,0 +1,11 @@
+# Bundled screenshot sources and credit (spec 103, D-024).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://doomwiki.org/wiki/Micro_Slaughter_Community_Project"
+source_page = "https://doomwiki.org/wiki/Micro_Slaughter_Community_Project"
+credit = "Bauul and the Micro-Slaughter Community Project team"
+original_size = "1920x1080"
+retrieved = "2026-10-22"
+permission = "In-game screenshot from the DoomWiki article's screenshot gallery (see source_page), saved by the project owner on 2026-10-22. DoomWiki text and images are published under CC BY-SA 4.0; the underlying map is the project team's material. Bundled as a representative in-game view under decision D-024, credited to the authors, and removed on their request."

@@ -490,7 +490,7 @@ fn bundled_screenshots_are_referenced() {
         assert_eq!(r.screenshots[0].asset, format!("{id}/01.jpg"), "{id}");
         assert_eq!(r.screenshots[0].credit, credit, "{id}");
     }
-    for id in ["vanguard", "lunatic", "micro-slaughter-community-project"] {
+    for id in ["vanguard", "lunatic"] {
         assert!(
             recipe(id).screenshots.is_empty(),
             "{id} uses the painted fallback art: no obtainable source was found"

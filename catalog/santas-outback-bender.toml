@@ -11,6 +11,10 @@ description = "DOOM II: MAP01–MAP17 (16 maps). It’s almost Christmas Eve, bu
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."
 tags = ["community-projects", "doomer-boards"]
 
+[[screenshots]]
+asset = "santas-outback-bender/01.jpg"
+credit = "Doomer Boards Project 31"
+
 [base_game]
 game = "doom2"
 variants = []

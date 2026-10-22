@@ -11,6 +11,10 @@ description = "DOOM II: nineteen slaughter maps across a main run and two secret
 permission = "Authors may NOT use the contents as a base for modification or reuse; permissions were obtained from the original authors of included resources. Redistribution is permitted provided MSCP_v1b.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
 tags = ["community-projects"]
 
+[[screenshots]]
+asset = "micro-slaughter-community-project/01.jpg"
+credit = "Bauul and the Micro-Slaughter Community Project team"
+
 [base_game]
 game = "doom2"
 variants = []

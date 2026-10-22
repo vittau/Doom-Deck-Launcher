@@ -33,6 +33,10 @@ description = "DOOM II megawad: 32 vanilla-format maps (MAP01–MAP32) built for
 permission = "Authors may not use these levels as a base without contacting the original author of each map, and the set is not to be split. Redistribution is permitted provided MM.TXT travels with the file, unmodified and intact; commercial use requires the crew's agreement, and the text also excludes Microsoft Network from redistributing it. DDL downloads the unmodified archive and keeps the bundled texts."
 tags = ["classics", "community-projects", "megawad"]
 
+[[screenshots]]
+asset = "memento-mori/01.jpg"
+credit = "The Memento Mori Crew"
+
 [base_game]
 game = "doom2"
 variants = []
