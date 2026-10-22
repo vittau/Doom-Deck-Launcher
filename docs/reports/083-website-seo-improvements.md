@@ -382,6 +382,7 @@ Neither step was taken before that instruction.
 | --- | --- |
 | Discovery/delivery merge | main `99b52c2`; Project website run [39701209346](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39701209346) — success |
 | Local donation button merge | main `a0e801e`; Project website run [39706639740](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39706639740) — success, including the served-file byte comparison and Cloudflare purge |
+| Minified CSS + `llms.txt` merge | main `e216b0d`; Project website run [39707805435](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39707805435) — success |
 
 Live checks after the second run (2026-10-22 ≈01:40 UTC) returned `200` for `/`, `/robots.txt`,
 `/sitemap.xml`, `/assets/credits.html`, `/assets/bmc-logo.svg`, `/assets/Cookie-Regular.woff2` and
@@ -391,5 +392,7 @@ The live homepage contains the local `.bmc-btn`, JSON-LD, Q&A and apex canonical
 `cdnjs.buymeacoffee.com` or `fonts.googleapis.com` request. A live headless load with every
 non-site request aborted reached `readyState=complete` in 897 ms (network round trip included),
 `scrollWidth` 390 px, the 44 px Donate button present and only the asynchronous GA tag blocked.
+The stylesheet is served minified (`9929` bytes, one line, no comments) and `/llms.txt` returns
+`200 text/plain` (1 349 bytes) with the canonical homepage and credits URLs.
 No credentials, console settings, releases or tags were touched; the page-only workflow performed
 the publication itself.
