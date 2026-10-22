@@ -141,6 +141,11 @@ jobs:
           test "$(printf '%s\n%s\n' "$msrv" "$toolchain" | sort -V | head -1)" = "$msrv"
           echo "toolchain=$toolchain msrv=$msrv"
 
+      - name: Synchronize the AppStream release with the workspace
+        run: |
+          set -euo pipefail
+          python3 scripts/flatpak/set-metainfo-release.py --date "$(date -u +%Y-%m-%d)"
+
       - name: Validate desktop entry and AppStream metainfo
         run: |
           set -euo pipefail

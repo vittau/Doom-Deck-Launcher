@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <component type="desktop-application">
   <id>com.doomdecklauncher.DoomDeckLauncher</id>
 
@@ -71,6 +71,7 @@
   </screenshots>
 
   <releases>
+    <release version="0.0.12" date="2026-10-22" />
     <release version="0.0.11" date="2026-10-21">
       <description>
         <p>Roomier cards, clearer SIGIL edition choices, responsive Pistol start changes and automatic catalog updates at startup.</p>

@@ -209,6 +209,11 @@ jobs:
           print("manifest and metadata inputs OK")
           PY
 
+      - name: Synchronize the AppStream release with the workspace
+        run: |
+          set -euo pipefail
+          python3 scripts/flatpak/set-metainfo-release.py --date "$(date -u +%Y-%m-%d)"
+
       - name: Validate desktop entry and AppStream metainfo
         run: |
           set -euo pipefail
