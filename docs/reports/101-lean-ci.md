@@ -4,8 +4,10 @@
 
 Implemented R1–R6 with workflow/documentation changes only. No production Rust, source tests,
 Cargo files, release workflow, signed Flatpak publication workflow or website workflow changed.
-No new dependencies or test framework. `main` at `1ae6f28` was merged before final static
-verification (`Already up to date`).
+No new dependencies or test framework. Initially `main` at `1ae6f28` was already included;
+then merged coordinator fixture commit `5beccd3` before repeating final static checks. Its
+source/test fixture changes are inherited from main, outside this task’s edits; no Cargo
+checks were repeated after that merge.
 
 ## Work removed and coverage retained
 
