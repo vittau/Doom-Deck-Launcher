@@ -42,18 +42,13 @@ fn player_supplied_recipe_embeds_without_packages_or_skips() {
 
 /// Doom II must be the IWAD; NERVE.WAD is the imported expansion PWAD.
 #[test]
-fn expansion_requires_doom2_and_accepts_classic_and_kex_variants() {
+fn expansion_requires_doom2_and_accepts_every_recognized_variant() {
     let catalog = Catalog::embedded();
     let recipe = recipe(&catalog);
     assert_eq!(recipe.base_game.game, ddl_core::catalog::Game::Doom2);
-    assert_eq!(
-        recipe.base_game.variants,
-        [
-            "doom2-1.9",
-            "doom2-1.9-kex-2024-08-06",
-            "doom2-1.9-kex-2024-10-01"
-        ],
-        "classic 1.9 and both reviewed Steam/KEX Doom II variants"
+    assert!(
+        recipe.base_game.variants.is_empty(),
+        "accept every recognized Doom II IWAD variant, including BFG, classic, French and Steam/KEX"
     );
     assert!(
         !recipe
