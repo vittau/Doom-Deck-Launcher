@@ -39,14 +39,18 @@ installed generations, and current-shape save. Resolver failures for absent
 synthetic content are expected and do not erase installed metadata.
 
 `config/audio.json` exists only in the reviewed audio-capable fixtures
-(`v0.0.10-audio`, `v0.0.11-polish` and `v0.0.12-catalog`). Each scenario calls that tag's
+(`v0.0.10-audio`, `v0.0.11-polish`, `v0.0.12-catalog` and `v0.0.13-update`). Each scenario calls that tag's
 production `Soundfonts::select(Choice::Default)` serializer, so the guard checks
 an explicit choice survives loading. Earlier tags predate audio preferences and
 correctly load with no explicit choice. No soundfont is installed or bundled,
 and no download/engine/UI code is run.
 
+`v0.0.13-update` also calls its production view-preference writer with an explicit
+List choice. The guard reads `config/view.json` through the production reader and
+checks that older tags, which have no such file, still default to Cards.
+
 For a new release, review the tagged serializers, add the tag to the generator's
-allowlist and, only if it is audio-capable, to its explicit `AUDIO_TAGS` set;
+allowlist and, when supported, to its explicit `AUDIO_TAGS` and `VIEW_TAGS` sets;
 then generate a new tree without changing existing ones and run this guard.
 Keep the scenario's ids and explicitly document any features that the tag
 predates.

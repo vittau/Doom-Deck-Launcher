@@ -1,6 +1,6 @@
 # 100 — Publish the current launcher and Flatpak from one source commit
 
-**Status:** In progress · **Depends on:** 095, 096, 097, 098, 099
+**Status:** Published and verified; physical Deck checks pending · **Depends on:** 095, 096, 097, 098, 099
 **Origin:** owner, 2026-10-22: take over orchestration, finish and commit the outstanding
 work, push and release as necessary, and provide an updated Flatpak. The prior
 coordinator handed over the unmerged `spec-098-catalog-update-needs-newer-ddl` branch.

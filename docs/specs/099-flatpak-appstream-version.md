@@ -1,6 +1,6 @@
 # 099 — Keep the Flatpak AppStream release version current
 
-**Status:** Implemented and locally verified; publication/Deck validation pending · **Depends on:** 062, 063, 079
+**Status:** Published in v0.0.13-update; physical Deck validation pending · **Depends on:** 062, 063, 079
 **Origin:** coordinator, 2026-10-22, after a physical Deck showed metadata version
 `0.0.11` for the published `v0.0.12-catalog` package (source commit `409d6c5`),
 while its binary correctly reported `0.0.12`.

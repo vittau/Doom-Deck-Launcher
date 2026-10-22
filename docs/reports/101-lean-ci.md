@@ -91,3 +91,13 @@ as a passing diagnostic.
 Actual CI duration improvements have **not yet been measured**. A future relevant GitHub run
 must confirm hosted execution and supply timings before any speedup claim. No implementation
 items remain open; hosted timing evidence and physical Deck validation are outside this task.
+
+## Coordinator review
+
+Reviewed and merged the workflow/documentation changes without conflicts. Verified the
+release, signed publication and independent website workflow bytes remain unchanged; the
+new path filters and manual controls match the owner-approved spec. No Rust or SDK check
+was repeated for this review. The final aggregation push uses `[skip ci]` because its only
+Rust edit is the separately focused-test-verified post-release fixture guard, alongside
+these statically verified workflow/documentation changes. Hosted timing gains remain
+unmeasured; later relevant source and metadata edits will exercise the new automatic paths.

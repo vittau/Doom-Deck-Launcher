@@ -1,7 +1,7 @@
 # Spec 099 report — Flatpak AppStream version
 
 **Worker:** Codex · **Branch:** `vittau/flatpak-metainfo-version`
-**Status:** implemented and locally verified; publication and physical Deck validation pending.
+**Status:** published and verified in v0.0.13-update; physical Deck validation pending.
 
 ## Change
 
@@ -19,7 +19,7 @@ unchanged. The manifest still installs that metainfo at the existing `/app/share
 destination. No bundle/catalog logic or application source, binary behavior, permissions,
 signing, publication or smoke-test logic changed (R1/R3/R4).
 
-The checked-in XML now starts with `0.0.12`, dated `2026-10-22`; the complete `0.0.11`
+At worker handoff the checked-in XML started with `0.0.12`, dated `2026-10-22`; the complete `0.0.11`
 and `0.0.9` entries remain. ElementTree also normalizes the XML declaration's quote style.
 No dependencies were added.
 
@@ -52,14 +52,16 @@ No dependencies were added.
 - `git diff --check`: **passed**.
 
 All tests and validation are offline/headless; no visible window or screenshot was opened.
-No push, tag, release or remote workflow dispatch was performed.
+No push, tag, release or remote workflow dispatch was performed during the original worker task.
 
-## Remaining validation and coordinator handoff
+## Worker handoff (before publication)
 
-**Needs Deck Validation:** a publication run from a reviewed ref containing this helper
+At worker handoff, a publication run from a reviewed ref containing this helper
 and the workflow changes must build/export the package, followed by a physical Deck check
 of `flatpak info`, `flatpak list --columns=version` and Discover against `ddl --version`.
-Those real package/display checks were not performed here and are not claimed as passing.
+Those package/display checks were not performed during the worker phase. The later
+coordinator section below records the completed publication checks; physical Discover
+validation remains **Needs Deck Validation**.
 The old `v0.0.12-catalog` tag does not contain this repair; merely republishing its
 unchanged tree does not pick up the helper or the corrected metadata.
 
@@ -86,3 +88,20 @@ requires both published artifacts, matching source provenance and version checks
 This task does not implement release orchestration, provenance metadata or a checklist,
 change publication/signing gates, create a GitHub release, publish a Flatpak, or amend
 coordinator-owned decision/status/journal files. The proposal needs its own spec.
+
+## Coordinator publication validation
+
+After the operator explicitly transferred orchestration and authorized push/publication,
+spec 100 integrated this repair with spec 098 and the existing shared Cards/List view.
+Workspace and AppStream versions advanced together to **0.0.13** for the new immutable
+`v0.0.13-update` tag at `7bf51c1bfc0f3d2b424778f9a9e1e71025a93947`.
+
+[Signed publication 39827799967](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39827799967)
+passed AppStream validation, a fresh signed install, binary version **0.0.13**, installed
+Flatpak display version **0.0.13**, and the source-SHA assertion. Pages, the cache-prefix
+purge and canonical site/descriptor/repository-summary byte checks passed. A direct read
+of the canonical served OSTree commit also confirmed the tag's Git source SHA.
+
+Publication verification is complete. Discover on the physical Deck remains **Needs Deck
+Validation**; no such hardware check was performed here. See the spec 100 report for the
+paired GitHub release, exact served commit and checksum evidence.
