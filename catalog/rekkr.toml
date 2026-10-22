@@ -17,7 +17,7 @@ authors = [
 ]
 release = "1.17 (first release 2018-07-09; this archive's WAD dated 2025-01-19)"
 page = "https://www.doomworld.com/idgames/levels/doom/megawads/rekkr"
-description = "REKKR: a 36-map total conversion for Ultimate Doom v1.9 (E1M1–E4M9) with new monsters, weapons, textures, sounds and music, run as a free PWAD over the player's own Doom IWAD."
+description = "A 36-map total conversion that recasts Ultimate Doom as a grim Norse saga, with new weapons, monsters, textures, sounds and a full soundtrack across four episodes."
 permission = "Licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (https://creativecommons.org/licenses/by-nc/4.0/): redistribution is allowed with credit and a link to the licence, and commercial use is not. DDL downloads the unmodified archive and keeps the bundled readme and credits files."
 tags = ["classics", "cacowards", "community-projects", "megawad"]
 
@@ -91,7 +91,7 @@ keep = true
 [[components]]
 id = "main"
 label = "REKKR"
-description = "Main 36-map total conversion with the new monsters, weapons, graphics, sounds and music supplied by the WAD's embedded DeHackEd patch and lumps."
+description = "The complete four-episode campaign with REKKR's weapons, bestiary and soundtrack."
 optional = false
 default = true
 position = 1

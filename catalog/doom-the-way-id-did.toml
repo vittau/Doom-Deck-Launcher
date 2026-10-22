@@ -25,7 +25,7 @@ authors = [
 ]
 release = "1.1a, revised 2012-02-05 (first release 2011-12-10)"
 page = "https://www.doomworld.com/idgames/levels/doom/megawads/dtwid"
-description = "DOOM episode replacement: 27 vanilla-format maps in E1M1–E3M9 that recreate id's 1994 mapping style, with a WAD-embedded DeHackEd patch for the level names."
+description = "A love letter to 1994 Doom: 27 lost-level-style maps across three episodes, with tight tech bases, marble fortresses and secret-filled corridors built to feel like the original id releases."
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse. Redistribution is permitted provided DTWID.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "cacowards", "community-projects"]
 
@@ -106,7 +106,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Doom the Way id Did"
-description = "Main 27-map three-episode replacement for vanilla Doom 1.9, with the level names supplied by the WAD's embedded DeHackEd patch."
+description = "The full three-episode campaign, from Communications Bridge to Lake of Fire."
 optional = false
 default = true
 position = 1

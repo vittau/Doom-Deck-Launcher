@@ -14,7 +14,7 @@ authors = [
 ]
 release = "1.1, 2020-05-25"
 page = "https://www.doomworld.com/idgames/levels/doom/Ports/megawads/deathless"
-description = "Ultimate DOOM four-episode replacement: 36 limit-removing maps (E1M1–E4M9) by Jimmy, with an embedded DeHackEd patch that buffs the lost soul and spiderdemon."
+description = "Jimmy's four-episode Ultimate Doom campaign: 36 fast, classic maps that move from infested tech bases to a drowned, demon-held Earth, with familiar monsters turned up a notch."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse. Redistribution is permitted provided deathless1.1.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled readme."
 tags = ["classics", "megawad"]
 
@@ -79,7 +79,7 @@ keep = true
 [[components]]
 id = "main"
 label = "Deathless"
-description = "Main 36-map four-episode Ultimate DOOM replacement with the monster rebalance and level names supplied by the WAD's embedded DeHackEd patch."
+description = "The complete four-episode campaign."
 optional = false
 default = true
 position = 1

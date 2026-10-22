@@ -445,3 +445,38 @@ fn assigned_recipes_pass_offline_lint_including_images() {
         assert!(recipe(&catalog, id).screenshots.is_empty());
     }
 }
+
+#[test]
+fn assigned_descriptions_are_plain_product_copy() {
+    // Product copy describes the mapset's theme and play concept. Implementation
+    // details (patch format, port family, IWAD/complevel, lump names) belong in
+    // verification/research, not in the card copy.
+    const TECHNICAL: [&str; 9] = [
+        "dehacked",
+        "complevel",
+        "iwad",
+        "wad",
+        "embedded",
+        "lump",
+        "limit-removing",
+        "boom-compatible",
+        "vanilla",
+    ];
+    let catalog = embedded();
+    for expected in &ASSIGNED {
+        let r = recipe(&catalog, expected.id);
+        for text in std::iter::once(&r.description)
+            .chain(r.components.iter().map(|component| &component.description))
+        {
+            assert!(!text.trim().is_empty(), "{} has copy", expected.id);
+            let lower = text.to_lowercase();
+            for term in TECHNICAL {
+                assert!(
+                    !lower.contains(term),
+                    "{} copy leaks the technical term {term:?}: {text}",
+                    expected.id
+                );
+            }
+        }
+    }
+}
