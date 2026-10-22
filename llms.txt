@@ -1,0 +1,32 @@
+# DoomDeckLauncher (DDL)
+
+> DoomDeckLauncher is a free, open-source, controller-first launcher for
+> community DOOM mapsets on Steam Deck, powered by DSDA-Doom. It never
+> bundles or downloads commercial base games; you bring your own legally
+> owned DOOM base-game files (IWADs).
+
+## Main pages
+
+- [DoomDeckLauncher](https://doomdecklauncher.com/): product overview, features, install
+  steps, requirements and questions answered.
+- [Asset credits](https://doomdecklauncher.com/assets/credits.html): artwork, font and
+  community screenshot provenance.
+
+## Project documentation
+
+- [Steam Deck guide](https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/steam-deck-guide.md):
+  installation, updates and controller setup.
+- [Source code](https://github.com/vittau/Doom-Deck-Launcher): GPL-3.0-or-later
+  repository and contribution guide.
+- [Flatpak research](https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/research/flatpak.md):
+  upstream evidence for the signed, self-hosted remote.
+
+## Notes
+
+- The signed Flatpak is an experimental, self-hosted channel, not a
+  Flathub listing.
+- Requirements: a Steam Deck and legally owned DOOM base-game files
+  (IWADs). DSDA-Doom is downloaded separately from its official upstream
+  release inside the launcher.
+- No Windows or macOS builds are published.
+- License: GPL-3.0-or-later.
