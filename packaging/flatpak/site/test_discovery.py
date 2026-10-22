@@ -294,7 +294,7 @@ class DiscoveryTests(unittest.TestCase):
                   '  *) echo "rejected: $path"; exit 1 ;;\n'
                   '  esac\n'
                   'done\n')
-        accepted = ("index.html\nrobots.txt\nsitemap.xml\n404.html\nCNAME\n"
+        accepted = ("index.html\nrobots.txt\nsitemap.xml\nllms.txt\n404.html\nCNAME\n"
                     "assets/home.webp\nassets/hero-1920.webp\n")
         result = subprocess.run(["bash", "-c", script], input=accepted, text=True,
                                 capture_output=True)
@@ -313,6 +313,87 @@ class DiscoveryTests(unittest.TestCase):
                        "How do installation and updates work?", "Is it made for Steam Deck?",
                        "No commercial base game is bundled or downloaded"):
             self.assertIn(phrase, without_scripts)
+
+    def test_llms_txt_summarises_the_site_accurately(self):
+        self.render()
+        text = (self.out / "llms.txt").read_text()
+        self.assertTrue(text.startswith("# DoomDeckLauncher (DDL)\n"))
+        self.assertNotIn("@@", text)
+        for url in (f"{BASE}/", f"{BASE}/assets/credits.html"):
+            self.assertIn(url, text)
+        for claim in ("free, open-source, controller-first launcher",
+                      "never\n> bundles or downloads commercial base games",
+                      "legally\n> owned DOOM base-game files (IWADs)",
+                      "not a\n  Flathub listing",
+                      "No Windows or macOS builds are published.",
+                      "GPL-3.0-or-later",
+                      "https://github.com/vittau/Doom-Deck-Launcher"):
+            self.assertIn(claim, text)
+        self.assertNotIn("other Linux", text)
+        self.assertNotIn("rank", text.lower())
+        # The local links are real rendered pages, and the file follows SITE_BASE.
+        for url in (f"{BASE}/", f"{BASE}/assets/credits.html"):
+            relative = urlsplit(url).path.lstrip("/") or "index.html"
+            self.assertTrue((self.out / relative).is_file(), url)
+        self.render(site_base="https://example.com/project")
+        moved = (self.out / "llms.txt").read_text()
+        self.assertIn("https://example.com/project/", moved)
+        self.assertNotIn(BASE, moved)
+
+    def test_css_minifier_preserves_strings_calculations_and_selectors(self):
+        css = """
+    /* drop me */
+    .a > .b, .c { content: "a  b"; width: calc(100% - 40px);
+      background: url("x y.png"); }
+    @media (max-width: 720px) { .d:not(.e) { color: red; } }
+    """
+        self.assertEqual(
+            renderer.minify_css(css),
+            '.a>.b,.c{content:"a  b";width:calc(100% - 40px);'
+            'background:url("x y.png");}'
+            '@media (max-width: 720px){.d:not(.e){color:red;}}\n')
+
+    def test_rendered_stylesheet_is_minified_without_losing_tokens(self):
+        self.render()
+        source = (renderer.SITE / "style.css").read_text()
+        output = (self.out / "assets/style.css").read_text()
+        self.assertNotIn("/*", output)
+        self.assertEqual(output.count("\n"), 1, "one minified line")
+        self.assertLess(len(output.encode()), len(source.encode()))
+        for kept in (":focus-visible", "prefers-reduced-motion", "@font-face",
+                     "calc(100% - 40px)", 'url("Barlow-Regular.ttf")',
+                     'url("Cookie-Regular.woff2")', "@media (max-width: 720px)"):
+            self.assertIn(kept, output)
+
+        def tokens(text):
+            """Everything except comments and whitespace outside strings."""
+            result, index, quote = [], 0, None
+            while index < len(text):
+                char = text[index]
+                if quote:
+                    if char == "\\" and index + 1 < len(text):
+                        result.append(text[index:index + 2])
+                        index += 2
+                        continue
+                    result.append(char)
+                    if char == quote:
+                        quote = None
+                    index += 1
+                    continue
+                if char in "\"'":
+                    quote = char
+                    result.append(char)
+                    index += 1
+                    continue
+                if char == "/" and text[index:index + 2] == "/*":
+                    index = text.find("*/", index + 2) + 2
+                    continue
+                if not char.isspace():
+                    result.append(char)
+                index += 1
+            return "".join(result)
+
+        self.assertEqual(tokens(source), tokens(output))
 
     def test_refresh_regenerates_discovery_files_and_keeps_release_metadata(self):
         self.render(version="0.0.9-focus", published="2026-10-20")

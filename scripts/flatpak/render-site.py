@@ -121,6 +121,105 @@ def image_derivatives():
     return derivatives
 
 
+def llms_txt(site_base):
+    """Short, accurate site summary for LLM agents; no ranking promise implied."""
+    return (
+        "# DoomDeckLauncher (DDL)\n"
+        "\n"
+        "> DoomDeckLauncher is a free, open-source, controller-first launcher for\n"
+        "> community DOOM mapsets on Steam Deck, powered by DSDA-Doom. It never\n"
+        "> bundles or downloads commercial base games; you bring your own legally\n"
+        "> owned DOOM base-game files (IWADs).\n"
+        "\n"
+        "## Main pages\n"
+        "\n"
+        f"- [DoomDeckLauncher]({site_base}/): product overview, features, install\n"
+        "  steps, requirements and questions answered.\n"
+        f"- [Asset credits]({site_base}/assets/credits.html): artwork, font and\n"
+        "  community screenshot provenance.\n"
+        "\n"
+        "## Project documentation\n"
+        "\n"
+        "- [Steam Deck guide](https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/steam-deck-guide.md):\n"
+        "  installation, updates and controller setup.\n"
+        "- [Source code](https://github.com/vittau/Doom-Deck-Launcher): GPL-3.0-or-later\n"
+        "  repository and contribution guide.\n"
+        "- [Flatpak research](https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/research/flatpak.md):\n"
+        "  upstream evidence for the signed, self-hosted remote.\n"
+        "\n"
+        "## Notes\n"
+        "\n"
+        "- The signed Flatpak is an experimental, self-hosted channel, not a\n"
+        "  Flathub listing.\n"
+        "- Requirements: a Steam Deck and legally owned DOOM base-game files\n"
+        "  (IWADs). DSDA-Doom is downloaded separately from its official upstream\n"
+        "  release inside the launcher.\n"
+        "- No Windows or macOS builds are published.\n"
+        "- License: GPL-3.0-or-later.\n"
+    )
+
+
+def minify_css(text):
+    """Strip CSS comments and redundant whitespace without altering meaning.
+
+    Whitespace inside quotes, parentheses (``calc(100% - 40px)``, ``url(...)``,
+    media-query conditions) and descendant selectors is preserved; only the
+    spacing around structural tokens is removed. The readable source template
+    stays in the repository and this runs at render time.
+    """
+    out = []
+    index, length = 0, len(text)
+    quote = None
+    parens = 0
+    pending_space = False
+    while index < length:
+        char = text[index]
+        if quote:
+            out.append(char)
+            if char == "\\" and index + 1 < length:
+                out.append(text[index + 1])
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in "\"'":
+            if pending_space and out and out[-1] not in "{:;,>":
+                out.append(" ")
+            pending_space = False
+            quote = char
+            out.append(char)
+            index += 1
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "*":
+            end = text.find("*/", index + 2)
+            if end == -1:
+                raise ValueError("unterminated CSS comment")
+            index = end + 2
+            pending_space = True
+            continue
+        if char.isspace():
+            pending_space = True
+            index += 1
+            continue
+        if char == "(":
+            parens += 1
+        elif char == ")":
+            parens = max(0, parens - 1)
+        if pending_space and out:
+            if parens == 0 and (char in "{}:;,>" or out[-1] in "{}:;,>"):
+                pass
+            else:
+                out.append(" ")
+            pending_space = False
+        else:
+            pending_space = False
+        out.append(char)
+        index += 1
+    return "".join(out).strip() + "\n"
+
+
 def render(output, version, published, app_id, site_base):
     """Copy only page-owned assets; leave ref, key, repo and Git state intact."""
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?", version):
@@ -133,8 +232,9 @@ def render(output, version, published, app_id, site_base):
     if url.scheme != "https" or not url.netloc or url.query or url.fragment or url.username:
         raise ValueError("site base must be an absolute HTTPS URL without query or fragment")
     derivatives = image_derivatives()
+    stylesheet = minify_css(ASSETS["style.css"].read_text())
     values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base,
-                  STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16],
+                  STYLE_HASH=hashlib.sha256(stylesheet.encode()).hexdigest()[:16],
                   ICON_HASH=hashlib.sha256(ASSETS["icon.png"].read_bytes()).hexdigest()[:16],
                   HERO_HASH=hashlib.sha256(ASSETS["hero.png"].read_bytes()).hexdigest()[:16],
                   BMC_LOGO_HASH=hashlib.sha256(ASSETS["bmc-logo.svg"].read_bytes()).hexdigest()[:16])
@@ -163,12 +263,15 @@ def render(output, version, published, app_id, site_base):
     (output / "CNAME").write_text("doomdecklauncher.com\n")
     (output / "robots.txt").write_text(robots_txt(site_base))
     (output / "sitemap.xml").write_text(sitemap_xml(site_base))
+    (output / "llms.txt").write_text(llms_txt(site_base))
     assets = output / "assets"
     assets.mkdir(exist_ok=True)
     for name, source in ASSETS.items():
-        shutil.copyfile(source, assets / name)
+        if name != "style.css":
+            shutil.copyfile(source, assets / name)
     for name in derivatives:
         shutil.copyfile(IMAGES / name, assets / name)
+    (assets / "style.css").write_text(stylesheet)
     for target, html in pages.items():
         (output / target).write_text(html)
 

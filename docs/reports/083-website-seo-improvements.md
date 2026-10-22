@@ -11,7 +11,7 @@ README branding, coordinator document, signed repository artifact, workflow secr
 external account was touched. Publication happened only later in the same session, under explicit
 operator authorization after the coordinator went offline (record at the end of this report).
 
-All 37 offline website tests pass (24 pre-existing, 13 new), as do the 23 `scripts/flatpak` tests
+All 40 offline website tests pass (24 pre-existing, 16 new), as do the 23 `scripts/flatpak` tests
 and the `served_urls.sh` test. Three headless local Lighthouse runs move total lab transfer from
 **3 226 KiB to 758 KiB** (median) with performance **74 → 95**; these are single-machine lab
 results, not field data, and nothing here promises indexing, rankings or citations.
@@ -20,7 +20,7 @@ results, not field data, and nothing here promises indexing, rankings or citatio
 
 | File | Change |
 | --- | --- |
-| `scripts/flatpak/render-site.py` | Renders `robots.txt`, `sitemap.xml`, JSON-LD (serialized, script-boundary safe), the 404 page and the WebP derivative copies; still standard library only |
+| `scripts/flatpak/render-site.py` | Renders `robots.txt`, `sitemap.xml`, `llms.txt`, JSON-LD (serialized, script-boundary safe), the 404 page, the minified stylesheet and the WebP derivative copies; still standard library only |
 | `scripts/flatpak/generate-site-images.py` | New reproducible `cwebp` generator/checker for committed website derivatives |
 | `packaging/flatpak/site/images/` | 18 committed WebP derivatives + `manifest.json` (encoder, source hashes, dimensions, quality, output hashes/bytes) |
 | `packaging/flatpak/site/index.html` | JSON-LD, social metadata, product lead sentence, six Q&A articles, responsive `<picture>` delivery, local Donate button below the release line |
@@ -28,11 +28,11 @@ results, not field data, and nothing here promises indexing, rankings or citatio
 | `packaging/flatpak/site/fonts/` | Self-hosted Cookie Regular (WOFF2) and its SIL OFL 1.1 notice |
 | `packaging/flatpak/site/credits.html` | Meta description, self-referencing canonical and Cookie font credit |
 | `packaging/flatpak/site/404.html` | New small branded 404 with absolute asset URLs |
-| `packaging/flatpak/site/style.css` | Hero `<picture>` layering, Q&A grid, local Donate button styling/spacing, 404 layout |
+| `packaging/flatpak/site/style.css` | Readable source for hero `<picture>` layering, Q&A grid, local Donate button styling/spacing and 404 layout; minified only at render time |
 | `packaging/flatpak/site/test_discovery.py` | New discovery, JSON-LD, image-delivery and publication-preservation tests |
 | `packaging/flatpak/site/test_render.py`, `test_identity.py` | Local Donate contract (no third-party script, placement, branding) and allowlist/cleanup expectations |
-| `.github/workflows/project-site.yml` | Root allowlist accepts `robots.txt`, `sitemap.xml`, `404.html`; verification compares the served discovery files |
-| `.github/workflows/flatpak-remote.yml` | Root cleanup retains the discovery files and 404; verification compares them too |
+| `.github/workflows/project-site.yml` | Root allowlist accepts `robots.txt`, `sitemap.xml`, `llms.txt`, `404.html`; verification compares the served discovery files |
+| `.github/workflows/flatpak-remote.yml` | Root cleanup retains the discovery files, `llms.txt` and 404; verification compares them too |
 
 The R7 Donate move was requested in coordinator follow-up `msg_372c25a9a081`; the updated spec text
 was not present on `origin/main` (`5bb62b9`) when this branch merged it, so the follow-up body is
@@ -75,6 +75,12 @@ Tests: `test_robots_is_policy_neutral_and_declares_the_canonical_sitemap`,
 `test_refresh_regenerates_discovery_files_and_keeps_release_metadata`, plus the extended
 `test_signed_cleanup_retains_cname_and_new_descriptor`.
 
+`llms.txt` is also generated from `SITE_BASE` as a short, accurate summary with links to the
+homepage, credits, Steam Deck guide, source and Flatpak research. It follows the informal
+[llms.txt proposal](https://llmstxt.org/), which no crawler vendor documents as a requirement;
+it is included because it is cheap and harmless, not as a ranking or citation lever. Both
+publication allowlists/cleanup and their served-file checks include it.
+
 ### R2 — structured data and social metadata
 
 The homepage now carries one JSON-LD block built in Python from the rendered `SITE_BASE` and
@@ -103,6 +109,13 @@ finding is intentionally accepted and should be marked as such in Semrush; it do
 indexing. It disappears only if the owner supplies real reviews or decides to drop the
 SoftwareApplication node (keeping `WebSite`), neither of which is a repository-side change to make
 unilaterally.
+
+**HSTS is not supported here.** Semrush also flags the missing `Strict-Transport-Security`
+response header. GitHub Pages does not let a repository set custom response headers, and the apex
+is DNS-only in front of Pages (report 080 §1.1), so HSTS cannot be enabled from this repository.
+The enforced HTTPS redirect (`301` from plain HTTP) is the available control. If the owner wants
+HSTS, that requires fronting the site with a proxy that adds it (for example a Cloudflare proxy
+with HSTS), a hosting decision outside this task; no HSTS claim is made on the site.
 
 Generated values are serialized with `json.dumps` and then `<`, `>`, `&` are replaced with JSON
 escape sequences, so the block stays valid JSON and cannot terminate the `script` element; HTML
@@ -158,6 +171,12 @@ Staleness is guarded in three places: the manifest records source and output has
 `generate-site-images.py --check` fails on drift, and
 `test_webp_derivatives_are_current_and_cache_versioned` / `test_stale_derivative_manifest_is_rejected`
 fail CI when a shared PNG changes without regenerated derivatives.
+
+The stylesheet is minified at render time from the readable source template: 12 617 → 9 929
+bytes raw (−21.3 %) and 3 325 → 3 016 bytes gzip (−9.3 %). GitHub Pages still compresses on the
+wire, so the transfer win is small; the main gain is fewer parse bytes. `STYLE_HASH` is computed
+from the minified output, so the `?v=` URL changes with it, and tests assert that only comments
+and whitespace differ from the source.
 
 The Donate widget is now a **local static button**, by explicit operator decision after the
 third-party loader was measured blocking. It keeps the owner-approved look (yellow `#FFDD00`,
@@ -242,7 +261,7 @@ considered and skipped (below).
 ## Tests run
 
 ```sh
-python3 -m unittest discover -s packaging/flatpak/site      # 37 tests, OK
+python3 -m unittest discover -s packaging/flatpak/site      # 40 tests, OK
 python3 -m unittest discover -s scripts/flatpak            # 23 tests, OK
 bash scripts/flatpak/test_served_urls.sh                   # OK
 python3 scripts/check-readme-links.py                      # PASS: 38 links/anchors
@@ -301,8 +320,8 @@ Owner-only work that remains:
 
 ## Excluded recommendations, with reasons
 
-- **`llms.txt`** — not documented as a requirement or ranking/citation lever by any crawler vendor
-  read for report 080 (F12); omitted rather than adding an unverified convention.
+- **Treating `llms.txt` as a ranking lever** — included for completeness, but no vendor documents
+  it as a requirement or citation signal (report 080 F12); no benefit is claimed.
 - **`FAQPage`/`QAPage` markup** — explicitly excluded by the spec; Google limits FAQ rich results
   to well-known government/health sites, and QAPage is for user-generated Q&A.
 - **A 720w screenshot tier** — would shave part of the remaining 171 KB responsive estimate but
