@@ -93,7 +93,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            flatpak flatpak-builder gnupg desktop-file-utils appstream
+            flatpak flatpak-builder ostree gnupg desktop-file-utils appstream
           flatpak --version
           flatpak-builder --version
           gpg --version | head -n 1
@@ -285,6 +285,20 @@ jobs:
           version="$(sed -n 's/^version *= *"\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
           test -n "$version"
           grep -Fx "ddl $version" "$RUNNER_TEMP/version.txt" >/dev/null
+          # Verify the version Flatpak displays, as well as the executable.
+          flatpak list --user --app --columns=application,version \
+            | tee "$RUNNER_TEMP/installed-versions.txt"
+          displayed_version="$(awk -F '\t' -v app="$APP_ID" '$1 == app {print $2}' \
+            "$RUNNER_TEMP/installed-versions.txt")"
+          test "$displayed_version" = "$version"
+          # The OSTree commit body records the Git source SHA at export time.
+          installed_commit="$(flatpak info --user --show-commit "${APP_ID}//stable")"
+          exported_commit="$(ostree --repo="$site/repo" rev-parse "app/${APP_ID}/x86_64/stable")"
+          test "$installed_commit" = "$exported_commit"
+          ostree --repo="$site/repo" show "$installed_commit" \
+            | tee "$RUNNER_TEMP/published-commit.txt"
+          source_commit="$(git rev-parse HEAD)"
+          grep -Eq "^[[:space:]]*${source_commit}[[:space:]]*$" "$RUNNER_TEMP/published-commit.txt"
           flatpak --user uninstall -y "${APP_ID}//stable"
           flatpak --user remote-delete --force ddl-smoke
 

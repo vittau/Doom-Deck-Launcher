@@ -215,7 +215,7 @@ geometry, fake transports and persistence tests complement these checks but do n
 
 ## Shared cards/list format (spec 095)
 
-This source change follows `v0.0.12-catalog` and is not part of that immutable release.
+This source change follows `v0.0.12-catalog` and is included in `v0.0.13-update`.
 All physical checks remain **Needs Deck Validation**; host/headless tests verify the state,
 navigation and layout but do not establish Gaming Mode input or measured Deck performance.
 
@@ -226,6 +226,16 @@ navigation and layout but do not establish Gaming Mode input or measured Deck pe
 | CV3 | Toggle on a non-first item, move through categories and Library base-game/mapset/local sections, open detail and return | Gaming | ⏳ | Same item stays focused and visible; chronology, favorites, filters and available actions remain correct |
 | CV4 | Inspect long titles, availability/installed/favorite markers, five complete Discover rows with the category strip visible, and the full footer | Gaming | ⏳ | Readable on the Deck LCD; no overlap or clipped focus; check perceived response while toggling and scrolling |
 | CV5 | Try Select in Home, Settings, detail, setup, dialogs and during a running game; return to Discover/Library | Gaming | ⏳ | Format changes only on the two unobstructed browsing roots; the footer names the next format |
+
+## Updated Flatpak and catalog messages (v0.0.13-update)
+
+All checks below remain **Needs Deck Validation**. Publication smoke tests validate the
+installed package version and source provenance on Linux, not Discover on a physical Deck.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| UP1 | Update the signed Flatpak, then compare Discover, `flatpak info`, `flatpak list --columns=version` and `flatpak run --command=ddl com.doomdecklauncher.DoomDeckLauncher --version` | Desktop | ⏳ | All must report `0.0.13`; verify normal upgrade retains profiles, mapsets and settings |
+| UP2 | If a future catalog requires a newer DDL, manually check it from Settings | Gaming | ⏳ | The message names the required version and asks for a DDL update; it does not offer a misleading connection retry |
 
 ## Input and Steam Input (manual setup)
 

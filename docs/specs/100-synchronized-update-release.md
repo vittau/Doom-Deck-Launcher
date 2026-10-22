@@ -27,7 +27,10 @@ GitHub prerelease and signed Flatpak publication must use the same immutable sou
   and signed Flatpak workflows. Verify both run on the tag's resolved Git SHA, both
   complete successfully, and the release assets/checksum and canonical site/repository
   serve the new update. Inspect the exported AppStream version and the Flatpak commit's
-  recorded Git SHA (the export already stores it in its commit body). This is evidence
+  recorded Git SHA (the export already stores it in its commit body). Extend the existing
+  signed smoke test to compare the installed AppStream version with Cargo and check that
+  the installed commit is the exported ref with the expected Git SHA in its commit body.
+  This is evidence
   for this publication, not permanent enforcement of future paired releases.
 - **R5 — Durable outcome.** Record commits, run URLs, verification and remaining Deck
   checks in `docs/reports/100-synchronized-update-release.md`. After tagging, extend the
@@ -37,7 +40,8 @@ GitHub prerelease and signed Flatpak publication must use the same immutable sou
 ## Boundaries
 
 Do not edit `docs/status.md` (explicit handoff instruction). No force-push, existing-tag
-rewrite, remote-ref deletion, stable release or visible window. No dependency additions.
+rewrite, remote-ref deletion, stable release or visible window. No application or Python
+dependency additions; install the OSTree CLI in CI for read-only provenance verification.
 Keep the existing signing, cache purge and canonical verification gates. A broader
 permanent release/Flatpak orchestration change remains a separate future task.
 
