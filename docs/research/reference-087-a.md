@@ -63,7 +63,7 @@ byte-identical to the three `/idgames` copies, confirming the DSDA page points a
 | | Going Down: Turbo | The 10x10 Project | Speed of Doom |
 | --- | --- | --- | --- |
 | Recipe id | `going-down-turbo` | `the-10x10-project` | `speed-of-doom` |
-| Release | 2nd bug-fix, 2024-07-11 (10th-anniversary edition) | 2022-06-15 | 2010-03-28 |
+| Release | 2nd bug-fix, archive built 2025-06-23; first release 2024-11-05 | 2022-06-15 | 2010-03-28 |
 | Author(s) | Cyriak Harris (mouldy) | lunchlunch | Josh "Joshy" Sealy, Darkwave0000 |
 | `/idgames` path | `levels/doom2/Ports/megawads/gdturbo.zip` | `levels/doom2/Ports/0-9/10x10.zip` | `levels/doom2/Ports/megawads/sodfinal.zip` |
 | Package size / SHA-256 | 11,635,723 / `c3323c3e…44e4a` | 6,399,619 / `1435ee1d…25fad` | 9,261,369 / `00528882…41e0` |
@@ -353,6 +353,13 @@ and textures by the long list in the text. **Confirmed** from the release text. 
 - `gdturbo.txt` title block: *"Title: Going Down Turbo"*, *"Release date: 7/11/2024"*,
   *"Author: mouldy"*, and *"This is a 2nd bug-fix to update the existing wad file"* with
   *"Update to: levels/doom2/Ports/megawads/gdturbo.zip"*. **Confirmed (quoted).**
+- The DoomWiki page (archived `oldid=552476`) says the release *"was first released on November 5,
+  2024, and the final version was uploaded to the idgames archive on March 1, 2025"*, calls it a
+  *"32-level megawad for Doom II designed for Boom-compatible source ports"*, and confirms the
+  author as Cyriak Harris (mouldy). The inspected ZIP's internal timestamps are 2025-06-23 and its
+  readme says it is the 2nd bug-fix, so the exact bug-fix build is pinned by SHA-256; the readme's
+  `7/11/2024` is ambiguous and is not used as a calendar date. **Confirmed for the archive and the
+  DoomWiki facts; the build date is 2025-06-23.**
 - The description calls it *"a special edition of Going Down I made for the 10th anniversary"*:
   *"All maps have been tweaked and adjusted to play faster and the difficulty has been rebalanced to
   make it a bit more forgiving."* It is a **distinct release**, not the 2014 `going-down` package;
@@ -420,9 +427,14 @@ release the `/idgames` mirrors serve.
   using ten stock textures and ten stock FLATs in each"* and adds *"there is a secret map"*.
   `New levels: 11 (+1 no-exit stopper)`; `Map #: 01-10, 11, 31`. **Confirmed (quoted).**
 - The coordinator read the DoomWiki page at `oldid=576470` and reported **LunchLunch, Boom, Doom II,
-  12 map slots including ending and secret**. The page returned Cloudflare HTTP 403 from this host,
-  so that identity sentence is **reported, not re-read here**; the archive bytes below are
-  **Confirmed** independently.
+  12 map slots including ending and secret**. A Wayback copy of an earlier revision (`oldid=506724`)
+  describes it as a *"twelve-map episode replacement"* and confirms the **2022 Cacoward**; the
+  archive's own `10x10.txt` and WAD are the evidence used for the recipe. **Confirmed from the
+  archived DoomWiki revision and the archive; the 576470 revision was not readable from this host
+  (Cloudflare 403).**
+- `10x10/10x10.txt` title block: *"Title: The 10x10 Project"*, *"Release date: 06/15/2022"*,
+  *"Author: lunchlunch"*. **Confirmed (quoted).** DoomWiki records the idgames release on
+  2022-06-22; the recipe keeps the readme/archive date 2022-06-15.
 
 ### 5.2 Archive and byte-identical mirrors
 

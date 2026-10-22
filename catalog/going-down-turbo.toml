@@ -3,7 +3,7 @@ schema_version = 1
 id = "going-down-turbo"
 title = "Going Down: Turbo"
 authors = ["Cyriak Harris (mouldy)"]
-release = "Second bug-fix update, 2024-07-11 (10th-anniversary edition)"
+release = "Second bug-fix update, archive built 2025-06-23; first released 2024-11-05"
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gdturbo"
 description = "10th-anniversary special edition of Going Down: 32 rebalanced Boom maps with par times for 100% kills and an embedded DEHACKED patch."
 permission = "Licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. Redistribution is permitted with appropriate credit, a link to the licence and an indication of changes, for non-commercial use only, and the material may not be transformed or built upon for distribution. DDL downloads the unmodified archive and keeps the bundled credits file."
@@ -30,7 +30,7 @@ tester = "DDL desk research"
 date = "2026-10-22"
 engine_version = "0.30.1"
 inspected = ["docs/research/reference-087-a.md §13–§16", "Archive, member, WAD lump, COMPLVL, UMAPINFO/MAPINFO and embedded DEHACKED inspection; gdturbo.txt; the DSDA-Doom run record; DSDA-Doom v0.30.1 source and release notes"]
-notes = "Confirmed archive/member identities and 32 MAP01–MAP32 markers. The WAD carries a COMPLVL lump whose exact bytes are 'boom', a 4,359-byte UMAPINFO with 32 map entries, a 5,880-byte ZDoom MAPINFO (inert under DSDA-Doom v0.30.1) and an embedded DEHACKED lump (6,263 B); there is no external patch. The readme identifies this as the 2nd bug-fix to the existing gdturbo.wad and recommends Boom-compatible ports; the author tested DSDA-Doom 0.28.2, so the recipe uses family boom, complevel boom (9). Tags: megawad = 32 maps per gdturbo.txt and the WAD; this 2024 edition has no Cacoward of its own (the 2014 original is the separate `going-down` recipe) and is under five years old, so neither cacowards nor classics is claimed."
+notes = "Confirmed archive/member identities and 32 MAP01–MAP32 markers. The WAD carries a COMPLVL lump whose exact bytes are 'boom', a 4,359-byte UMAPINFO with 32 map entries, a 5,880-byte ZDoom MAPINFO (inert under DSDA-Doom v0.30.1) and an embedded DEHACKED lump (6,263 B); there is no external patch. The readme identifies this as the 2nd bug-fix to the existing gdturbo.wad, records '7/11/2024', and recommends Boom-compatible ports; DoomWiki (archived oldid=552476) records the first release on 2024-11-05, while the inspected ZIP's internal timestamps are 2025-06-23, so the exact bug-fix build is pinned by SHA-256 rather than by the ambiguous readme date. The author tested DSDA-Doom 0.28.2, so the recipe uses family boom, complevel boom (9). Tags: megawad = 32 maps per gdturbo.txt and the WAD; this 2024 edition has no Cacoward of its own (the 2014 original is the separate `going-down` recipe) and is under five years old, so neither cacowards nor classics is claimed."
 limitations = ["Needs Deck Validation: IWAD selection, complevel, embedded DEHACKED application, UMAPINFO map names, load order, gameplay, audio and map selection.", "The author warns that some maps will not work with -nomonsters and that the release may not run with non-Boom ports; DDL does not pass -nomonsters.", "No performance claim is made; the author's own tested engine was DSDA-Doom 0.28.2."]
 
 [[packages]]
