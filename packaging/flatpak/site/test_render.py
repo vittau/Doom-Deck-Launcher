@@ -137,20 +137,33 @@ class RenderTests(unittest.TestCase):
                     renderer.refresh(self.out, APP_ID, BASE)
                 self.assertEqual((self.out / "index.html").read_text(), text)
 
-    def test_official_donation_embed_matches_owner_configuration(self):
+    def test_donation_button_is_local_and_matches_owner_branding(self):
         text = self.render()
         doc = Document(text)
-        embeds = [a for tag, a in doc.elements
-                  if tag == "script" and a.get("data-name") == "bmc-button"]
-        self.assertEqual(len(embeds), 1)
-        embed = embeds[0]
-        self.assertEqual(embed["src"], "https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js")
-        for key, value in {"slug": "vittau", "font": "Cookie", "text": "Donate",
-                           "color": "#FFDD00", "font-color": "#000000",
-                           "outline-color": "#000000", "coffee-color": "#ffffff"}.items():
-            self.assertEqual(embed[f"data-{key}"], value)
-        self.assertTrue(any(tag == "a" and a.get("href") == "https://buymeacoffee.com/vittau"
-                            for tag, a in doc.elements))
+        # No third-party script, stylesheet or font request for the widget.
+        for forbidden in ("cdnjs.buymeacoffee.com", "button.prod.min.js",
+                          'data-name="bmc-button"', "fonts.googleapis.com"):
+            self.assertNotIn(forbidden, text)
+        buttons = [a for tag, a in doc.elements
+                   if tag == "a" and a.get("class") == "bmc-btn"]
+        self.assertEqual(len(buttons), 1)
+        button = buttons[0]
+        self.assertEqual(button["href"], "https://buymeacoffee.com/vittau")
+        self.assertEqual(button["target"], "_blank")
+        self.assertEqual(button["rel"], "noopener")
+        self.assertIn("Donate", text[text.index('class="bmc-btn"'):])
+        logos = [a for tag, a in doc.elements if tag == "img" and a.get("class") == "bmc-logo"]
+        self.assertEqual(len(logos), 1)
+        digest = hashlib.sha256((self.out / "assets/bmc-logo.svg").read_bytes()).hexdigest()[:16]
+        self.assertEqual(logos[0]["src"], f"assets/bmc-logo.svg?v={digest}")
+        svg = (self.out / "assets/bmc-logo.svg").read_text()
+        self.assertIn('viewBox="0 0 884 1279"', svg)
+        self.assertIn('fill="#ffffff"', svg, "white cup from the owner configuration")
+        self.assertIn('fill="#000000"', svg, "owner outline colour")
+        font = (self.out / "assets/Cookie-Regular.woff2").read_bytes()
+        self.assertEqual(font[:4], b"wOF2")
+        self.assertIn("SIL Open Font License",
+                      (self.out / "assets/Cookie-OFL.txt").read_text())
         # Spec 083 R7: one compact widget in the hero, below the release line and
         # outside the header, while installation stays the primary action.
         header = re.search(r'<header class="site-header.*?</header>', text, re.DOTALL).group()
@@ -158,10 +171,12 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("buymeacoffee", header)
         self.assertEqual(text.count('class="coffee-widget"'), 1)
         self.assertEqual(text.count("https://buymeacoffee.com/vittau"), 1)
-        self.assertIn("<noscript>", text)
         self.assertLess(text.index('<p class="release">'), text.index('class="coffee-widget"'))
         self.assertLess(text.index('class="coffee-widget"'), text.index('class="quiet-link"'))
         self.assertLess(text.index('class="button primary"'), text.index('class="coffee-widget"'))
+        # A plain link: the donation CTA works with every script blocked.
+        without_scripts = re.sub(r"(?is)<script\b.*?</script>", "", text)
+        self.assertIn('href="https://buymeacoffee.com/vittau"', without_scripts)
 
     def test_stylesheet_url_tracks_css_content(self):
         text = self.render()

@@ -140,9 +140,9 @@ class DiscoveryTests(unittest.TestCase):
         block = re.search(r'<script type="application/ld\+json">(.*?)</script>', text,
                           re.DOTALL).group(1)
         self.assertNotIn("</script>", block)
-        # Only the four real script closures remain (Google tag loader, inline
-        # tag config, JSON-LD and the donation embed).
-        self.assertEqual(text.count("</script>"), 4)
+        # Only the three real script closures remain (Google tag loader, inline
+        # tag config and JSON-LD); the donation CTA is a plain link.
+        self.assertEqual(text.count("</script>"), 3)
         self.assertIn("\\u003c/script\\u003e", text)
         # HTML attributes keep their entity escaping.
         self.assertIn('https://example.com/a&quot;quoted', text)

@@ -32,6 +32,11 @@ ASSETS = {
     "PirataOne-Regular.ttf": ROOT / "crates/ddl/ui/assets/PirataOne-Regular.ttf",
     "Barlow-OFL.txt": ROOT / "crates/ddl/ui/assets/Barlow-OFL.txt",
     "PirataOne-OFL.txt": ROOT / "crates/ddl/ui/assets/PirataOne-OFL.txt",
+    # Local donation button: official cup glyph and the Cookie typeface, so the
+    # widget needs no third-party script, stylesheet or font request.
+    "bmc-logo.svg": SITE / "bmc-logo.svg",
+    "Cookie-Regular.woff2": SITE / "fonts/Cookie-Regular.woff2",
+    "Cookie-OFL.txt": SITE / "fonts/Cookie-OFL.txt",
     **{f"{name}.png": ROOT / f"docs/screenshots/{name}.png"
        for name in ("home", "discover", "play-setup", "mapset-detail", "audio-settings")},
 }
@@ -131,7 +136,8 @@ def render(output, version, published, app_id, site_base):
     values = dict(VERSION=version, DATE=published, APP_ID=app_id, SITE_BASE=site_base,
                   STYLE_HASH=hashlib.sha256(ASSETS["style.css"].read_bytes()).hexdigest()[:16],
                   ICON_HASH=hashlib.sha256(ASSETS["icon.png"].read_bytes()).hexdigest()[:16],
-                  HERO_HASH=hashlib.sha256(ASSETS["hero.png"].read_bytes()).hexdigest()[:16])
+                  HERO_HASH=hashlib.sha256(ASSETS["hero.png"].read_bytes()).hexdigest()[:16],
+                  BMC_LOGO_HASH=hashlib.sha256(ASSETS["bmc-logo.svg"].read_bytes()).hexdigest()[:16])
     values.update({name.removesuffix(".png").replace("-", "_").upper() + "_HASH":
                    hashlib.sha256(source.read_bytes()).hexdigest()[:16]
                    for name, source in ASSETS.items() if source.parent == ROOT / "docs/screenshots"})

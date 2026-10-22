@@ -116,15 +116,22 @@
               <span class="status-dot" aria-hidden="true"></span> Experimental ·
               v@@VERSION@@ · Published <time datetime="@@DATE@@">@@DATE@@</time>
             </p>
-            <!-- Official Buy Me a Coffee widget, immediately below the release line. -->
+            <!-- Local donation button: same official glyph, Cookie font and colours
+                 as the owner-approved embed, with no third-party request. -->
             <div class="coffee-widget">
-              <script type="text/javascript"
-                src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
-                data-name="bmc-button" data-slug="vittau" data-color="#FFDD00"
-                data-emoji="" data-font="Cookie" data-text="Donate"
-                data-outline-color="#000000" data-font-color="#000000"
-                data-coffee-color="#ffffff"></script>
-              <noscript><a href="https://buymeacoffee.com/vittau">Donate</a></noscript>
+              <a
+                class="bmc-btn"
+                href="https://buymeacoffee.com/vittau"
+                target="_blank"
+                rel="noopener"
+                ><img
+                  class="bmc-logo"
+                  src="assets/bmc-logo.svg?v=@@BMC_LOGO_HASH@@"
+                  width="18"
+                  height="26"
+                  alt=""
+               ><span class="bmc-btn-text">Donate</span></a
+              >
             </div>
             <a class="quiet-link" href="#install"
               >See the setup steps <span aria-hidden="true">↓</span></a
@@ -547,6 +554,7 @@
       <p class="legal">
         Original Rose Compass identity and Ember Cathedral art:
         GPL-3.0-or-later. Barlow and Pirata One: SIL Open Font License.
+        Cookie: SIL Open Font License.
         <a href="assets/credits.html">Asset credits &amp; font licenses</a>.
         Inspired by
         <a href="https://github.com/karkusviktor/UZDeck">UZDeck</a> and
