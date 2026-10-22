@@ -1,0 +1,71 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-c.md §7; gathered 2026-10-22.
+schema_version = 1
+id = "micro-slaughter-community-project"
+title = "Micro-Slaughter Community Project"
+authors = ["Bauul (project lead)", "Antares031", "Aurelius", "Bdubzzz", "BridgeBurner56", "Danlex", "Dragonfly", "Dreadopp", "Guardsoul", "Liberation", "Lord_Z", "Pegleg", "Remmirath", "RonnieJamesDiner", "Walter"]
+release = "1b, 2021-01-27 (readme); idgames archive file dated 2026-09-07"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/mscp_v1b"
+description = "DOOM II Boom community project: nineteen five-minute slaughter maps (MAP01–MAP17 plus MAP31/MAP32), each a bite-sized combat puzzle, with an embedded DEHACKED patch and a UMAPINFO that supplies per-map titles, authors, par times and an endgame epilogue."
+permission = "Authors may NOT use the contents as a base for modification or reuse; permissions were obtained from the original authors of included resources. Redistribution is permitted provided MSCP_v1b.txt travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits file."
+tags = ["community-projects"]
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# The author strongly recommends pistol-starting each map; that is a profile suggestion.
+pistol_start = true
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = ["docs/research/reference-087-c.md §7", "Archive and member sizes/SHA-256; WAD lump inventory (19 map markers MAP01–MAP17 and MAP31/MAP32, UMAPINFO with per-map titles/authors/par times and a MAP17 endgame, embedded DEHACKED, ZDoom ZMAPINFO and DECORATE extras); author's release text read byte-for-byte", "DSDA-Doom v0.30.1 prboom2/src/p_spec.c generalized-linedef dispatch and prboom2/src/dsda/mapinfo/u.c (UMAPINFO)"]
+notes = "Confirmed package/member identities from three byte-identical mirrors and the nineteen map markers MAP01–MAP17, MAP31 and MAP32 (the description says '18 maps'; the slot list and the WAD have nineteen). Complevel boom is the author's own statement ('Target format: PRBoom+ complevel 9', tested on DSDA 0.29.4), and 18 of the 19 maps use Boom generalized line types (1,002 lines: 595 floor, 307 ceiling, 56 lift, 30 locked-door, 14 door). DSDA-Doom reads the UMAPINFO for map names, per-map authors, par times and the MAP17 endgame flag; MAP31/MAP32 return to MAP16. The ZDoom ZMAPINFO and DECORATE lumps are inert under DSDA-Doom v0.30.1. The embedded DEHACKED is covered by the WAD hash. Tag: community-projects = fifteen credited mappers led by Bauul, per the readme's map credits and UMAPINFO author fields. No megawad (19 slots) and no episode (more than nine) tag. No Cacowards entry was found for this release in the researched inventory, so no cacowards tag is claimed. Needs Deck Validation: IWAD/complevel, UMAPINFO application, pistol-start profile, gameplay and performance."
+limitations = ["Needs Deck Validation: IWAD/complevel, load order, DEHACKED and UMAPINFO application, gameplay, audio and map selection.", "Slaughter combat with 300-second par times: no framerate, memory or battery measurement was made, and Deck performance is unverified.", "The author documents that co-op may soft-lock; single-player is the designed mode and co-op was not tested here.", "The readme says '18 maps' while the slot list and the WAD have 19 (MAP01–MAP17, MAP31, MAP32); the MAP17 epilogue is a credits tour with an endgame flag.", "The ZDoom ZMAPINFO and DECORATE lumps are inert under DSDA-Doom v0.30.1; confirm the intended presentation on the Deck."]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/mscp_v1b"
+urls = ["https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/mscp_v1b.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/mscp_v1b.zip", "https://lethe.chinstrap.org/idgames/levels/doom2/Ports/megawads/mscp_v1b.zip"]
+size = 25051502
+sha256 = "0e708e0e871a583d522b09c45ba2f00466a66c957f408aad5f710e19fb1a09cc"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/mscp_v1b.zip"
+
+[[packages.members]]
+id = "maps"
+path = "MSCP_v1b.wad"
+size = 86441134
+sha256 = "c28e7d90342abd2bab37a243f1078b44dc8bce22e2ee6490f8009d5502f02cf6"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "MSCP_v1b.txt"
+size = 5455
+sha256 = "57048764375bd4e8129c6a4cd2609854d17498535186c4e1b861fe7ef6073a4e"
+keep = true
+
+[[components]]
+id = "main"
+label = "Micro-Slaughter Community Project"
+description = "Main nineteen-slot Boom community project with UMAPINFO titles, par times and an endgame epilogue."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
