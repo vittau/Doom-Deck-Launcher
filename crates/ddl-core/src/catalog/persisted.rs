@@ -26,6 +26,8 @@ struct StoredRecipe {
     #[serde(default)]
     images: Vec<Image>,
     base_game: BaseGame,
+    /// Machine-written copies omit this when the recipe has no downloads (spec 094).
+    #[serde(default)]
     packages: Vec<Package>,
     components: Vec<Component>,
     compatibility: StoredCompatibility,

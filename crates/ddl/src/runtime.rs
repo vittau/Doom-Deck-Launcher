@@ -51,7 +51,7 @@ pub enum Category {
 }
 /// The owner's Discover order (spec 072 R1). Vocabulary entries outside this
 /// list keep their catalog metadata but are not navigation categories.
-const CATEGORY_ORDER: [&str; 7] = [
+const CATEGORY_ORDER: [&str; 8] = [
     "cacowards",
     "megawad",
     "community-projects",
@@ -59,6 +59,7 @@ const CATEGORY_ORDER: [&str; 7] = [
     "classics",
     "episode",
     "challenging",
+    "gimmick",
 ];
 /// First node id of a Discover/Library card; card `k` has id `CARD + k`.
 pub(crate) const CARD: i32 = 10;
@@ -805,7 +806,19 @@ impl Runtime {
                             }
                             Sheet::Remove(path) => self.start(ui, Command::RemoveFolder(path)),
                             Sheet::Component(id) => self.toggle(ui, &id),
-                            Sheet::UserComponent(id) => self.toggle(ui, &id),
+                            Sheet::UserComponent(id) => {
+                                // Spec 094 R4: a required player-supplied main has
+                                // no off switch, so confirming the sheet only closes
+                                // it (after an import or replace).
+                                let required = self.item().is_some_and(|item| {
+                                    item.recipe.components.iter().any(|component| {
+                                        component.id.as_str() == id.as_str() && !component.optional
+                                    })
+                                });
+                                if !required {
+                                    self.toggle(ui, &id);
+                                }
+                            }
                             Sheet::DeleteProfile(id, _) => {
                                 self.start(ui, Command::DeleteProfile(id))
                             }
@@ -2695,10 +2708,19 @@ impl Runtime {
                                 && item.manifest.as_ref().is_some_and(|manifest| {
                                     manifest.find_imported(&c.id).is_some()
                                 });
-                            let detail = if !c.optional {
+                            // Spec 094 R4: a required player-supplied main stays
+                            // required (no off switch) but its row must be
+                            // focusable so the controller can import or replace
+                            // the file; every other required row stays locked.
+                            let actionable = c.optional || c.user_supplied;
+                            let detail = if c.user_supplied {
+                                if imported {
+                                    text(ui, T::On)
+                                } else {
+                                    text(ui, T::NotProvided)
+                                }
+                            } else if !c.optional {
                                 text(ui, T::Locked)
-                            } else if c.user_supplied && !imported {
-                                text(ui, T::NotProvided)
                             } else {
                                 text(
                                     ui,
@@ -2716,10 +2738,10 @@ impl Runtime {
                                 632.,
                                 c.label.clone().into(),
                                 detail,
-                                c.optional,
+                                actionable,
                             );
                             b.nodes.last_mut().unwrap().fitted_label = true;
-                            if !c.optional {
+                            if !actionable {
                                 // Spec 060 R3: focus skips it, so it reads as disabled.
                                 b.nodes.last_mut().unwrap().kind = 16;
                             }
@@ -3706,7 +3728,19 @@ impl Runtime {
         ui.set_sheet_open(self.sheet.is_some());
         ui.set_sheet_body(match self.sheet {
             Some(Sheet::ImportOffer) => text(ui, T::ImportOfferBody),
-            Some(Sheet::UserComponent(_)) => text(ui, T::ImportedComponentHelp),
+            Some(Sheet::UserComponent(ref id)) => {
+                let optional = self.item().is_some_and(|item| {
+                    item.recipe
+                        .components
+                        .iter()
+                        .any(|component| component.id.as_str() == id.as_str() && component.optional)
+                });
+                if optional {
+                    text(ui, T::ImportedComponentHelp)
+                } else {
+                    "".into()
+                }
+            }
             _ => "".into(),
         });
         ui.set_sheet_back_later(matches!(self.sheet, Some(Sheet::ImportOffer)));
@@ -3742,7 +3776,14 @@ impl Runtime {
                 Sheet::UserComponent(id) => (
                     T::ImportedComponent,
                     T::Import,
-                    if self
+                    if self.item().is_some_and(|item| {
+                        item.recipe.components.iter().any(|component| {
+                            component.id.as_str() == id.as_str() && !component.optional
+                        })
+                    }) {
+                        // Required player-supplied main: import/replace only.
+                        T::Done
+                    } else if self
                         .item()
                         .is_some_and(|item| item.profile.components.contains(id))
                     {

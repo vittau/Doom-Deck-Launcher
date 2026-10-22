@@ -183,6 +183,22 @@ fn valid_date(s: &str) -> bool {
     n[0] > 0 && n[2] > 0 && n[2] <= days
 }
 
+/// A recipe with no downloads is valid only when its required main component is
+/// the single player-imported file (spec 094 R3).
+fn main_import_only(r: &Recipe) -> bool {
+    r.packages.is_empty()
+        && r.components.iter().any(|component| {
+            component.id == "main"
+                && !component.optional
+                && component.user_supplied
+                && !component.members.is_empty()
+                && component
+                    .members
+                    .iter()
+                    .all(|member| member.package.is_none() && member.member.is_none())
+        })
+}
+
 /// Days in `month` of `year`, for the optional original-release date (spec 090).
 fn days_in_month(year: u16, month: u8) -> u8 {
     match month {
@@ -304,11 +320,15 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
             "use a known IWAD id (lowercase letters, digits, dots and hyphens)",
         );
     }
+    // Spec 094 R3: a player-supplied entry needs no downloads, but only when its
+    // required main component is the imported file itself. Every other member
+    // still has to resolve to a declared package (checked per component below).
+    let import_only = main_import_only(r);
     issue(
         "packages".into(),
-        r.packages.is_empty(),
+        r.packages.is_empty() && !import_only,
         "no packages",
-        "declare at least one source package",
+        "declare at least one source package, or make the required main a player-supplied import",
     );
     let mut package_ids = HashSet::new();
     for (i, p) in r.packages.iter().enumerate() {

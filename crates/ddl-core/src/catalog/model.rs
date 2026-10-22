@@ -25,6 +25,9 @@ pub struct Recipe {
     #[serde(default)]
     pub images: Vec<Image>,
     pub base_game: BaseGame,
+    /// Download packages. Empty only for a required player-supplied main entry
+    /// (spec 094 R3); absent in machine-written copies is treated as empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub packages: Vec<Package>,
     pub components: Vec<Component>,
     pub compatibility: Compatibility,
