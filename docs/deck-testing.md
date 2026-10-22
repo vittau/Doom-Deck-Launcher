@@ -237,6 +237,18 @@ installed package version and source provenance on Linux, not Discover on a phys
 | UP1 | Update the signed Flatpak, then compare Discover, `flatpak info`, `flatpak list --columns=version` and `flatpak run --command=ddl com.doomdecklauncher.DoomDeckLauncher --version` | Desktop | ⏳ | All must report `0.0.13`; verify normal upgrade retains profiles, mapsets and settings |
 | UP2 | If a future catalog requires a newer DDL, manually check it from Settings | Gaming | ⏳ | The message names the required version and asks for a DDL update; it does not offer a misleading connection retry |
 
+## Continuous browsing and favorite ordering (v0.0.14-browse)
+
+All checks below remain **Needs Deck Validation** until tested on the owner's Deck.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| CB1 | Hold Down through several screens in Discover and Library List, then reverse direction | Gaming | ⏳ | Scroll moves continuously with neighboring rows retained; selected row settles fully visible; no queued actions or page jumps |
+| CB2 | Scroll manually with the right stick/trackpad, release, then navigate again | Gaming | ⏳ | Manual position survives neutral ticks; new focus navigation reveals the selected row |
+| CB3 | Favorite/unfavorite installed mapsets and toggle Cards/List | Gaming | ⏳ | Favorites precede other installed mapsets; chronology/title order within groups; selection keeps its mapset identity |
+| CB4 | Browse newly added real mapset screenshots in Cards and detail | Gaming | ⏳ | Representative image and credit fit correctly; unresolved searches are listed in report103 |
+| CB5 | Update the signed Flatpak and compare Discover, Flatpak list/info and binary version | Desktop | ⏳ | All should report `0.0.14` after publication; installed mapsets/profiles/settings remain intact |
+
 ## Input and Steam Input (manual setup)
 
 Follow the [controller layouts](steam-deck-guide.md#recommended-steam-deck-controller-setup).
