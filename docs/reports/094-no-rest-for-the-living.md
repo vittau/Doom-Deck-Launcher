@@ -12,7 +12,7 @@ capability.
 | | No Rest for the Living |
 | --- | --- |
 | Id | `no-rest-for-the-living` |
-| Base game | Doom II; variants `doom2-1.9`, `doom2-1.9-kex-2024-08-06`, `doom2-1.9-kex-2024-10-01` |
+| Base game | Doom II; `variants = []` accepts every recognized Doom II IWAD (BFG, classic, French, Steam/KEX) |
 | Components | one required/default-on `main`, `user_supplied = true`, one `maps` member, no package |
 | Packages | none (metadata-only; no dummy package) |
 | Imported BFG file | 3,819,855 bytes; SHA-256 `2d234de8…458fa9`; MD5 `967d5ae2…b3b0` |

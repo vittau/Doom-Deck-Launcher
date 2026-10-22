@@ -16,7 +16,7 @@ credit = "Nerve Software (screenshot via DoomWiki)"
 
 [base_game]
 game = "doom2"
-variants = ["doom2-1.9", "doom2-1.9-kex-2024-08-06", "doom2-1.9-kex-2024-10-01"]
+variants = []
 
 [compatibility]
 family = "vanilla"

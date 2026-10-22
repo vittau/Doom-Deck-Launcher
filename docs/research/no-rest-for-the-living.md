@@ -52,9 +52,10 @@ verified. The KEX size/MD5 are recorded here and in the recipe comments; no KEX 
 
 - `NERVE.WAD` is a PWAD, not an IWAD. The catalog's `base_game.game` is therefore `doom2`; NERVE is
   never modeled as a base game or downloaded as an IWAD. **Confirmed.**
-- `base_game.variants` accepts the classic Doom II 1.9 variant and both reviewed Steam/KEX Doom II
-  variants (`doom2-1.9`, `doom2-1.9-kex-2024-08-06`, `doom2-1.9-kex-2024-10-01`). **Confirmed from
-  `crates/ddl-core/data/iwads.toml`.**
+- `base_game.variants` is empty, the existing convention that accepts every recognized Doom II
+  variant: BFG, classic 1.x, French and both reviewed Steam/KEX variants. `Game::Doom2` still
+  excludes TNT and Plutonia, and NERVE itself is never modeled as an IWAD. The reviewed table in
+  `crates/ddl-core/data/iwads.toml` supplies the classic, BFG and KEX identities. **Confirmed.**
 - DSDA-Doom's `D_AddFile()` forces `gamemission = pack_nerve` when the added file name ends in
   `nerve.wad`; the pinned v0.30.1 code uses `strnicmp`, so the owner's uppercase `NERVE.WAD` works.
   The file name must be preserved through import.
