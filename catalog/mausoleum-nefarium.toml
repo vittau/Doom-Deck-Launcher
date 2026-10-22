@@ -4,6 +4,8 @@ id = "mausoleum-nefarium"
 title = "Mausoleum Nefarium (Doomer Boards Project 49)"
 authors = ["Doomer Boards Project 49"]
 release = "2022-07-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2022, month = 7, day = 1 }
 page = "https://doomer.boards.net/thread/2666/mausoleum-nefarium"
 description = "DOOM II: MAP01–MAP11 (11 maps). Explore the hidden crypts and the forgotten story left behind by its disciples."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

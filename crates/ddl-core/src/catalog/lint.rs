@@ -183,6 +183,19 @@ fn valid_date(s: &str) -> bool {
     n[0] > 0 && n[2] > 0 && n[2] <= days
 }
 
+/// Days in `month` of `year`, for the optional original-release date (spec 090).
+fn days_in_month(year: u16, month: u8) -> u8 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400)) => {
+            29
+        }
+        2 => 28,
+        _ => 0,
+    }
+}
+
 /// Linear/pairwise checks prove order for all combinations without an exponential
 /// subset enumeration: each surviving pair must have distinct positions, unless
 /// exclusivity or main replacement prevents that pair from ever coexisting.
@@ -665,6 +678,42 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
         "invalid verification date",
         "use a real YYYY-MM-DD date",
     );
+    // Spec 090, R3: an optional first-public-release date with only evidenced
+    // precision. Absent is unknown; the rest of the ordering rules cannot use an
+    // invented month or day, so a day without a month is an error too.
+    if let Some(date) = &r.original_release {
+        issue(
+            "original_release.year".into(),
+            !(1990..=2100).contains(&date.year),
+            "implausible original release year",
+            "record the evidenced year between 1990 and 2100",
+        );
+        match date.month {
+            Some(month) if !(1..=12).contains(&month) => issue(
+                "original_release.month".into(),
+                true,
+                "invalid original release month",
+                "use 1–12, or omit the month when only the year is evidenced",
+            ),
+            None if date.day.is_some() => issue(
+                "original_release.day".into(),
+                true,
+                "original release day without a month",
+                "record only the precision the source supports",
+            ),
+            Some(month) => {
+                if let Some(day) = date.day {
+                    issue(
+                        "original_release.day".into(),
+                        day == 0 || day > days_in_month(date.year, month),
+                        "invalid day for that month",
+                        "use a real calendar day, or omit the day when only the month is evidenced",
+                    );
+                }
+            }
+            None => {}
+        }
+    }
     issue(
         "verification.tester".into(),
         r.verification.tester.trim().is_empty() || r.verification.notes.trim().is_empty(),

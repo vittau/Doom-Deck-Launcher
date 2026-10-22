@@ -4,6 +4,8 @@ id = "phantom-processing"
 title = "Phantom Processing (Doomer Boards Project 74)"
 authors = ["Doomer Boards Project 74"]
 release = "2025-07-02"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2025, month = 7, day = 2 }
 page = "https://doomer.boards.net/thread/4043/phantom-processing"
 description = "DOOM II: MAP01–MAP08 (8 maps). A trespasser explores the chilling remnants of a processing plant channeling ancient spirits."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

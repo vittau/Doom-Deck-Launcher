@@ -4,6 +4,8 @@ id = "plutonian-sunrise"
 title = "Plutonian Sunrise (Doomer Boards Project 53)"
 authors = ["Doomer Boards Project 53"]
 release = "2022-11-02"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2022, month = 11, day = 2 }
 page = "https://doomer.boards.net/thread/2998/plutonian-sunrise"
 description = "DOOM II: MAP01–MAP12 (12 maps). The UAAF returns in this autumn themed experiment."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

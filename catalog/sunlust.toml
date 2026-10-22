@@ -4,6 +4,8 @@ id = "sunlust"
 title = "Sunlust"
 authors = ["Ribbiks", "Dannebubinga"]
 release = "2015-08-07"
+# First public release (spec 090): reference-sunlust.md §1 (2015-08-07).
+original_release = { year = 2015, month = 8, day = 7 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/sunlust"
 description = "DOOM II: 32 Boom-compatible maps (MAP01–MAP32) designed for pistol start, with bundled MIDI music, graphics and an embedded DEHACKED patch."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text files unedited. See the kept text members for the full terms and resource credits."

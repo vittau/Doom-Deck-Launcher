@@ -4,6 +4,8 @@ id = "haunting-hollow"
 title = "Haunting Hollow (Doomer Boards Project 62)"
 authors = ["Doomer Boards Project 62"]
 release = "2023-10-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2023, month = 10, day = 1 }
 page = "https://doomer.boards.net/thread/3364/haunting-hollow"
 description = "DOOM II: MAP01–MAP11 (11 maps). The lost village of Lodewood has fallen victim to the creatures of the night."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

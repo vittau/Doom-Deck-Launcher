@@ -4,6 +4,8 @@ id = "caustic-industry"
 title = "Caustic Industry (Doomer Boards Project 69)"
 authors = ["Doomer Boards Project 69"]
 release = "2024-12-16"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2024, month = 12, day = 16 }
 page = "https://doomer.boards.net/thread/3856/dbp69-caustic-industry-cl2"
 description = "DOOM II: MAP01–MAP31 (20 maps). Industrial facilities made of rusted metal and concrete, rivers of neon nukage, and hazardous crushers."
 permission = "Released under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/); the bundled credits text names every contributor. DDL downloads the unmodified archive and keeps that text alongside the maps."

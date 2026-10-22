@@ -42,6 +42,7 @@ fn base_recipe(id: &str) -> Recipe {
         title: "Test mapset".to_owned(),
         authors: vec!["Test Author".to_owned()],
         release: "1.0".to_owned(),
+        original_release: None,
         page: "https://example.invalid/page".to_owned(),
         description: "A synthetic mapset for tests.".to_owned(),
         permission: "Test permission text.".to_owned(),

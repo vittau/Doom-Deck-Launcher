@@ -4,6 +4,8 @@ id = "umbral-platinum"
 title = "Umbral Platinum (Doomer Boards Project 18)"
 authors = ["Doomer Boards Project 18"]
 release = "2019-12-04"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2019, month = 12, day = 4 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp18_up"
 description = "DOOM II: MAP01–MAP08 (7 maps). When demons meet technology in this classic military techbase - chaos ensues!."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."

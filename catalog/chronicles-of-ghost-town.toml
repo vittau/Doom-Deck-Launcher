@@ -4,6 +4,8 @@ id = "chronicles-of-ghost-town"
 title = "Chronicles of Ghost Town (Doomer Boards Project 38)"
 authors = ["Doomer Boards Project 38"]
 release = "2021-08-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2021, month = 8, day = 1 }
 page = "https://doomer.boards.net/thread/2218/chronicles-ghost-town"
 description = "DOOM II: MAP01–MAP17 (17 maps). Whispers of the ghost town, haunted by a forbidden poltergeist... designed by the many members of doomer boards."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

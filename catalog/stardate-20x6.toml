@@ -4,6 +4,8 @@ id = "stardate-20x6"
 title = "Stardate 20X6"
 authors = ["Ribbiks"]
 release = "2013-06-02"
+# First public release (spec 090): stardate20x6.txt dated 06/02/2013, normalized to 2013-06-02; docs/research/reference-087-d.md §3.
+original_release = { year = 2013, month = 6, day = 2 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/stardate"
 description = "DOOM II: eight Boom-compatible maps (MAP01–MAP07 plus a bonus MAP31) in a purple space-station setting; the author calls the UV difficulty a challenge for veteran players."
 permission = "Authors MAY use the contents of this file as a base for modification or reuse; other authors' materials are credited in the text. You MAY distribute this file provided you include the text intact and unmodified, in any electronic format, and you may not charge for the contents. The text also credits GothicDM/Gothic2, Hexen, Plutonia and TNT resources. DDL downloads the unmodified archive and keeps the bundled text."

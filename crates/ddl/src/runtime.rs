@@ -12,6 +12,7 @@ pub(crate) mod osk;
 use local_ui::LocalUi;
 
 use ddl_core::{
+    catalog::{compare_browsing_order, shows_in_category},
     downloads::{CancellationToken, InstallProgress, InstallStage},
     platform::{legacy_import::LegacyInstall, sandbox::Sandbox},
     profiles::Profile,
@@ -1383,11 +1384,9 @@ impl Runtime {
     /// in the owner's order, then `Favorites`. Never empty.
     fn categories(&self) -> Vec<Category> {
         let mut list = self.snapshot.as_ref().map_or_else(Vec::new, |s| {
-            requested_categories(|id| {
-                s.items
-                    .iter()
-                    .any(|i| i.recipe.tags.iter().any(|tag| tag == id))
-            })
+            // Spec 090 R1: a category with no visible recipe is not offered, so
+            // Community Projects disappears only if nothing but DBPs used it.
+            requested_categories(|id| s.items.iter().any(|i| shows_in_category(&i.recipe, id)))
         });
         list.push(Category::Favorites);
         list
@@ -1414,21 +1413,24 @@ impl Runtime {
             .first()
             .map_or(CHIP + self.category_index() as i32, |&i| CARD + i as i32)
     }
-    /// Snapshot indexes shown on Discover in the current category, favorites first.
+    /// Snapshot indexes shown on Discover in the current category, oldest first
+    /// (spec 090, R1/R2). Community Projects hides `doomer-boards` recipes, and a
+    /// favorite never moves a card: chronology decides every position.
     fn discover_items(&self) -> Vec<usize> {
         let Some(s) = &self.snapshot else {
             return vec![];
         };
         let mut shown: Vec<usize> = (0..s.items.len())
             .filter(|&i| match &self.category {
-                Category::Tag(id) => s.items[i].recipe.tags.contains(id),
+                Category::Tag(id) => shows_in_category(&s.items[i].recipe, id),
                 Category::Favorites => s.items[i].favorite,
             })
             .collect();
-        shown.sort_by_key(|&i| !s.items[i].favorite);
+        shown.sort_by(|&a, &b| compare_browsing_order(&s.items[a].recipe, &s.items[b].recipe));
         shown
     }
-    /// Snapshot indexes shown on Library: installed mapsets, favorites first.
+    /// Snapshot indexes shown on Library: installed mapsets, oldest first (spec
+    /// 090, R2). Favorites never reorder this list either.
     fn library_items(&self) -> Vec<usize> {
         let Some(s) = &self.snapshot else {
             return vec![];
@@ -1436,7 +1438,7 @@ impl Runtime {
         let mut shown: Vec<usize> = (0..s.items.len())
             .filter(|&i| s.items[i].manifest.is_some())
             .collect();
-        shown.sort_by_key(|&i| !s.items[i].favorite);
+        shown.sort_by(|&a, &b| compare_browsing_order(&s.items[a].recipe, &s.items[b].recipe));
         shown
     }
     /// Moves the category by `delta` with wrapping; the strip chip keeps focus

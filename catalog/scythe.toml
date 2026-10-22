@@ -7,6 +7,8 @@ authors = [
   "Kim \"Torn\" Bach (MAP31)",
 ]
 release = "Final release; idgames entry 2003-04-10"
+# First public release (spec 090): reference-scythe.md §1 (2003-04-08; idgames entry 2003-04-10).
+original_release = { year = 2003, month = 4, day = 8 }
 page = "https://www.doomworld.com/idgames/levels/doom2/megawads/scythe"
 description = "DOOM II megawad: 32 vanilla-format maps in three ten-map runs plus two secret maps, with a custom soundtrack and sky graphics."
 permission = "Authors may not use the contents as a base for modification or reuse without agreement. Redistribution is permitted provided scythe.txt travels with the file, unmodified and intact, and no commercial use is made without the author's agreement. DDL downloads the unmodified archive and keeps the bundled credits file."

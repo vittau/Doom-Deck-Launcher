@@ -4,6 +4,8 @@ id = "emerald-city"
 title = "Emerald City (Doomer Boards Project 50)"
 authors = ["Doomer Boards Project 50"]
 release = "2022-08-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2022, month = 8, day = 1 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp50"
 description = "DOOM II: MAP01–MAP16 (16 maps). The lost remains of Emerald city have been overtaken by nature. But that's not the only inhabitants left behind."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."

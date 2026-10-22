@@ -4,6 +4,8 @@ id = "forgotten-psychedelics"
 title = "Forgotten Psychadelics (Doomer Boards Project 70)"
 authors = ["Doomer Boards Project 70"]
 release = "2025-02-12"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2025, month = 2, day = 12 }
 page = "https://doomer.boards.net/thread/3898/dbp70-forgotten-psychedelics"
 description = "DOOM II: MAP01–MAP20 (20 maps). Far out! It's a journey back in time through the groovy vibes of 70s."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

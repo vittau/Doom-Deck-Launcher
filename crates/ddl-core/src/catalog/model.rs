@@ -8,6 +8,10 @@ pub struct Recipe {
     pub title: String,
     pub authors: Vec<String>,
     pub release: String,
+    /// First public release date, with only the precision the evidence supports
+    /// (spec 090, R3). Absent means unknown, not "January 1".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_release: Option<ReleaseDate>,
     pub page: String,
     pub description: String,
     pub permission: String,
@@ -32,6 +36,49 @@ pub struct Recipe {
 pub struct Image {
     pub path: String,
     pub permission: String,
+}
+
+/// The first public release date of a mapset, carrying only the precision the
+/// evidence supports (spec 090, R3). A missing `month` or `day` is unknown, never
+/// January or the first of the month.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReleaseDate {
+    pub year: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub month: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub day: Option<u8>,
+}
+
+impl ReleaseDate {
+    /// Ascending browsing key (spec 090, R2/R3): year first, then month, then day.
+    /// A missing month or day sorts after the known values of its period, so a
+    /// year-only date is never presented as an early-January release and a
+    /// month-only date is never presented as its first day.
+    #[must_use]
+    pub const fn ordering_key(self) -> (u16, u8, u8) {
+        let month = match self.month {
+            Some(month) => month,
+            None => 13,
+        };
+        let day = match self.day {
+            Some(day) => day,
+            None => 32,
+        };
+        (self.year, month, day)
+    }
+
+    /// The date as an ISO prefix with only the evidenced precision: `YYYY`,
+    /// `YYYY-MM` or `YYYY-MM-DD`.
+    #[must_use]
+    pub fn iso(&self) -> String {
+        match (self.month, self.day) {
+            (Some(month), Some(day)) => format!("{:04}-{month:02}-{day:02}", self.year),
+            (Some(month), None) => format!("{:04}-{month:02}", self.year),
+            (None, _) => format!("{:04}", self.year),
+        }
+    }
 }
 
 /// One bundled screenshot a recipe references (spec 023, R2; D-024).

@@ -12,6 +12,7 @@ mod links;
 mod lint;
 mod loader;
 mod model;
+mod order;
 pub mod persisted;
 #[cfg(test)]
 mod recipe_fixture;
@@ -38,6 +39,7 @@ pub use lint::{
 };
 pub use loader::{Catalog, LoadedRecipe, SkippedRecipe};
 pub use model::*;
+pub use order::{COMMUNITY_PROJECTS, DOOMER_BOARDS, compare_browsing_order, shows_in_category};
 pub use remote::{BUNDLE_URL, CatalogUpdateError, HttpsRemoteFetch, RemoteFetch, load_remote};
 pub use sample::{DEFAULT_MAX_ARCHIVE_BYTES, Sample, SampleEntry, e2e_sample};
 pub use source_dir::load_catalog_dir;

@@ -4,6 +4,8 @@ id = "alone"
 title = "Alone (Doomer Boards Project 17)"
 authors = ["Doomer Boards Project 17"]
 release = "2019-10-31"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2019, month = 10, day = 31 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp17_alone"
 description = "DOOM II: MAP01–MAP10 (9 maps). Alone is a dark and gritty 9 map set for limit removing ports. I hope you're ready to get spooked because you are . . ."
 permission = "Authors may not use the contents as a base for modification or reuse; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."

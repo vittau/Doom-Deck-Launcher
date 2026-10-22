@@ -4,6 +4,8 @@ id = "going-down"
 title = "Going Down"
 authors = ["Cyriak Harris (mouldy)"]
 release = "Final version (third bug-fix), 2015-08-21; idgames entry 2014-11-02"
+# First public release (spec 090): reference-going-down.md §1, first complete release 2014-09-14 (pinned third bug-fix 2015-08-21).
+original_release = { year = 2014, month = 9, day = 14 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/gd"
 description = "DOOM II megawad: 32 BOOM-format maps, one floor of a UAC tower each, with an embedded DEHACKED patch and the author's own MIDI soundtrack."
 permission = "Authors may not use the contents as a base for modification or reuse. Redistribution is permitted provided gd.txt travels with the file, unmodified and intact; the author states permission was obtained from the original authors of any included resources. DDL downloads the unmodified archive and keeps the bundled credits file."

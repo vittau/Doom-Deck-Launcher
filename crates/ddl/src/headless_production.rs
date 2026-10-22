@@ -2016,7 +2016,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         catalog
             .recipes
             .iter()
-            .any(|r| r.recipe.tags.contains(&tag.id))
+            .any(|r| ddl_core::catalog::shows_in_category(&r.recipe, &tag.id))
     })
     .collect();
     assert!(used.len() >= 2, "the shipped recipes use several tags");
@@ -2120,7 +2120,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             // category that contains this recipe before rendering its card.
             let category = used
                 .iter()
-                .find(|tag| recipe.tags.contains(&tag.id))
+                .find(|tag| ddl_core::catalog::shows_in_category(&recipe, &tag.id))
                 .expect("every reviewed recipe is in a requested category");
             r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
             r.focus = 10 + index as i32;
@@ -2184,7 +2184,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.snapshot.as_mut().unwrap().items[index].recipe = reordered.clone();
         let category = used
             .iter()
-            .find(|tag| reordered.tags.contains(&tag.id))
+            .find(|tag| ddl_core::catalog::shows_in_category(&reordered, &tag.id))
             .expect("ancient-aliens is in a requested category");
         r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
         r.selected = index;
@@ -2244,24 +2244,31 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             .as_ref()
             .and_then(|s| {
                 used.iter()
-                    .find(|tag| s.items[0].recipe.tags.contains(&tag.id))
+                    .find(|tag| ddl_core::catalog::shows_in_category(&s.items[0].recipe, &tag.id))
             })
             .expect("the first recipe is in a requested category");
         r.choose_category(crate::runtime::Category::Tag(category.id.clone()));
+        let cleared =
+            crate::screenshots::presentation(&r.snapshot.as_ref().unwrap().items[0].recipe);
         r.snapshot.as_mut().unwrap().items[0]
             .recipe
             .screenshots
             .clear();
+        // Spec 090 R2: the first snapshot recipe is no longer necessarily the
+        // first card, so select it explicitly for the fallback composition.
+        r.selected = 0;
         r.focus = 10;
         r.sync(ui);
+        assert!(
+            !cleared.is_empty(),
+            "the fallback fixture starts with a screenshot"
+        );
         assert!(ui.get_band_screenshot().is_empty());
         assert!(
-            ui.get_nodes()
+            !ui.get_nodes()
                 .iter()
-                .find(|n| n.kind == 4)
-                .unwrap()
-                .screenshot
-                .is_empty()
+                .any(|n| n.kind == 4 && n.screenshot == cleared),
+            "the art band falls back to painted art for a recipe without screenshots"
         );
         assert!(
             !ui.get_nodes()
@@ -2307,7 +2314,7 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         let holding: Vec<i32> = items
             .iter()
             .enumerate()
-            .filter(|(_, i)| i.recipe.tags.iter().any(|t| t == id))
+            .filter(|(_, i)| ddl_core::catalog::shows_in_category(&i.recipe, id))
             .map(|(i, _)| 10 + i as i32)
             .collect();
         (cards, holding)
@@ -2319,6 +2326,27 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         assert_eq!(ui.get_focused(), 200 + n as i32);
         assert_eq!(selected_chip(ui), tag.label);
         let (mut cards, mut holding) = tag_cards(&tag.id);
+        // Spec 090 R2: cards are in ascending first-public-release order, with
+        // unknown dates last and the title/id tie-break, never catalog order.
+        let items = state.borrow().snapshot.as_ref().unwrap().items.clone();
+        let mut expected = holding.clone();
+        expected.sort_by(|a, b| {
+            ddl_core::catalog::compare_browsing_order(
+                &items[(*a - 10) as usize].recipe,
+                &items[(*b - 10) as usize].recipe,
+            )
+        });
+        assert_eq!(cards, expected, "category {} is oldest first", tag.id);
+        if tag.id == "community-projects" {
+            for card in &cards {
+                let recipe = &items[(*card - 10) as usize].recipe;
+                assert!(
+                    !recipe.tags.iter().any(|t| t == "doomer-boards"),
+                    "{} leaked into the Community Projects tab",
+                    recipe.id
+                );
+            }
+        }
         cards.sort_unstable();
         holding.sort_unstable();
         assert_eq!(cards, holding, "category {}", tag.id);
@@ -2393,6 +2421,12 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         r.sync(ui);
         r.focus
     };
+    let marked_position = ui
+        .get_nodes()
+        .iter()
+        .find(|n| n.id == favorite_id)
+        .map(|n| (n.x, n.y))
+        .expect("the card is laid out before favoriting");
     press_char(window, "x");
     idle(&state);
     let marked = state.borrow().snapshot.as_ref().unwrap().items[(favorite_id - 10) as usize]
@@ -2409,13 +2443,16 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             .collect::<Vec<_>>(),
         [marked.as_str()]
     );
-    let first_card = ui
+    let after_favorite = ui
         .get_nodes()
         .iter()
         .find(|n| n.id == favorite_id)
         .map(|n| (n.x, n.y))
         .unwrap();
-    assert_eq!(first_card, (12., 84.), "favorites sort first");
+    assert_eq!(
+        after_favorite, marked_position,
+        "spec 090 R2: favoriting never moves a card out of release order"
+    );
     assert_eq!(ui.get_nodes().iter().filter(|n| n.kind == 12).count(), 1);
     assert_eq!(ui.get_favorite_label(), "Unfavorite");
     capture(window, "015-discover-specific-favorite.png");

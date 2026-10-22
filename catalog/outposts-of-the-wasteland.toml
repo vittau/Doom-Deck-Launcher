@@ -4,6 +4,8 @@ id = "outposts-of-the-wasteland"
 title = "Outposts of the Wasteland (Doomer Boards Project 68)"
 authors = ["Doomer Boards Project 68"]
 release = "2024-10-04"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2024, month = 10, day = 4 }
 page = "https://doomer.boards.net/thread/3754/dbp68-outposts-wasteland-rc1-cl2"
 description = "DOOM II: MAP01–MAP19 (19 maps). When gasoline is worth more than gold, one man must fight for his life against a ruthless gang in a post-apocalyptic universe."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

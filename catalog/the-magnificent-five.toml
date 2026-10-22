@@ -4,6 +4,8 @@ id = "the-magnificent-five"
 title = "The Magnificent Five (Doomer Boards Project 30)"
 authors = ["Doomer Boards Project 30"]
 release = "2020-12-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2020, month = 12, day = 1 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/d-f/dbp30"
 description = "DOOM II: MAP01–MAP06 (6 maps). While you were out hunting game in the prairie an old nemesis of yours \"Black Hand Burt\" murdered your wife & daughter, and robbed you of your fortune. Now you're on a path of Revenge!."
 permission = "Authors may use the contents as a base for modification or reuse, with credit to the original authors; redistribution is permitted provided the bundled text file travels with the file, unmodified and intact. DDL downloads the unmodified archive and keeps the bundled credits text."

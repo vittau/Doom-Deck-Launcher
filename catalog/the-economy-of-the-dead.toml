@@ -4,6 +4,8 @@ id = "the-economy-of-the-dead"
 title = "The Economy of the Dead (Doomer Boards Project 77)"
 authors = ["Doomer Boards Project 77"]
 release = "2025-11-16"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2025, month = 11, day = 16 }
 page = "https://doomer.boards.net/thread/4191/economy-dead-dbp77"
 description = "DOOM II: MAP01–MAP09 (9 maps). Commercial real estate crashes under the intergalactic UAC Logistics center."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."

@@ -48,6 +48,7 @@ pub(crate) fn test_recipe() -> crate::catalog::Recipe {
         title: "Sigil test".to_owned(),
         authors: vec!["Test".to_owned()],
         release: "1.0".to_owned(),
+        original_release: None,
         page: "https://example.invalid/page".to_owned(),
         description: "Test recipe.".to_owned(),
         permission: "Test.".to_owned(),

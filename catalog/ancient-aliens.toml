@@ -4,6 +4,8 @@ id = "ancient-aliens"
 title = "Ancient Aliens (v1.2)"
 authors = ["Paul \"skillsaw\" DeBruyne"]
 release = "v1.2 (2023-03-16)"
+# First public release (spec 090): reference-ancient-aliens.md §1 (v1, 2016-05-08; the pinned archive is v1.2).
+original_release = { year = 2016, month = 5, day = 8 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/aaliens"
 description = "DOOM II: 32 Boom-compatible maps (MAP01–MAP32) with bundled MIDI music, graphics and an embedded DEHACKED patch."
 permission = "Redistribution permitted with the bundled permission text intact and unmodified; the authors do not permit reuse of the contents as a base for modification. DDL downloads the unmodified archive from its canonical /idgames source and keeps the bundled text file unedited. See the kept credits member for the full terms and resource credits."

@@ -20,6 +20,8 @@ authors = [
   "Seongbae \"antares031\" Park",
 ]
 release = "Final version (2024-09-30)"
+# First public release (spec 090): reference-eviternity-ii.md §1, initial release 2023-12-10 (pinned final 2024-09-30).
+original_release = { year = 2023, month = 12, day = 10 }
 page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternityii"
 description = "DOOM II: 37-map MBF21 megawad (MAP01–MAP37) with an updated OTEX texture set, MIDI music, an embedded DEHACKED patch and a COMPLVL lump that declares mbf21."
 permission = "Without prior written consent the authors do not permit using this WAD or its assets as a base or resource for other projects. DDL downloads the unmodified archive from its canonical /idgames source; it does not modify, repackage or reuse the content, and keeps the bundled readme, credits and changelog members intact. See the kept text members for the full terms and resource credits."

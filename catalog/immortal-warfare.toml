@@ -4,6 +4,8 @@ id = "immortal-warfare"
 title = "Immortal Warfare (Doomer Boards Project 58)"
 authors = ["Doomer Boards Project 58"]
 release = "2023-05-01"
+# First public release (spec 090): release-thread first post, docs/research/doomer-boards-projects.md inventory.
+original_release = { year = 2023, month = 5, day = 1 }
 page = "https://doomer.boards.net/thread/3169/immortal-warfare"
 description = "DOOM II: MAP01–MAP10 (10 maps). Modern warfare brings to life a new call to duty."
 permission = "No separate permission text is bundled inside the downloaded package; the release thread publishes the mapset for public download. DDL downloads the unmodified archive and does not modify or redistribute it. Removed on the authors’ request."
