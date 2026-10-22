@@ -1,0 +1,88 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-d.md §1; gathered 2026-10-22.
+schema_version = 1
+id = "uac-ultra"
+title = "UAC Ultra"
+authors = ["40oz", "Super Jamie"]
+release = "v1.2 (2010-03-29)"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/uacultra"
+description = "DOOM II: a 12-map Boom-compatible levelset (MAP01–MAP12, described by the authors as an \"11 (and a half)\" map set) with new textures, a new monster, new music and an embedded DEHACKED patch."
+permission = "Authors MAY use the contents of this file as a base for modification or reuse, and state that permissions were obtained from the original authors of any modified or included resources. You MAY distribute this file provided you include this text file with no modifications, in any electronic format, as long as the file is intact. DDL downloads the unmodified archive and keeps the bundled text."
+tags = ["classics", "cacowards"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/uac-ultra/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "uac-ultra/01.jpg"
+credit = "40oz & Super Jamie"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Continuous DOOM II mapset (MAP01–MAP12, no UMAPINFO); the menu selects the map, so no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-d.md §1 and §5",
+  "Downloaded uacultra.zip from three byte-identical mirrors; 2,309,100 bytes, SHA-256 58ebd0fa…; ZIP central directory has exactly uacultra.txt (4,135 B) and uacultra.wad (7,473,347 B)",
+  "uacultra.wad: PWAD, 505 lumps, twelve map markers MAP01–MAP12, fourteen D_* music lumps, one embedded DEHACKED lump; no COMPLVL, UMAPINFO or MAPINFO lump",
+  "Authors' uacultra.txt: release 29th March 2010, v1.2, DOOM2, MAP01–MAP12, \"Boom-compatible. PrBoom-Plus recommended.\", Dehacked/BEX Patch: Yes, Music: Yes",
+  "Cacowards 2010 Top Ten, page 2: https://www.doomworld.com/cacowards/2010/ (edition page read at https://web.archive.org/web/2026id_/https://www.doomworld.com/17years/best2.php; index https://www.doomworld.com/17years/ lists UAC Ultra on Page 2 of the Top Ten)",
+  "Cacowards 2010 screenshot: https://web.archive.org/web/2026id_/https://www.doomworld.com/17years/images/uacultra.png",
+]
+notes = "Confirmed archive and member identities from downloads on www.gamers.org, mirrors.lug.mtu.edu and ftp.fu-berlin.de that return identical size and SHA-256; nothing downloaded was extracted to disk or executed. The WAD embeds its DEHACKED patch (new monster and boss changes) and all fourteen music lumps, so no separate -deh member or soundtrack package is needed. No COMPLVL or UMAPINFO lump exists: complevel boom comes from the authors' own \"Boom-compatible. PrBoom-Plus recommended.\" statement. Tags: cacowards = 2010 Top Ten winner (17th Annual Cacowards, page 2 of the Top Ten; the entry was read in the Wayback capture and the canonical year URL is https://www.doomworld.com/cacowards/2010/); classics = released 2010-03-29, over five years before this review. Not tagged megawad or episode: twelve maps is over the nine-map episode limit and under the thirty-map megawad limit. Not tagged challenging: the authors say the difficulty should \"keep you on your feet without being ridiculous\", which is not an experienced-players claim. No gameplay test was performed."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, new-monster behaviour, gameplay, audio and map selection.",
+  "The readme mentions a separate `ultratex.wad` texture set that is not part of this archive and has no source URL; it is not downloaded or declared.",
+  "The bundled screenshot is a 640x480 (4:3) Cacowards image, the only reachable in-game view; confirm the card crop on the Deck.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/s-u/uacultra"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/s-u/uacultra.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/s-u/uacultra.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/s-u/uacultra.zip"]
+size = 2309100
+sha256 = "58ebd0fa2fc0ef26fbcd4908a5cb08dbccacc637613db7cb73cec682a863a5a5"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/s-u/uacultra.zip"
+
+[[packages.members]]
+id = "maps"
+path = "uacultra.wad"
+size = 7473347
+sha256 = "db52da533223c74c01d8dd0eb2d81b39fc6a344249be3a7fe92a34a8a0926798"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "uacultra.txt"
+size = 4135
+sha256 = "ee2372b5bc80393a9bb28a238d7b03f55ca248bd402c9a068bba2019a395ac8d"
+keep = true
+
+[[components]]
+id = "main"
+label = "UAC Ultra"
+description = "Main 12-map Boom levelset with its new textures, new monster, music and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"

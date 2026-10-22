@@ -1,0 +1,15 @@
+# Bundled screenshot sources and credit (spec 023, D-024).
+# Screenshots are the mapset authors' material: each file records its source URL,
+# source page, credit, original size, retrieval date and any permission text found.
+# A screenshot is removed on the author's request (D-024). Never edit the images
+# by hand; regenerate them from the recorded source at card size (scripts/lean-image.sh).
+schema_version = 1
+
+[[screenshot]]
+file = "01.jpg"
+source_url = "https://web.archive.org/web/2026id_/https://www.doomworld.com/20years/images/stardate.png"
+source_page = "https://www.doomworld.com/20years/best3.php"
+credit = "Ribbiks"
+original_size = "1280x960"
+retrieved = "2026-10-22"
+permission = "In-game screenshot published in Doomworld's 20th Annual Cacowards feature (2013 Top Ten, page 3). No separate image licence text was found on the page. Bundled as a representative in-game view under decision D-024, credited to the mapset author, and removed on the author's request. The page and image were read through the Wayback Machine on 2026-10-22 because doomworld.com returns HTTP 403 to automated fetches."

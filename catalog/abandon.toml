@@ -1,0 +1,91 @@
+# Confirmed bytes and release metadata: docs/research/reference-087-d.md §5; gathered 2026-10-22.
+schema_version = 1
+id = "abandon"
+title = "Abandon"
+authors = ["Bemused", "Benjogami", "Scotty"]
+release = "2023-05-07 update (original 2020 release)"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/abandon"
+description = "DOOM II: 17 Boom-compatible slaughter maps (MAP01–MAP17) plus a small ending map at MAP18, with an embedded DEHACKED patch, new graphics and a bundled MIDI soundtrack."
+permission = "Authors may NOT use the contents of this file as a base for modification or reuse; permissions were obtained from the original authors of any resources modified or included. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
+tags = ["cacowards", "challenging"]
+
+# Bundled screenshot(s) (spec 023, D-024): the images live under
+# crates/ddl/ui/assets/screenshots/abandon/ with source, credit and permission
+# text in SOURCES.toml beside them; the build embeds them for card, detail and band.
+[[screenshots]]
+asset = "abandon/01.jpg"
+credit = "Bemused, Benjogami & Scotty"
+
+[base_game]
+game = "doom2"
+variants = []
+
+[compatibility]
+family = "boom"
+complevel = "boom"
+
+[compatibility.engine]
+range = "=0.30.1"
+status = "inspected"
+
+[compatibility.runtime]
+# Continuous DOOM II set (MAP01–MAP17 with a small ending map at MAP18); no UMAPINFO or
+# MAPINFO lump, so the menu selects the map and no warp is prescribed.
+
+[verification]
+status = "inspected"
+tester = "DDL desk research"
+date = "2026-10-22"
+engine_version = "0.30.1"
+inspected = [
+  "docs/research/reference-087-d.md §5.1 and §6",
+  "Downloaded abandon.zip from three byte-identical mirrors; 46,212,925 bytes, SHA-256 9ef49a28…; ZIP central directory has Abandon.txt (4,997 B) and Abandon.wad (177,444,166 B)",
+  "Abandon.wad: PWAD, 767 lumps, eighteen map markers MAP01–MAP18, twenty-one D_* music lumps, one embedded DEHACKED lump; no COMPLVL, UMAPINFO or MAPINFO lump. MAP01–MAP17 are the released levels and MAP18 is a four-thing ending map (DEHACKED string \"HUSTR_18 = The End\")",
+  "Map-lump sizes read from the WAD directory: 167,702,999 bytes across the eighteen slots; the largest is MAP12 at 29,091,075 bytes, and MAP09/MAP10 place 8,672/10,030 things (74,510 things across all eighteen slots)",
+  "Authors' Abandon.txt: Release date 05/07/2023 = 2023-05-07 (the readme writes month/day; the ZIP's Abandon.txt is dated 2023-05-07 and the WAD 2023-02-10), DOOM2, MAP01–MAP17, New levels: 17, \"Grandiose, oppressive slaughter maps.\", \"Advanced engine needed: Boom\", \"Tested With: PRBoom+ 2.4.1.5, DSDA-Doom 0.x.x\", \"May Not Run With: zDaemon as several maps use extended nodes\", Dehacked/BEX Patch: Yes, Music: Yes",
+  "Cacowards 2020 Top Ten, page 1: https://www.doomworld.com/cacowards/2020/best1/ (page read at https://web.archive.org/web/20201210111058id_/https://www.doomworld.com/cacowards/2020/best1/; title \"2020 Cacowards - Top Ten Page 1 - Doomworld\")",
+  "Cacowards 2020 screenshot: https://web.archive.org/web/2026id_/https://static.doomworld.com/pages_media/9_abandon.jpg?_cb=1607467020",
+]
+notes = "Confirmed archive and member identities from downloads on www.gamers.org, mirrors.lug.mtu.edu and ftp.fu-berlin.de that return identical size and SHA-256; nothing downloaded was extracted to disk or executed. The archive holds exactly two root members, Abandon.txt and Abandon.wad, with the case shown. The WAD embeds its DEHACKED patch (level names and intermission text), all twenty-one music lumps and its own status-bar graphics, so no separate -deh member or soundtrack package is needed. The bundled text is a 2023-05-07 update: the authors list 17 new levels MAP01–MAP17, while the WAD also carries a small MAP18 ending map; the Cacoward was awarded for the 2020 release, and this recipe pins the 2023 archive bytes rather than the award-year download. No COMPLVL lump exists: complevel boom comes from the author's \"Advanced engine needed: Boom\" line, and the same text says it was tested with DSDA-Doom. The author's \"May Not Run With: zDaemon as several maps use extended nodes\" is recorded as an author statement, not a DDL test. Inspected size facts for the performance limitation, not a measurement: 177,444,166-byte WAD, 167,702,999 bytes of map lumps, MAP12 alone 29,091,075 bytes, and 74,510 things across the map slots. Tags: cacowards = 2020 Top Ten winner, page 1; challenging = the authors describe the set as \"Grandiose, oppressive slaughter maps\" and the Cacowards entry calls its environs \"legitimately perilous\". Not tagged megawad or episode: 17 released maps is over the nine-map episode limit and under the thirty-map megawad limit, and MAP18 is an ending map rather than an eighteenth level. Not tagged classics: the pinned archive text is dated 2023-05-07, less than five years before this review, even though the project itself won in 2020. No gameplay or performance test was performed."
+limitations = [
+  "Needs Deck Validation: IWAD/complevel, load order, DEHACKED application, gameplay, audio, extended-node rendering and map progression.",
+  "Needs Deck Validation: performance and memory use on the Steam Deck. Inspected facts only: a 177,444,166-byte WAD, 167,702,999 bytes of map lumps, a 29,091,075-byte MAP12 and up to 10,030 things in one map; no FPS, frame time, battery or thermal measurement was made.",
+  "The recipe ships the 2023-05-07 archive; the 2020 Cacowards award refers to that year's release of the same project, and the earlier bytes are not pinned here.",
+  "The MAP18 ending map is not described in the authors' level list; confirm that DSDA-Doom reaches and exits it as intended.",
+]
+
+[[packages]]
+id = "free"
+page = "https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/abandon"
+urls = ["https://www.gamers.org/pub/idgames/levels/doom2/Ports/megawads/abandon.zip", "https://mirrors.lug.mtu.edu/idgames/levels/doom2/Ports/megawads/abandon.zip", "https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/abandon.zip"]
+size = 46212925
+sha256 = "9ef49a28f7852b074470abf21b02de895f2cf9a2a6eb8300c65b12c833dfbd27"
+kind = "zip"
+idgames_path = "levels/doom2/Ports/megawads/abandon.zip"
+
+[[packages.members]]
+id = "maps"
+path = "Abandon.wad"
+size = 177444166
+sha256 = "ce48df1db341d8e3ef02250a0d3852032a8b15813c0734495d70ee489e534bea"
+keep = false
+
+[[packages.members]]
+id = "credits"
+path = "Abandon.txt"
+size = 4997
+sha256 = "b2e9c6423db89c132ccd4f9d95074ccac69fa035a76b1e2e6ed211f377e410a4"
+keep = true
+
+[[components]]
+id = "main"
+label = "Abandon"
+description = "Main 17-map Boom slaughter set plus the MAP18 ending map, with its music, graphics and embedded DEHACKED patch."
+optional = false
+default = true
+position = 1
+
+[[components.members]]
+package = "free"
+member = "maps"
+role = "maps"
