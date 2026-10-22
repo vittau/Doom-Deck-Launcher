@@ -1,0 +1,208 @@
+{
+  "derivatives": {
+    "audio-settings-1280.webp": {
+      "bytes": 65134,
+      "height": 800,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "07da1ace0c14fccf56facc7d52729ca5c1faa68f6cddc106d937547923de8b4e",
+      "source": "audio-settings.png",
+      "width": 1280
+    },
+    "audio-settings-640.webp": {
+      "bytes": 25664,
+      "height": 400,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "9029f636476a5b77553524c397a986d9195937839fe453b6fccf27e887fb2b2c",
+      "source": "audio-settings.png",
+      "width": 640
+    },
+    "audio-settings-960.webp": {
+      "bytes": 43682,
+      "height": 600,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "44b43d5312d9f051956bb942e52a5493dc18e4309a9ba433e682cc62d39ecf8e",
+      "source": "audio-settings.png",
+      "width": 960
+    },
+    "discover-1280.webp": {
+      "bytes": 143708,
+      "height": 800,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "b03418f38de81cee7af215e6038e5013249290bb8ad1aeccd61b98983546eafa",
+      "source": "discover.png",
+      "width": 1280
+    },
+    "discover-640.webp": {
+      "bytes": 48962,
+      "height": 400,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "c777d1f642cd93a24e1ea178c758fd6811f03ceeabf52492396d5056078f6dd6",
+      "source": "discover.png",
+      "width": 640
+    },
+    "discover-960.webp": {
+      "bytes": 87188,
+      "height": 600,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "2566a72eb5e3490a3c5bf27b84c2a1f52efcc580731eb82ce09454773161b3bb",
+      "source": "discover.png",
+      "width": 960
+    },
+    "hero-1920.webp": {
+      "bytes": 69366,
+      "height": 620,
+      "quality": 80,
+      "saver": "WebP (cwebp)",
+      "sha256": "ae0c09071b2645d5b2ca758d5d8255ae70bdb53a3f468622d4d9f35c33857850",
+      "source": "hero.png",
+      "width": 1920
+    },
+    "hero-2560.webp": {
+      "bytes": 97746,
+      "height": 827,
+      "quality": 80,
+      "saver": "WebP (cwebp)",
+      "sha256": "b3b39c83ed4d37d25644f0834ade9f45d1e3b06251dbeead96f96b38e52cdd6c",
+      "source": "hero.png",
+      "width": 2560
+    },
+    "hero-960.webp": {
+      "bytes": 23718,
+      "height": 310,
+      "quality": 80,
+      "saver": "WebP (cwebp)",
+      "sha256": "486b881477b192a5f2aec91222885c9672e54e7c80996087f785872cbb4b6c4c",
+      "source": "hero.png",
+      "width": 960
+    },
+    "home-1280.webp": {
+      "bytes": 64796,
+      "height": 800,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "36e79b94f751eefc295b6e0ffb30e9bdcaaeb8d3ce968cb24cfbd347ef0e0325",
+      "source": "home.png",
+      "width": 1280
+    },
+    "home-640.webp": {
+      "bytes": 24894,
+      "height": 400,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "ddde763b303488b841051a6f7a7f5d95882c0dbd18d654f1433ba8d1821156bf",
+      "source": "home.png",
+      "width": 640
+    },
+    "home-960.webp": {
+      "bytes": 43462,
+      "height": 600,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "b29a6eee65fd4ad19d567e3b2a10cd4020e4d9c1641c17a99e86d8a6530f3562",
+      "source": "home.png",
+      "width": 960
+    },
+    "mapset-detail-1280.webp": {
+      "bytes": 125326,
+      "height": 800,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "62c1a677bbd09bb2508b6794fee56af64b0309e822adf27f097f89de1acc4775",
+      "source": "mapset-detail.png",
+      "width": 1280
+    },
+    "mapset-detail-640.webp": {
+      "bytes": 42816,
+      "height": 400,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "4bac33e0966bc6ed92aa60a9f34d2326457d3a1451341c8c980512d4c2ce5d6f",
+      "source": "mapset-detail.png",
+      "width": 640
+    },
+    "mapset-detail-960.webp": {
+      "bytes": 76312,
+      "height": 600,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "07a8efd9db3cd0733b95e81949e115e886fa6812db1336f0f15876a931965897",
+      "source": "mapset-detail.png",
+      "width": 960
+    },
+    "play-setup-1280.webp": {
+      "bytes": 78106,
+      "height": 800,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "3b92cce7504cfd322d922b2e9b7799a7a04d2813759db3fbebc9ff8caeb211bb",
+      "source": "play-setup.png",
+      "width": 1280
+    },
+    "play-setup-640.webp": {
+      "bytes": 29094,
+      "height": 400,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "a9c1dfdda62b4e899ff1d9526bc7272ae4b35ebb2953f49dd7f4dc890409f735",
+      "source": "play-setup.png",
+      "width": 640
+    },
+    "play-setup-960.webp": {
+      "bytes": 51852,
+      "height": 600,
+      "quality": 88,
+      "saver": "WebP (cwebp)",
+      "sha256": "d3bf676ce63ca75ed5ed5d88985fc6c456520b664a9defe66690ab06179dd95a",
+      "source": "play-setup.png",
+      "width": 960
+    }
+  },
+  "encoder": "1.6.0 / libsharpyuv: 0.4.2",
+  "format": 1,
+  "generator": "scripts/flatpak/generate-site-images.py",
+  "source_pngs_are_shared_and_unmodified": true,
+  "sources": {
+    "audio-settings.png": {
+      "height": 800,
+      "path": "docs/screenshots/audio-settings.png",
+      "sha256": "fc7f7016095d2f49ffab2ea1abb3f22f17c1a5aa1414f2450850a23916721741",
+      "width": 1280
+    },
+    "discover.png": {
+      "height": 800,
+      "path": "docs/screenshots/discover.png",
+      "sha256": "8d9f7cd6d760fedaf2a87cbc5e0a53e73ca35e42d950f22e50792331276c1655",
+      "width": 1280
+    },
+    "hero.png": {
+      "height": 1240,
+      "path": "docs/design/logo/steam/hero.png",
+      "sha256": "67f3ae56e21c2b78ae8b51265534a7a1d59445c7cdcf1b5163b06bf7b5d770b1",
+      "width": 3840
+    },
+    "home.png": {
+      "height": 800,
+      "path": "docs/screenshots/home.png",
+      "sha256": "ddacfae1aa2f0f4d94b07aa77b1ac43361de92f014f7aa35f552f4bf7dc885ba",
+      "width": 1280
+    },
+    "mapset-detail.png": {
+      "height": 800,
+      "path": "docs/screenshots/mapset-detail.png",
+      "sha256": "a4498256f2732976a3e9c92dbf90a1e02e4f8a56d1aa2258b6dc363c53974f0c",
+      "width": 1280
+    },
+    "play-setup.png": {
+      "height": 800,
+      "path": "docs/screenshots/play-setup.png",
+      "sha256": "3afbdc95a346523360b93028687e786baa72678ff747d15cdd095164767f5743",
+      "width": 1280
+    }
+  }
+}
