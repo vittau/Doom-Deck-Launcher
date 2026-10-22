@@ -1,6 +1,6 @@
 # 095 — Shared compact list view for Discover and Library
 
-**Status:** Ready · **Milestone:** M3 · **Depends on:** 008, 010, 030, 055, 057, 090
+**Status:** Implemented; physical Deck validation pending · **Milestone:** M3 · **Depends on:** 008, 010, 030, 055, 057, 090
 **Origin:** owner, 2026-10-22: Select toggles Discover and Library between cards and a
 more compact list; both tabs share the preference and restore it after restarting DDL.
 
@@ -61,22 +61,22 @@ with one controller button. Discover and Library always use the same saved forma
 
 ## Acceptance criteria
 
-- [ ] **A1 (R1):** input tests prove one Select action per press and no repeats;
+- [x] **A1 (R1):** input tests prove one Select action per press and no repeats;
   runtime tests prove both tabs share the toggle and all excluded contexts ignore it.
-- [ ] **A2 (R2, R6):** inspected 1280×800 production renders show at least five complete
+- [x] **A2 (R2, R6):** inspected 1280×800 production renders show at least five complete
   Discover rows, readable long names and status markers, correctly framed artwork,
   mixed Library sections, visible scrolled focus and an unclipped hint row. Cards
   retain their existing presentation. Compact renders are shown to the owner before merge.
-- [ ] **A3 (R3):** controller/headless journey switches both ways on a non-first item,
+- [x] **A3 (R3):** controller/headless journey switches both ways on a non-first item,
   changes tabs and category, opens detail and returns, toggles a favorite and navigates
   Library sections; identity, filters, order and available actions remain correct.
-- [ ] **A4 (R4):** service reopen restores List and Cards; old saved-state fixtures
+- [x] **A4 (R4):** service reopen restores List and Cards; old saved-state fixtures
   default to Cards; rapid toggles persist the final choice; injected save failure
   remains usable; an older background catalog instance cannot clobber the preference.
-- [ ] **A5 (R5):** a large synthetic catalog (at least 1,000 entries) and repeated
+- [x] **A5 (R5):** a large synthetic catalog (at least 1,000 entries) and repeated
   toggles exercise a non-first/last item, focus visibility and no accumulating jobs or
   row models; a fake service observes no layout-triggered network or catalog reload.
-- [ ] **A6:** `cargo fmt --all --check`, workspace Clippy with `-D warnings` and
+- [x] **A6:** `cargo fmt --all --check`, workspace Clippy with `-D warnings` and
   `cargo test --workspace` pass after merging main; report tests per requirement and
   record any remaining physical Deck checks without claiming unmeasured performance.
 

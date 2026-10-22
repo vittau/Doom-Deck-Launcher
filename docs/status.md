@@ -1,11 +1,12 @@
 # Status
 
-## Current checkpoint — 2026-10-21
+## Current checkpoint — 2026-10-22
 
-**Available for Deck testing:** [v0.0.11-polish](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.11-polish)
+**Available for Deck testing:** [v0.0.12-catalog](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.12-catalog)
 ships the Linux tarball and the signed Flatpak update at
-[the project site](https://doomdecklauncher.com/). Release run `39693631790` and
-signed repository publication `39693631806` succeeded. Canonical site identifies app v0.0.11.
+[the project site](https://doomdecklauncher.com/). Release run `39793977054` and
+signed publication validation `39802331079` succeeded. Canonical site identifies app v0.0.12.
+The shared Cards/List view below follows this immutable release and is not included in it.
 
 - **Integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian Reliquary
   with MAP31 performance warning (066), Default/Arachno Audio settings (067), and verified SIGIL
@@ -70,14 +71,22 @@ signed repository publication `39693631806` succeeded. Canonical site identifies
   `ddl-linux-x86_64.tar.gz` and its verified checksum, and the signed Flatpak repository plus
   canonical site (now v0.0.12, 2026-10-22). CI run `39793971539` passed on Linux including the
   catalog-bundle job; release run `39793977054` passed. The first Flatpak publication timed out
-  awaiting Pages after publishing its content; run `39798321701` repeats publication to complete
-  the skipped Cloudflare purge and canonical-file checks. Real-network e2e run `39797198619`
-  and a physical Deck playthrough remain pending.
-- **Shared compact browsing in progress:** spec 095 defines a Select toggle between cards and
-  a compact list in Discover and Library, one persisted preference, preserved focus/filter/order
-  and no toggle effect in other screens or sheets. A supervised Codex UI worker implements it
-  in `vittau/compact-list-095`; visual review, combined checks and physical Deck validation are
-  pending. The future /idgames browse specs (051/053) now also require bounded background
+  awaiting Pages after publishing its content; retry `39798321701` hit the same limit. The
+  reviewed wait repair (097, 120 polls at 10 s, nominal ~20 minutes plus API time) was validated
+  by run `39802331079`: signed smoke, exact Pages commit, Cloudflare prefix purge and canonical
+  page/descriptor/summary byte comparisons all passed. That Pages wait took 31 s, so the expanded
+  ceiling was not needed in the successful run. Real-network e2e `39797198619` also passed.
+  The physical Deck playthrough remains pending.
+- **Shared compact browsing implemented for the next release:** Select (keyboard V) switches
+  Discover and Library between cards and readable compact rows, sharing one atomic persisted
+  preference while preserving focus/filter/order. Repeated input coalesces in one background
+  writer and normal teardown finishes the last save after the UI loop stops. Production renders
+  were reviewed and shown to the owner before merge; 1,000-entry model/focus and 2,000-change
+  persistence regressions pass. Combined format, workspace Clippy and **984 workspace tests**
+  passed after integrating 095/096/097; Linux CI on the integrated source follows. Eight tagged
+  state fixtures now include `v0.0.12-catalog` (096), with all earlier fixture bytes preserved.
+  Physical Select, LCD legibility and Gaming Mode responsiveness remain **Needs Deck Validation**
+  (`deck-testing.md`, CV1–CV5). The future /idgames browse specs (051/053) also require bounded background
   search, 50-row UI pages, stale-result rejection and measured responsiveness acceptance.
 - **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
   and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live

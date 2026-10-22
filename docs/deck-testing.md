@@ -213,6 +213,20 @@ geometry, fake transports and persistence tests complement these checks but do n
 | R5 | Verify the ordered specific categories, last mapset accessibility and catalog date after an update | Gaming | ⏳ | No All/Featured tab; Doomer Boards follows Community Projects; source date uses English UTC, not device fetch time |
 | R6 | Install Memento Mori and Memento Mori II from Classics and launch each | Gaming | ⏳ | Doom II, vanilla, map WAD then original music WAD; confirm MIDI playback and map selection |
 
+## Shared cards/list format (spec 095)
+
+This source change follows `v0.0.12-catalog` and is not part of that immutable release.
+All physical checks remain **Needs Deck Validation**; host/headless tests verify the state,
+navigation and layout but do not establish Gaming Mode input or measured Deck performance.
+
+| # | Check | Mode | Result | Notes |
+| --- | --- | --- | --- | --- |
+| CV1 | In Discover, press Select once to switch to List, then change to Library | Gaming | ⏳ | Library uses List too; holding Select must not repeatedly alternate formats |
+| CV2 | In Library, switch back to Cards, close DDL normally and reopen; repeat with List | Gaming | ⏳ | Both tabs restore the final choice, including rapid toggles immediately before closing |
+| CV3 | Toggle on a non-first item, move through categories and Library base-game/mapset/local sections, open detail and return | Gaming | ⏳ | Same item stays focused and visible; chronology, favorites, filters and available actions remain correct |
+| CV4 | Inspect long titles, availability/installed/favorite markers, five complete Discover rows with the category strip visible, and the full footer | Gaming | ⏳ | Readable on the Deck LCD; no overlap or clipped focus; check perceived response while toggling and scrolling |
+| CV5 | Try Select in Home, Settings, detail, setup, dialogs and during a running game; return to Discover/Library | Gaming | ⏳ | Format changes only on the two unobstructed browsing roots; the footer names the next format |
+
 ## Input and Steam Input (manual setup)
 
 Follow the [controller layouts](steam-deck-guide.md#recommended-steam-deck-controller-setup).

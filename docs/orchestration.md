@@ -205,14 +205,15 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Tagged serializer fixtures through `v0.0.10-audio` are complete (070). After the next
+- Tagged serializer fixtures through `v0.0.12-catalog` are complete (070/078/096). After the next
   pre-release, add its saved-state fixture and update the release guard (055 R4).
 - Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
   from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
-- Current integration 2026-10-21: 067 Audio/soundfonts and 068 verified SIGIL editions,
-  including COMPAT + SHREDS, are reviewed and merged after combined fmt/clippy and 870 passing tests.
-  Specs 062–066 and independent website deployment are complete; the old shutdown pause record
-  is historical. See `docs/status.md` for the final integration and CI results.
+- Current integration 2026-10-22: catalog additions 087–094 shipped as `v0.0.12-catalog`, with
+  successful Linux e2e and signed publication/purge/canonical checks. Shared Cards/List browsing
+  (095), the v0.0.12 state fixture (096) and the reviewed Pages wait repair (097) pass combined
+  fmt/Clippy and 984 workspace tests. The new browsing format follows the published tag; see
+  `docs/status.md` for integrated-source CI results and the remaining physical Deck checks.
 - Next backlog: specs 051–053 (/idgames browse on top of the published index); the
   "Advanced" card subtitle touching its bottom edge (cosmetic, pre-existing).
 

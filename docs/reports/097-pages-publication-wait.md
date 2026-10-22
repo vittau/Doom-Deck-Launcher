@@ -72,10 +72,22 @@ No cargo build or unit test: this is a reversible timer change with no logic to 
 `AGENTS.md`'s test-per-requirement rule is met by the static checks above plus the real-run gate
 below.
 
-## Outstanding
+## Worker handoff before remote validation
 
 - **Remote validation is the coordinator's, and it is the only proof of the 20-minute path:** run the
   `Flatpak repository` workflow from this reviewed branch with `ref` input `v0.0.12-catalog` and
   confirm that `Wait for the Pages deployment` succeeds and that `Purge the Cloudflare cache prefix`
   and `Verify the published files` actually execute. No success may be claimed before that run.
 - Nothing was pushed, tagged, released or dispatched; no owner question was needed.
+
+## Coordinator validation
+
+The coordinator pushed the reviewed branch and ran
+[39802331079](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39802331079)
+with workflow commit `9ae7e5b` and application input `v0.0.12-catalog` (`409d6c5`).
+The run passed signed smoke, matched exact Pages commit
+`423e09eaf2007a9a7fb93630517a18ba1546da10`, executed the Cloudflare prefix purge
+and passed canonical page/descriptor/summary byte comparisons. Pages built in 28 s;
+the wait step took 31 s, so the expanded ceiling was not exercised in this run.
+The full integration evidence is in `095-097-integration.md`. No remote validation
+work remains for this repair; physical Deck validation is a separate concern.

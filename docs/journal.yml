@@ -988,3 +988,26 @@
     Pages build, which skipped the Cloudflare purge and canonical-file verification. No
     launcher telemetry was added and the site events remain D-040 scope.
   refs: [docs/reports/087-094-catalog-integration.md, docs/status.md]
+- date: 2026-10-22
+  type: change
+  summary: >-
+    Completed the v0.0.12 publication verification: real-network Linux e2e 39797198619
+    passed. The first two signed publications exceeded the old Pages wait, so the reviewed
+    repair allows 120 polls at 10 seconds (nominal 20 minutes plus API time). Validation
+    run 39802331079 built the immutable 409d6c5 tag and passed signed smoke, exact Pages
+    commit matching, Cloudflare prefix purge and canonical page/descriptor/summary byte
+    comparisons. Its Pages wait took 31 seconds; the expanded ceiling was not exercised.
+  refs: [docs/specs/097-pages-publication-wait.md, docs/reports/097-pages-publication-wait.md]
+- date: 2026-10-22
+  type: change
+  summary: >-
+    Integrated shared Cards/List browsing for Discover and Library (095), with Select/V,
+    stable focus and categories, isolated atomic preference persistence, bounded coalescing
+    writes and post-event-loop teardown flush. Reviewed production headless previews before
+    merge; the thousand-entry model/focus and two-thousand-change write regressions pass.
+    Added the v0.0.12-catalog state fixture from its immutable tagged serializers (096),
+    preserving every older fixture byte. Combined format, workspace Clippy and all 984
+    workspace tests passed on the 095/096/097 merge. The new UI is not part of the published
+    v0.0.12 tag; integrated-source Linux CI and physical Deck validation follow separately.
+  refs: [docs/reports/095-shared-compact-list-view.md, docs/reports/096-release-state-v012.md,
+    docs/deck-testing.md]

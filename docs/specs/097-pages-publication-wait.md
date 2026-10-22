@@ -1,6 +1,6 @@
 # 097 — Pages publication wait leaves room for a real build
 
-**Status:** Ready · **Milestone:** M3 · **Depends on:** 062, 063, 079 (signed Flatpak publication)
+**Status:** Implemented and publication verified · **Milestone:** M3 · **Depends on:** 062, 063, 079 (signed Flatpak publication)
 **Origin:** coordinator, 2026-10-22, after the `v0.0.12-catalog` publication verification
 (`.scratch/catalog-publication-verification.md`). Routine repair within existing authority: no owner
 input required.
