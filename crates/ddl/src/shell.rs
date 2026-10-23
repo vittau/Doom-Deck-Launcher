@@ -1059,6 +1059,7 @@ impl Builder<'_> {
             art: 0,
             screenshot: Default::default(),
             fitted_label: false,
+            pinned: false,
             primary,
             actionable,
         });

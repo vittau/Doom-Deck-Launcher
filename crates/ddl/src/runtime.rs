@@ -91,7 +91,7 @@ const BROWSE: i32 = 230;
 /// Horizontal room for the strip, between the card grid's edges.
 const STRIP_WIDTH: f32 = 1200.;
 /// Vertical room the strip takes above the Discover grid.
-const STRIP_HEIGHT: f32 = 72.;
+const STRIP_HEIGHT: f32 = 80.;
 /// The requested categories that at least one recipe uses, in the owner's order.
 fn requested_categories(used: impl Fn(&str) -> bool) -> Vec<Category> {
     CATEGORY_ORDER
@@ -1195,6 +1195,7 @@ impl Runtime {
             (Screen::Discover, id) if (CHIP..CHIP + CHIPS_MAX as i32).contains(&id) => {
                 if let Some(category) = self.categories().get((id - CHIP) as usize) {
                     self.category = category.clone();
+                    self.scroll_anchor = None;
                 }
                 if let Some(&first) = self.discover_items().first() {
                     self.focus = card_id(first);
@@ -1620,6 +1621,7 @@ impl Runtime {
         }
         let next = (self.category_index() as isize + delta).rem_euclid(list.len() as isize);
         self.category = list[next as usize].clone();
+        self.scroll_anchor = None;
         if !(CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
             self.focus = self
                 .discover_items()
@@ -2472,18 +2474,26 @@ impl Runtime {
                                 continue;
                             }
                             let x = 12. + 408. * (visible % 3) as f32;
-                            let y = 12. + top + 438. * (visible / 3) as f32;
-                            b.card(card_id(i), x, y, 384., 410.);
-                            // Spec 074: a 28 px inset on every side keeps the art,
-                            // text and chips clear of the 20 px ornamental frame and
-                            // leaves room for two chip rows above the bottom edge.
-                            b.recipe_art(x + 28., y + 28., 328., 128., &item.recipe);
+                            let reduction = if discover { 70. } else { 0. };
+                            // A single tag row returns 38px to the screenshot.
+                            let content_shift = reduction - if discover { 38. } else { 0. };
+                            let y = 12. + top + (438. - reduction) * (visible / 3) as f32;
+                            b.card(card_id(i), x, y, 384., 410. - reduction);
+                            // Preserve the 28px frame inset. Only Discover uses
+                            // compact, single-row tags; Library retains two rows.
+                            b.recipe_art(
+                                x + 28.,
+                                y + 28.,
+                                328.,
+                                128. - content_shift,
+                                &item.recipe,
+                            );
                             if item.favorite {
                                 b.favorite(x + 316., y + 36.);
                             }
                             b.title(
                                 x + 28.,
-                                y + 164.,
+                                y + 164. - content_shift,
                                 328.,
                                 60.,
                                 display_title(&item.recipe).into(),
@@ -2491,7 +2501,7 @@ impl Runtime {
                             );
                             b.author(
                                 x + 28.,
-                                y + 230.,
+                                y + 230. - content_shift,
                                 328.,
                                 24.,
                                 item.recipe.authors.join(", ").into(),
@@ -2512,7 +2522,7 @@ impl Runtime {
                             );
                             b.label(
                                 x + 28.,
-                                y + 258.,
+                                y + 258. - content_shift,
                                 328.,
                                 24.,
                                 format!("{} · {status}", game(ui, item.recipe.base_game.game))
@@ -2521,7 +2531,7 @@ impl Runtime {
                             );
                             b.label(
                                 x + 28.,
-                                y + 286.,
+                                y + 286. - content_shift,
                                 328.,
                                 24.,
                                 if discover {
@@ -2542,12 +2552,12 @@ impl Runtime {
                                 Category::Tag(id) if discover => Some(id.as_str()),
                                 _ => None,
                             };
-                            b.chips(
-                                &tag_labels(s, &item.recipe, 2, lead),
-                                x + 28.,
-                                y + 314.,
-                                328.,
-                            );
+                            let labels = tag_labels(s, &item.recipe, 2, lead);
+                            if discover {
+                                b.discover_chips(&labels, x + 28., y + 314. - content_shift, 328.);
+                            } else {
+                                b.chips(&labels, x + 28., y + 314., 328.);
+                            }
                         }
                         if discover && self.category == Category::Favorites && shown.is_empty() {
                             b.panel(12., 12. + top, 1200., 280.);
@@ -3883,8 +3893,27 @@ impl Runtime {
                 294.
             })
         .max(64.);
+        let pinned_height = if discover && self.local.view.is_none() {
+            STRIP_HEIGHT
+        } else {
+            0.
+        };
+        ui.set_pinned_height(pinned_height);
+        let viewport = (viewport - pinned_height).max(64.);
         let focus_inset = if discover { 24. } else { 12. };
-        let plane: Vec<&ViewNode> = self.nodes.iter().filter(|n| !setup || n.x < 700.).collect();
+        // Match the clipped scrolling plane's local coordinates. Pinned nodes
+        // remain in the navigation model, but never contribute scroll bounds.
+        let scrolling: Vec<ViewNode> = self
+            .nodes
+            .iter()
+            .filter(|n| !n.pinned && (!setup || n.x < 700.))
+            .cloned()
+            .map(|mut n| {
+                n.y -= pinned_height;
+                n
+            })
+            .collect();
+        let plane: Vec<&ViewNode> = scrolling.iter().collect();
         let focused = plane.iter().find(|n| n.id == self.focus).copied();
         // Geometry is part of the anchor: a favorite toggle can move the same
         // selected item. A neutral refresh with unchanged geometry preserves
@@ -3907,9 +3936,20 @@ impl Runtime {
         if focus_changed {
             let offset = if self.local.view == Some(local_ui::View::Picker) {
                 0.
+            } else if discover && self.nodes.iter().any(|n| n.id == self.focus && n.pinned) {
+                if self.scroll_anchor.is_some() {
+                    ui.get_presented_scroll_offset()
+                } else {
+                    0.
+                }
             } else if list {
                 focused.map_or(0., |n| {
-                    continuous_offset(&plane, n, viewport, ui.get_presented_scroll_offset())
+                    let current = if discover && self.scroll_anchor.is_none() {
+                        0.
+                    } else {
+                        ui.get_presented_scroll_offset()
+                    };
+                    continuous_offset(&plane, n, viewport, current)
                 })
             } else {
                 focused.map_or(0., |n| follow_offset(&plane, n, viewport, focus_inset))
@@ -4075,11 +4115,12 @@ impl Runtime {
         let bounds = |right: bool| {
             self.nodes
                 .iter()
-                .filter(|n| !ui.get_setup_screen() || (n.x >= 700.) == right)
+                .filter(|n| !n.pinned && (!ui.get_setup_screen() || (n.x >= 700.) == right))
                 .fold((0_f32, 0_f32), |(w, h), n| {
                     (
                         (n.x + n.w + 20. - if right { 700. } else { 0. }).max(w),
-                        (n.y + n.h + 20.).max(h),
+                        (n.y + n.h + if discover && !list { 24. } else { 20. } - pinned_height)
+                            .max(h),
                     )
                 })
         };
@@ -4462,6 +4503,7 @@ impl Nodes {
             art: 0,
             screenshot: Default::default(),
             fitted_label: false,
+            pinned: false,
         });
     }
     fn panel(&mut self, x: f32, y: f32, w: f32, h: f32) {
@@ -4648,6 +4690,33 @@ impl Nodes {
         }
         if labels.is_empty() { 0 } else { row.min(1) + 1 }
     }
+    /// Discover cards use one compact row. Keep the category lead first and
+    /// omit a trailing label rather than wrapping or truncating its text.
+    fn discover_chips(&mut self, labels: &[String], x: f32, y: f32, width: f32) {
+        let mut cx = 0.;
+        for label in labels.iter().take(2) {
+            // Compact Barlow labels need a wider glyph allowance than the
+            // legacy chips. Font-metric tests cover the full tag vocabulary.
+            let w = (label.chars().count() as f32 * 14. * 0.60 + 12.).ceil();
+            if cx + w > width {
+                break;
+            }
+            self.push(
+                -999,
+                x + cx,
+                y,
+                w,
+                26.,
+                13,
+                label.as_str().into(),
+                Default::default(),
+                false,
+                false,
+            );
+            self.nodes.last_mut().unwrap().size = 14.;
+            cx += w + 6.;
+        }
+    }
     /// The Discover category strip at the top of the grid. Chips wider than the
     /// grid scroll: `start` is the first chip drawn, kept so `selected` and
     /// `focused` stay visible. Returns the new `start`.
@@ -4658,6 +4727,7 @@ impl Nodes {
         start: usize,
         focused: Option<usize>,
     ) -> usize {
+        let first = self.nodes.len();
         let widths: Vec<f32> = chips.iter().map(|(l, _)| chip_width(l, 20.)).collect();
         let span = |a: usize, b: usize| widths[a..=b].iter().sum::<f32>() + 12. * (b - a) as f32;
         let overflow = span(0, chips.len() - 1) > STRIP_WIDTH;
@@ -4696,6 +4766,9 @@ impl Nodes {
                     self.label(gx, 12., 36., 52., glyph.into(), 40.);
                 }
             }
+        }
+        for node in &mut self.nodes[first..] {
+            node.pinned = true;
         }
         start
     }
@@ -5171,6 +5244,68 @@ mod category_tests {
         let held = b.strip(&chips(&labels, 5), 5, 3, Some(5));
         assert_eq!(held, 3);
     }
+    #[test]
+    fn compact_discover_chips_fit_every_vocabulary_pair_without_truncation() {
+        if crate::headless::isolated(
+            module_path!(),
+            "compact_discover_chips_fit_every_vocabulary_pair_without_truncation",
+        ) {
+            return;
+        }
+        let (_window, ui) = crate::headless::setup();
+        let catalog = Catalog::embedded();
+        // All ordered vocabulary pairs include every pair any embedded recipe
+        // can expose, with either category lead, plus the longest pair.
+        for first in &catalog.tags.tags {
+            for second in &catalog.tags.tags {
+                if first.id == second.id {
+                    continue;
+                }
+                let labels = [first.label.clone(), second.label.clone()];
+                let mut b = Nodes { nodes: vec![] };
+                b.discover_chips(&labels, 40., 282., 328.);
+                assert_eq!(b.nodes.len(), 2, "both labels fit: {labels:?}");
+                assert_eq!(b.nodes[0].label.as_str(), first.label);
+                assert_eq!(b.nodes[1].x, b.nodes[0].x + b.nodes[0].w + 6.);
+                for n in &b.nodes {
+                    assert_eq!((n.y, n.h, n.size), (282., 26., 14.));
+                    assert!(n.x >= 40. && n.x + n.w <= 368.);
+                    ui.set_fit_label(n.label.clone());
+                    ui.set_fit_display(false);
+                    ui.set_fit_strong(false);
+                    ui.set_fit_multiline(false);
+                    ui.set_fit_size(14.);
+                    ui.set_fit_smaller(14.);
+                    ui.set_fit_width(1000.);
+                    ui.set_fit_height(26.);
+                    assert!(
+                        ui.get_fit_base_width() <= n.w - 10.,
+                        "Barlow label {} needs {}px, chip text has {}px",
+                        n.label,
+                        ui.get_fit_base_width(),
+                        n.w - 10.
+                    );
+                    assert!(ui.get_fit_base_height() <= 26.);
+                }
+            }
+        }
+        let mut b = Nodes { nodes: vec![] };
+        b.discover_chips(
+            &[
+                "Community Projects".into(),
+                "An unusually long future vocabulary label that cannot fit".into(),
+            ],
+            0.,
+            0.,
+            328.,
+        );
+        assert_eq!(b.nodes.len(), 1, "omit a second tag that cannot fit");
+        assert_eq!(
+            b.nodes[0].label, "Community Projects",
+            "preserve category lead"
+        );
+    }
+
     #[test]
     fn cards_show_at_most_two_tag_chips_led_by_the_open_category() {
         let catalog = Catalog::embedded();

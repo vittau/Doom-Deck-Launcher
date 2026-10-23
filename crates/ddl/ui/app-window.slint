@@ -56,7 +56,7 @@ component ScrollPlane inherits Flickable {
 export struct ViewNode {
     id: int, x: float, y: float, w: float, h: float,
     kind: int, label: string, detail: string, tone: int, size: float, art: int,
-    primary: bool, actionable: bool, fitted-label: bool, screenshot: string,
+    primary: bool, actionable: bool, fitted-label: bool, screenshot: string, pinned: bool,
 }
 // Preserve the opaque centre of the former nine-slice, including on sheets.
 component Frame inherits VectorFrame { background: Tokens.surface; }
@@ -186,7 +186,7 @@ component Node inherits Rectangle {
     if item.kind == 13: Rectangle {
         y: 0px; height: parent.height; width: parent.width;
         background: Tokens.raised; border-radius: parent.height / 2; border-width: 1px; border-color: Tokens.line;
-        Text { x: 10px; width: parent.width - 20px; text: root.item.label; color: root.disabled-control ? Tokens.locked-ink : Tokens.text; font-size: root.item.size * 1px; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
+        Text { x: root.item.size < 18 ? 5px : 10px; width: parent.width - 2 * self.x; text: root.item.label; color: root.disabled-control ? Tokens.locked-ink : Tokens.text; font-size: root.item.size * 1px; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
     }
     if item.kind == 15: Rectangle {
         Rectangle {
@@ -349,6 +349,7 @@ export component AppWindow inherits Window {
     in property <bool> discover-screen: false;
     out property <bool> tabs-enabled: root-screen && !sheet-open && !input-locked;
     in property <bool> continuous-list: false;
+    in property <float> pinned-height: 0;
     in-out property <float> scroll-offset: 0;
     out property <float> presented-scroll-offset: main-plane.presented-offset;
     callback follow-scroll(float, bool);
@@ -454,15 +455,26 @@ export component AppWindow inherits Window {
     }
     Text { x: 52px; y: 176px; width: root.art-band ? 772px : parent.width - 92px; height: 32px; text: root.status; color: Tokens.muted; overflow: elide; }
     Rectangle {
-        x: 20px; y: root.discover-screen ? 230px : 210px; width: parent.width - 40px; height: parent.height - (root.discover-screen ? 298px : 278px);
+        x: 20px; y: (root.discover-screen ? 230px : 210px) + root.pinned-height * 1px; width: parent.width - 40px; height: parent.height - (root.discover-screen ? 298px : 278px) - root.pinned-height * 1px;
         clip: true;
         main-plane := ScrollPlane {
         width: parent.width; height: parent.height;
         extent-width: root.content-width; extent-height: root.content-height;
         bounded: root.continuous-list;
         offset <=> root.scroll-offset;
-        for item in root.nodes: Node { x: (item.x + 8) * 1px; y: (item.y + 8) * 1px; visible: !root.setup-screen || item.x < 700; item: item; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
+        for item in root.nodes: Node { x: (item.x + 8) * 1px; y: (item.y + 8 - root.pinned-height) * 1px; visible: !item.pinned && (!root.setup-screen || item.x < 700); item: item; pulse: root.install-pulse && item.id == 1; focused: root.focused == item.id && !root.sheet-open; activate(id) => { root.clicked(id); } }
     }
+    }
+    // Independent of Flickable: both painting and hit testing stop at this edge.
+    if root.pinned-height > 0: Rectangle {
+        x: 20px; y: 230px; width: parent.width - 40px; height: root.pinned-height * 1px;
+        background: Tokens.deep; clip: true;
+        for item in root.nodes: Node {
+            x: (item.x + 8) * 1px; y: (item.y + 8) * 1px;
+            visible: item.pinned; item: item;
+            focused: root.focused == item.id && !root.sheet-open;
+            activate(id) => { root.clicked(id); }
+        }
     }
     Rectangle {
         visible: root.setup-screen;
