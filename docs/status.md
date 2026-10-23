@@ -70,6 +70,13 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   `v0.0.15-local` saved-state fixture, its guard and this status; it does not imply a newer
   binary than the published one.
 
+- **Pinned Discover categories (111, merged, not yet released):** the category strip stays fixed
+  above the scrolling content in Cards and List; the focused item is always fully visible below
+  it and switching category returns to the top. Owner-chosen compact Discover cards: 340px
+  tall with 96px art and one row of smaller tag chips; Library cards unchanged. Sixteen focused
+  tests, fmt and app Clippy passed; real-catalog off-screen renders reviewed. Deck feel and
+  readability of the 14px tags are Needs Deck Validation (PD1–PD3).
+
 ### Immediate direction
 
 The owner will validate the Deck soon and reports no further compatibility problem found.

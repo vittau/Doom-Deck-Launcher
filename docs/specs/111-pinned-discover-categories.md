@@ -1,6 +1,6 @@
 # 111 — Pinned Discover category strip
 
-**Status:** Ready · **Depends on:** 072, 090, 102
+**Status:** Implemented — merged, awaiting physical Deck validation · **Depends on:** 072, 090, 102
 **Origin:** owner, 2026-10-23: keep the Discover tabs fixed at the top while scrolling, so it
 is easier to see where they are.
 
@@ -51,3 +51,9 @@ Acceptance: scrolling Discover through more than two viewports in both layouts k
 at the same pixels, the focused item is always fully visible beneath it, and the renders show
 clean separation with no content bleeding over the strip. Physical feel on the Deck LCD is
 **Needs Deck Validation**.
+
+## Owner decisions during review (2026-10-23)
+
+- Discover cards are **340px** tall (from 410px), three per row at 384px; Library cards stay 410px.
+- Card tags use **one compact row** (14px text, 26px chips, 6px gap); a second tag that does
+  not fit is omitted rather than wrapped. The freed row gives the screenshot 96px of height.

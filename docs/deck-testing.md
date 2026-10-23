@@ -292,3 +292,16 @@ host evidence. These rows do not record a new physical test or a release result.
 | RV1 | On a mapset without alternatives (e.g. Going Down), Show recipe variants stays visible and greyed out with No recipe variants available; D-pad skips it and clicking does nothing | Gaming | ✅ 0.0.16, 2026-10-23: Going Down row greyed out |
 | RV2 | SIGIL → Show recipe variants immediately focuses/reveals COMPAT; selecting it asks for confirmation with Keep current settings focused; cancel preserves choices, explicit accept changes the variant, Hide preserves the selected components | Gaming | ✅ 0.0.16, 2026-10-23 |
 | RV3 | Ready setup shows resolved Complevel plus Set by recipe; blocked setup explains recipe control; custom setup Compatibility still offers Auto/numeric choices | Gaming | ⚠️ 0.0.16, 2026-10-23: catalog Complevel + Set by recipe correct; blocked and custom-setup parts not run |
+
+
+## Pinned Discover categories — source after spec 111
+
+**Needs Deck Validation:** see [report111](reports/111-pinned-discover-categories.md) for the
+focused tests and off-screen renders. Not yet in a published build.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| PD1 | Discover Cards and List: scroll deep with the D-pad and the stick; the category strip never moves and no card/row draws over it; the focused item is always fully visible | Gaming | ⏳ |
+| PD2 | Up from the first row reaches the strip without a jump; L2/R2 and choosing a chip return the list to the top; touch on a chip and on a half-hidden card hits the right target | Gaming | ⏳ |
+| PD3 | 340px cards: art, title, author and the one-row tags (14px) are readable at arm's length on the LCD | Gaming | ⏳ |
+
