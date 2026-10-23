@@ -269,14 +269,18 @@ Use legally owned content already on the Deck; do not download IWADs for this ch
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
-| LC1 | Library Y / Add local mapset explains base game → Create setup → Add files; first content filename names the new setup, Rename confirms/cancels without changing profiles or saves | Gaming | ⏳ |
+| LC1 | Library Y / Add local mapset explains base game → Create setup → Add files; first content filename names the new setup, Rename confirms/cancels without changing profiles or saves | Gaming | ✅ 0.0.16, 2026-10-23: owner ran it with a WAD already on the Deck |
 | LC2 | Browse a large WAD folder on internal storage and SD; compare listing-ready feel, cancel while browsing and while confirming a large selection, verify no partial add | Gaming | ⏳ |
-| LC3 | Browse an SD folder, close/reopen picker and restart DDL; folder is remembered; unmount card and reopen → Home without repeated retry | Gaming | ⏳ |
+| LC3 | Browse an SD folder, close/reopen picker and restart DDL; folder is remembered; unmount card and reopen → Home without repeated retry | Gaming | ⏳ 0.0.16, 2026-10-23: not run; no SD card on this Deck, so the unmount step is N/A |
 | LC4 | Move a middle local file, use Locate file and select the same bytes; original slot, compatibility, profile and saves remain; restart and launch | Gaming | ⏳ |
 | LC5 | Locate different bytes, first cancel then explicitly accept; Cancel starts focused and saves warning is readable; wrong patch/content kind or non-IWAD in IWAD slot fails safely | Gaming | ⏳ |
 | LC6 | Locate a custom file-based IWAD, then catalog/base-game profile extras; only the intended profile changes; registered copies/recipe members retain their existing recovery | Gaming | ⏳ |
-| LC7 | Check Rename text input/Steam keyboard, D-pad/footer/Back behavior and the Library/detail/missing/picker/confirmation layouts at LCD scale; verify Flatpak folder visibility | Gaming | ⏳ |
+| LC7 | Check Rename text input/Steam keyboard, D-pad/footer/Back behavior and the Library/detail/missing/picker/confirmation layouts at LCD scale; verify Flatpak folder visibility | Gaming | ⚠️ 0.0.16, 2026-10-23: Rename/Steam keyboard, D-pad/Back and folder visibility work for the screens reached in LC1; Locate/missing/confirmation layouts not reached |
 
+
+**0.0.16 quick pass (2026-10-23, owner, Gaming Mode):** update → owned games found →
+install a small catalog mapset → play → return: ✅ (data kept, input and Flatpak audio OK).
+LC2 and LC4–LC6 need a folder of the owner's own WADs and were deferred.
 
 ## Recipe variant clarity — source after spec 107
 
@@ -285,6 +289,6 @@ host evidence. These rows do not record a new physical test or a release result.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
-| RV1 | On a mapset without alternatives (e.g. Going Down), Show recipe variants stays visible and greyed out with No recipe variants available; D-pad skips it and clicking does nothing | Gaming | ⏳ |
-| RV2 | SIGIL → Show recipe variants immediately focuses/reveals COMPAT; selecting it asks for confirmation with Keep current settings focused; cancel preserves choices, explicit accept changes the variant, Hide preserves the selected components | Gaming | ⏳ |
-| RV3 | Ready setup shows resolved Complevel plus Set by recipe; blocked setup explains recipe control; custom setup Compatibility still offers Auto/numeric choices | Gaming | ⏳ |
+| RV1 | On a mapset without alternatives (e.g. Going Down), Show recipe variants stays visible and greyed out with No recipe variants available; D-pad skips it and clicking does nothing | Gaming | ✅ 0.0.16, 2026-10-23: Going Down row greyed out |
+| RV2 | SIGIL → Show recipe variants immediately focuses/reveals COMPAT; selecting it asks for confirmation with Keep current settings focused; cancel preserves choices, explicit accept changes the variant, Hide preserves the selected components | Gaming | ✅ 0.0.16, 2026-10-23 |
+| RV3 | Ready setup shows resolved Complevel plus Set by recipe; blocked setup explains recipe control; custom setup Compatibility still offers Auto/numeric choices | Gaming | ⚠️ 0.0.16, 2026-10-23: catalog Complevel + Set by recipe correct; blocked and custom-setup parts not run |
