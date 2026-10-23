@@ -1127,3 +1127,18 @@
     Chicken crash remains Needs Deck Validation.
   refs: [docs/specs/109-short-install-paths.md, docs/reports/109-short-install-paths.md,
     docs/releases/v0.0.16-path.md, docs/status.md]
+
+- date: 2026-10-23
+  type: finding
+  summary: >-
+    Headless Chicken (HDLSCHKN.wad) crashes DSDA-Doom 0.30.1 on Linux at startup inside
+    S_Init's sound precache. Not the path, complevel, soundfont or music backend: -nosound
+    works, -nodraw still crashes, OPL and FluidSynth both crash, and the official macOS build
+    is unaffected. The mapset ships a ZDoom-style SNDINFO naming 51 sounds (16 Ogg, 1 WAV);
+    dsda_ResolveAmbientSounds appends them to S_sfx, I_CacheSounds reaches GetSndData and
+    ConvertAudioFormat crashes inside libSDL2. Reproduced on ubuntu-latest with the official
+    AppImage and Freedoom (run 39980316374), backtrace #2 GetSndData / #3 I_CacheSounds /
+    #4 S_Init. Handoff for an upstream fix and PR to dsda-org/dsda-doom in report110; DDL does
+    not patch the engine or the WAD.
+  refs: [docs/reports/110-dsda-sound-precache-crash-handoff.md, .github/workflows/diag-hc.yml,
+    catalog/headless-chicken.toml]
