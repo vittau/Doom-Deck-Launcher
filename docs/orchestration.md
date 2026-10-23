@@ -242,28 +242,23 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Published app: `v0.0.15-local` (`9745d53`), with paired release/signed Flatpak
-  publication verified in report108. Tagged serializer fixtures through that release are
-  complete, including audio, Cards/List and local-picker preferences. Add a new fixture
-  only after the next tag.
-- Source checkpoint: `9745d53` passed ordinary Linux CI `39957952528` and is the published
-  tag, carrying 114/118 recipe screenshots and the Headless Chicken MBF21 correction. The
-  remote catalog is published; only the four recipes with no verified image remain uncovered.
-- Owner will perform Deck validation soon. Focus the current journey and CB/CV/UP checks,
-  retained state, audio and file access; old pending checkboxes do not prove current defects.
-  Use the D-039 canonical signed channel, not D-035's historical URL.
-- CI follow-up (owner deferred on 2026-10-23): the Flatpak job spends ~5.5 of its 6.6 minutes
-  recompiling every crate because `--force-clean` discards the build directory each tag. A
-  cached build dir plus `target/` keyed on `Cargo.lock`, the manifest, `cargo-sources.json`,
-  toolchain and SDK should cut it to ~1.5–2 min; caching the Flathub SDK saves another ~0.6 min.
-  Measure before claiming a speedup.
-- D-041: specs 051–053 are deferred without priority. Preserve the existing index tooling;
-  do not dispatch archive-browser work by default. Manual custom setups/extras serve
-  occasional other content. Specs106/107 are reviewed, merged and published in
-  `v0.0.15-local`: responsive local listing, remembered folder, Locate file, naming/Rename and
-  clear recipe variant controls with disabled unavailable state. Reports106/107 record 995
-  ordinary tests plus eight affected follow-up cases and reviewed off-screen frames. LC/RV
-  physical Deck checks remain pending.
+- Published app: `v0.0.18-favorites` (`3abf320`): pinned Discover categories and compact cards
+  (111, Deck-validated PD1–PD3 on 0.0.17), installed-and-favorites-first order (112, D-043) and
+  Favorites focus after unfavoriting (113). Owner paused on 2026-10-23 before testing 0.0.18:
+  ask for **DF1–DF2** results on resume and record them in `docs/deck-testing.md`.
+- Saved-state fixtures (spec 055) exist through `v0.0.15-local`; 0.0.16–0.0.18 have none.
+  D-042 allows breaking state while experimental, so add fixtures only if the owner wants them.
+- Pending Deck checks that need the owner's own WAD folder: LC2, LC4–LC6, the remaining parts
+  of LC7 and RV3 (custom/blocked setups). No SD card on the owner's Deck (SD steps N/A).
+- Headless Chicken is known broken on Linux with DSDA-Doom 0.30.1 (report 110). The owner's
+  upstream fix is [dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050); when a DSDA
+  release contains it, add that engine to `crates/ddl-core/data/engines.toml` with its SHA-256
+  and re-test the mapset.
+- Codex was at 74% of its 5h window on 2026-10-23 evening; check usage before routing per the
+  temporary override (through 2026-11-01).
+- CI follow-up (owner deferred on 2026-10-23): cache the Flatpak build dir and `target/`
+  (~5.5 of 6.6 minutes are recompilation). Measure before claiming a speedup.
+- D-041: specs 051–053 stay deferred without priority; preserve the index tooling.
 
 ## Where state lives
 
