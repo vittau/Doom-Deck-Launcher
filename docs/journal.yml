@@ -1140,5 +1140,4 @@
     AppImage and Freedoom (run 39980316374), backtrace #2 GetSndData / #3 I_CacheSounds /
     #4 S_Init. Handoff for an upstream fix and PR to dsda-org/dsda-doom in report110; DDL does
     not patch the engine or the WAD.
-  refs: [docs/reports/110-dsda-sound-precache-crash-handoff.md, .github/workflows/diag-hc.yml,
-    catalog/headless-chicken.toml]
+  refs: [docs/reports/110-dsda-sound-precache-crash-handoff.md, catalog/headless-chicken.toml]

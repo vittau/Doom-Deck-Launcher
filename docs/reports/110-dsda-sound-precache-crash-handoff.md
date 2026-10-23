@@ -48,8 +48,9 @@ S_Init: Setting up sound.
 | Same WAD, official **macOS** 0.30.1 build | Does **not** crash; Linux build only. |
 | Repeated on a CachyOS host (owner) | Same crash. |
 
-Backtrace from the official AppImage, reproduced in CI on `ubuntu-latest`
-(`.github/workflows/diag-hc.yml`, run 39980316374):
+Backtrace from the official AppImage, reproduced during this investigation with a one-off
+GitHub Actions diagnostic job on `ubuntu-latest` (run 39980316374; the temporary workflow was
+removed, the steps are below):
 
 ```
 Thread 1 "dsda-doom" received signal SIGSEGV, Segmentation fault.
@@ -125,9 +126,20 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 ```
 
 Expected: the run stops at `Precaching all sound effects...` and prints the engine's crash
-message. For a stack, build 0.30.1 from source with debug info and run it under gdb; the
-committed workflow `.github/workflows/diag-hc.yml` does the whole thing on Ubuntu with gdb
-(`gh workflow run diag-hc.yml`) and is the shortest path to a full `bt` with symbols.
+message. For a stack with symbols, build 0.30.1 from source with debug info. With the AppImage you can
+still get frames from its partial symbols; note the debugger itself must not inherit the
+AppImage libraries:
+
+```sh
+gdb -batch -q -x /dev/stdin --args ./squashfs-root/usr/bin/dsda-doom \
+  -iwad <iwad> -file HDLSCHKN.wad -complevel mbf21 -nodraw -verbose <<'EOF'
+set environment LD_LIBRARY_PATH <abs-path>/squashfs-root/usr/lib
+set environment SDL_AUDIODRIVER dummy
+set environment SDL_VIDEODRIVER dummy
+run
+bt
+EOF
+```
 
 Useful extra detail for the fix: with `-verbose` the log lists `Named sound: <name> -> <lump>
 <id>` for every SNDINFO entry just before the crash, so a breakpoint in `GetSndData` prints the
@@ -150,5 +162,5 @@ offending `sfxid`/lump.
   engine version to `crates/ddl-core/data/engines.toml` with its SHA-256.
 - Until then, Headless Chicken is **known broken** on Linux with DSDA-Doom 0.30.1; `-nosound`
   is the only workaround and DDL does not expose it per mapset.
-- Evidence: `.github/workflows/diag-hc.yml` (run 39980316374), this report, and the
-  publication history in reports 106/107/109.
+- Evidence: the CI diagnostic runs 39980316374 (backtrace) and 39982006900, this report, and
+  the publication history in reports 106/107/109.
