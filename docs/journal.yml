@@ -1103,3 +1103,27 @@
   refs: [docs/specs/108-publish-local-content-update.md,
     docs/reports/108-publish-local-content-update.md, docs/releases/v0.0.15-local.md,
     docs/status.md, docs/deck-testing.md]
+
+- date: 2026-10-23
+  type: decision
+  summary: >-
+    D-042: while DDL is experimental and the owner is the only user, releases may break on-disk
+    layouts and drop compatibility code; no migration work unless the owner asks, and the break
+    is named in the release notes. Applied immediately to the shorter install-folder change
+    (spec 109) instead of adding a legacy-directory fallback.
+  refs: [docs/decisions.md, docs/specs/109-short-install-paths.md]
+
+- date: 2026-10-23
+  type: change
+  summary: >-
+    Published v0.0.16-path at 7d3e5d0: the per-release install directory is now a bounded slug
+    of the release label, so paths lose spaces, commas and parentheses (Headless Chicken becomes
+    library/headless-chicken/RC1-2023-12-09/free/HDLSCHKN.wad). Members, hashes, downloads,
+    launch arguments and profiles unchanged; no migration per D-042. Four focused library tests,
+    fmt, denied-warning workspace Clippy and the 999-test ordinary offline suite passed; CI
+    39971956875, release 39973279644 and signed Flatpak 39973279777 succeeded on the same source
+    SHA, the site serves 0.0.16 and the tarball checksum matches. The saved-state fixture for the
+    tag is byte-identical to v0.0.15-local. Whether the shorter path fixes the owner's Headless
+    Chicken crash remains Needs Deck Validation.
+  refs: [docs/specs/109-short-install-paths.md, docs/reports/109-short-install-paths.md,
+    docs/releases/v0.0.16-path.md, docs/status.md]

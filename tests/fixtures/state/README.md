@@ -22,6 +22,7 @@ after generation (`git worktree remove --force .scratch/<tag>`).
 | v0.0.13-update | 7bf51c1 | Same scenario and explicit Default audio; the tag's production view-preference writer saves List in the isolated schema-1 `config/view.json`. |
 | v0.0.14-browse | 58e83b8 | Same scenario, explicit Default audio and List view; continuous browsing and the 12 new screenshot assets change no saved-state fields. |
 | v0.0.15-local | 9745d53 | Same scenario; the tag's production local-picker writer saves an explicit folder in the separate schema-1 `config/local-picker.json` (spec 106). |
+| v0.0.16-path | 7d3e5d0 | Same scenario and saved-state bytes; the shorter install-folder logic (spec 109) changes paths on disk, not serialized state. |
 
 Each config/data state tree contains a registered engine, two IWAD folder
 references and registry entries, two installed recipe snapshots with active and
@@ -42,18 +43,18 @@ synthetic content are expected and do not erase installed metadata.
 
 `config/audio.json` exists only in the reviewed audio-capable fixtures
 (`v0.0.10-audio`, `v0.0.11-polish`, `v0.0.12-catalog`, `v0.0.13-update`,
-`v0.0.14-browse` and `v0.0.15-local`). Each scenario calls that tag's
+`v0.0.14-browse`, `v0.0.15-local` and `v0.0.16-path`). Each scenario calls that tag's
 production `Soundfonts::select(Choice::Default)` serializer, so the guard checks
 an explicit choice survives loading. Earlier tags predate audio preferences and
 correctly load with no explicit choice. No soundfont is installed or bundled,
 and no download/engine/UI code is run.
 
-`v0.0.13-update`, `v0.0.14-browse` and `v0.0.15-local` also call their production
+`v0.0.13-update`, `v0.0.14-browse`, `v0.0.15-local` and `v0.0.16-path` also call their production
 view-preference writer with an explicit List choice. The guard reads `config/view.json`
 through the production reader and checks that older tags, which have no such file, still
 default to Cards.
 
-`v0.0.15-local` additionally calls its production local-picker writer with `/tmp`, a
+`v0.0.15-local` and `v0.0.16-path` additionally call their production local-picker writer with `/tmp`, a
 folder both supported hosts can enumerate, so `config/local-picker.json` holds real
 serializer output rather than hand-written JSON. The guard reads it through the
 production reader and accepts either the remembered folder or the documented Home

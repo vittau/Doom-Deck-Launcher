@@ -1,6 +1,6 @@
 # 109 — Short install directory names
 
-**Status:** In progress · **Depends on:** 009, 020, 022
+**Status:** Published and verified; Deck result pending · **Depends on:** 009, 020, 022
 **Origin:** owner, 2026-10-23, while investigating a Headless Chicken crash: the install
 directory used the whole `release` citation as its name, producing long paths with spaces,
 commas and parentheses. The owner asked for shorter path logic and offered to test it on the
@@ -40,10 +40,10 @@ old names.
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1) — `release_dir_name` tests pass; `install_dir` ends in the short slug for a
+- [x] **A1** (R1) — `release_dir_name` tests pass; `install_dir` ends in the short slug for a
       citation-style release.
-- [ ] **A2** (R2) — the focused library tests pass and no other install behaviour changed.
-- [ ] **A3** (R4) — CI, release and Flatpak runs succeed on the same tag SHA and the served
+- [x] **A2** (R2) — the focused library tests pass and no other install behaviour changed.
+- [x] **A3** (R4) — CI, release and Flatpak runs succeed on the same tag SHA and the served
       version is `0.0.16`.
 - [ ] **A4** (R4) — owner's Deck result recorded for the short path and the crash
       *(Needs Deck Validation)*.

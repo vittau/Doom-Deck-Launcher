@@ -2,14 +2,19 @@
 
 ## Current checkpoint — 2026-10-23
 
-**Available for Deck testing:** [v0.0.15-local](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.15-local),
-immutable source `9745d534bf9320b16fd12112ce3017af374bb4d3`, published as a Linux tarball
+**Available for Deck testing:** [v0.0.16-path](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.16-path),
+immutable source `7d3e5d01139fa7445d4d3f5d7f0b661899773139`, published as a Linux tarball
 and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
 Release and signed publication succeeded; the publication report records matching source
-provenance, version, canonical output and tarball checksum (108).
+provenance, version, canonical output and tarball checksum (109).
 
 ### Shipped
 
+- **Install paths:** the per-release install folder is now a bounded slug of the release label
+  (`library/headless-chicken/RC1-2023-12-09/free/HDLSCHKN.wad`) instead of the whole citation,
+  so paths no longer carry spaces, commas or parentheses. Existing installs are not migrated
+  (D-042): reinstall a mapset to adopt the short folder. Whether this changes the owner's
+  Headless Chicken crash is not established (109).
 - **Local content:** choosing a folder lists files from bounded inspections instead of hashing
   every byte; selected files are identified only on confirmation and that capture can be
   cancelled. The picker remembers the last usable folder, a missing file can be located in its

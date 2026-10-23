@@ -6117,6 +6117,7 @@ mod release_state_tests {
             "v0.0.13-update",
             "v0.0.14-browse",
             "v0.0.15-local",
+            "v0.0.16-path",
         ];
         for tag in required_tags {
             assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
@@ -6271,6 +6272,7 @@ mod release_state_tests {
                     | "v0.0.13-update"
                     | "v0.0.14-browse"
                     | "v0.0.15-local"
+                    | "v0.0.16-path"
             );
             assert_eq!(tree.join("config/audio.json").is_file(), has_audio, "{tag}");
             assert_eq!(
@@ -6291,7 +6293,10 @@ mod release_state_tests {
                 snapshot.audio.warning.is_none(),
                 "{tag}: audio preferences readable"
             );
-            let has_view = matches!(tag, "v0.0.13-update" | "v0.0.14-browse" | "v0.0.15-local");
+            let has_view = matches!(
+                tag,
+                "v0.0.13-update" | "v0.0.14-browse" | "v0.0.15-local" | "v0.0.16-path"
+            );
             assert_eq!(tree.join("config/view.json").is_file(), has_view, "{tag}");
             assert_eq!(
                 load_view_format(&env).unwrap(),
@@ -6304,7 +6309,7 @@ mod release_state_tests {
             );
             // Spec 106's optional local-picker preference is separate state and
             // never blocks opening an older tree that has no such file.
-            let has_picker = tag == "v0.0.15-local";
+            let has_picker = matches!(tag, "v0.0.15-local" | "v0.0.16-path");
             assert_eq!(
                 tree.join("config/local-picker.json").is_file(),
                 has_picker,
