@@ -37,6 +37,21 @@ The shortcut also works while a tab, category or Library setup control has focus
 it is inactive on details, setup, dialogs, other screens and while a game runs.
 **Needs Deck Validation:** physical Select mapping, row legibility and responsiveness.
 
+## Catalog recipe variants and compatibility
+
+On a catalog mapset's **Play setup** screen, **Show recipe variants** reveals alternatives
+provided by that recipe. Focus moves to the first revealed alternative; selecting a
+replacement asks you to confirm it. **Keep current settings** (focused first) or **B** cancels.
+**Hide recipe variants** collapses the choices without changing your selected components.
+When none are available, the row stays visible and greyed out, with **No recipe variants
+available**; controller navigation skips it. Purchased-file imports use their separate rows.
+
+Catalog **Complevel** is **Set by recipe**. A recipe variant may supply its own compatibility
+settings, but this control does not let you choose an arbitrary complevel. To choose **Auto**
+or a numeric compatibility level directly, use a **custom setup → Compatibility**. Follow
+the content author's DSDA-Doom instructions; choosing a level does not establish compatibility
+for a mod made for another engine.
+
 ## Local WADs and extra files
 
 For an occasional mapset outside Discover, keep your legally obtained files in a stable
