@@ -78,6 +78,13 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   tests, fmt and app Clippy passed; real-catalog off-screen renders reviewed. The owner
   validated PD1–PD3 on the Deck with 0.0.17 (strip fixed, navigation/touch, 14px tags readable).
 
+- **Discover installed and favorites first (112, merged, not yet released; D-043):** every
+  Discover category, in Cards and List, lists installed favorites, installed mapsets,
+  favorite-only mapsets, then the rest, chronological inside each group. Favorite toggles and
+  installs move the item with focus kept; uninstall keeps its spec 022 navigation. Ordinary
+  suite (1,008 tests), the category/favorites journey and CI 40030510101 passed. Follow-up 113
+  fixes focus after unfavoriting inside the Favorites category (pre-existing).
+
 ### Immediate direction
 
 The owner will validate the Deck soon and reports no further compatibility problem found.

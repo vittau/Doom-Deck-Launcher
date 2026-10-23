@@ -1186,3 +1186,16 @@
     The tag's saved-state fixture is still to be added (spec 055).
   refs: [docs/releases/v0.0.17-discover.md, docs/status.md, docs/deck-testing.md]
 
+- date: 2026-10-23
+  type: merge
+  summary: >-
+    Spec 112 merged (cc2fa71, D-043): Discover sorts every category by (installed, favorite)
+    descending with chronological order inside each group, via compare_discover_order in
+    ddl-core. OpenCode DeepSeek V4.1 Flash high worker (Codex was at 74% of its 5h window, so
+    the temporary Codex override did not apply). Ordinary suite 1,008 passed, category/favorites
+    journey passed, CI 40030510101 succeeded; renders of both layouts reviewed. Spec 113 written
+    for the pre-existing lost focus after unfavoriting in the Favorites category.
+  refs: [docs/specs/112-discover-installed-favorites-first.md,
+    docs/reports/112-discover-installed-favorites-first.md,
+    docs/specs/113-favorites-focus-after-unfavorite.md]
+
