@@ -1199,3 +1199,14 @@
     docs/reports/112-discover-installed-favorites-first.md,
     docs/specs/113-favorites-focus-after-unfavorite.md]
 
+- date: 2026-10-23
+  type: merge
+  summary: >-
+    Spec 113 merged (4bde97c): in Discover's Favorites category, unfavoriting the focused card
+    (on Discover or on detail) moves focus to the card now in its former slot, else the new last
+    card, else the Favorites chip with the empty panel. OpenCode DeepSeek V4.1 Flash high worker;
+    8 new tests, ordinary suite 1,016 passed, category/favorites journey passed, CI 40033575859
+    succeeded. Release 0.0.18 prepared with specs 112–113 and Deck checks DF1–DF2.
+  refs: [docs/specs/113-favorites-focus-after-unfavorite.md,
+    docs/reports/113-favorites-focus-after-unfavorite.md, docs/releases/v0.0.18-favorites.md]
+

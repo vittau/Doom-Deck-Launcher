@@ -305,3 +305,14 @@ focused tests and off-screen renders. Published in `v0.0.17-discover`.
 | PD2 | Up from the first row reaches the strip without a jump; L2/R2 and choosing a chip return the list to the top; touch on a chip and on a half-hidden card hits the right target | Gaming | ✅ 0.0.17, 2026-10-23 |
 | PD3 | 340px cards: art, title, author and the one-row tags (14px) are readable at arm's length on the LCD | Gaming | ✅ 0.0.17, 2026-10-23 |
 
+
+## Discover order and Favorites focus — source after specs 112–113
+
+**Needs Deck Validation:** see [report112](reports/112-discover-installed-favorites-first.md) and
+[report113](reports/113-favorites-focus-after-unfavorite.md). Published in `v0.0.18-favorites`.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| DF1 | In a Discover category with installed and favorite mapsets: installed favorites first, then installed, then favorite-only, then the rest (Cards and List); X on a card moves it to its new group with focus kept | Gaming | ⏳ |
+| DF2 | Favorites category: X on a middle, the last and the only card leaves focus on a visible card (or the Favorites chip with the empty panel); same after unfavoriting on the mapset page and pressing B | Gaming | ⏳ |
+
