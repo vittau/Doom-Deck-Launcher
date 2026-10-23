@@ -1324,7 +1324,18 @@ impl Runtime {
                     self.set_pistol_start(ui, recipe_id, profile_id, value);
                 }
             }
-            (Screen::Setup, 42) => self.advanced = !self.advanced,
+            (Screen::Setup, 42) => {
+                if let Some(index) = self
+                    .item()
+                    .and_then(|item| item.recipe.components.iter().position(is_recipe_variant))
+                {
+                    self.advanced = !self.advanced;
+                    // Reveal the actual choice immediately in the scrolling options pane.
+                    if self.advanced {
+                        self.focus = 100 + index as i32;
+                    }
+                }
+            }
             (Screen::Setup, 43) => ui.invoke_show_toast(text(ui, T::OrderHelp)),
             (Screen::Setup, 100..=199) => {
                 if let Some(c) = self
@@ -2815,7 +2826,7 @@ impl Runtime {
                         );
                         let mut y = 128.;
                         for (index, c) in item.recipe.components.iter().enumerate() {
-                            if c.replaces.is_some() && !c.user_supplied && !self.advanced {
+                            if is_recipe_variant(c) && !self.advanced {
                                 continue;
                             }
                             if let Some(group) = c
@@ -2942,16 +2953,31 @@ impl Runtime {
                             }
                             y += b.nodes.last().unwrap().h + 16.;
                         }
+                        let variants_available =
+                            item.recipe.components.iter().any(is_recipe_variant);
                         b.row(
                             42,
                             36.,
                             y,
                             632.,
-                            text(ui, T::Advanced),
-                            text(ui, T::AdvancedHelp),
-                            true,
+                            text(
+                                ui,
+                                if variants_available && self.advanced {
+                                    T::HideRecipeVariants
+                                } else {
+                                    T::ShowRecipeVariants
+                                },
+                            ),
+                            text(
+                                ui,
+                                if variants_available {
+                                    T::RecipeVariantsHelp
+                                } else {
+                                    T::NoRecipeVariants
+                                },
+                            ),
+                            variants_available,
                         );
-                        b.nodes.last_mut().unwrap().h = 64.;
                         y += b.nodes.last().unwrap().h + 16.;
                         b.button(
                             40,
@@ -3117,6 +3143,7 @@ impl Runtime {
                                     false,
                                 );
                             }
+                            b.label(740., 350., 448., 40., text(ui, T::RecipeControlled), 20.);
                             b.button(50, 740., 402., 448., text(ui, T::Unavailable), false);
                             b.nodes.last_mut().unwrap().actionable = false;
                             b.nodes.last_mut().unwrap().tone = 1;
@@ -4392,6 +4419,12 @@ fn problem_detail(problem: &Problem) -> Option<String> {
         _ => None,
     }
 }
+/// The exact alternatives hidden by the catalog setup's variant control.
+/// Player-supplied imports have their own always-visible flow.
+fn is_recipe_variant(component: &ddl_core::catalog::Component) -> bool {
+    component.replaces.is_some() && !component.user_supplied
+}
+
 struct Nodes {
     nodes: Vec<ViewNode>,
 }

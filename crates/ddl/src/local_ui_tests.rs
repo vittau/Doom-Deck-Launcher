@@ -997,7 +997,7 @@ fn controller_060_rows_are_entered_at_their_leftmost_item() {
         .iter()
         .position(|i| i.recipe.id == "auger-zenith")
         .unwrap();
-    r.focus = 42;
+    r.focus = 40; // The unavailable variants row is skipped.
     r.sync(&ui);
     let chips: Vec<_> = r
         .nodes
@@ -1009,7 +1009,7 @@ fn controller_060_rows_are_entered_at_their_leftmost_item() {
     r.action(&ui, Action::Up);
     assert_eq!(
         r.focus, chips[0],
-        "Advanced enters add-ons at the leftmost chip"
+        "Skill skips unavailable variants and enters add-ons at the leftmost chip"
     );
     r.action(&ui, Action::Right);
     assert_eq!(r.focus, chips[1]);
@@ -1405,5 +1405,146 @@ fn local_polish_controller_locate_equal_changed_cancel_and_busy_back() {
             .custom_show("night-maps")
             .unwrap(),
         *r.local_setup().unwrap()
+    );
+}
+
+#[test]
+fn recipe_variants_107_disabled_available_and_confirmed_states() {
+    if isolated("recipe_variants_107_disabled_available_and_confirmed_states") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let s = services(&env);
+    let mut r = runtime(&env, &s, &ui);
+    r.screen = Screen::Setup;
+    let select = |r: &Runtime, id: &str| {
+        r.snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .position(|i| i.recipe.id == id)
+            .unwrap()
+    };
+    r.selected = select(&r, "going-down");
+    r.focus = 40;
+    r.sync(&ui);
+    let row = r.nodes.iter().find(|n| n.id == 42).unwrap();
+    assert_eq!(row.label, "Show recipe variants");
+    assert_eq!(row.detail, "No recipe variants available");
+    assert!(!row.actionable);
+    assert_eq!(row.kind, 3);
+    assert!(row.h >= 80.);
+    assert!(
+        r.nodes
+            .iter()
+            .any(|n| n.label == "Complevel is set by the recipe.")
+    );
+    write_png("107-no-variants.png", &render(&window));
+    click(&mut r, &ui, 42);
+    assert!(!r.advanced, "disabled pointer activation cannot toggle");
+    r.focus = 42;
+    act(&mut r, &ui, Action::Confirm);
+    assert!(!r.advanced, "stale controller activation is also guarded");
+    r.focus = 40;
+    r.sync(&ui);
+    act(&mut r, &ui, Action::Up);
+    assert_ne!(r.focus, 42);
+    assert!(r.nodes.iter().any(|n| n.id == r.focus && n.actionable));
+    act(&mut r, &ui, Action::Down);
+    assert_eq!(r.focus, 40);
+    act(&mut r, &ui, Action::Right);
+    assert_eq!(r.focus, 41);
+    act(&mut r, &ui, Action::Down);
+    assert_eq!(r.focus, 43);
+    act(&mut r, &ui, Action::Up);
+    assert_eq!(r.focus, 40);
+    r.selected = select(&r, "sigil");
+    r.focus = 42;
+    r.sync(&ui);
+    let compat = 100
+        + r.item()
+            .unwrap()
+            .recipe
+            .components
+            .iter()
+            .position(|c| c.id == "compat")
+            .unwrap() as i32;
+    let paid = 100
+        + r.item()
+            .unwrap()
+            .recipe
+            .components
+            .iter()
+            .position(|c| c.id == "soundtrack")
+            .unwrap() as i32;
+    assert!(!r.nodes.iter().any(|n| n.id == compat));
+    assert!(r.nodes.iter().any(|n| n.id == paid));
+    assert_eq!(
+        r.nodes.iter().find(|n| n.id == 42).unwrap().label,
+        "Show recipe variants"
+    );
+    write_png("107-variants-collapsed.png", &render(&window));
+    click(&mut r, &ui, 42);
+    assert_eq!(
+        r.focus, compat,
+        "expansion brings the revealed alternative into view"
+    );
+    assert!(r.nodes.iter().any(|n| n.id == compat && n.actionable));
+    let row = r.nodes.iter().find(|n| n.id == 42).unwrap();
+    assert_eq!(row.label, "Hide recipe variants");
+    assert!(row.h >= 80.);
+    let revealed = r.nodes.iter().find(|n| n.id == compat).unwrap();
+    let top = revealed.y + 8. - ui.get_scroll_offset();
+    assert!(
+        top >= 0. && top + revealed.h <= ui.window().size().height as f32 - 278.,
+        "revealed variant must be fully inside the options viewport"
+    );
+    write_png("107-variants-expanded.png", &render(&window));
+    let before = r.item().unwrap().profile.clone();
+    click(&mut r, &ui, compat);
+    assert!(matches!(r.sheet, Some(Sheet::Component(_))));
+    assert_eq!(r.focus, 900);
+    write_png("107-variant-confirmation.png", &render(&window));
+    act(&mut r, &ui, Action::Confirm);
+    assert!(r.sheet.is_none());
+    assert_eq!(r.item().unwrap().profile, before);
+    click(&mut r, &ui, compat);
+    act(&mut r, &ui, Action::Back);
+    assert_eq!(r.item().unwrap().profile, before);
+    click(&mut r, &ui, compat);
+    act(&mut r, &ui, Action::Right);
+    act(&mut r, &ui, Action::Confirm);
+    assert!(
+        r.item()
+            .unwrap()
+            .profile
+            .components
+            .iter()
+            .any(|c| c == "compat")
+    );
+    let confirmed = r.item().unwrap().profile.clone();
+    click(&mut r, &ui, 42);
+    assert!(!r.advanced);
+    assert_eq!(r.focus, 42);
+    assert!(!r.nodes.iter().any(|n| n.id == compat));
+    assert_eq!(r.item().unwrap().profile, confirmed);
+    // Availability follows the effective snapshot recipe rather than its title or catalog ID.
+    let recipe = &mut r.snapshot.as_mut().unwrap().items[r.selected].recipe;
+    recipe.components.retain(|c| !is_recipe_variant(c));
+    r.sync(&ui);
+    assert!(!r.nodes.iter().find(|n| n.id == 42).unwrap().actionable);
+    assert_ne!(r.focus, 42);
+    // Paid/imported alternatives alone do not enable the free variant toggle.
+    assert!(
+        r.item()
+            .unwrap()
+            .recipe
+            .components
+            .iter()
+            .any(|c| c.replaces.is_some() && c.user_supplied)
     );
 }
