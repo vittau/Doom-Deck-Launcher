@@ -325,6 +325,10 @@ export component AppWindow inherits Window {
     property <bool> view-key-held: false;
     in property <bool> import-hint: false;
     in property <bool> local-add-hint: false;
+    in property <string> local-add-label: LocalStrings.add-hint;
+    in property <bool> local-single-picker: false;
+    in property <string> local-action-label;
+    in property <bool> local-cancel: false;
     in property <bool> local-remove-hint: false;
     in property <bool> local-confirm-hint: false;
     in property <bool> detail-hint: false;
@@ -556,18 +560,18 @@ export component AppWindow inherits Window {
             visible: !root.input-locked;
             y: 18px; width: parent.width; height: 28px; alignment: start;
             padding-left: root.view-hint ? 28px : 40px; padding-right: root.view-hint ? 28px : 40px; spacing: root.view-hint ? 16px : 24px;
-            Hint { badge: @tr("A"); label: @tr("Select"); }
-            Hint { badge: @tr("B"); label: root.sheet-back-later ? @tr("Later") : root.quit-hint ? @tr("Quit") : @tr("Back"); }
+            Hint { badge: @tr("A"); label: root.local-action-label != "" ? root.local-action-label : @tr("Select"); }
+            Hint { badge: @tr("B"); label: root.local-cancel ? LocalStrings.cancel : root.sheet-back-later ? @tr("Later") : root.quit-hint ? @tr("Quit") : @tr("Back"); }
             if root.favorite-hint && !root.sheet-open: Hint { badge: @tr("X"); label: root.favorite-label; }
             if root.detail-hint && !root.sheet-open: Hint { badge: @tr("X"); label: @tr("Details"); }
-            if root.local-add-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: LocalStrings.add-hint; }
+            if root.local-add-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: root.local-add-label; }
             if root.local-remove-hint && !root.sheet-open: Hint { badge: @tr("X"); label: LocalStrings.remove; }
             if root.import-hint && !root.sheet-open: Hint { badge: @tr("Y"); label: @tr("Import"); }
             if root.profile-hint: Hint { badge: @tr("L1/R1"); label: @tr("Profile"); pill: true; }
             if root.root-screen && !root.sheet-open: Hint { badge: @tr("L1/R1"); label: @tr("Tabs"); pill: true; }
             if root.view-hint: Hint { badge: @tr("Select"); label: root.list-view ? @tr("Card view") : @tr("List view"); pill: true; }
             if root.category-hint && !root.sheet-open: Hint { badge: @tr("L2/R2"); label: @tr("Category"); pill: true; }
-            if !root.sheet-open || root.local-confirm-hint: Hint { badge: @tr("Start"); label: root.local-confirm-hint ? LocalStrings.confirm : LocalStrings.quit; pill: true; }
+            if (!root.sheet-open && !root.local-single-picker) || root.local-confirm-hint: Hint { badge: @tr("Start"); label: root.local-confirm-hint ? LocalStrings.confirm : LocalStrings.quit; pill: true; }
         }
     }
     if root.input-locked: Text {x:40px;y:parent.height - 64px;height:64px;text:@tr("Game running — return here when you exit");color:Tokens.muted;vertical-alignment:center;}
