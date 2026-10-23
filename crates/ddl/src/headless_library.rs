@@ -774,7 +774,7 @@ fn continuous_lists_retarget_preserve_manual_offsets_and_render_motion() {
     r.view_format = ViewFormat::List;
     r.choose_category(Category::Favorites);
     for (screen, name, viewport) in [
-        (Screen::Discover, "discover", 502.),
+        (Screen::Discover, "discover", 422.),
         (Screen::Library, "library", 522.),
     ] {
         r.screen = screen;
@@ -787,6 +787,10 @@ fn continuous_lists_retarget_preserve_manual_offsets_and_render_motion() {
             .get_nodes()
             .iter()
             .filter(|n| n.kind == 24 && (10..40).contains(&n.id))
+            .map(|mut n| {
+                n.y -= ui.get_pinned_height();
+                n
+            })
             .collect();
         let visible = rows
             .iter()
@@ -840,7 +844,8 @@ fn continuous_lists_retarget_preserve_manual_offsets_and_render_motion() {
         assert_eq!(r.focus, reversed);
         advance_time(160);
         let offset = ui.get_presented_scroll_offset();
-        let node = ui.get_nodes().iter().find(|n| n.id == r.focus).unwrap();
+        let mut node = ui.get_nodes().iter().find(|n| n.id == r.focus).unwrap();
+        node.y -= ui.get_pinned_height();
         assert!(node.y + 4. >= offset && node.y + node.h + 12. <= offset + viewport);
         assert!(offset > 2. * viewport);
         ui.invoke_scroll(0., -137.);
@@ -912,7 +917,8 @@ fn continuous_lists_retarget_preserve_manual_offsets_and_render_motion() {
         assert_eq!(r.selected, 0, "actions see current identity immediately");
         r.action(&ui, Action::Back);
         assert_eq!(r.focus, 10);
-        let node = ui.get_nodes().iter().find(|n| n.id == r.focus).unwrap();
+        let mut node = ui.get_nodes().iter().find(|n| n.id == r.focus).unwrap();
+        node.y -= ui.get_pinned_height();
         assert!(node.y + 4. >= ui.get_scroll_offset());
         assert!(node.y + node.h + 12. <= ui.get_scroll_offset() + viewport);
     }
@@ -1037,4 +1043,203 @@ fn library_favorites_group_in_both_layouts_and_toggle_keeps_identity() {
             .map(|(i, _)| 10 + *i as i32)
             .collect::<Vec<_>>()
     );
+}
+
+/// Spec 111: production geometry, painting, input clipping, and both layouts.
+#[test]
+fn pinned_discover_categories() {
+    if isolated(module_path!(), "pinned_discover_categories") {
+        return;
+    }
+    MOCK_TIME_ONLY.store(true, std::sync::atomic::Ordering::SeqCst);
+    use crate::{input::Action, runtime::Category, services::ViewFormat};
+    use std::{cell::RefCell, rc::Rc};
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let prototype = r.snapshot.as_ref().unwrap().items[0].clone();
+    r.snapshot.as_mut().unwrap().items = (0..30)
+        .map(|index| {
+            let mut item = prototype.clone();
+            item.recipe.id = format!("pinned-{index:02}");
+            item.recipe.title = format!("Mapset {index:02}");
+            item.favorite = true;
+            item
+        })
+        .collect();
+    r.screen = Screen::Discover;
+    r.choose_category(Category::Favorites);
+    let clicks = Rc::new(RefCell::new(Vec::new()));
+    let clicked = clicks.clone();
+    ui.on_clicked(move |id| clicked.borrow_mut().push(id));
+    let click = |x, y| {
+        let position = slint::LogicalPosition::new(x, y);
+        window.dispatch_event(WindowEvent::PointerPressed {
+            position,
+            button: slint::platform::PointerEventButton::Left,
+        });
+        window.dispatch_event(WindowEvent::PointerReleased {
+            position,
+            button: slint::platform::PointerEventButton::Left,
+        });
+    };
+    let strip_pixels = |frame: &slint::SharedPixelBuffer<slint::Rgb8Pixel>| {
+        (230..310)
+            .flat_map(|y| {
+                frame.as_slice()[y * WIDTH as usize + 20..y * WIDTH as usize + 1260]
+                    .iter()
+                    .copied()
+            })
+            .collect::<Vec<_>>()
+    };
+    for (layout, name) in [(ViewFormat::Cards, "cards"), (ViewFormat::List, "list")] {
+        r.view_format = layout;
+        r.focus = 10;
+        r.sync(&ui);
+        advance_time(160);
+        let chip = ui
+            .get_nodes()
+            .iter()
+            .find(|n| n.pinned && n.actionable && n.primary)
+            .unwrap();
+        // Enter and leave the selected chip through real navigation.
+        let top = ui.get_scroll_offset();
+        r.action(&ui, Action::Up);
+        assert_eq!(r.focus, chip.id);
+        assert_eq!(
+            ui.get_scroll_offset(),
+            top,
+            "Up into pinned strip never jumps"
+        );
+        advance_time(160);
+        let baseline = render(&window);
+        write_png(&format!("111-{name}-top-chip.png"), &baseline);
+        r.action(&ui, Action::Down);
+        assert_eq!(r.focus, 10);
+        advance_time(160);
+        write_png(&format!("111-{name}-top-item.png"), &render(&window));
+        for _ in 0..20 {
+            r.action(&ui, Action::Down);
+            advance_time(16);
+        }
+        r.action(&ui, Action::Up);
+        let reversed = r.focus;
+        r.action(&ui, Action::Down);
+        r.action(&ui, Action::Up);
+        assert_eq!(
+            r.focus, reversed,
+            "direction reversal keeps the right identity"
+        );
+        advance_time(160);
+        // Every item, first/last included, and a complete reversal.
+        for id in (10..40).chain((10..40).rev()) {
+            r.focus = id;
+            r.sync(&ui);
+            advance_time(160);
+            let n = ui.get_nodes().iter().find(|n| n.id == id).unwrap();
+            let ring = if layout == ViewFormat::Cards { 16. } else { 8. };
+            let top = 230. + n.y + 8. - ring - ui.get_presented_scroll_offset();
+            let bottom = top + n.h + 2. * ring;
+            assert!(top >= 310. - 0.1, "{name} {id} ring top {top}");
+            assert!(bottom <= 732. + 0.1, "{name} {id} ring bottom {bottom}");
+        }
+        r.focus = 39;
+        r.sync(&ui);
+        advance_time(160);
+        assert!(ui.get_scroll_offset() > 2. * 422.);
+        write_png(&format!("111-{name}-deep-item.png"), &render(&window));
+        r.focus = chip.id;
+        r.sync(&ui);
+        advance_time(160);
+        let deep = render(&window);
+        write_png(&format!("111-{name}-deep-chip.png"), &deep);
+        assert_eq!(
+            strip_pixels(&baseline),
+            strip_pixels(&deep),
+            "strip pixels fixed at deep offset"
+        );
+        // Stick, wheel and Flickable drag all paint the same stationary strip.
+        for offset in [37., 137., 900.] {
+            ui.invoke_follow_scroll(offset, false);
+            advance_time(160);
+            assert_eq!(strip_pixels(&baseline), strip_pixels(&render(&window)));
+        }
+        window.dispatch_event(WindowEvent::PointerScrolled {
+            position: slint::LogicalPosition::new(600., 500.),
+            delta_x: 0.,
+            delta_y: -43.,
+        });
+        advance_time(160);
+        assert_eq!(strip_pixels(&baseline), strip_pixels(&render(&window)));
+        ui.invoke_scroll(0., 73.);
+        advance_time(160);
+        assert_eq!(strip_pixels(&baseline), strip_pixels(&render(&window)));
+        let before_drag = ui.get_scroll_offset();
+        window.dispatch_event(WindowEvent::PointerPressed {
+            position: slint::LogicalPosition::new(600., 500.),
+            button: slint::platform::PointerEventButton::Left,
+        });
+        advance_time(50);
+        window.dispatch_event(WindowEvent::PointerMoved {
+            position: slint::LogicalPosition::new(600., 440.),
+        });
+        advance_time(50);
+        window.dispatch_event(WindowEvent::PointerReleased {
+            position: slint::LogicalPosition::new(600., 440.),
+            button: slint::platform::PointerEventButton::Left,
+        });
+        advance_time(160);
+        assert!(
+            ui.get_scroll_offset() > before_drag,
+            "Flickable drag scrolls content"
+        );
+        assert_eq!(strip_pixels(&baseline), strip_pixels(&render(&window)));
+        // Position the first item across the strip's lower clipping boundary.
+        ui.invoke_follow_scroll(70., false);
+        advance_time(160);
+        render(&window);
+        clicks.borrow_mut().clear();
+        click(60., 305.); // blank lower strip margin, with a hidden mapset behind
+        assert!(
+            clicks.borrow().is_empty(),
+            "hidden content cannot receive clicks"
+        );
+        click(60., 315.); // visible part of that same item
+        assert_eq!(clicks.borrow().last(), Some(&10));
+        clicks.borrow_mut().clear();
+        click(chip.x + 28. + chip.w / 2., 270.);
+        assert_eq!(
+            clicks.borrow().as_slice(),
+            &[chip.id],
+            "chip routes independently of scroll"
+        );
+        // Category changes reset content even when a pinned chip had focus.
+        r.action(&ui, Action::NextCategory);
+        assert_eq!(ui.get_scroll_offset(), 0.);
+        r.choose_category(Category::Favorites);
+        r.focus = 10;
+        r.sync(&ui);
+        advance_time(160);
+        if layout == ViewFormat::Cards {
+            // Review-only compact alternative: transform the same production nodes.
+            let mut nodes: Vec<_> = ui.get_nodes().iter().collect();
+            for n in &mut nodes {
+                if n.pinned {
+                    continue;
+                }
+                let row = ((n.y - 92.) / 414.).floor().max(0.);
+                let relative = n.y - (92. + row * 414.);
+                n.y -= row * 46.;
+                if (n.kind == 1 && n.actionable) || n.kind == 4 {
+                    n.h -= 46.;
+                } else if relative >= 140. {
+                    n.y -= 46.;
+                }
+            }
+            ui.set_nodes(slint::ModelRc::new(slint::VecModel::from(nodes)));
+            write_png("111-cards-compact-340-review-only.png", &render(&window));
+        }
+    }
+    r.finish_preferences();
 }
