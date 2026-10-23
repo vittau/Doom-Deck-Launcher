@@ -60,11 +60,12 @@ catalog is sufficient for the current direction; occasional other content uses t
 manual custom-setup/extra-files path. Do not start archive-browser work by default.
 
 The source-based UX study is [report 105](reports/105-curated-browsing-and-local-content-review.md).
-Its strongest implementation candidate is avoiding full-file hashes while merely listing
-local folders, with a small measured reproduction and a spec before code. Folder memory,
-missing-file recovery and browsing filters are proposals, not approved implementation work.
-The guide now describes the existing manual path. No new UI, search feature or release is
-part of this documentation update.
+The owner authorized the four manual-content improvements on 2026-10-23. Implementation
+is in progress under [spec106](specs/106-local-content-polish.md): lightweight folder listing,
+last-folder memory, explicit missing-file relocation and recognizable/renameable custom
+setups. The spec preserves launch-time identity checks and profile/order isolation. Browsing
+filters/search remain proposals without priority. No new app release or physical Deck result
+is implied by this work.
 
 ## Historical milestone tables
 
