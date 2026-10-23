@@ -1,6 +1,6 @@
 # 106 — Responsive local browsing and recoverable custom setups
 
-**Status:** Ready · **Depends on:** 026, 055, 059, 095, 105 · **Decision:** D-041
+**Status:** Implemented · Host checks passed; physical Deck validation pending · **Depends on:** 026, 055, 059, 095, 105 · **Decision:** D-041
 **Origin:** owner, 2026-10-23: implement report105's manual-content improvements; avoid
 DeepSeek V4.1 Flash Free. Physical Deck validation will be performed by the owner.
 
@@ -20,6 +20,9 @@ bounded metadata/header/directory inspection and never calculate full-file SHA-2
 fake `UserFile` identities. Keep existing type/suffix/size/regular-file, WAD-directory and
 IWAD-header validation, file filtering, shortcuts and enumeration limits. Inspect on the
 background worker with cancellation between entries; no unbounded per-file threads/tasks.
+
+Browse completion must retain the current snapshot: do not rebuild/rehash the library after
+publishing a folder listing.
 
 Hash and record only selected files when confirmed for addition, including selected local
 IWADs. Revalidate at confirmation: a file changed, vanished or replaced after listing must

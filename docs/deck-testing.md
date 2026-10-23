@@ -154,7 +154,7 @@ the controller now work (gilrs).
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| L1 | Library → **New custom setup** → add a PWAD and a DEH from the SD card (file picker, A to select, Start to add), pick the IWAD, reorder with A/D-pad/A, launch | Gaming | ⚠️ | 0.0.6: custom setup with no files + Ultimate Doom plays (used to play the base game; spec 032). PWAD/DEH from SD not run |
+| L1 | Library → **Add local mapset** → add a PWAD and a DEH from the SD card (file picker, A to select, Start to add), pick the IWAD, reorder with A/D-pad/A, launch | Gaming | ⚠️ | 0.0.6: custom setup with no files + Ultimate Doom plays (used to play the base game; spec 032). PWAD/DEH from SD not run |
 | L2 | Installed mapset → Play setup → **Extra files** → add a PWAD on top; it loads after the recipe files; saves warning shows when the profile has saves | Gaming | ⏳ | Recipe files locked at the top |
 | L3 | Move or edit an added file in Desktop Mode, then launch: the missing-file / changed-file dialog names the file; "Use the changed file" works | Gaming | ⏳ | A user-file IWAD's campaign follows its file name (D-017 note) |
 
@@ -259,3 +259,20 @@ Follow the [controller layouts](steam-deck-guide.md#recommended-steam-deck-contr
 | I2 | Gyro-as-mouse layout: cursor does not disturb DDL's UI (D-009) | Gaming | ⏳ | |
 | I3 | Gamepad + gyro-as-mouse together in DSDA, normal play | Gaming | ⏳ | |
 | I4 | Strict demo recording blocks mixed input as documented | Gaming | ⏳ | |
+
+
+## Local-content polish — source after spec 106
+
+**Needs Deck Validation:** these are new source checks, not results for the published app.
+Host software-render and synthetic-file evidence is in [report106](reports/106-local-content-polish.md).
+Use legally owned content already on the Deck; do not download IWADs for this checklist.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| LC1 | Library Y / Add local mapset explains base game → Create setup → Add files; first content filename names the new setup, Rename confirms/cancels without changing profiles or saves | Gaming | ⏳ |
+| LC2 | Browse a large WAD folder on internal storage and SD; compare listing-ready feel, cancel while browsing and while confirming a large selection, verify no partial add | Gaming | ⏳ |
+| LC3 | Browse an SD folder, close/reopen picker and restart DDL; folder is remembered; unmount card and reopen → Home without repeated retry | Gaming | ⏳ |
+| LC4 | Move a middle local file, use Locate file and select the same bytes; original slot, compatibility, profile and saves remain; restart and launch | Gaming | ⏳ |
+| LC5 | Locate different bytes, first cancel then explicitly accept; Cancel starts focused and saves warning is readable; wrong patch/content kind or non-IWAD in IWAD slot fails safely | Gaming | ⏳ |
+| LC6 | Locate a custom file-based IWAD, then catalog/base-game profile extras; only the intended profile changes; registered copies/recipe members retain their existing recovery | Gaming | ⏳ |
+| LC7 | Check Rename text input/Steam keyboard, D-pad/footer/Back behavior and the Library/detail/missing/picker/confirmation layouts at LCD scale; verify Flatpak folder visibility | Gaming | ⏳ |
