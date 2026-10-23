@@ -1052,3 +1052,24 @@
     readable/renameable custom setups. Started one supervised Codex GPT-6.1 Sol medium worker;
     implementation/review/checks remain in progress. Archive search stays deferred under D-041.
   refs: [docs/specs/106-local-content-polish.md, docs/status.md]
+
+- date: 2026-10-23
+  type: change
+  summary: >-
+    Reviewed and merged spec106 locally as 95a55bb: bounded local inspection and lightweight
+    browse completion, optional atomic last-folder preference, explicit slot/profile-preserving
+    missing-file relocation, filename defaults and custom setup Rename. Fmt, denied-warning
+    workspace Clippy and 995 ordinary offline tests passed, with ten documented exclusions.
+    Synthetic host folder-loop diagnostic improved from 1047-1122 ms to 0.16-0.25 ms; this
+    excludes UI/service overhead and does not establish Deck/SD latency. No dependency or release.
+  refs: [docs/reports/106-local-content-polish.md, docs/deck-testing.md]
+- date: 2026-10-23
+  type: finding
+  summary: >-
+    Owner reports catalog Advanced clicks apparently do nothing. Source confirms it only
+    expands non-user-supplied recipe replacements, not a complevel override. Owner explicitly
+    prefers unavailable buttons visible but greyed out and skipped by focus. Spec107 defines
+    clear recipe-variant labels, disabled no-variant state and recipe-controlled complevel
+    guidance; implementation follows with the same supervised UI worker. No external approval
+    process is involved: confirmation refers to the player's recipe-variant selection.
+  refs: [docs/specs/107-catalog-variant-clarity.md, docs/status.md]

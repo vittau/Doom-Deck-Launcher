@@ -112,3 +112,13 @@ Final logs are under the same absolute `.scratch/106/` root: `clippy.txt` and
 `workspace-tests.txt`. No exhaustive/title-matrix, network e2e or SDK replay.
 No physical Deck acceptance is claimed. No implementation requirement intentionally deferred;
 archive search remains deferred by D-041, outside this task.
+
+## Coordinator acceptance
+
+Accepted and merged locally as `95a55bb`. Reviewed the scoped production changes and offline
+regressions, and all seven software-rendered review frames; corrected clipped detail help and
+ambiguous relocation-heading copy before acceptance. The merged core/app tree matches the
+worker's checked source byte-for-byte and historical state fixtures have no changes, so the
+ordinary suite was not repeated after the conflict-free merge. Retained logs and frames at
+`/Users/vitor/git/Doom-Deck-Launcher/.scratch/106/evidence/`. The same worker continues with
+separate spec107; no release or physical hardware result is implied.

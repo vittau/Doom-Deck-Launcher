@@ -60,12 +60,21 @@ catalog is sufficient for the current direction; occasional other content uses t
 manual custom-setup/extra-files path. Do not start archive-browser work by default.
 
 The source-based UX study is [report 105](reports/105-curated-browsing-and-local-content-review.md).
-The owner authorized the four manual-content improvements on 2026-10-23. Implementation
-is in progress under [spec106](specs/106-local-content-polish.md): lightweight folder listing,
-last-folder memory, explicit missing-file relocation and recognizable/renameable custom
-setups. The spec preserves launch-time identity checks and profile/order isolation. Browsing
-filters/search remain proposals without priority. No new app release or physical Deck result
-is implied by this work.
+The owner authorized the four manual-content improvements on 2026-10-23. Implemented and reviewed locally under [spec106](specs/106-local-content-polish.md):
+lightweight folder listing without full-file hashes or a full snapshot refresh, durable last
+folder, explicit slot/profile-preserving Locate file and recognizable/renameable custom
+setups. Launch-time identity verification remains. Merge `95a55bb` matches checked production
+source; fmt, denied-warning workspace Clippy and 995 ordinary offline tests passed with the
+ten documented visual exclusions. The isolated synthetic host diagnostic fell from
+1047–1122 ms to 0.16–0.25 ms; it is not complete UI latency or a Deck/SD result. See report106
+and pending LC1–LC7 Deck checks.
+
+The owner reported that the catalog Advanced row appeared active but did nothing for tested
+mapsets. Source confirms it only reveals recipe alternatives, not a generic complevel
+selector. [Spec107](specs/107-catalog-variant-clarity.md) is in progress to make the action
+clear and leave it visibly greyed out/non-actionable when unavailable, per the owner's
+explicit preference. Custom setups retain Auto/numeric Compatibility. Browsing filters/search
+remain proposals without priority. No new app release or physical Deck result is implied.
 
 ## Historical milestone tables
 
