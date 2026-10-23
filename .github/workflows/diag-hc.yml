@@ -43,8 +43,13 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p run/data run/save
-          cat > gdb.cmd <<'GDB'
+          cat > gdb.cmd <<EOF
           set pagination off
+          set environment LD_LIBRARY_PATH $PWD/squashfs-root/usr/lib
+          set environment SDL_AUDIODRIVER dummy
+          set environment SDL_VIDEODRIVER dummy
+          EOF
+          cat >> gdb.cmd <<'GDB'
           break GetSndData
           commands
           silent
@@ -55,9 +60,6 @@ jobs:
           bt
           GDB
           timeout 150 gdb -batch -q -x gdb.cmd \
-            -ex "set environment LD_LIBRARY_PATH $PWD/squashfs-root/usr/lib" \
-            -ex "set environment SDL_AUDIODRIVER dummy" \
-            -ex "set environment SDL_VIDEODRIVER dummy" \
             --args squashfs-root/usr/bin/dsda-doom \
               -iwad freedoom-0.13.0/freedoom2.wad \
               -file HDLSCHKN.wad \
@@ -65,5 +67,5 @@ jobs:
               -data run/data \
               -save run/save \
               -complevel mbf21 \
-              -nodraw 2>&1 | tail -40
+              -nodraw 2>&1 | tail -45
           echo "gdb-exit=$?"
