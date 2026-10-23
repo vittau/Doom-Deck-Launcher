@@ -1,8 +1,14 @@
 # 103 — Fill missing mapset screenshots from real public sources
 
-**Status:** Implemented — 12 of 26 added, 14 unresolved · **Depends on:** 023, 035, 037
+**Status:** Original task implemented — 12 of 26 added; later follow-ups reach 22 of 26 · **Depends on:** 023, 035, 037
 **Origin:** owner, 2026-10-22: try to find screenshots for mapsets that lack them,
 using an OpenCode worker.
+
+**Current source follow-up (2026-10-23):** subsequent commits `13cade4`, `071839d` and
+`0754810` added ten more images. Four baseline recipes remain without screenshots:
+japanese-valentines, mindblood-genesis, spaceballs-the-quest-for-more-dbp-maps and
+tomatomania. The original report103 inventory is historical; see report105 and the current
+status checkpoint. These later ten assets are not in the immutable `v0.0.14-browse` app.
 
 ## Goal and baseline
 

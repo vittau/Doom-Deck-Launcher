@@ -1,9 +1,13 @@
 # 053 — Browse UI and promotion hand-off
 
-**Status:** Ready (after 052)  ·  **Milestone:** M4  ·  **Depends on:** 030, 031, 045, 051, 052
+**Status:** Deferred — no current priority (D-041)  ·  **Milestone:** M4  ·  **Depends on:** 030, 031, 045, 051, 052
 **Origin:** spec 041 research (`docs/research/idgames-browse.md`, report R5), 2026-10-19; owner: advance M4 while Deck testing waits.
 
 **Goal:** a controller-only, couch-readable browse/search flow that never implies compatibility.
+
+**Priority update (owner, 2026-10-23):** the curated Discover catalog is sufficient for
+now; occasional other content uses manual custom setups/extras. Keep this contract for
+future consideration; it is not the next task to dispatch (D-041).
 
 ## Requirements
 

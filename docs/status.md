@@ -1,104 +1,75 @@
 # Status
 
-## Current checkpoint — 2026-10-22
+## Current checkpoint — 2026-10-23
 
-**Available for Deck testing:** [v0.0.12-catalog](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.12-catalog)
-ships the Linux tarball and the signed Flatpak update at
-[the project site](https://doomdecklauncher.com/). Release run `39793977054` and
-signed publication validation `39802331079` succeeded. Canonical site identifies app v0.0.12.
-The shared Cards/List view below follows this immutable release and is not included in it.
+**Available for Deck testing:** [v0.0.14-browse](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.14-browse),
+immutable source `58e83b8c8dabdb550633faee002fa6ba977da7ab`, published as a Linux tarball
+and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
+Release and signed publication succeeded; the publication report records matching source
+provenance, version, canonical output and tarball checksum (104).
 
-- **Integrated:** direct Play/Continue and hardware rendering defaults (064), Antaresian Reliquary
-  with MAP31 performance warning (066), Default/Arachno Audio settings (067), and verified SIGIL
-  native REG/MP3 and COMPAT/SHREDS support (068). Combined fmt/clippy and **870** workspace tests
-  passed (200 app, 628 core, 39 integration, 3 doctests); source CI `39607816657`, Flatpak artifact
-  `39607816207` and real-network Linux e2e `39607814060` passed.
-- **Website/README:** five current screenshots (including Audio), explicit content-hashed favicon
-  on both pages, app DDL artwork plus product subtitle in the header (069). Owner corrected its
-  alignment/spacing after first publication; the centered compact revision is live. Independent
-  website run `39612160906` passed Pages deployment, Cloudflare project-prefix purge and canonical
-  verification. Coordinator also compared live CSS/icon/logo/all five images with source bytes.
-- **Release-state guard:** real serializer-generated fixtures now cover all six release tags
-  through v0.0.10-audio (070), including explicit Default audio preferences. Focused integrated
-  guard, fmt and clippy passed. No application behavior changed in this follow-up.
-- **Published in v0.0.11-polish:** compact application branding,
-  specific ordered Discover categories and reachable cards across the 92-recipe catalog (071/072),
-  verified Memento Mori I/II and dedicated Doomer Boards membership (073), roomier mapset and
-  base-game cards with artwork clear of frames (074), lightweight profile-only Pistol start writes
-  with rapid-input/failure handling (075), plain normal/COMPAT SIGIL edition labels (076), and
-  an independent catalog check at every startup with its English UTC source date in Discover
-  (077, D-038). Actual launch-time file verification remains intact.
-- **Current verification:** all five refreshed shared screenshots reviewed and compared against
-  canonical served bytes. Formatting, workspace Clippy and **898 Rust tests** passed, including
-  the full unfiltered Linux CI run `39693604865`; Steam Runtime build/catalog publication,
-  Flatpak artifact `39693604642` and real-network e2e `39693602559` passed. Signed publication
-  installed and executed the new identity successfully. Downloaded tarball matches its SHA-256.
-- **Domain/identity transition published:** `https://doomdecklauncher.com/` and
-  `com.doomdecklauncher.DoomDeckLauncher` (079, D-039). Valid HTTPS and HTTP redirects work;
-  the previous project-page URL responds with a 301 to the canonical site. The signed repository
-  advertises the new ID and retires the old app ref; no installation migration was requested.
-  Cloudflare accepted the exact `doomdecklauncher.com/` prefix purge, followed by successful
-  canonical file validation. The tagged serializer fixture and seven-release guard are verified.
-- **Website follow-ups complete:** matching light/dark README header reviewed and integrated
-  (081); owner-confirmed Search Console configuration; GA4 `G-BTYE5G8WCM` deployed to both site
-  pages with one initialization each (082). Independent website run `39695211624` passed
-  deployment, prefix purge and served-file verification; the live tag was checked independently.
-  Analytics event reception and private index coverage remain unobserved. The reviewed SEO/AI
-  search audit is `reports/080-seo-and-ai-discovery-audit.md`; sitemap, entity metadata and image
-  optimization are recommendations, not implemented behavior.
-- **Two named website events live:** the Donate link sends `donate_click` (085) and both install
-  buttons send `install_click` (086), declared with `data-ga-event` and dispatched by one
-  parameter-free handler; credits and 404 stay event-free. Website runs `39720643613` and
-  `39720898607` deployed and the served page was checked: one Donate declaration, two install
-  declarations, one `gtag('event'` call site. The owner confirmed both events arriving in
-  Analytics on 2026-10-22. D-040 records that they measure intent only: they are deliberately not
-  key events, and the donation outcome stays in the Buy Me a Coffee dashboard.
-- **Catalog expansion published as v0.0.12-catalog (2026-10-22):** the shipped catalog is
-  now **118 recipes** — the previous 92 plus 25 downloadable mapsets (specs 087–089, 092, 093) and
-  the player-supplied No Rest for the Living expansion (094). Browsing is ascending first-public
-  release chronology with an optional validated `original_release` (117 day precision, 1 year,
-  unknown last, favorites never reorder); Community Projects no longer duplicates Doomer Boards;
-  `gimmick` follows Challenging. A recipe with no packages is allowed only when its required main
-  is user-supplied, so the NERVE.WAD entry installs with no network, blocks Play until the file is
-  imported and keeps the `NERVE.WAD` basename for DSDA mission selection. Reader capability and
-  bundle gate are `0.0.12`. Linear Doom was assessed and omitted (no reproducible archive bytes,
-  no established DSDA support); Sunder is pinned to the author's V.2407 build. Combined fmt,
-  workspace Clippy and workspace tests pass on `verify/087-pwads`, and the integration audit
-  re-checked all 25 downloaded archives against the inspected pins. Deck navigation, the import
-  picker with each NERVE variant, and gameplay remain **Needs Deck Validation**. Published on
-  2026-10-22: the catalog bundle on the `catalog` branch (118 recipes, `min_ddl_version` 0.0.12,
-  source commit `409d6c5`), the GitHub pre-release `v0.0.12-catalog` with
-  `ddl-linux-x86_64.tar.gz` and its verified checksum, and the signed Flatpak repository plus
-  canonical site (now v0.0.12, 2026-10-22). CI run `39793971539` passed on Linux including the
-  catalog-bundle job; release run `39793977054` passed. The first Flatpak publication timed out
-  awaiting Pages after publishing its content; retry `39798321701` hit the same limit. The
-  reviewed wait repair (097, 120 polls at 10 s, nominal ~20 minutes plus API time) was validated
-  by run `39802331079`: signed smoke, exact Pages commit, Cloudflare prefix purge and canonical
-  page/descriptor/summary byte comparisons all passed. That Pages wait took 31 s, so the expanded
-  ceiling was not needed in the successful run. Real-network e2e `39797198619` also passed.
-  The physical Deck playthrough remains pending.
-- **Shared compact browsing implemented for the next release:** Select (keyboard V) switches
-  Discover and Library between cards and readable compact rows, sharing one atomic persisted
-  preference while preserving focus/filter/order. Repeated input coalesces in one background
-  writer and normal teardown finishes the last save after the UI loop stops. Production renders
-  were reviewed and shown to the owner before merge; 1,000-entry model/focus and 2,000-change
-  persistence regressions pass. Combined format, workspace Clippy and **984 workspace tests**
-  passed after integrating 095/096/097. Integrated-source Linux CI `39805075655` passed on
-  `b598f00`, including all 984 tests and the Steam Runtime build; Flatpak `39805075851`
-  passed bundle install/version smoke and uploaded its artifact. No new application release
-  was created. Eight tagged
-  state fixtures now include `v0.0.12-catalog` (096), with all earlier fixture bytes preserved.
-  Physical Select, LCD legibility and Gaming Mode responsiveness remain **Needs Deck Validation**
-  (`deck-testing.md`, CV1–CV5). The future /idgames browse specs (051/053) also require bounded background
-  search, 50-row UI pages, stale-result rejection and measured responsiveness acceptance.
-- **Deck validation remains:** actual MIDI/MP3 playback, Gaming Mode controls, old-setup import
-  and managed SF2 access inside Flatpak; see `deck-testing.md`. The guide now documents the live
-  self-hosted signed installation and Discover update path rather than the older Flathub plan.
+### Shipped
 
-The old shutdown checkpoint is historical; both original feature workers completed and their
-merged worktrees were removed. Subsequent 069/070 workers also completed and were cleaned up.
+- **Browsing:** shared persistent Cards/List choice on Select/V (095), continuous List
+  scrolling and favorite-first installed mapsets in Library (102). Discover retains its
+  category filters and chronological ordering. Actual controller feel remains Needs Deck Validation.
+- **Catalog:** 118 recipes, including the player-supplied No Rest for the Living expansion.
+  The published app bundles screenshots for 104 recipes; 14 lacked images at the tag.
+  Downloads, user-supplied components, profiles, base games and local custom setups are implemented.
+- **Updates:** catalogs needing a newer client now ask for a DDL update rather than a connection
+  retry (098). Flatpak AppStream/display versions and binary version are synchronized (099/100).
+- **Upgrade guards:** real tagged-serializer state fixtures cover releases through
+  `v0.0.14-browse`, including audio and Cards/List preferences. This is automated evidence,
+  not a substitute for upgrading the owner's actual Deck setup.
+- **Website:** canonical domain and signed Flatpak identity are D-039. The owner confirmed
+  Analytics reception of `donate_click` and `install_click`; D-040 limits them to intent.
+  Owner reports Google search visibility; the live favicon is a reachable 256×256 PNG with
+  an explicit home-page icon link and no observed robots block. Search-result icon display
+  has not been confirmed; no favicon change is planned from that observation alone.
 
-The milestone tables below describe earlier release checkpoints; this section records newer work.
+### After the published app tag
+
+`main` at `fa4eb89` is verified by [Linux CI 39866464560](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39866464560):
+fmt, denied-warning Clippy, ordinary offline tests and catalog lint succeeded. The ordinary
+suite excludes the ten exhaustive render cases specified in 101; it is not a full-suite result.
+The catalog publication job also succeeded, and the served catalog records this source SHA.
+The daily [/idgames index run 39931095281](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39931095281)
+succeeded on 2026-10-23; the app archive browser remains unimplemented and deprioritized.
+
+- **Ten further recipe screenshots:** current source covers **114 of 118** recipes.
+  Missing: japanese-valentines, mindblood-genesis,
+  spaceballs-the-quest-for-more-dbp-maps and tomatomania. These ten additional image files
+  are not bundled in the published 0.0.14 app. Catalog refresh alone cannot deliver image
+  bytes: `screenshots.rs` resolves embedded assets and otherwise retains the painted fallback.
+- **Headless Chicken:** current/published remote recipe selects MBF21 after the owner's
+  crash at Boom. This changes catalog requirements, not an existing installed launch
+  snapshot automatically. Successful gameplay at MBF21 still needs confirmation; do not
+  present it as validated or assume an already installed copy has adopted the recipe update.
+- **No later app release is claimed.** Post-tag Rust changes concern the release-state
+  test guard, not production app behavior. Latest code/recipe checks do not imply a new binary.
+
+### Immediate direction
+
+The owner will validate the Deck soon and reports no further compatibility problem found.
+Keep outstanding hardware checks honest; do not treat every historical pending checkbox
+as an observed defect. Prioritize the install/update → find owned games → install → play →
+return journey, including retained data, physical input and Flatpak audio/file access.
+
+**D-041:** `/idgames` browsing (051–053) is deferred without priority. The curated Discover
+catalog is sufficient for the current direction; occasional other content uses the existing
+manual custom-setup/extra-files path. Do not start archive-browser work by default.
+
+The source-based UX study is [report 105](reports/105-curated-browsing-and-local-content-review.md).
+Its strongest implementation candidate is avoiding full-file hashes while merely listing
+local folders, with a small measured reproduction and a spec before code. Folder memory,
+missing-file recovery and browsing filters are proposals, not approved implementation work.
+The guide now describes the existing manual path. No new UI, search feature or release is
+part of this documentation update.
+
+## Historical milestone tables
+
+The tables below retain earlier checkpoints and their original results. For the current
+release, source delta and priority, use the checkpoint above and individual release reports.
 
 **Milestone:** M3 — `main` has 13 mapsets with tags/favorites, multiple profiles, widescreen status bars, GOG IWAD discovery, recipe updates after install, the Stained Glass logo (v3, D-029), real mapset screenshots, catalog updates without a release, a download idle timeout and local content (any WAD/ZIP/DEH, player-set load order, extras on catalog mapsets); latest pre-release is `v0.0.9-focus`; first Deck test done on `v0.0.6-local` (2026-10-19): fixes in specs 028–032  ·  **Updated:** 2026-10-20
 

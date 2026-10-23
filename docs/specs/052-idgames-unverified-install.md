@@ -1,10 +1,14 @@
 # 052 — Unverified install and launch
 
-**Status:** Ready (after 051)  ·  **Milestone:** M4  ·  **Depends on:** 006, 009, 051, D-030
+**Status:** Deferred — no current priority (D-041)  ·  **Milestone:** M4  ·  **Depends on:** 006, 009, 051, D-030
 **Origin:** spec 041 research (`docs/research/idgames-browse.md`, report R5), 2026-10-19; owner: advance M4 while Deck testing waits.
 
 **Goal:** download and launch an indexed mapset honestly and safely, with no pinned hash and no
 reviewed recipe.
+
+**Priority update (owner, 2026-10-23):** the curated Discover catalog is sufficient for
+now; occasional other content uses manual custom setups/extras. Keep this contract for
+future consideration; it is not the next task to dispatch (D-041).
 
 ## Requirements
 

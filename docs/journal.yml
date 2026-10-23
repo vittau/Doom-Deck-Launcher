@@ -1022,3 +1022,23 @@
     v0.0.12 tag remains immutable at 409d6c5. Physical Deck checks remain pending. The merged
     fixture worktree was removed; Orca's user-owned UI worktree was preserved.
   refs: [docs/reports/095-097-integration.md, docs/status.md]
+
+- date: 2026-10-23
+  type: decision
+  summary: >-
+    D-041: owner considers the curated Discover catalog sufficient and defers idgames
+    browse/search (051-053) without priority; occasional other content uses manual custom
+    setups/extras. Owner will validate the Deck soon and reports no further compatibility
+    issue found. Preserve existing index tooling without starting archive-browser work.
+  refs: [docs/decisions.md, docs/specs/051-idgames-browse-core.md, docs/specs/052-idgames-unverified-install.md, docs/specs/053-idgames-browse-ui.md]
+- date: 2026-10-23
+  type: change
+  summary: >-
+    Consolidated status around published v0.0.14-browse and the later fa4eb89 catalog/source
+    checkpoint, including 114 of 118 source recipe screenshots versus 104 in the published
+    app. Marked original screenshot inventories historical and aligned overview/orchestration
+    priorities. Source-based UX review identifies whole-file hashing during folder listing,
+    manual-route discoverability and indirect missing-file recovery as measured/proposed
+    follow-ups, not implemented defects or new UI. Added the existing manual-content route
+    to the Deck guide. No application changes, benchmark, new release or physical Deck result.
+  refs: [docs/status.md, docs/reports/105-curated-browsing-and-local-content-review.md, docs/steam-deck-guide.md]

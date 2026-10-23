@@ -4,7 +4,7 @@
 > **Audience:** AI orchestrator, implementation agents, maintainers  
 > **Primary platform:** Steam Deck / SteamOS (Gaming Mode first)  
 > **Primary engine:** DSDA-Doom (official Linux x86-64 AppImage)  
-> **Last updated:** 2026-10-21  
+> **Last updated:** 2026-10-23<br>
 > **Revision:** 1.2 — repo/docs conventions; decisions in force live in `docs/decisions.md`
 
 ## 1. Vision
@@ -56,7 +56,7 @@ DDL is **not** a DOOM engine, an Electron application, a general-purpose cross-s
 | Engine distribution | Official upstream DSDA-Doom Linux x86-64 **AppImage** from GitHub Releases |
 | Engine lifecycle | Detect/download/verify/install/update/launch/rollback, managed inside DDL's per-user data directory |
 | DDL distribution | Native Linux x86-64 application, built/tested against a suitable Steam Linux Runtime SDK; tarball initially |
-| PWAD discovery | Small curated/verified catalog initially; general `/idgames` browser later |
+| PWAD discovery | Curated catalog first; general `/idgames` browser deferred without current priority (D-041) |
 | Persistence | Local files and typed versioned manifests; SQLite only if demonstrated necessary |
 | Backend service | None required for initial release; host versioned catalog as static files |
 
@@ -86,7 +86,7 @@ DDL is **not** a DOOM engine, an Electron application, a general-purpose cross-s
 ### Core screens
 
 - **Home / Continue:** recently played, continue, favorites, setup status.
-- **Discover:** curated categories in order: Cacowards, Megawads, Community Projects, Doomer Boards, Classics, Episodes, Challenging; Favorites follows as a personal filter. All and Featured are not navigation categories (072). Full online search is added after curated browsing works.
+- **Discover:** curated categories in order: Cacowards, Megawads, Community Projects, Doomer Boards, Classics, Episodes, Challenging; Favorites follows as a personal filter. All and Featured are not navigation categories (072). General `/idgames` search is deferred without current priority (D-041); occasional other content uses manual custom setups/extras.
 - **Detail:** description, authorship, previews, source, dependencies, requirements, badges for verified/support status, Install/Play.
 - **Library:** installed mapsets and user-imported PWADs; filter/search with on-screen keyboard only if needed.
 - **Profile / Game Options:** game and skill selection, play mode, pistol-start availability, gameplay flags, advanced load order and compatibility information.

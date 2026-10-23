@@ -237,18 +237,19 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Tagged serializer fixtures through `v0.0.12-catalog` are complete (070/078/096). After the next
-  pre-release, add its saved-state fixture and update the release guard (055 R4), including
-  an explicit saved Cards/List choice through that tag's new `view.json` writer (095).
-- Owner: Deck checks V1–V6 and U1–U9 in `docs/deck-testing.md`; install/test the signed Flatpak
-  from D-035's remote after CI stabilization, including spec 059's Needs Deck Validation items.
-- Current integration 2026-10-22: catalog additions 087–094 shipped as `v0.0.12-catalog`, with
-  successful Linux e2e and signed publication/purge/canonical checks. Shared Cards/List browsing
-  (095), the v0.0.12 state fixture (096) and the reviewed Pages wait repair (097) pass combined
-  fmt/Clippy and 984 workspace tests. The new browsing format follows the published tag; see
-  `docs/status.md` for integrated-source CI results and the remaining physical Deck checks.
-- Next backlog: specs 051–053 (/idgames browse on top of the published index); the
-  "Advanced" card subtitle touching its bottom edge (cosmetic, pre-existing).
+- Published app: `v0.0.14-browse` (`58e83b8`), with paired release/signed Flatpak
+  publication verified in report104. Tagged serializer fixtures through that release are
+  complete, including Cards/List preferences. Add a new fixture only after the next tag.
+- Source checkpoint: `fa4eb89` passed ordinary Linux CI `39866464560`; current source has
+  114/118 recipe screenshots, ten more than the published app, plus the Headless Chicken
+  MBF21 recipe correction. The remote catalog is published; image bytes still need an app
+  build. See `docs/status.md` for the release/source distinction.
+- Owner will perform Deck validation soon. Focus the current journey and CB/CV/UP checks,
+  retained state, audio and file access; old pending checkboxes do not prove current defects.
+  Use the D-039 canonical signed channel, not D-035's historical URL.
+- D-041: specs 051–053 are deferred without priority. Preserve the existing index tooling;
+  do not dispatch archive-browser work by default. Manual custom setups/extras serve
+  occasional other content. Report105 evaluates polish opportunities without approving code.
 
 ## Where state lives
 

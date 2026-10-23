@@ -6,6 +6,7 @@ may lag the source tree. **Needs Deck Validation:** Gaming Mode, controller hand
 real gameplay; see the [hardware checklist](deck-testing.md).
 
 - [Install](#install-from-a-github-release)
+- [Local WADs and extra files](#local-wads-and-extra-files)
 - [Steam artwork](#make-it-look-native-in-steam)
 - [Flatpak (Discover)](#flatpak-discover)
 - [Controller layouts](#recommended-steam-deck-controller-setup)
@@ -35,6 +36,41 @@ background for the next launch. The footer names the next format: **List view** 
 The shortcut also works while a tab, category or Library setup control has focus;
 it is inactive on details, setup, dialogs, other screens and while a game runs.
 **Needs Deck Validation:** physical Select mapping, row legibility and responsiveness.
+
+## Local WADs and extra files
+
+For an occasional mapset outside Discover, keep your legally obtained files in a stable
+folder accessible to DDL. Local files remain where you put them: DDL records their paths
+and checks their identity before launch. Moving or deleting a file later blocks that setup
+until its reference is repaired. DDL uses DSDA-Doom only; selecting a file is not a claim
+that a mod for a different engine is compatible.
+
+1. Open **Library → New custom setup** (or press **Y** at the Library root).
+2. Choose **Base IWAD**, using an identified game you own or an IWAD file you supply.
+   Leave **Compatibility** on **Auto — DSDA-Doom decides** unless the mapset's instructions
+   specify a supported choice, then select **Create setup**.
+3. Open **File order**, then **Add files** (or **Y**). The picker has Home,
+   Downloads/Documents when present, Steam-library and mounted-card shortcuts when visible.
+4. Navigate to your files. **A** opens a folder or toggles a file selection; select the
+   required WAD/ZIP and DEH/BEX files. **Start**, or **Add N files**, confirms. **Parent
+   folder** goes up a directory; **B** cancels the picker without adding the selection.
+5. Follow the author's order: **A** picks up a file, **Up/Down** moves it, and **A** drops
+   it. **X** removes only its reference. Patches have a separate ordered group applied after
+   the content files. Return to the custom setup and choose **Play**.
+
+To add files to an installed Discover mapset, open its **Edit / Play setup → Extra files**
+for the active profile. Recipe files remain locked and load first; the extras apply to that
+profile. Changing content may make existing saves incompatible. Custom setups and layered
+profiles are not verified catalog configurations.
+
+If a file changes, DDL asks for explicit confirmation before using the new bytes. If a file
+is missing, restore it at the recorded location or remove its old reference and add the file
+from its new location, restoring the intended load order. Delete setup does not delete your
+original files; the separate profiles/saves deletion checkbox starts unchecked.
+
+**Needs Deck Validation:** the SD-card/controller journey and actual gameplay, including
+Flatpak visibility of the chosen location. This describes implemented controls checked in
+source and existing offline tests, not a newly completed physical test.
 
 ## Install (from a GitHub Release)
 

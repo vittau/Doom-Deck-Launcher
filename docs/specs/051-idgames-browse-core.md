@@ -1,10 +1,14 @@
 # 051 — `/idgames` browse core (fetch, cache, search)
 
-**Status:** Ready (after 050)  ·  **Milestone:** M4  ·  **Depends on:** 006, 019, 050
+**Status:** Deferred — no current priority (D-041)  ·  **Milestone:** M4  ·  **Depends on:** 006, 019, 050
 **Origin:** spec 041 research (`docs/research/idgames-browse.md`, report R5), 2026-10-19; owner: advance M4 while Deck testing waits.
 
 **Goal:** the app can list, search and page the archive offline from the cached index, and fetch a
 single `.txt` on demand for the entry page.
+
+**Priority update (owner, 2026-10-23):** the curated Discover catalog is sufficient for
+now; occasional other content uses manual custom setups/extras. Keep this contract for
+future consideration; it is not the next task to dispatch (D-041).
 
 ## Requirements
 

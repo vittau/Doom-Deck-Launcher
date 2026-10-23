@@ -1,5 +1,12 @@
 # 103 — Missing mapset screenshots
 
+> Historical task result: the 12 added / 14 unresolved inventory below describes the
+> original worker delivery. Later commits `13cade4`, `071839d` and `0754810` added ten
+> more screenshots. At `fa4eb89`, 114/118 recipes have images; the remaining four are
+> japanese-valentines, mindblood-genesis, spaceballs-the-quest-for-more-dbp-maps and
+> tomatomania. The later ten images require a newer app build than `v0.0.14-browse`.
+
+
 ## Outcome
 
 **12 of the 26 baseline recipes gained a verified real in-game image; 14 remain

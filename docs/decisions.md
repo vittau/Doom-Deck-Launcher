@@ -63,6 +63,16 @@ pursued. Reading the two events next to the dashboard numbers, as a click-to-don
 only supported interpretation. Adding any other event, parameter, identifier or an in-app
 measurement needs a new decision.
 
+**D-041 — Curated discovery first; archive browsing deferred (Accepted, owner, 2026-10-23).**
+The existing Discover catalog already covers enough important mapsets for the current product
+scope. `/idgames` browse/search and unverified installation (specs 051–053) remain in the
+backlog without priority; do not treat them as the default next development step. Occasional
+other DSDA-compatible content uses the existing manual custom-setup and profile extra-files
+flows (D-026). Preserve the existing index tooling; this decision neither removes it nor
+requests changes to its scheduled workflow. Focus near-term work on Deck validation and
+supported improvements to the existing journey. The owner will perform Deck validation soon;
+UX proposals require evidence and a spec before implementation.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
