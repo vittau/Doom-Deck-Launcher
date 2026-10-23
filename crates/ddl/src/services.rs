@@ -562,16 +562,63 @@ pub struct Directory {
     pub path: PathBuf,
     pub entries: Vec<(PathBuf, bool)>,
     pub shortcuts: Vec<PathBuf>,
-    pub files: Vec<UserFile>,
+    pub files: Vec<local::Inspection>,
     pub iwad_files: BTreeSet<PathBuf>,
+}
+#[derive(Debug, Clone)]
+pub enum LocalSlot {
+    Iwad,
+    File(usize),
+    Patch(usize),
+}
+#[derive(Debug, Clone)]
+pub enum ReplacementTarget {
+    Custom(CustomSetup, LocalSlot),
+    Extras(Profile, usize),
+}
+impl ReplacementTarget {
+    pub fn file(&self) -> Option<&UserFile> {
+        match self {
+            Self::Custom(s, LocalSlot::Iwad) => match &s.iwad {
+                CustomIwad::File { file } => Some(file),
+                _ => None,
+            },
+            Self::Custom(s, LocalSlot::File(i)) => s.files.get(*i),
+            Self::Custom(s, LocalSlot::Patch(i)) => s.patches.get(*i),
+            Self::Extras(p, i) => p.extras.get(*i),
+        }
+    }
+    fn check(&self, replacement: &UserFile) -> Result<(), CliFailure> {
+        let old = self
+            .file()
+            .ok_or_else(|| CliFailure::message("Missing slot"))?;
+        if replacement.kind != old.kind
+            || matches!(self, Self::Custom(_, LocalSlot::Iwad))
+                && !local::is_iwad_header(&replacement.path).unwrap_or(false)
+        {
+            return Err(CliFailure::message(
+                "Replacement has the wrong file kind or IWAD header",
+            ));
+        }
+        Ok(())
+    }
+}
+fn capture(path: &Path, cancel: &CancellationToken) -> Result<UserFile, CliFailure> {
+    UserFile::read_cancellable(path, || cancel.is_cancelled())
+        .map_err(|e| CliFailure::message(e.to_string()))
 }
 /// UI local-content operations execute on the same worker as catalog services.
 #[derive(Debug, Clone)]
 pub enum LocalCommand {
     Browse(PathBuf),
+    OpenPicker(Option<PathBuf>),
+    Iwad(CustomSetup, PathBuf),
+    Rename(CustomSetup, String),
+    AddNamed(String, Option<String>, Vec<PathBuf>, Option<String>),
+    PrepareReplacement(ReplacementTarget, PathBuf),
+    ApplyReplacement(ReplacementTarget, UserFile),
     Create(String, NewIwad, Compatibility),
     Save(CustomSetup),
-    Add(String, Option<String>, Vec<PathBuf>),
     Extras(Profile),
     Delete(String, bool),
     Accept(String, Option<String>),
@@ -663,6 +710,7 @@ impl Command {
 }
 #[derive(Debug)]
 pub enum Event {
+    Replacement(ReplacementTarget, UserFile),
     ViewFormat(ViewFormat),
     Progress(InstallProgress),
     Working,
@@ -684,6 +732,8 @@ pub enum Event {
 /// How the UI refreshes after a command (spec 075, R1).
 #[derive(Debug)]
 pub enum Refresh {
+    /// Local browsing/inspection publishes its result without rehashing the library.
+    None,
     /// Rebuild and install the whole snapshot.
     Full,
     /// The command reported the single value it changed, so no snapshot is
@@ -938,6 +988,69 @@ impl Services {
         Ok(Refresh::Profile(Box::new(profile)))
     }
 
+    fn check_replacement_target(&self, target: &ReplacementTarget) -> Result<(), CliFailure> {
+        let matches = match target {
+            ReplacementTarget::Custom(setup, _) => self.custom_show(&setup.id)? == *setup,
+            ReplacementTarget::Extras(profile, _) => {
+                self.extras_profile(&profile.recipe_id, Some(&profile.id))? == *profile
+            }
+        };
+        if matches {
+            Ok(())
+        } else {
+            Err(CliFailure::message(
+                "Target changed; select the missing file again",
+            ))
+        }
+    }
+    fn local_add(
+        &mut self,
+        id: &str,
+        profile: Option<&str>,
+        paths: &[PathBuf],
+        placeholder: Option<&str>,
+        cancel: &CancellationToken,
+    ) -> Result<(), CliFailure> {
+        let files: Vec<_> = paths
+            .iter()
+            .map(|p| capture(p, cancel))
+            .collect::<Result<_, _>>()?;
+        let _lock = self.lock_cli()?;
+        if cancel.is_cancelled() {
+            return Err(CliFailure::message("cancelled"));
+        }
+        if self.has_custom(id) {
+            let mut setup = self.custom_show(id)?;
+            let name = if setup.files.is_empty() && placeholder == Some(setup.name.as_str()) {
+                files
+                    .iter()
+                    .find(|f| !f.kind.is_patch())
+                    .and_then(|f| local::picker::filename_name(&f.path))
+            } else {
+                None
+            };
+            for file in files {
+                setup
+                    .add(file)
+                    .map_err(|e| CliFailure::message(e.to_string()))?;
+            }
+            if let Some(name) = name {
+                setup.name = name;
+            }
+            self.save_custom(setup)?;
+        } else {
+            let mut profile = self.extras_profile(id, profile)?;
+            for file in files {
+                if profile.extras.iter().any(|f| f.path == file.path) {
+                    return Err(CliFailure::message("File already added"));
+                }
+                profile.extras.push(file);
+            }
+            self.save_extras(profile)?;
+        }
+        Ok(())
+    }
+
     fn execute_local(
         &mut self,
         command: LocalCommand,
@@ -950,6 +1063,26 @@ impl Services {
         };
         let result: Result<(), CliFailure> = (|| {
             match command {
+                LocalCommand::OpenPicker(preferred) => {
+                    let path = preferred
+                        .filter(|p| local::picker::usable(p))
+                        .unwrap_or_else(|| {
+                            local::picker::remembered(&self.env.paths.config, &self.env.home)
+                        });
+                    if let Err(error) =
+                        self.execute_local(LocalCommand::Browse(path.clone()), cancel, emit)
+                    {
+                        if cancel.is_cancelled() || path == self.env.home {
+                            return Err(CliFailure::message(error.to_string()));
+                        }
+                        self.execute_local(
+                            LocalCommand::Browse(self.env.home.clone()),
+                            cancel,
+                            emit,
+                        )
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                    }
+                }
                 LocalCommand::Browse(path) => {
                     let mut directory = self
                         .browse(&path, false, cancel)
@@ -962,7 +1095,7 @@ impl Services {
                             return Err(CliFailure::message("cancelled"));
                         }
                         if let Ok(entry) = entry
-                            && let Ok(file) = UserFile::read(&entry.path())
+                            && let Ok(file) = local::Inspection::read(&entry.path())
                         {
                             directory.entries.push((file.path.clone(), false));
                             if local::is_iwad_header(&file.path).unwrap_or(false) {
@@ -997,20 +1130,83 @@ impl Services {
                         .into_iter()
                         .filter(|p| p.is_dir()),
                     );
+                    if cancel.is_cancelled() {
+                        return Err(CliFailure::message("cancelled"));
+                    }
+                    if let Err(error) = local::picker::remember(&self.env.paths.config, &path) {
+                        tracing::warn!(%error, "could not remember picker folder");
+                    }
                     emit(Event::Directory(directory));
                 }
                 LocalCommand::Create(name, iwad, compatibility) => {
-                    self.custom_create(&name, None, iwad, compatibility)?;
+                    self.custom_create_cancel(&name, None, iwad, compatibility, cancel)?;
                 }
                 LocalCommand::Save(setup) => {
                     let _lock = self.lock_cli()?;
                     self.save_custom(setup)?;
                 }
-                LocalCommand::Add(id, profile, paths) => {
-                    if self.has_custom(&id) {
-                        self.custom_add_file(&id, &paths)?;
-                    } else {
-                        self.extras_add(&id, profile.as_deref(), &paths)?;
+                LocalCommand::AddNamed(id, profile, paths, placeholder) => {
+                    self.local_add(
+                        &id,
+                        profile.as_deref(),
+                        &paths,
+                        placeholder.as_deref(),
+                        cancel,
+                    )?;
+                }
+                LocalCommand::Iwad(expected, path) => {
+                    let file = capture(&path, cancel)?;
+                    if !local::is_iwad_header(&path).unwrap_or(false) {
+                        return Err(CliFailure::message("Select a file with an IWAD header"));
+                    }
+                    let _lock = self.lock_cli()?;
+                    if self.custom_show(&expected.id)? != expected {
+                        return Err(CliFailure::message("Setup changed; try again"));
+                    }
+                    let mut setup = expected;
+                    setup.iwad = CustomIwad::File { file };
+                    self.save_custom(setup)?;
+                }
+                LocalCommand::Rename(expected, name) => {
+                    let name = ddl_core::profiles::validate_name(&name, "", None, &[])
+                        .map_err(CliFailure::message)?;
+                    let _lock = self.lock_cli()?;
+                    if self.custom_show(&expected.id)? != expected {
+                        return Err(CliFailure::message("Setup changed; try again"));
+                    }
+                    let mut setup = expected;
+                    setup.name = name;
+                    self.custom
+                        .save(&setup)
+                        .map_err(|e| CliFailure::message(e.to_string()))?;
+                }
+                LocalCommand::PrepareReplacement(target, path) => {
+                    let file = capture(&path, cancel)?;
+                    target.check(&file)?;
+                    self.check_replacement_target(&target)?;
+                    emit(Event::Replacement(target, file));
+                }
+                LocalCommand::ApplyReplacement(target, file) => {
+                    let fresh = capture(&file.path, cancel)?;
+                    if fresh != file {
+                        return Err(CliFailure::message("Replacement changed; select it again"));
+                    }
+                    target.check(&fresh)?;
+                    let _lock = self.lock_cli()?;
+                    self.check_replacement_target(&target)?;
+                    match target {
+                        ReplacementTarget::Custom(mut setup, slot) => {
+                            match slot {
+                                LocalSlot::Iwad => setup.iwad = CustomIwad::File { file: fresh },
+                                LocalSlot::File(index) => setup.files[index] = fresh,
+                                LocalSlot::Patch(index) => setup.patches[index] = fresh,
+                            }
+                            self.save_custom(setup)?;
+                        }
+                        ReplacementTarget::Extras(mut profile, index) => {
+                            profile.extras[index] = fresh;
+                            self.save_extras(profile)?;
+                        }
                     }
                 }
                 LocalCommand::Extras(profile) => {
@@ -2193,6 +2389,15 @@ impl Services {
         }
         if let Command::Local(LocalCommand::BasePistolStart { profile_id, value }) = &command {
             return self.set_base_pistol_start(profile_id, *value);
+        }
+        if let Command::Local(
+            operation @ (LocalCommand::Browse(_)
+            | LocalCommand::OpenPicker(_)
+            | LocalCommand::PrepareReplacement(..)),
+        ) = command
+        {
+            self.execute_local(operation, cancel, emit)?;
+            return Ok(Refresh::None);
         }
         self.execute_full(command, cancel, emit)
             .map(|()| Refresh::Full)
@@ -3646,6 +3851,16 @@ impl Services {
         iwad: NewIwad,
         compatibility: Compatibility,
     ) -> Result<CustomSetup, CliFailure> {
+        self.custom_create_cancel(name, id, iwad, compatibility, &CancellationToken::new())
+    }
+    fn custom_create_cancel(
+        &mut self,
+        name: &str,
+        id: Option<&str>,
+        iwad: NewIwad,
+        compatibility: Compatibility,
+        cancel: &CancellationToken,
+    ) -> Result<CustomSetup, CliFailure> {
         let _lock = self.lock_cli()?;
         let id = match id {
             Some(id) => {
@@ -3667,8 +3882,7 @@ impl Services {
             NewIwad::Variant(variant) => CustomIwad::Identified { variant },
             NewIwad::File(path) => {
                 let path = absolute_path(&path)?;
-                let file = UserFile::read(&path)
-                    .map_err(|error| CliFailure::message(error.to_string()))?;
+                let file = capture(&path, cancel)?;
                 if file.kind != local::Kind::Wad || !local::is_iwad_header(&path).unwrap_or(false) {
                     return Err(CliFailure::message(format!(
                         "`{}` is not an IWAD: its header is not `IWAD`",
@@ -3678,6 +3892,9 @@ impl Services {
                 CustomIwad::File { file }
             }
         };
+        if cancel.is_cancelled() {
+            return Err(CliFailure::message("cancelled"));
+        }
         let setup = CustomSetup::new(id.clone(), name, iwad, compatibility, now_unix_secs());
         setup
             .validate()
@@ -4759,15 +4976,15 @@ mod tests {
                 assert_eq!(saved.skill, 5, "other fields are preserved");
                 assert_eq!(saved.components, profile.components);
             }
-            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+            Refresh::Full | Refresh::None => panic!("the toggle must not rebuild the snapshot"),
         }
         match toggle(&mut s, false) {
             Refresh::Profile(saved) => assert!(!saved.pistol_start),
-            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+            Refresh::Full | Refresh::None => panic!("the toggle must not rebuild the snapshot"),
         }
         match toggle(&mut s, false) {
             Refresh::Profile(saved) => assert!(!saved.pistol_start),
-            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+            Refresh::Full | Refresh::None => panic!("the toggle must not rebuild the snapshot"),
         }
         assert_eq!(
             s.counters().snapshots(),
@@ -4833,7 +5050,7 @@ mod tests {
             .expect("the first press succeeds")
         {
             Refresh::Profile(saved) => assert!(saved.pistol_start),
-            Refresh::Full => panic!("the toggle must not rebuild the snapshot"),
+            Refresh::Full | Refresh::None => panic!("the toggle must not rebuild the snapshot"),
         }
         assert_eq!(s.counters().snapshots(), snapshots, "no snapshot built");
         assert!(s.profiles.load(&profile.id).unwrap().pistol_start);
@@ -4922,7 +5139,9 @@ mod tests {
                 assert!(saved.pistol_start);
                 assert_eq!(saved.recipe_id, base.id());
             }
-            Refresh::Full => panic!("the base toggle must not rebuild the snapshot"),
+            Refresh::Full | Refresh::None => {
+                panic!("the base toggle must not rebuild the snapshot")
+            }
         }
         let stored = s.profiles.load(&profile_id).unwrap();
         assert!(stored.pistol_start);
@@ -6101,3 +6320,7 @@ mod release_state_tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "local_polish_tests.rs"]
+mod local_polish_tests;

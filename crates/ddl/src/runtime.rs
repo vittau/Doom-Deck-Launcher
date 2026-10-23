@@ -454,6 +454,7 @@ impl Runtime {
                             emit(Event::ProfileSaved(*profile));
                             Ok(None)
                         }
+                        services::Refresh::None => Ok(None),
                         services::Refresh::Full => services.snapshot().map(|s| Some(Box::new(s))),
                     }
                 });
@@ -509,6 +510,7 @@ impl Runtime {
                     self.playing = true;
                     self.neutral = true;
                 }
+                Event::Replacement(target, file) => self.local_replacement_ready(target, file),
                 Event::Directory(d) => {
                     self.directory = Some(d);
                     if self.local.view.is_none() {
@@ -569,9 +571,9 @@ impl Runtime {
                                 self.replace_snapshot(*snapshot);
                                 self.unreadable.clear();
                                 self.recovery_attempts = 0;
-                                self.local_finished(ui, &command);
                                 self.problem = None;
                             }
+                            self.local_finished(ui, &command);
                             self.pistol_in_flight = false;
                             if let Some(Command::UpdateMapset(id)) = &command
                                 && let Some(item) = self
@@ -851,6 +853,7 @@ impl Runtime {
             match action {
                 Action::Back => {
                     self.sheet = None;
+                    self.local.renaming = None;
                     self.focus = self.invoking;
                 }
                 Action::Up | Action::Down
@@ -1845,6 +1848,9 @@ impl Runtime {
         }
     }
     fn profile_action(&mut self, ui: &AppWindow) {
+        if self.rename_setup_action(ui) {
+            return;
+        }
         let Some((target, profile, profiles)) = self.base_profile_context().or_else(|| {
             self.item().map(|item| {
                 (
@@ -1942,7 +1948,11 @@ impl Runtime {
     fn profile_sheet(&self, ui: &AppWindow) {
         let mut b = Nodes::new(ui);
         if matches!(self.sheet, Some(Sheet::ProfileNames)) {
-            ui.set_sheet_title(text(ui, T::RenameProfile));
+            ui.set_sheet_title(if self.local.renaming.is_some() {
+                ui.global::<crate::LocalStrings>().get_rename()
+            } else {
+                text(ui, T::RenameProfile)
+            });
             // Invisible navigation anchor forwards controller focus to TextInput.
             b.button(918, 32., 140., 656., "".into(), false);
             b.nodes.last_mut().unwrap().kind = 0;

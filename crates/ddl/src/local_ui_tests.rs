@@ -207,6 +207,11 @@ fn local_new_setup_iwad_compatibility_and_content_filtered_multiselect() {
     }
     write_png("026-file-picker-multiselect.png", &render(&window));
     act(&mut r, &ui, Action::Menu); // Start confirms
+    assert_eq!(
+        r.local_setup().unwrap().name,
+        "tiny",
+        "first content filename names only this session's new placeholder"
+    );
     assert_eq!(r.local.view, Some(View::Order));
     assert_eq!(r.local_setup().unwrap().files.len(), 2);
     // B cancels a later picker without adding anything and restores the editor.
@@ -913,7 +918,7 @@ fn controller_057_focus_walks_every_multi_item_screen() {
     r.sync(&ui);
     click(&mut r, &ui, CUSTOM);
     assert_eq!(r.local.view, Some(View::Detail));
-    walk_rows(&mut r, &ui, &[&[1, 2], &[3], &[4], &[5]]);
+    walk_rows(&mut r, &ui, &[&[1, 2], &[3], &[4], &[6, 5]]);
     r.local.creating = Some("New setup".into());
     r.local.iwad = Some(NewIwad::File(env.home.join("base.wad")));
     r.local.view = Some(View::New);
@@ -1251,4 +1256,154 @@ fn controller_057_right_stick_scrolls_planes_without_focus_changes() {
     mapper.event(0, Signal::Axis(Axis::RightStickY, 0.1), Duration::ZERO);
     assert_eq!(mapper.scroll(CONFIG.poll), (0., 0.));
     assert_eq!(ui.get_focused(), focus);
+}
+
+#[test]
+fn local_polish_controller_rename_guidance_and_identity_refresh() {
+    if isolated("local_polish_controller_rename_guidance_and_identity_refresh") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (s, _) = custom(&env);
+    let mut r = runtime(&env, &s, &ui);
+    assert!(
+        r.nodes
+            .iter()
+            .any(|n| n.id == NEW && n.label == "Add local mapset")
+    );
+    assert_eq!(ui.get_local_add_label(), "Add local mapset");
+    write_png("106-library.png", &render(&window));
+    act(&mut r, &ui, Action::Y);
+    assert_eq!(r.local.view, Some(View::New));
+    assert!(ui.get_status().contains("create the setup"));
+    act(&mut r, &ui, Action::Back);
+    click(&mut r, &ui, CUSTOM);
+    write_png("106-detail.png", &render(&window));
+    let before = r.local_setup().unwrap().clone();
+    let profiles = r.snapshot.as_ref().unwrap().custom_profiles.clone();
+    click(&mut r, &ui, 6);
+    assert!(ui.get_profile_name_open());
+    assert_eq!(r.focus, 918);
+    ui.set_profile_name(" ".into());
+    click(&mut r, &ui, 917);
+    assert!(!ui.get_profile_name_error().is_empty());
+    write_png("106-rename-invalid.png", &render(&window));
+    ui.set_profile_name("Renamed maps".into());
+    ui.set_profile_name_error("".into()); // TextInput's edited callback clears this in production.
+    write_png("106-rename.png", &render(&window));
+    act(&mut r, &ui, Action::Back);
+    assert!(r.local.renaming.is_none());
+    assert_eq!(r.local_setup().unwrap(), &before);
+    assert_eq!(r.focus, 6);
+    click(&mut r, &ui, 6);
+    ui.set_profile_name("Renamed maps".into());
+    click(&mut r, &ui, 917);
+    let mut expected = before;
+    expected.name = "Renamed maps".into();
+    assert_eq!(r.local_setup().unwrap(), &expected);
+    assert_eq!(r.snapshot.as_ref().unwrap().custom_profiles, profiles);
+    assert_eq!(ui.get_heading(), "Renamed maps");
+    act(&mut r, &ui, Action::Back);
+    assert!(r.nodes.iter().any(|n| n.label == "Renamed maps"));
+    let mut profile = profiles[0].clone();
+    profile.last_played = Some(u64::MAX - 1);
+    ProfileStore::new(&env.paths.config, &env.paths.data)
+        .save(&profile)
+        .unwrap();
+    r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
+    r.screen = Screen::Home;
+    r.sync(&ui);
+    assert!(r.nodes.iter().any(|n| n.label == "Renamed maps"));
+}
+
+#[test]
+fn local_polish_controller_locate_equal_changed_cancel_and_busy_back() {
+    if isolated("local_polish_controller_locate_equal_changed_cancel_and_busy_back") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (s, files) = custom(&env);
+    let original = s.custom_show("night-maps").unwrap();
+    let moved = env.home.join("moved.wad");
+    fs::rename(&files[0], &moved).unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    click(&mut r, &ui, CUSTOM);
+    click(&mut r, &ui, 1);
+    assert!(matches!(r.local.dialog, Some(Dialog::Issue(_, false))));
+    assert_eq!(r.focus, 900);
+    assert!(
+        ui.get_sheet_nodes()
+            .iter()
+            .any(|n| n.id == 901 && n.label == "Locate file")
+    );
+    write_png("106-missing-locate.png", &render(&window));
+    click(&mut r, &ui, 901);
+    assert!(r.local.relocation.is_some());
+    assert!(!ui.get_local_confirm_hint());
+    assert!(!r.nodes.iter().any(|n| n.id == 1 && n.actionable));
+    write_png("106-single-picker.png", &render(&window));
+    let select = |r: &Runtime, path: &Path| {
+        PICK + r
+            .directory
+            .as_ref()
+            .unwrap()
+            .entries
+            .iter()
+            .position(|(p, _)| p == path)
+            .unwrap() as i32
+    };
+    let id = select(&r, &moved);
+    click(&mut r, &ui, id);
+    assert!(r.local.dialog.is_none());
+    assert_eq!(r.local_setup().unwrap().files[0].path, moved);
+    // Different bytes need a separate, Cancel-focused confirmation.
+    fs::remove_file(&moved).unwrap();
+    r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
+    r.sync(&ui);
+    click(&mut r, &ui, 1);
+    click(&mut r, &ui, 901);
+    let different = env.home.join("different.wad");
+    fs::write(&different, b"PWAD\0\0\0\0\x0c\0\0\0different").unwrap();
+    r.local_op(&ui, Op::Browse(env.home.clone()));
+    wait(&mut r, &ui);
+    let id = select(&r, &different);
+    click(&mut r, &ui, id);
+    assert!(matches!(r.local.dialog, Some(Dialog::Replacement(..))));
+    assert_eq!(r.focus, 900);
+    write_png("106-changed-replacement.png", &render(&window));
+    let unchanged = r.local_setup().unwrap().clone();
+    act(&mut r, &ui, Action::Back);
+    assert_eq!(r.local_setup().unwrap(), &unchanged);
+    let id = select(&r, &different);
+    click(&mut r, &ui, id);
+    click(&mut r, &ui, 901);
+    let after = r.local_setup().unwrap().clone();
+    assert_eq!(after.id, original.id);
+    assert_eq!(after.files[0].path, different);
+    assert_eq!(after.files[1], original.files[1]);
+    assert_eq!(after.patches, original.patches);
+    // Deterministic UI cancellation seam, paired with chunk-cancel core tests:
+    // no timing race against a fast host hash.
+    r.busy = true;
+    r.pending = Some(Command::Local(Op::PrepareReplacement(
+        ReplacementTarget::Custom(after.clone(), LocalSlot::File(0)),
+        different,
+    )));
+    r.action(&ui, Action::Back);
+    assert!(r.cancel.is_cancelled());
+    r.busy = false;
+    r.pending = None;
+    assert_eq!(
+        Services::open(env)
+            .unwrap()
+            .custom_show("night-maps")
+            .unwrap(),
+        *r.local_setup().unwrap()
+    );
 }

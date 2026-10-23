@@ -1,7 +1,7 @@
 //! Spec 026 controller-only local-content screens. Reuses the Ember node renderer.
 use super::*;
 use crate::LocalStrings;
-use crate::services::{LocalCommand as Op, NewIwad};
+use crate::services::{LocalCommand as Op, LocalSlot, NewIwad, ReplacementTarget};
 use ddl_core::local::{self, Compatibility, CustomIwad, CustomSetup, Group, UserFile};
 use ddl_core::profiles::Profile;
 
@@ -32,6 +32,7 @@ pub(super) enum Dialog {
     Issue(PathBuf, bool),
     Saves,
     Error(String),
+    Replacement(Box<ReplacementTarget>, UserFile),
 }
 #[derive(Default)]
 pub(super) struct LocalUi {
@@ -41,6 +42,10 @@ pub(super) struct LocalUi {
     iwad: Option<NewIwad>,
     compatibility: Compatibility,
     picker_iwad: bool,
+    relocation: Option<ReplacementTarget>,
+    prepared: Option<(ReplacementTarget, UserFile)>,
+    pub(super) renaming: Option<CustomSetup>,
+    placeholder: Option<(String, String)>,
     picker_return: Option<View>,
     selected: Vec<PathBuf>,
     moving: Option<(Group, usize)>,
@@ -121,7 +126,7 @@ impl Runtime {
         self.local.picker_iwad = iwad;
         self.local.selected.clear();
         self.local_open(View::Picker);
-        self.local_op(ui, Op::Browse(self.env.home.clone()));
+        self.local_op(ui, Op::OpenPicker(None));
     }
     pub(super) fn local_finished(&mut self, ui: &AppWindow, command: &Option<Command>) {
         if let Some(Command::Local(operation)) = command {
@@ -132,6 +137,7 @@ impl Runtime {
                         .as_ref()
                         .and_then(|s| s.custom.iter().find(|c| &c.name == name))
                         .map(|s| s.id.clone());
+                    self.local.placeholder = self.local.target.clone().map(|id| (id, name.clone()));
                     self.local.creating = None;
                     self.local_open(View::Detail);
                 }
@@ -140,10 +146,29 @@ impl Runtime {
                     self.invoking = 3;
                     self.edit_profile_name(ui);
                 }
-                Op::Browse(_) => {
+                Op::Browse(_) | Op::OpenPicker(_) => {
                     self.local.view = Some(View::Picker);
                     self.local.picker_file_start = 0;
                     self.local.picker_shortcut_start = 0;
+                    self.focus = 1;
+                }
+                Op::PrepareReplacement(..) => {
+                    if let Some((target, file)) = self.local.prepared.take() {
+                        let same = target
+                            .file()
+                            .is_some_and(|old| old.size == file.size && old.sha256 == file.sha256);
+                        if same {
+                            self.local_op(ui, Op::ApplyReplacement(target, file));
+                        } else {
+                            self.local.dialog = Some(Dialog::Replacement(Box::new(target), file));
+                            self.local.dialog_focus = 1;
+                            self.focus = 900;
+                        }
+                    }
+                }
+                Op::ApplyReplacement(..) => {
+                    self.local.relocation = None;
+                    self.local.view = self.local.picker_return.take();
                     self.focus = 1;
                 }
                 Op::Delete(..) => {
@@ -154,6 +179,47 @@ impl Runtime {
                 _ => {}
             }
         }
+    }
+    fn relocation_target(&self, path: &std::path::Path) -> Option<ReplacementTarget> {
+        if let Some(setup) = self.local_setup() {
+            let slot = if matches!(&setup.iwad, CustomIwad::File { file } if file.path == path) {
+                LocalSlot::Iwad
+            } else if let Some(i) = setup.files.iter().position(|f| f.path == path) {
+                LocalSlot::File(i)
+            } else {
+                LocalSlot::Patch(setup.patches.iter().position(|f| f.path == path)?)
+            };
+            Some(ReplacementTarget::Custom(setup.clone(), slot))
+        } else {
+            let profile = self.local_profile()?;
+            let index = profile.extras.iter().position(|f| f.path == path)?;
+            Some(ReplacementTarget::Extras(profile, index))
+        }
+    }
+    pub(super) fn local_replacement_ready(&mut self, target: ReplacementTarget, file: UserFile) {
+        self.local.prepared = Some((target, file));
+    }
+    pub(super) fn rename_setup_action(&mut self, ui: &AppWindow) -> bool {
+        let Some(expected) = self.local.renaming.clone() else {
+            return false;
+        };
+        if self.focus == 916 {
+            self.sheet = None;
+            self.local.renaming = None;
+            self.focus = 6;
+        } else if self.focus == 917 {
+            match ddl_core::profiles::validate_name(&ui.get_profile_name(), "", None, &[]) {
+                Ok(name) => {
+                    self.local.placeholder = None;
+                    self.local.renaming = None;
+                    self.sheet = None;
+                    self.focus = 6;
+                    self.local_op(ui, Op::Rename(expected, name));
+                }
+                Err(_) => ui.set_profile_name_error(ui.global::<LocalStrings>().get_name_invalid()),
+            }
+        }
+        true
     }
     fn local_begin(&mut self, ui: &AppWindow) {
         self.local = LocalUi::default();
@@ -319,7 +385,24 @@ impl Runtime {
                                     self.local_op(ui, Op::Accept(id, profile));
                                 }
                             }
-                            Dialog::Saves | Dialog::Issue(_, false) | Dialog::Error(_) => {}
+                            Dialog::Issue(path, false) => {
+                                if let Some(target) = self.relocation_target(&path) {
+                                    let preferred = path.parent().map(PathBuf::from);
+                                    self.local.picker_return = self.local.view;
+                                    self.local.picker_iwad = matches!(
+                                        target,
+                                        ReplacementTarget::Custom(_, LocalSlot::Iwad)
+                                    );
+                                    self.local.relocation = Some(target);
+                                    self.local.selected.clear();
+                                    self.local_open(View::Picker);
+                                    self.local_op(ui, Op::OpenPicker(preferred));
+                                }
+                            }
+                            Dialog::Replacement(target, file) => {
+                                self.local_op(ui, Op::ApplyReplacement(*target, file));
+                            }
+                            Dialog::Saves | Dialog::Error(_) => {}
                         }
                     }
                 }
@@ -413,6 +496,23 @@ impl Runtime {
             return true;
         }
         if self.busy {
+            if action == Action::Back
+                && matches!(
+                    self.pending,
+                    Some(Command::Local(
+                        Op::Browse(_)
+                            | Op::OpenPicker(_)
+                            | Op::AddNamed(..)
+                            | Op::PrepareReplacement(..)
+                            | Op::ApplyReplacement(..)
+                            | Op::Create(..)
+                            | Op::Iwad(..)
+                    ))
+                )
+            {
+                self.cancel.cancel();
+                self.local.prepared = None;
+            }
             // Spec 075, R2: a repeated press on the base-game Pistol row keeps
             // its intent while a command runs; the runtime queues it.
             if action == Action::Confirm
@@ -437,6 +537,7 @@ impl Runtime {
                 View::Picker => {
                     self.local.view = self.local.picker_return.take();
                     self.local.selected.clear();
+                    self.local.relocation = None;
                     self.focus = 1;
                 }
                 View::Iwad | View::Compat => self.local_open(if self.local.creating.is_some() {
@@ -633,6 +734,16 @@ impl Runtime {
                     }
                 }
                 4 => self.local_open(View::Compat),
+                6 if view == View::Detail => {
+                    if let Some(setup) = self.local_setup().cloned() {
+                        ui.set_profile_name(setup.name.clone().into());
+                        ui.set_profile_name_error("".into());
+                        self.local.renaming = Some(setup);
+                        self.invoking = 6;
+                        self.sheet = Some(Sheet::ProfileNames);
+                        self.focus = 918;
+                    }
+                }
                 5 => {
                     self.local.delete_profiles = false;
                     self.local.dialog = Some(Dialog::Delete);
@@ -710,6 +821,8 @@ impl Runtime {
                 {
                     if directory {
                         self.local_op(ui, Op::Browse(path));
+                    } else if let Some(target) = self.local.relocation.clone() {
+                        self.local_op(ui, Op::PrepareReplacement(target, path));
                     } else if self.local.picker_iwad {
                         self.local_choose_iwad(ui, NewIwad::File(path));
                     } else if let Some(index) = self.local.selected.iter().position(|p| p == &path)
@@ -732,16 +845,10 @@ impl Runtime {
                     }
                 }
                 NewIwad::File(path) => {
-                    // The picker already read this file on the services worker.
-                    let Some(file) = self
-                        .directory
-                        .as_ref()
-                        .and_then(|d| d.files.iter().find(|f| &f.path == path))
-                        .cloned()
-                    else {
-                        return;
-                    };
-                    setup.iwad = CustomIwad::File { file };
+                    self.local_op(ui, Op::Iwad(setup, path.clone()));
+                    self.local.iwad = Some(iwad);
+                    self.local_open(View::Detail);
+                    return;
                 }
             }
             self.local_op(ui, Op::Save(setup));
@@ -754,13 +861,22 @@ impl Runtime {
         });
     }
     fn local_add_selected(&mut self, ui: &AppWindow) {
-        if self.local.selected.is_empty() || self.local.picker_iwad {
+        if self.local.selected.is_empty()
+            || self.local.picker_iwad
+            || self.local.relocation.is_some()
+        {
             return;
         }
         if let Some((id, profile)) = self.local_target() {
             let paths = std::mem::take(&mut self.local.selected);
             self.local_open(View::Order);
-            self.local_op(ui, Op::Add(id, profile, paths));
+            let placeholder = self
+                .local
+                .placeholder
+                .as_ref()
+                .filter(|(created, _)| created == &id)
+                .map(|(_, name)| name.clone());
+            self.local_op(ui, Op::AddNamed(id, profile, paths, placeholder));
         }
     }
     pub(super) fn local_nodes(&mut self, ui: &AppWindow, b: &mut Nodes) {
@@ -1049,7 +1165,8 @@ impl Runtime {
                             compatibility_name(ui, setup.compatibility),
                             true,
                         );
-                        b.button(5, 340., 414., 824., c.get_delete(), false);
+                        b.button(6, 340., 414., 394., c.get_rename(), false);
+                        b.button(5, 758., 414., 406., c.get_delete(), false);
                     }
                 }
                 View::Iwad => {
@@ -1186,7 +1303,7 @@ impl Runtime {
                 }
                 View::Picker => {
                     c.set_value(self.local.selected.len().to_string().into());
-                    if !self.local.picker_iwad {
+                    if !self.local.picker_iwad && self.local.relocation.is_none() {
                         b.button(1, 36., 30., 780., c.get_add(), false);
                     }
                     b.button(2, 840., 30., 348., c.get_up(), false);
@@ -1572,6 +1689,22 @@ impl Runtime {
         }
     }
     pub(super) fn local_sheet(&mut self, ui: &AppWindow) {
+        ui.set_local_action_label(Default::default());
+        ui.set_local_cancel(
+            self.busy
+                && matches!(
+                    self.pending,
+                    Some(Command::Local(
+                        Op::Browse(_)
+                            | Op::OpenPicker(_)
+                            | Op::AddNamed(..)
+                            | Op::PrepareReplacement(..)
+                            | Op::ApplyReplacement(..)
+                            | Op::Create(..)
+                            | Op::Iwad(..)
+                    ))
+                ),
+        );
         if self.playing {
             ui.set_local_add_hint(false);
             ui.set_local_remove_hint(false);
@@ -1624,6 +1757,16 @@ impl Runtime {
         }
         ui.set_sheet_error_text(Default::default());
         let c = ui.global::<LocalStrings>();
+        if self.local.renaming.is_some() {
+            ui.set_local_action_label(if self.focus == 918 {
+                c.get_edit_name()
+            } else {
+                ui.get_sheet_nodes()
+                    .iter()
+                    .find(|n| n.id == self.focus)
+                    .map_or_else(SharedString::default, |n| n.label)
+            });
+        }
         if (BASE..BASE + 20).contains(&self.focus) {
             ui.set_favorite_hint(false);
         }
@@ -1631,8 +1774,23 @@ impl Runtime {
             self.local.view == Some(View::Order)
                 || self.screen == Screen::Library && self.local.view.is_none(),
         );
+        ui.set_local_add_label(
+            if self.screen == Screen::Library && self.local.view.is_none() {
+                c.get_new()
+            } else {
+                c.get_add_hint()
+            },
+        );
+        ui.set_local_single_picker(
+            self.local.view == Some(View::Picker)
+                && (self.local.picker_iwad || self.local.relocation.is_some()),
+        );
         ui.set_local_remove_hint(self.local.view == Some(View::Order));
-        ui.set_local_confirm_hint(self.local.view == Some(View::Picker) && !self.local.picker_iwad);
+        ui.set_local_confirm_hint(
+            self.local.view == Some(View::Picker)
+                && !self.local.picker_iwad
+                && self.local.relocation.is_none(),
+        );
         if let Some(view) = self.local.view {
             ui.set_root_screen(false);
             ui.set_setup_screen(false);
@@ -1669,7 +1827,13 @@ impl Runtime {
                 }
                 View::Iwad => c.get_iwad(),
                 View::Compat => c.get_compat(),
-                View::Picker => c.get_picker(),
+                View::Picker => {
+                    if self.local.relocation.is_some() {
+                        c.get_locate()
+                    } else {
+                        c.get_picker()
+                    }
+                }
             });
             ui.set_status(match view {
                 View::New => c.get_new_help(),
@@ -1695,7 +1859,27 @@ impl Runtime {
                 });
             }
             if view == View::Picker && self.focus >= PICK {
-                ui.set_a_hint(c.get_select());
+                ui.set_local_action_label(
+                    if self
+                        .directory
+                        .as_ref()
+                        .and_then(|d| d.entries.get((self.focus - PICK) as usize))
+                        .is_some_and(|(_, folder)| *folder)
+                    {
+                        c.get_open_folder()
+                    } else if self.local.relocation.is_some() || self.local.picker_iwad {
+                        c.get_choose()
+                    } else {
+                        c.get_select()
+                    },
+                );
+                ui.set_a_hint(
+                    if self.local.relocation.is_some() || self.local.picker_iwad {
+                        c.get_choose()
+                    } else {
+                        c.get_select()
+                    },
+                );
             }
         }
         if let Some(dialog) = &self.local.dialog {
@@ -1713,6 +1897,7 @@ impl Runtime {
                 Dialog::Issue(..) => c.get_blocked(),
                 Dialog::Saves => c.get_extras(),
                 Dialog::Error(_) => c.get_error(),
+                Dialog::Replacement(..) => c.get_replace_title(),
             });
             match dialog {
                 Dialog::Delete => {
@@ -1774,12 +1959,40 @@ impl Runtime {
                     );
                     if *changed {
                         b.button(901, 368., 312., 304., c.get_changed(), false);
+                    } else if self.relocation_target(path).is_some() {
+                        b.button(901, 368., 312., 304., c.get_locate(), false);
                     } else {
                         b.label(32., 260., 656., 36., c.get_missing(), 20.);
                     }
                 }
+                Dialog::Replacement(_, file) => {
+                    b.title(
+                        32.,
+                        96.,
+                        656.,
+                        70.,
+                        file.path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_string()
+                            .into(),
+                        28.,
+                    );
+                    b.label(32., 184., 656., 100., c.get_replace_help(), 22.);
+                    b.button(901, 368., 312., 304., c.get_replace(), false);
+                }
                 Dialog::Error(message) => {
-                    ui.set_sheet_error_text(message.clone().into());
+                    ui.set_sheet_error_text(match message.as_str() {
+                        "Replacement has the wrong file kind or IWAD header" => c.get_wrong_kind(),
+                        "Setup changed; try again"
+                        | "Target changed; select the missing file again"
+                        | "Missing slot" => c.get_stale_target(),
+                        "Replacement changed; select it again" => c.get_stale_replacement(),
+                        "File already added" => c.get_already_added(),
+                        "Select a file with an IWAD header" => c.get_select_iwad(),
+                        _ => message.clone().into(),
+                    });
                 }
                 Dialog::Saves => {
                     b.label(32., 112., 656., 120., c.get_saves(), 24.);
@@ -1799,6 +2012,7 @@ impl Runtime {
             );
             if let Some(node) = b.nodes.iter().find(|n| n.id == self.focus) {
                 ui.set_a_hint(node.label.clone());
+                ui.set_local_action_label(node.label.clone());
             }
             ui.set_sheet_nodes(ModelRc::new(VecModel::from(b.nodes)));
             ui.set_focused(self.focus);

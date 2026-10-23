@@ -45,12 +45,14 @@ and checks their identity before launch. Moving or deleting a file later blocks 
 until its reference is repaired. DDL uses DSDA-Doom only; selecting a file is not a claim
 that a mod for a different engine is compatible.
 
-1. Open **Library → New custom setup** (or press **Y** at the Library root).
+1. Open **Library → Add local mapset** (or press **Y** at the Library root).
 2. Choose **Base IWAD**, using an identified game you own or an IWAD file you supply.
    Leave **Compatibility** on **Auto — DSDA-Doom decides** unless the mapset's instructions
    specify a supported choice, then select **Create setup**.
 3. Open **File order**, then **Add files** (or **Y**). The picker has Home,
    Downloads/Documents when present, Steam-library and mounted-card shortcuts when visible.
+   It reopens your last successfully browsed folder, including after restarting DDL; an
+   unavailable folder falls back to Home.
 4. Navigate to your files. **A** opens a folder or toggles a file selection; select the
    required WAD/ZIP and DEH/BEX files. **Start**, or **Add N files**, confirms. **Parent
    folder** goes up a directory; **B** cancels the picker without adding the selection.
@@ -58,15 +60,27 @@ that a mod for a different engine is compatible.
    it. **X** removes only its reference. Patches have a separate ordered group applied after
    the content files. Return to the custom setup and choose **Play**.
 
+A setup you just created gets a readable name from its first added content filename.
+Patch-only additions keep the generated name. **Rename** on the setup detail screen lets
+you choose a display name (1–32 characters); **Save name** confirms, and **Cancel** or **B**
+keeps the old name. Renaming preserves profiles, file order, saves and play history.
+
 To add files to an installed Discover mapset, open its **Edit / Play setup → Extra files**
 for the active profile. Recipe files remain locked and load first; the extras apply to that
 profile. Changing content may make existing saves incompatible. Custom setups and layered
 profiles are not verified catalog configurations.
 
-If a file changes, DDL asks for explicit confirmation before using the new bytes. If a file
-is missing, restore it at the recorded location or remove its old reference and add the file
-from its new location, restoring the intended load order. Delete setup does not delete your
-original files; the separate profiles/saves deletion checkbox starts unchecked.
+If a file changes in place, DDL still asks for explicit **Use the changed file** confirmation.
+For a missing local file, choose **Locate file** in its issue sheet and select its new location.
+This picker chooses one replacement with **A**; **B** cancels. The same bytes update only the
+path, keeping its exact slot. Different bytes need a second **Use replacement** confirmation
+that warns about saves and starts on **Cancel**. A wrong file kind or a non-IWAD for an IWAD
+slot is rejected. This also repairs profile extras on catalog mapsets/base games and a custom
+file-based IWAD; downloaded recipe files and registered IWAD copies keep their existing
+repair flows. Nothing searches your disks or moves your files automatically.
+
+Delete setup does not delete your original files; the separate profiles/saves deletion
+checkbox starts unchecked.
 
 **Needs Deck Validation:** the SD-card/controller journey and actual gameplay, including
 Flatpak visibility of the chosen location. This describes implemented controls checked in

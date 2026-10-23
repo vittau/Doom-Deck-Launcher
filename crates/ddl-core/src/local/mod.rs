@@ -22,12 +22,13 @@
 
 pub mod kind;
 pub mod launch;
+pub mod picker;
 pub mod setup;
 pub mod store;
 
 pub use kind::{
-    FileError, IdentityError, Kind, MAX_USER_FILE_BYTES, TEXT_PREFIX_BYTES, UserFile, detect_kind,
-    is_iwad_header,
+    FileError, IdentityError, Inspection, Kind, MAX_USER_FILE_BYTES, TEXT_PREFIX_BYTES, UserFile,
+    detect_kind, is_iwad_header,
 };
 pub use launch::{
     Engine, LaunchError, accept_changed, assign_allowlist, build_plan, first_issue, recipe_game,

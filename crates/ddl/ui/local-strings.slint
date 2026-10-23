@@ -1,5 +1,19 @@
 export global LocalStrings {
     in property <string> value;
+    out property <string> open-folder: @tr("Open folder");
+    out property <string> edit-name: @tr("Edit name");
+    out property <string> wrong-kind: @tr("Choose the same file kind. An IWAD slot requires an IWAD header.");
+    out property <string> stale-target: @tr("This setup or profile changed. Select the missing file again.");
+    out property <string> stale-replacement: @tr("The replacement changed. Select it again.");
+    out property <string> already-added: @tr("This file is already added.");
+    out property <string> select-iwad: @tr("Select a file with an IWAD header.");
+    out property <string> name-invalid: @tr("Enter a name with 1–32 characters.");
+    out property <string> rename: @tr("Rename");
+    out property <string> locate: @tr("Locate file");
+    out property <string> choose: @tr("Choose file");
+    out property <string> replace-title: @tr("Use different content?");
+    out property <string> replace-help: @tr("The selected file has different content. Existing saves may not load. Use this replacement?");
+    out property <string> replace: @tr("Use replacement");
     out property <string> skill-value: root.value.to-float() == 4 ? @tr("4 (UV)") : root.value.to-float() == 5 ? @tr("5 (Nightmare)") : root.value;
     out property <string> shortcut: @tr("Shortcut");
     out property <string> pick-up: @tr("Pick up");
@@ -7,9 +21,9 @@ export global LocalStrings {
     out property <string> continue: @tr("Continue");
     out property <string> iwad-selected: @tr("Your base IWAD is selected.");
     out property <string> error: @tr("Could not complete this action");
-    out property <string> new: @tr("New custom setup");
+    out property <string> new: @tr("Add local mapset");
     out property <string> badge: @tr("Custom — not verified");
-    out property <string> new-help: @tr("Choose your base game, then add local files.");
+    out property <string> new-help: @tr("Choose a base game, create the setup, then add local files.");
     out property <string> iwad: @tr("Base IWAD");
     out property <string> added-iwad: @tr("A file I added that is an IWAD");
     out property <string> compat: @tr("Compatibility");
@@ -49,5 +63,5 @@ export global LocalStrings {
     out property <string> confirm: @tr("Add selected");
     out property <string> save: @tr("Save order");
     out property <string> iwad-help: @tr("Choose an identified IWAD or a local file with an IWAD header.");
-    out property <string> local-help: @tr("Your files stay in place. Compatibility is not verified.");
+    out property <string> local-help: @tr("Files stay in place. Use Locate file after moving one.");
 }
