@@ -122,6 +122,385 @@ fn owner_runtime(temp: &std::path::Path, ui: &AppWindow) -> Runtime {
     runtime
 }
 
+/// Discover's expected card ids for `tag` (spec 112, R1): the
+/// `(installed, favorite)` tuple descending, with chronology inside each group.
+fn expected_discover(items: &[crate::services::Item], tag: &str) -> Vec<i32> {
+    let mut shown: Vec<usize> = (0..items.len())
+        .filter(|&i| ddl_core::catalog::shows_in_category(&items[i].recipe, tag))
+        .collect();
+    shown.sort_by(|&a, &b| {
+        let (a, b) = (&items[a], &items[b]);
+        ddl_core::catalog::compare_discover_order(
+            &a.recipe,
+            a.manifest.is_some(),
+            a.favorite,
+            &b.recipe,
+            b.manifest.is_some(),
+            b.favorite,
+        )
+    });
+    shown.iter().map(|&i| 10 + i as i32).collect()
+}
+
+/// Card (Cards) or row (List) ids in the order the plane draws them.
+fn drawn_ids(ui: &AppWindow, list: bool) -> Vec<i32> {
+    let kind = if list { 24 } else { 1 };
+    ui.get_nodes()
+        .iter()
+        .filter(|n| n.actionable && n.kind == kind)
+        .map(|n| n.id)
+        .collect()
+}
+
+/// One mapset per group in the megawad category, in chronological order: an
+/// installed favorite, an installed mapset, a favorite-only mapset and the rest.
+/// Returns the three leading group indexes plus the last chronological item of
+/// the category, which sits in the trailing group.
+fn mark_discover_groups(runtime: &mut Runtime) -> (usize, usize, usize, usize) {
+    let snapshot = runtime.snapshot.as_mut().unwrap();
+    let mut indexes: Vec<usize> = (0..snapshot.items.len())
+        .filter(|&i| ddl_core::catalog::shows_in_category(&snapshot.items[i].recipe, "megawad"))
+        .collect();
+    assert!(indexes.len() >= 6, "megawad has several catalog recipes");
+    indexes.sort_by(|&a, &b| {
+        ddl_core::catalog::compare_browsing_order(
+            &snapshot.items[a].recipe,
+            &snapshot.items[b].recipe,
+        )
+    });
+    for item in &mut snapshot.items {
+        item.favorite = false;
+        item.manifest = None;
+    }
+    for &index in &indexes[..2] {
+        let item = &mut snapshot.items[index];
+        let (id, release) = (item.recipe.id.clone(), item.recipe.release.clone());
+        item.manifest = Some(InstallManifest {
+            schema_version: 1,
+            recipe_id: id,
+            release,
+            recipe_sha256: "a".repeat(64),
+            installed_at: 0,
+            packages: vec![],
+            members: vec![],
+        });
+    }
+    snapshot.items[indexes[0]].favorite = true;
+    snapshot.items[indexes[2]].favorite = true;
+    (
+        indexes[0],
+        indexes[1],
+        indexes[2],
+        indexes[indexes.len() - 1],
+    )
+}
+
+/// Spec 112 R1/R4: each Discover category, in Cards and List, leads with an
+/// installed favorite, an installed mapset, a favorite-only mapset and then the
+/// rest, chronologically inside each group, rendered from real catalog recipes.
+#[test]
+fn discover_installed_favorites_first_in_both_layouts() {
+    if isolated(
+        module_path!(),
+        "discover_installed_favorites_first_in_both_layouts",
+    ) {
+        return;
+    }
+    use crate::runtime::Category;
+    use crate::services::ViewFormat;
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let (installed_favorite, installed, favorite, _) = mark_discover_groups(&mut r);
+    r.screen = Screen::Discover;
+    r.choose_category(Category::Tag("megawad".into()));
+    for (format, name) in [
+        (ViewFormat::Cards, "112-discover-groups-cards.png"),
+        (ViewFormat::List, "112-discover-groups-list.png"),
+    ] {
+        r.view_format = format;
+        r.focus = 10;
+        r.sync(&ui);
+        advance_time(20);
+        let shown = drawn_ids(&ui, format == ViewFormat::List);
+        assert_eq!(
+            shown,
+            expected_discover(&r.snapshot.as_ref().unwrap().items, "megawad"),
+            "{format:?} follows the four groups"
+        );
+        // The first three slots are the three leading groups; the grid shows
+        // them side by side on its first row.
+        assert_eq!(
+            &shown[..3],
+            &[
+                10 + installed_favorite as i32,
+                10 + installed as i32,
+                10 + favorite as i32,
+            ],
+            "{format:?} leads with installed favorite, installed and favorite"
+        );
+        let frame = render(&window);
+        let path = write_png(name, &frame);
+        assert!(path.is_file());
+        // Four groups on screen: the grid/rows are not truncated to one group.
+        assert!(shown.len() > 3);
+    }
+}
+
+/// Spec 112 R2: toggling X moves the row into its favorite group in both
+/// layouts without losing or duplicating rows, keeps focus on the same mapset,
+/// and returning from Mapset detail keeps that selection.
+#[test]
+fn discover_favorite_toggle_moves_the_row_and_keeps_focus() {
+    if isolated(
+        module_path!(),
+        "discover_favorite_toggle_moves_the_row_and_keeps_focus",
+    ) {
+        return;
+    }
+    use crate::{input::Action, runtime::Category, services::ViewFormat};
+    let (_window, ui) = setup();
+    ui.show().unwrap();
+    for (format, list) in [(ViewFormat::Cards, false), (ViewFormat::List, true)] {
+        let temp = tempfile::tempdir().unwrap();
+        let mut r = owner_runtime(temp.path(), &ui);
+        let (_, _, _, rest) = mark_discover_groups(&mut r);
+        r.screen = Screen::Discover;
+        r.choose_category(Category::Tag("megawad".into()));
+        r.view_format = format;
+        let target = 10 + rest as i32;
+        r.focus = target;
+        r.sync(&ui);
+        let before = drawn_ids(&ui, list);
+        assert_eq!(
+            before,
+            expected_discover(&r.snapshot.as_ref().unwrap().items, "megawad"),
+            "{format:?} starts in the four groups"
+        );
+        r.action(&ui, Action::X);
+        assert_eq!(r.focus, target, "{format:?} keeps focus on the same card");
+        assert!(
+            r.snapshot.as_ref().unwrap().items[rest].favorite,
+            "{format:?} marks the favorite optimistically"
+        );
+        let after = drawn_ids(&ui, list);
+        assert_eq!(
+            after,
+            expected_discover(&r.snapshot.as_ref().unwrap().items, "megawad"),
+            "{format:?} re-sorts with the new favorite group"
+        );
+        assert_eq!(after.len(), before.len(), "{format:?} loses no row");
+        assert_eq!(
+            after.iter().filter(|&&id| id == target).count(),
+            1,
+            "{format:?} duplicates no row"
+        );
+        assert!(
+            after.iter().position(|&id| id == target) < before.iter().position(|&id| id == target),
+            "{format:?} moves the favorite up"
+        );
+        // Settle the saved favorite: the fresh snapshot keeps recipe identity.
+        for _ in 0..1000 {
+            pump_events();
+            r.drain(&ui);
+            if !r.busy {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(!r.busy && r.problem.is_none());
+        assert!(
+            r.snapshot.as_ref().unwrap().items[rest].favorite,
+            "{format:?} persists the favorite"
+        );
+        assert_eq!(r.focus, target, "{format:?} keeps focus after the save");
+        // Return from Mapset detail keeps the same selected mapset.
+        r.action(&ui, Action::Confirm);
+        assert_eq!(r.screen, Screen::Detail);
+        assert_eq!(r.selected, rest);
+        r.action(&ui, Action::Back);
+        assert_eq!(r.screen, Screen::Discover);
+        assert_eq!(r.focus, target, "{format:?} return keeps the selection");
+    }
+}
+
+/// Spec 112 R2/R4: a finished production install moves the mapset into the
+/// installed group in Cards and List, leaving Play setup keeps it focused, and a
+/// finished production uninstall moves it back out with its row identity intact.
+///
+/// The post-uninstall navigation stays as spec 022 defined it (Library, card
+/// focus, cleared history); the coordinator confirmed spec 112 R2 applies to the
+/// Discover ordering and row identity for uninstalls, not to that flow.
+#[test]
+fn discover_install_and_uninstall_move_the_item_and_keep_focus() {
+    if isolated(
+        module_path!(),
+        "discover_install_and_uninstall_move_the_item_and_keep_focus",
+    ) {
+        return;
+    }
+    use crate::input::Action;
+    use crate::runtime::Category;
+    use crate::services::ViewFormat;
+    let scene = super::production::scene();
+    let ui = &scene.ui;
+    let state = scene.state.clone();
+    super::production::idle(&state);
+    let (sigil, auger) = {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Discover;
+        r.choose_category(Category::Tag("cacowards".into()));
+        r.view_format = ViewFormat::Cards;
+        let items = &r.snapshot.as_ref().unwrap().items;
+        let index = |id: &str| items.iter().position(|i| i.recipe.id == id).unwrap();
+        (
+            10 + index("sigil") as i32,
+            10 + index("auger-zenith") as i32,
+        )
+    };
+    // A favorite that is not installed leads the category.
+    {
+        let mut r = state.borrow_mut();
+        r.focus = auger;
+        r.sync(ui);
+        r.action(ui, Action::X);
+    }
+    super::production::idle(&state);
+    assert_eq!(state.borrow().focus, auger, "the toggle keeps the mapset");
+    assert_eq!(drawn_ids(ui, false)[0], auger, "the favorite leads Cards");
+    // A real install of SIGIL moves it ahead of that favorite.
+    {
+        let mut r = state.borrow_mut();
+        r.focus = sigil;
+        r.sync(ui);
+        r.start(ui, Command::Install("sigil".into()));
+    }
+    super::production::wait(&state, |r| r.progress.is_some() || !r.busy);
+    scene.package_gate.release();
+    super::production::idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Setup);
+    assert!(
+        state
+            .borrow()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .find(|i| i.recipe.id == "sigil")
+            .unwrap()
+            .manifest
+            .is_some(),
+        "the install finished"
+    );
+    // Back leaves Play setup for the same Discover mapset, now installed.
+    state.borrow_mut().action(ui, Action::Back);
+    assert_eq!(state.borrow().screen, Screen::Discover);
+    assert_eq!(state.borrow().focus, sigil, "focus keeps the mapset");
+    for (format, list) in [(ViewFormat::Cards, false), (ViewFormat::List, true)] {
+        let mut r = state.borrow_mut();
+        r.view_format = format;
+        r.sync(ui);
+        let shown = drawn_ids(ui, list);
+        assert_eq!(
+            shown,
+            expected_discover(&r.snapshot.as_ref().unwrap().items, "cacowards"),
+            "{format:?} keeps the four groups"
+        );
+        assert_eq!(shown[0], sigil, "{format:?}: installed leads favorite-only");
+        assert_eq!(shown[1], auger, "{format:?}: the favorite follows");
+    }
+    // Favorite the installed mapset: installed favorite leads both layouts.
+    {
+        let mut r = state.borrow_mut();
+        r.focus = sigil;
+        r.sync(ui);
+        r.action(ui, Action::X);
+    }
+    super::production::idle(&state);
+    assert_eq!(state.borrow().focus, sigil, "the toggle keeps the mapset");
+    let before_uninstall = {
+        let mut r = state.borrow_mut();
+        let mut shown = Vec::new();
+        for (format, list) in [(ViewFormat::Cards, false), (ViewFormat::List, true)] {
+            r.view_format = format;
+            r.sync(ui);
+            let drawn = drawn_ids(ui, list);
+            assert_eq!(
+                drawn,
+                expected_discover(&r.snapshot.as_ref().unwrap().items, "cacowards"),
+                "{format:?} leads with the installed favorite"
+            );
+            assert_eq!(drawn[0], sigil, "{format:?}: installed favorite leads");
+            shown.push(drawn);
+        }
+        shown
+    };
+    // A real uninstall moves it out of the installed group. Spec 022 keeps the
+    // Library destination; the row and the selection keep their identity.
+    {
+        let mut r = state.borrow_mut();
+        r.view_format = ViewFormat::Cards;
+        r.selected = r
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .items
+            .iter()
+            .position(|i| i.recipe.id == "sigil")
+            .unwrap();
+        // The production path opens Mapset detail before its uninstall action.
+        r.screen = Screen::Detail;
+        r.focus = 1;
+        r.sync(ui);
+        r.start(ui, Command::Uninstall("sigil".into(), false));
+    }
+    super::production::idle(&state);
+    assert_eq!(state.borrow().screen, Screen::Library);
+    let selected = state.borrow().selected;
+    let sigil_index = {
+        let r = state.borrow();
+        let items = &r.snapshot.as_ref().unwrap().items;
+        let index = items.iter().position(|i| i.recipe.id == "sigil").unwrap();
+        assert!(
+            items[index].manifest.is_none(),
+            "the uninstall finished and keeps the row"
+        );
+        assert!(items[index].favorite, "the favorite survives the uninstall");
+        assert_eq!(
+            r.snapshot.as_ref().unwrap().items[selected].recipe.id,
+            "sigil",
+            "the selection keeps the mapset"
+        );
+        index
+    };
+    // Opening Discover with that mapset focused shows it in its new group, once.
+    for (format, list) in [(ViewFormat::Cards, false), (ViewFormat::List, true)] {
+        let mut r = state.borrow_mut();
+        r.screen = Screen::Discover;
+        r.view_format = format;
+        r.focus = 10 + sigil_index as i32;
+        r.sync(ui);
+        let drawn = drawn_ids(ui, list);
+        assert_eq!(
+            drawn,
+            expected_discover(&r.snapshot.as_ref().unwrap().items, "cacowards"),
+            "{format:?} re-sorts after the uninstall"
+        );
+        assert_eq!(
+            drawn.iter().filter(|&&id| id == r.focus).count(),
+            1,
+            "{format:?} draws the uninstalled mapset once"
+        );
+        assert_eq!(
+            drawn.len(),
+            before_uninstall[if list { 1 } else { 0 }].len(),
+            "{format:?} loses no row"
+        );
+    }
+}
+
 #[test]
 fn library_owner_scene_renders() {
     if isolated(module_path!(), "library_owner_scene_renders") {
@@ -1028,8 +1407,16 @@ fn library_favorites_group_in_both_layouts_and_toggle_keeps_identity() {
         .enumerate()
         .filter(|(_, i)| i.favorite)
         .collect();
-    favorites
-        .sort_by(|(_, a), (_, b)| ddl_core::catalog::compare_browsing_order(&a.recipe, &b.recipe));
+    favorites.sort_by(|(_, a), (_, b)| {
+        ddl_core::catalog::compare_discover_order(
+            &a.recipe,
+            a.manifest.is_some(),
+            a.favorite,
+            &b.recipe,
+            b.manifest.is_some(),
+            b.favorite,
+        )
+    });
     let actual: Vec<_> = ui
         .get_nodes()
         .iter()
