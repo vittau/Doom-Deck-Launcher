@@ -2,7 +2,9 @@
 
 **Status:** Ready · **Depends on:** 010, 026, 106
 **Origin:** owner, 2026-10-23: the setup's apparent complevel/approval control is confusing;
-what approval is required, and how can the player change the complevel?
+what approval is required, and how can the player change the complevel? Clicking it seems
+to do nothing. Owner correction: an unavailable button should stay visible and greyed out;
+active-looking controls that do nothing are poor UX.
 
 ## Confirmed current behavior
 
@@ -13,10 +15,12 @@ involved. Custom setup detail has a separate Compatibility selector (Auto/numeri
 
 ## Requirements
 
-- **R1:** show the catalog variant toggle only when the effective recipe actually has one
-  of those hidden replacement components. No actionable row that does nothing on a recipe
-  without alternatives. Use the same visibility condition as the component loop, not a
-  separate guessed tag/title list. Preserve installed-snapshot recipe behavior.
+- **R1:** keep the catalog variant row visible but **greyed out, non-actionable and skipped
+  by controller focus** when the effective recipe has none of those hidden replacement
+  components. The owner explicitly prefers a disabled control over removing it. Explain
+  **No recipe variants available** in its help. Use the same availability condition as the
+  component loop, not a guessed tag/title list. Preserve installed-snapshot recipe behavior.
+  No active-looking control may accept clicks and silently do nothing.
 - **R2:** replace the vague Advanced/approval presentation with **Show recipe variants** /
   **Hide recipe variants** and concise help explaining alternatives supplied by the recipe
   and the player's confirmation on selection. Never imply a generic complevel selector,
@@ -32,9 +36,9 @@ involved. Custom setup detail has a separate Compatibility selector (Auto/numeri
 
 ## Acceptance and scope
 
-- Focused headless tests: a no-variant catalog setup has no toggle/focus node; a variant recipe
+- Focused headless tests: a no-variant catalog setup has a visibly disabled row without an actionable/focus node; a variant recipe
   has the correctly labeled toggle, expands/collapses and still asks the player before replacing
-  content. Cancel preserves choices. Focus remains valid when controls appear/disappear; existing
+  content. Cancel preserves choices. Focus skips disabled rows and remains valid when variants expand/collapse; existing
   skill/pistol/load-order navigation still works. The complevel is visibly recipe-controlled;
   custom setup numeric/Auto selection retains its regression coverage.
 - Off-screen production frames for no-variant, collapsed and expanded variant states; no
