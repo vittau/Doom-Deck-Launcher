@@ -246,7 +246,11 @@ below are the ones most easily lost between sessions.
   Use the D-039 canonical signed channel, not D-035's historical URL.
 - D-041: specs 051–053 are deferred without priority. Preserve the existing index tooling;
   do not dispatch archive-browser work by default. Manual custom setups/extras serve
-  occasional other content. Report105 evaluates polish opportunities without approving code.
+  occasional other content. Owner-authorized specs106/107 are now reviewed/merged locally:
+  responsive local listing, remembered folder, Locate file, naming/Rename and clear recipe
+  variant controls with disabled unavailable state. Reports106/107 record 995 ordinary tests
+  plus eight affected follow-up cases and reviewed off-screen frames. These changes are not
+  published; LC/RV physical Deck checks remain pending.
 
 ## Where state lives
 

@@ -83,3 +83,12 @@ Raw focused-check logs: `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/local-c
 **Needs Deck Validation:** physical controller feel, disabled-row contrast at LCD scale,
 scroll/focus when opening SIGIL's alternatives, and readability of the recipe-controlled
 complevel note. No implementation requirement remains open. No push, tag or release.
+
+## Coordinator acceptance
+
+Accepted and merged locally as `b537833` after source review and all five final production
+frames. The expanded alternative is fully visible and focused; disabled rows are visibly
+inactive and skipped; ready-state complevel wording fits. The merged app/core source matches
+the worker's checked tree byte-for-byte, so focused checks were not replayed after this
+conflict-free merge. Logs and frames are retained at
+`/Users/vitor/git/Doom-Deck-Launcher/.scratch/107/evidence/`. No release was made.

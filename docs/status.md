@@ -29,7 +29,7 @@ provenance, version, canonical output and tarball checksum (104).
 
 ### After the published app tag
 
-`main` at `fa4eb89` is verified by [Linux CI 39866464560](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39866464560):
+The pre-polish source checkpoint `fa4eb89` is verified by [Linux CI 39866464560](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39866464560):
 fmt, denied-warning Clippy, ordinary offline tests and catalog lint succeeded. The ordinary
 suite excludes the ten exhaustive render cases specified in 101; it is not a full-suite result.
 The catalog publication job also succeeded, and the served catalog records this source SHA.
@@ -70,11 +70,18 @@ ten documented visual exclusions. The isolated synthetic host diagnostic fell fr
 and pending LC1–LC7 Deck checks.
 
 The owner reported that the catalog Advanced row appeared active but did nothing for tested
-mapsets. Source confirms it only reveals recipe alternatives, not a generic complevel
-selector. [Spec107](specs/107-catalog-variant-clarity.md) is in progress to make the action
-clear and leave it visibly greyed out/non-actionable when unavailable, per the owner's
-explicit preference. Custom setups retain Auto/numeric Compatibility. Browsing filters/search
-remain proposals without priority. No new app release or physical Deck result is implied.
+mapsets. [Spec107](specs/107-catalog-variant-clarity.md) is now reviewed and merged locally as
+`b537833`. The row stays visible but greyed out, non-actionable and skipped by focus when
+no recipe variants exist. Available Show/Hide recipe variants reveals and focuses the first
+alternative; selecting one retains player confirmation with the safe action focused. This
+also fixes alternatives previously appearing above the visible viewport. Catalog complevel
+copy now says Set by recipe; custom setups retain Auto/numeric Compatibility. Eight focused
+follow-up tests, fmt and denied-warning app Clippy passed; five headless states were reviewed.
+The earlier 995-test ordinary suite was not repeated for this scoped presentation follow-up.
+
+These local changes are **not yet pushed or released**. The latest published app remains
+`v0.0.14-browse`; its UI does not contain these fixes. No physical Deck result is claimed.
+Browsing filters/search remain without priority. Source/check evidence lives in reports106/107.
 
 ## Historical milestone tables
 

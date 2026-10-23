@@ -1073,3 +1073,16 @@
     guidance; implementation follows with the same supervised UI worker. No external approval
     process is involved: confirmation refers to the player's recipe-variant selection.
   refs: [docs/specs/107-catalog-variant-clarity.md, docs/status.md]
+
+- date: 2026-10-23
+  type: change
+  summary: >-
+    Reviewed and merged recipe-variant clarity locally as b537833. Unavailable variant
+    controls stay visible but greyed out, non-actionable and skipped by focus per owner
+    preference; available controls reveal and focus the alternative immediately. Clarified
+    player confirmation and recipe-controlled complevel without introducing a catalog override.
+    Eight affected offline tests, fmt and denied-warning app Clippy passed; five headless
+    production states reviewed. Reused prior 995-test ordinary evidence without replay.
+    No dependency, push, tag, release or physical Deck result. Worker finished before the
+    account window was exhausted; no OpenCode transfer or Free model was needed.
+  refs: [docs/reports/107-catalog-variant-clarity.md, docs/status.md, docs/deck-testing.md]
