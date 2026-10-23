@@ -1167,3 +1167,13 @@
   refs: [docs/specs/111-pinned-discover-categories.md,
     docs/reports/111-pinned-discover-categories.md, docs/deck-testing.md]
 
+- date: 2026-10-23
+  type: change
+  summary: >-
+    The first full CI run after the spec 111 merge (40012207892) failed two ordinary headless
+    journeys that still asserted 410px Discover cards with two tag rows and the first card's
+    rail at y=238; the code was correct. Both now follow the spec 111 geometry (c6c4f09) and the
+    full suite passed (40014809417). docs/orchestration.md now requires the ordinary suite for
+    UI geometry changes and warns that a [skip ci] head skips the whole push.
+  refs: [docs/orchestration.md, crates/ddl/src/headless_production.rs]
+

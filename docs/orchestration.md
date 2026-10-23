@@ -107,6 +107,14 @@ visual changes or another reason to run everything, choose one authoritative ful
 Do not repeat it on macOS and Linux by habit. Manual full-suite runs cannot publish a catalog;
 manual catalog publication uses `publish_catalog=true` with `full_tests=false` on `main`.
 
+**UI geometry changes need the ordinary suite before merge.** Spec 111's worker ran only
+focused filters; two ordinary headless journeys that hard-code card geometry
+(`cards_keep_roomy_insets_and_one_tag_row`, `discover_and_detail`'s rail check) failed in CI
+after the merge. When a change moves or resizes production nodes, require the ordinary test
+command in the brief (or run it on the verify branch) before fast-forwarding `main`. Also:
+a `[skip ci]` head commit skips CI for every commit in that push, so push a source merge on
+its own or dispatch CI manually.
+
 After documentation, workflow, metadata or test-only follow-ups that cannot invalidate a
 previous full-suite result, check only affected behavior rather than rerunning that suite.
 For workflow-only changes use `actionlint`, YAML parsing and static command/trigger checks;
