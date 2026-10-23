@@ -129,9 +129,10 @@ fn capture(window: &MinimalSoftwareWindow, name: &str) {
     }
     if name == "010-discover.png" {
         // Spec 061 aligns the first card's whole frame at the viewport's
-        // 8 px inset (230 + 8), leaving its focus ring above the carved rail.
-        // Compare the 24 px rail before either card's screenshot starts.
-        for y in 238..262 {
+        // 8 px inset; spec 111 moves that viewport below the pinned strip
+        // (230 + 80 + 12 + 8). Compare the 24 px rail before either card's
+        // screenshot starts.
+        for y in 330..354 {
             for x in 32..432 {
                 assert_eq!(
                     buffer.as_slice()[y * WIDTH as usize + x],
@@ -2735,7 +2736,7 @@ pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow)
         n.x >= card.x + 28.
             && n.y >= card.y + 28.
             && n.x + n.w <= card.x + 384. - 28.
-            && n.y + n.h <= card.y + 410. - 28.
+            && n.y + n.h <= card.y + 340. - 28.
     };
     let content: Vec<crate::ViewNode> = nodes
         .iter()
@@ -2749,7 +2750,7 @@ pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow)
                 && n.x >= card.x
                 && n.x < card.x + 384.
                 && n.y >= card.y
-                && n.y < card.y + 410.
+                && n.y < card.y + 340.
         })
         .collect();
     assert!(
@@ -2770,12 +2771,12 @@ pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow)
     let art = content.iter().find(|n| n.kind == 4).unwrap();
     assert_eq!(
         (art.x, art.y, art.w, art.h),
-        (card.x + 28., card.y + 28., 328., 128.),
+        (card.x + 28., card.y + 28., 328., 96.),
         "the art clears the frame on every side"
     );
     let title = content.iter().find(|n| n.kind == 20).unwrap();
     assert!(
-        title.y >= card.y + 164. && title.y + title.h <= card.y + 224.,
+        title.y >= card.y + 132. && title.y + title.h <= card.y + 192.,
         "the title keeps its room below the art"
     );
     let chips: Vec<&crate::ViewNode> = content.iter().filter(|n| n.kind == 13).collect();
@@ -2785,12 +2786,12 @@ pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow)
         "a Doomer Boards card shows both requested tags"
     );
     assert!(
-        chips.iter().any(|n| n.y == card.y + 314.) && chips.iter().any(|n| n.y == card.y + 352.),
-        "the tags use two rows"
+        chips.iter().all(|n| n.y == card.y + 282.),
+        "spec 111: Discover tags share one compact row"
     );
     assert!(
-        chips.iter().all(|n| n.y + n.h <= card.y + 382.),
-        "the second tag row stays above the card inset"
+        chips.iter().all(|n| n.y + n.h <= card.y + 312.),
+        "the tag row stays above the card inset"
     );
     assert!(
         content
@@ -2811,13 +2812,13 @@ pub(super) fn card_padding_after(window: &MinimalSoftwareWindow, ui: &AppWindow)
                 && n.x >= other.x
                 && n.x < other.x + 384.
                 && n.y >= other.y
-                && n.y < other.y + 410.
+                && n.y < other.y + other.h
         }) {
             assert!(
                 node.x >= other.x + 28.
                     && node.y >= other.y + 28.
                     && node.x + node.w <= other.x + 384. - 28.
-                    && node.y + node.h <= other.y + 410. - 28.,
+                    && node.y + node.h <= other.y + other.h - 28.,
                 "kind {} at ({}, {}) leaves card ({}, {})",
                 node.kind,
                 node.x,

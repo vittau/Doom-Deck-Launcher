@@ -287,8 +287,8 @@ fn required_import_sheet_has_no_toggle() {
 }
 
 #[test]
-fn cards_keep_roomy_insets_and_two_tag_rows() {
-    if isolated(module_path!(), "cards_keep_roomy_insets_and_two_tag_rows") {
+fn cards_keep_roomy_insets_and_one_tag_row() {
+    if isolated(module_path!(), "cards_keep_roomy_insets_and_one_tag_row") {
         return;
     }
     let (window, ui) = setup();
