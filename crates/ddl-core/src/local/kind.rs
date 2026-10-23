@@ -28,6 +28,7 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::iwads::identify::sha256_file;
 
@@ -129,17 +130,20 @@ pub struct UserFile {
     pub kind: Kind,
 }
 
-impl UserFile {
-    /// Reads and identifies the file at `path`.
-    ///
-    /// Rejects non-absolute paths, missing files, directories, devices and
-    /// sockets, symlinks that resolve to a non-regular file, files above
-    /// [`MAX_USER_FILE_BYTES`], content that is not a WAD, ZIP or bounded text,
-    /// and a suffix the engine's `-file` routing would reject.
-    ///
+/// Bounded listing result. Deliberately has no digest and cannot be launched.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Inspection {
+    /// Candidate absolute path.
+    pub path: PathBuf,
+    /// Observed length, not a trusted identity.
+    pub size: u64,
+    /// Validated content/suffix route.
+    pub kind: Kind,
+}
+impl Inspection {
+    /// Inspect metadata and a bounded prefix/header, without hashing payloads.
     /// # Errors
-    ///
-    /// Returns a [`FileError`] describing the first problem found.
+    /// Returns the same type, path and format errors as identity capture.
     pub fn read(path: &Path) -> Result<Self, FileError> {
         if !path.is_absolute() {
             return Err(FileError::NotAbsolute(path.to_path_buf()));
@@ -197,15 +201,84 @@ impl UserFile {
             });
         }
 
-        let sha256 = sha256_file(path).map_err(|error| FileError::Unreadable {
-            path: path.to_path_buf(),
-            error,
-        })?;
         Ok(Self {
             path: path.to_path_buf(),
             size,
-            sha256,
             kind,
+        })
+    }
+}
+
+impl UserFile {
+    /// Reads and identifies the file at `path`.
+    ///
+    /// Rejects non-absolute paths, missing files, directories, devices and
+    /// sockets, symlinks that resolve to a non-regular file, files above
+    /// [`MAX_USER_FILE_BYTES`], content that is not a WAD, ZIP or bounded text,
+    /// and a suffix the engine's `-file` routing would reject.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`FileError`] describing the first problem found.
+    pub fn read(path: &Path) -> Result<Self, FileError> {
+        Self::read_cancellable(path, || false)
+    }
+
+    /// Capture a fresh identity, observing cancellation between 64 KiB reads.
+    /// # Errors
+    /// Returns an interrupted read on cancellation, or a validation/read error.
+    pub fn read_cancellable(
+        path: &Path,
+        mut cancelled: impl FnMut() -> bool,
+    ) -> Result<Self, FileError> {
+        let fail = |error| FileError::Unreadable {
+            path: path.to_path_buf(),
+            error,
+        };
+        let inspected = Inspection::read(path)?;
+        let mut file = File::open(path).map_err(fail)?;
+        let before = file.metadata().map_err(fail)?;
+        let mut hash = Sha256::new();
+        let mut buffer = [0; 64 * 1024];
+        let mut total = 0;
+        loop {
+            if cancelled() {
+                return Err(fail(io::Error::new(
+                    io::ErrorKind::Interrupted,
+                    "cancelled",
+                )));
+            }
+            let count = file.read(&mut buffer).map_err(fail)?;
+            if count == 0 {
+                break;
+            }
+            total += count as u64;
+            if total > MAX_USER_FILE_BYTES {
+                return Err(fail(io::Error::other("file grew while reading")));
+            }
+            hash.update(&buffer[..count]);
+        }
+        let after = fs::metadata(path).map_err(fail)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            if before.dev() != after.dev() || before.ino() != after.ino() {
+                return Err(fail(io::Error::other("file replaced while reading")));
+            }
+        }
+        // Inspect again: a stale listing or changed header never supplies identity.
+        if total != inspected.size
+            || before.len() != after.len()
+            || before.modified().ok() != after.modified().ok()
+            || Inspection::read(path)? != inspected
+        {
+            return Err(fail(io::Error::other("file changed while reading")));
+        }
+        Ok(Self {
+            path: path.to_path_buf(),
+            size: total,
+            sha256: hash.finalize().iter().map(|b| format!("{b:02x}")).collect(),
+            kind: inspected.kind,
         })
     }
 
@@ -295,11 +368,14 @@ pub fn is_iwad_header(path: &Path) -> Result<bool, FileError> {
 /// Returns a [`FileError`] when the file cannot be read or its content is not
 /// an accepted kind.
 pub fn detect_kind(path: &Path, size: u64) -> Result<Kind, FileError> {
-    let mut prefix = vec![0_u8; TEXT_PREFIX_BYTES.min(usize::try_from(size).unwrap_or(usize::MAX))];
     let mut file = File::open(path).map_err(|error| FileError::Unreadable {
         path: path.to_path_buf(),
         error,
     })?;
+    detect_reader(path, size, &mut file)
+}
+fn detect_reader(path: &Path, size: u64, file: &mut impl Read) -> Result<Kind, FileError> {
+    let mut prefix = vec![0_u8; TEXT_PREFIX_BYTES.min(usize::try_from(size).unwrap_or(usize::MAX))];
     let read = file
         .read(&mut prefix)
         .map_err(|error| FileError::Unreadable {
@@ -309,7 +385,7 @@ pub fn detect_kind(path: &Path, size: u64) -> Result<Kind, FileError> {
     prefix.truncate(read);
 
     if prefix.starts_with(b"IWAD") || prefix.starts_with(b"PWAD") {
-        return check_wad(path, size);
+        return check_wad(path, size, &prefix);
     }
     if prefix.starts_with(b"PK\x03\x04") || prefix.starts_with(b"PK\x05\x06") {
         return Ok(Kind::Zip);
@@ -323,23 +399,13 @@ pub fn detect_kind(path: &Path, size: u64) -> Result<Kind, FileError> {
 }
 
 /// Validates a WAD header and its lump directory.
-fn check_wad(path: &Path, size: u64) -> Result<Kind, FileError> {
-    if size < HEADER_LEN {
+fn check_wad(path: &Path, size: u64, raw: &[u8]) -> Result<Kind, FileError> {
+    if size < HEADER_LEN || raw.len() < HEADER_LEN as usize {
         return Err(FileError::InvalidContent {
             path: path.to_path_buf(),
             detail: "WAD header is truncated".to_owned(),
         });
     }
-    let mut raw = [0_u8; HEADER_LEN as usize];
-    let mut file = File::open(path).map_err(|error| FileError::Unreadable {
-        path: path.to_path_buf(),
-        error,
-    })?;
-    file.read_exact(&mut raw)
-        .map_err(|error| FileError::Unreadable {
-            path: path.to_path_buf(),
-            error,
-        })?;
     let numlumps = i32::from_le_bytes([raw[4], raw[5], raw[6], raw[7]]);
     let infotableofs = i32::from_le_bytes([raw[8], raw[9], raw[10], raw[11]]);
     if numlumps < 0 || infotableofs < 0 {
@@ -747,5 +813,64 @@ mod tests {
         let pwad = write(&dir, "mod.wad", &wad_bytes(b"PWAD", &["MAP01"]));
         assert!(is_iwad_header(&iwad).unwrap());
         assert!(!is_iwad_header(&pwad).unwrap());
+    }
+}
+
+#[cfg(test)]
+mod polish_tests {
+    use super::*;
+    #[test]
+    fn bounded_inspection_reads_only_prefix_and_preserves_wad_checks() {
+        struct Reader {
+            calls: usize,
+        }
+        impl Read for Reader {
+            fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+                self.calls += 1;
+                assert_eq!(self.calls, 1, "must never read payload chunks");
+                assert!(buf.len() <= TEXT_PREFIX_BYTES);
+                buf.fill(0);
+                buf[..12].copy_from_slice(b"PWAD\0\0\0\0\x0c\0\0\0");
+                Ok(buf.len())
+            }
+        }
+        let mut reader = Reader { calls: 0 };
+        assert_eq!(
+            detect_reader(
+                Path::new("/synthetic.wad"),
+                MAX_USER_FILE_BYTES,
+                &mut reader
+            )
+            .unwrap(),
+            Kind::Wad
+        );
+        assert_eq!(reader.calls, 1);
+        assert!(check_wad(Path::new("/bad.wad"), 12, b"PWAD\x01\0\0\0\x0c\0\0\0").is_err());
+    }
+    #[test]
+    fn identity_cancel_at_chunk_and_invalid_mutation_after_listing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("maps.wad");
+        let mut f = File::create(&path).unwrap();
+        use std::io::Write;
+        f.write_all(b"PWAD\0\0\0\0\x0c\0\0\0").unwrap();
+        f.set_len(1024 * 1024).unwrap();
+        let inspected = Inspection::read(&path).unwrap();
+        assert_eq!(inspected.size, 1024 * 1024);
+        let mut checkpoints = 0;
+        assert!(
+            UserFile::read_cancellable(&path, || {
+                checkpoints += 1;
+                checkpoints == 3
+            })
+            .is_err()
+        );
+        assert_eq!(checkpoints, 3);
+        let identity = UserFile::read(&path).unwrap();
+        fs::write(&path, b"bad header").unwrap();
+        assert!(UserFile::read(&path).is_err());
+        assert!(identity.verify().is_err());
+        fs::remove_file(&path).unwrap();
+        assert!(UserFile::read(&path).is_err());
     }
 }
