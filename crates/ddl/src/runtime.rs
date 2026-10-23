@@ -2474,19 +2474,26 @@ impl Runtime {
                                 continue;
                             }
                             let x = 12. + 408. * (visible % 3) as f32;
-                            let reduction = if discover { 24. } else { 0. };
+                            let reduction = if discover { 70. } else { 0. };
+                            // A single tag row returns 38px to the screenshot.
+                            let content_shift = reduction - if discover { 38. } else { 0. };
                             let y = 12. + top + (438. - reduction) * (visible / 3) as f32;
                             b.card(card_id(i), x, y, 384., 410. - reduction);
-                            // Spec 074: a 28 px inset on every side keeps the art,
-                            // text and chips clear of the 20 px ornamental frame and
-                            // leaves room for two chip rows above the bottom edge.
-                            b.recipe_art(x + 28., y + 28., 328., 128. - reduction, &item.recipe);
+                            // Preserve the 28px frame inset. Only Discover uses
+                            // compact, single-row tags; Library retains two rows.
+                            b.recipe_art(
+                                x + 28.,
+                                y + 28.,
+                                328.,
+                                128. - content_shift,
+                                &item.recipe,
+                            );
                             if item.favorite {
                                 b.favorite(x + 316., y + 36.);
                             }
                             b.title(
                                 x + 28.,
-                                y + 164. - reduction,
+                                y + 164. - content_shift,
                                 328.,
                                 60.,
                                 display_title(&item.recipe).into(),
@@ -2494,7 +2501,7 @@ impl Runtime {
                             );
                             b.author(
                                 x + 28.,
-                                y + 230. - reduction,
+                                y + 230. - content_shift,
                                 328.,
                                 24.,
                                 item.recipe.authors.join(", ").into(),
@@ -2515,7 +2522,7 @@ impl Runtime {
                             );
                             b.label(
                                 x + 28.,
-                                y + 258. - reduction,
+                                y + 258. - content_shift,
                                 328.,
                                 24.,
                                 format!("{} · {status}", game(ui, item.recipe.base_game.game))
@@ -2524,7 +2531,7 @@ impl Runtime {
                             );
                             b.label(
                                 x + 28.,
-                                y + 286. - reduction,
+                                y + 286. - content_shift,
                                 328.,
                                 24.,
                                 if discover {
@@ -2545,12 +2552,12 @@ impl Runtime {
                                 Category::Tag(id) if discover => Some(id.as_str()),
                                 _ => None,
                             };
-                            b.chips(
-                                &tag_labels(s, &item.recipe, 2, lead),
-                                x + 28.,
-                                y + 314. - reduction,
-                                328.,
-                            );
+                            let labels = tag_labels(s, &item.recipe, 2, lead);
+                            if discover {
+                                b.discover_chips(&labels, x + 28., y + 314. - content_shift, 328.);
+                            } else {
+                                b.chips(&labels, x + 28., y + 314., 328.);
+                            }
                         }
                         if discover && self.category == Category::Favorites && shown.is_empty() {
                             b.panel(12., 12. + top, 1200., 280.);
@@ -4683,6 +4690,33 @@ impl Nodes {
         }
         if labels.is_empty() { 0 } else { row.min(1) + 1 }
     }
+    /// Discover cards use one compact row. Keep the category lead first and
+    /// omit a trailing label rather than wrapping or truncating its text.
+    fn discover_chips(&mut self, labels: &[String], x: f32, y: f32, width: f32) {
+        let mut cx = 0.;
+        for label in labels.iter().take(2) {
+            // Compact Barlow labels need a wider glyph allowance than the
+            // legacy chips. Font-metric tests cover the full tag vocabulary.
+            let w = (label.chars().count() as f32 * 14. * 0.60 + 12.).ceil();
+            if cx + w > width {
+                break;
+            }
+            self.push(
+                -999,
+                x + cx,
+                y,
+                w,
+                26.,
+                13,
+                label.as_str().into(),
+                Default::default(),
+                false,
+                false,
+            );
+            self.nodes.last_mut().unwrap().size = 14.;
+            cx += w + 6.;
+        }
+    }
     /// The Discover category strip at the top of the grid. Chips wider than the
     /// grid scroll: `start` is the first chip drawn, kept so `selected` and
     /// `focused` stay visible. Returns the new `start`.
@@ -5210,6 +5244,68 @@ mod category_tests {
         let held = b.strip(&chips(&labels, 5), 5, 3, Some(5));
         assert_eq!(held, 3);
     }
+    #[test]
+    fn compact_discover_chips_fit_every_vocabulary_pair_without_truncation() {
+        if crate::headless::isolated(
+            module_path!(),
+            "compact_discover_chips_fit_every_vocabulary_pair_without_truncation",
+        ) {
+            return;
+        }
+        let (_window, ui) = crate::headless::setup();
+        let catalog = Catalog::embedded();
+        // All ordered vocabulary pairs include every pair any embedded recipe
+        // can expose, with either category lead, plus the longest pair.
+        for first in &catalog.tags.tags {
+            for second in &catalog.tags.tags {
+                if first.id == second.id {
+                    continue;
+                }
+                let labels = [first.label.clone(), second.label.clone()];
+                let mut b = Nodes { nodes: vec![] };
+                b.discover_chips(&labels, 40., 282., 328.);
+                assert_eq!(b.nodes.len(), 2, "both labels fit: {labels:?}");
+                assert_eq!(b.nodes[0].label.as_str(), first.label);
+                assert_eq!(b.nodes[1].x, b.nodes[0].x + b.nodes[0].w + 6.);
+                for n in &b.nodes {
+                    assert_eq!((n.y, n.h, n.size), (282., 26., 14.));
+                    assert!(n.x >= 40. && n.x + n.w <= 368.);
+                    ui.set_fit_label(n.label.clone());
+                    ui.set_fit_display(false);
+                    ui.set_fit_strong(false);
+                    ui.set_fit_multiline(false);
+                    ui.set_fit_size(14.);
+                    ui.set_fit_smaller(14.);
+                    ui.set_fit_width(1000.);
+                    ui.set_fit_height(26.);
+                    assert!(
+                        ui.get_fit_base_width() <= n.w - 10.,
+                        "Barlow label {} needs {}px, chip text has {}px",
+                        n.label,
+                        ui.get_fit_base_width(),
+                        n.w - 10.
+                    );
+                    assert!(ui.get_fit_base_height() <= 26.);
+                }
+            }
+        }
+        let mut b = Nodes { nodes: vec![] };
+        b.discover_chips(
+            &[
+                "Community Projects".into(),
+                "An unusually long future vocabulary label that cannot fit".into(),
+            ],
+            0.,
+            0.,
+            328.,
+        );
+        assert_eq!(b.nodes.len(), 1, "omit a second tag that cannot fit");
+        assert_eq!(
+            b.nodes[0].label, "Community Projects",
+            "preserve category lead"
+        );
+    }
+
     #[test]
     fn cards_show_at_most_two_tag_chips_led_by_the_open_category() {
         let catalog = Catalog::embedded();

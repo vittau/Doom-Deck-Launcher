@@ -186,7 +186,7 @@ component Node inherits Rectangle {
     if item.kind == 13: Rectangle {
         y: 0px; height: parent.height; width: parent.width;
         background: Tokens.raised; border-radius: parent.height / 2; border-width: 1px; border-color: Tokens.line;
-        Text { x: 10px; width: parent.width - 20px; text: root.item.label; color: root.disabled-control ? Tokens.locked-ink : Tokens.text; font-size: root.item.size * 1px; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
+        Text { x: root.item.size < 18 ? 5px : 10px; width: parent.width - 2 * self.x; text: root.item.label; color: root.disabled-control ? Tokens.locked-ink : Tokens.text; font-size: root.item.size * 1px; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
     }
     if item.kind == 15: Rectangle {
         Rectangle {
