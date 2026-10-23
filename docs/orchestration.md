@@ -244,6 +244,11 @@ below are the ones most easily lost between sessions.
 - Owner will perform Deck validation soon. Focus the current journey and CB/CV/UP checks,
   retained state, audio and file access; old pending checkboxes do not prove current defects.
   Use the D-039 canonical signed channel, not D-035's historical URL.
+- CI follow-up (owner deferred on 2026-10-23): the Flatpak job spends ~5.5 of its 6.6 minutes
+  recompiling every crate because `--force-clean` discards the build directory each tag. A
+  cached build dir plus `target/` keyed on `Cargo.lock`, the manifest, `cargo-sources.json`,
+  toolchain and SDK should cut it to ~1.5–2 min; caching the Flathub SDK saves another ~0.6 min.
+  Measure before claiming a speedup.
 - D-041: specs 051–053 are deferred without priority. Preserve the existing index tooling;
   do not dispatch archive-browser work by default. Manual custom setups/extras serve
   occasional other content. Specs106/107 are reviewed, merged and published in
