@@ -1218,6 +1218,17 @@ fn pinned_discover_categories() {
         r.action(&ui, Action::NextCategory);
         assert_eq!(ui.get_scroll_offset(), 0.);
         r.choose_category(Category::Favorites);
+        r.focus = 39;
+        r.sync(&ui);
+        advance_time(160);
+        assert!(ui.get_scroll_offset() > 2. * 422.);
+        r.action(&ui, Action::PreviousCategory);
+        assert_eq!(
+            ui.get_scroll_offset(),
+            0.,
+            "category switch from an item starts at top"
+        );
+        r.choose_category(Category::Favorites);
         r.focus = 10;
         r.sync(&ui);
         advance_time(160);

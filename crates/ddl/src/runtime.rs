@@ -3937,7 +3937,12 @@ impl Runtime {
                 }
             } else if list {
                 focused.map_or(0., |n| {
-                    continuous_offset(&plane, n, viewport, ui.get_presented_scroll_offset())
+                    let current = if discover && self.scroll_anchor.is_none() {
+                        0.
+                    } else {
+                        ui.get_presented_scroll_offset()
+                    };
+                    continuous_offset(&plane, n, viewport, current)
                 })
             } else {
                 focused.map_or(0., |n| follow_offset(&plane, n, viewport, focus_inset))

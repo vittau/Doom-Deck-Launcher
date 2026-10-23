@@ -40,7 +40,7 @@ capture was used.
 
 | Exact command | Result |
 | --- | --- |
-| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl headless::library -- --nocapture` | 9 passed; includes the new pinned test, existing Discover/Library continuous motion, category/favorites navigation, Library scenes, setup/sheet neutral-scroll preservation and 1,000-item coverage |
+| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl headless::library -- --nocapture` | 9 passed (including the final rerun after the category-reset fix); includes the new pinned test, existing Discover/Library continuous motion, category/favorites navigation, Library scenes, setup/sheet neutral-scroll preservation and 1,000-item coverage |
 | `cargo test -p ddl runtime::category_tests -- --nocapture` | 5 passed; category ordering/reachability, overflow window and glyphs, tag chips |
 | `cargo test -p ddl runtime::scroll_tests -- --nocapture` | 3 passed; continuous minimum-distance bounds, reversals and existing card/section follow math |
 | `cargo test -p ddl compact_toggle_contexts_empty_lists_and_save_failure_remain_usable -- --nocapture` | 1 passed; empty category, layout toggle and unrelated-screen behavior |
@@ -57,7 +57,8 @@ The new regression covers both layouts equally:
   bounded between y=310 and y=732; repeated directional movement and reversal
   preserve the selected identity. Deep navigation exceeds two scrolling viewports.
 - Up from the first item to the selected chip without an offset jump, Down back
-  to the first item, and category switching back to offset zero.
+  to the first item, and category switching back to offset zero from both a
+  focused chip and a deeply scrolled focused item.
 - Real pointer events at y=305 (hidden content must receive no activation), y=315
   (the visible part of that same card/row activates the correct item), and on a
   chip while content is scrolled.
@@ -68,7 +69,10 @@ The new regression covers both layouts equally:
 An initial compile identified the required shared-node initializer in `shell.rs`;
 it was added after authorization. The first Clippy pass identified identical
 branches in the optional preview transform; those branches were combined and the
-final Clippy and affected test both passed. No full workspace suite, title matrix,
+final Clippy and affected test both passed. Final review also corrected a 12px
+List category-reset offset when switching from an item, added regression coverage,
+and reran all nine focused headless cases plus formatting and Clippy successfully.
+No full workspace suite, title matrix,
 network e2e or SDK build was needed for this focused UI change.
 
 ## Off-screen production PNGs
