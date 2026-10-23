@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "fixture-alternate",
+  "name": "Alternate",
+  "recipe_id": "auger-zenith",
+  "components": [
+    "alternate-blaster"
+  ],
+  "skill": 2,
+  "pistol_start": false
+}

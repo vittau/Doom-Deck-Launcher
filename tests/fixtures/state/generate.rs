@@ -92,6 +92,13 @@ mod release_state_fixture {
             home: "/ddl-fixture".into(), screen: None, test: None,
         }, ViewFormat::List).unwrap();
         // VIEW_END
+        // PICKER_START
+        // Use this tag's production local-picker writer with a folder both
+        // supported hosts can enumerate, so the saved preference is real state
+        // and not hand-written JSON. It always falls back to Home when absent.
+        ddl_core::local::picker::remember(&config, Path::new("/tmp"))
+            .expect("the fixture host can enumerate /tmp");
+        // PICKER_END
         SetupStore::new(&data).save(&CustomSetup::new(
             "fixture-custom", "My custom setup", CustomIwad::Identified { variant: "doom2-1.9".into() },
             Compatibility::Auto, 1700000000,

@@ -1,6 +1,6 @@
 # 108 — Publish the reviewed local-content and variant-clarity update
 
-**Status:** In progress · **Depends on:** 104, 106, 107
+**Status:** Published and verified; physical Deck checks pending · **Depends on:** 104, 106, 107
 **Origin:** owner, 2026-10-23: publish the reviewed changes now; the owner is the only current
 user and explicitly accepts publication before physical Deck checks.
 

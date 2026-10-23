@@ -6116,6 +6116,7 @@ mod release_state_tests {
             "v0.0.12-catalog",
             "v0.0.13-update",
             "v0.0.14-browse",
+            "v0.0.15-local",
         ];
         for tag in required_tags {
             assert!(root.join(tag).is_dir(), "missing release fixture {tag}");
@@ -6269,6 +6270,7 @@ mod release_state_tests {
                     | "v0.0.12-catalog"
                     | "v0.0.13-update"
                     | "v0.0.14-browse"
+                    | "v0.0.15-local"
             );
             assert_eq!(tree.join("config/audio.json").is_file(), has_audio, "{tag}");
             assert_eq!(
@@ -6289,7 +6291,7 @@ mod release_state_tests {
                 snapshot.audio.warning.is_none(),
                 "{tag}: audio preferences readable"
             );
-            let has_view = matches!(tag, "v0.0.13-update" | "v0.0.14-browse");
+            let has_view = matches!(tag, "v0.0.13-update" | "v0.0.14-browse" | "v0.0.15-local");
             assert_eq!(tree.join("config/view.json").is_file(), has_view, "{tag}");
             assert_eq!(
                 load_view_format(&env).unwrap(),
@@ -6299,6 +6301,25 @@ mod release_state_tests {
                     ViewFormat::Cards
                 },
                 "{tag}: the saved view survives; older releases default to Cards"
+            );
+            // Spec 106's optional local-picker preference is separate state and
+            // never blocks opening an older tree that has no such file.
+            let has_picker = tag == "v0.0.15-local";
+            assert_eq!(
+                tree.join("config/local-picker.json").is_file(),
+                has_picker,
+                "{tag}"
+            );
+            let home = Path::new("/ddl-fixture");
+            let expected_folder = if has_picker && local::picker::usable(Path::new("/tmp")) {
+                PathBuf::from("/tmp")
+            } else {
+                home.to_path_buf()
+            };
+            assert_eq!(
+                local::picker::remembered(&env.paths.config, home),
+                expected_folder,
+                "{tag}: the remembered local folder survives or falls back to Home"
             );
             // Saving loaded state emits only the current shape and is atomic.
             let temp = tempfile::tempdir().unwrap();

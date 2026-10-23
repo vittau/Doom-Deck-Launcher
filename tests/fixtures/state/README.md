@@ -21,6 +21,7 @@ after generation (`git worktree remove --force .scratch/<tag>`).
 | v0.0.12-catalog | 409d6c5 | Same scenario and audio choice; embedded recipe snapshots include optional `original_release` date metadata, without changing saved-state field meanings or AppState schema 2. |
 | v0.0.13-update | 7bf51c1 | Same scenario and explicit Default audio; the tag's production view-preference writer saves List in the isolated schema-1 `config/view.json`. |
 | v0.0.14-browse | 58e83b8 | Same scenario, explicit Default audio and List view; continuous browsing and the 12 new screenshot assets change no saved-state fields. |
+| v0.0.15-local | 9745d53 | Same scenario; the tag's production local-picker writer saves an explicit folder in the separate schema-1 `config/local-picker.json` (spec 106). |
 
 Each config/data state tree contains a registered engine, two IWAD folder
 references and registry entries, two installed recipe snapshots with active and
@@ -40,20 +41,28 @@ installed generations, and current-shape save. Resolver failures for absent
 synthetic content are expected and do not erase installed metadata.
 
 `config/audio.json` exists only in the reviewed audio-capable fixtures
-(`v0.0.10-audio`, `v0.0.11-polish`, `v0.0.12-catalog`, `v0.0.13-update` and
-`v0.0.14-browse`). Each scenario calls that tag's
+(`v0.0.10-audio`, `v0.0.11-polish`, `v0.0.12-catalog`, `v0.0.13-update`,
+`v0.0.14-browse` and `v0.0.15-local`). Each scenario calls that tag's
 production `Soundfonts::select(Choice::Default)` serializer, so the guard checks
 an explicit choice survives loading. Earlier tags predate audio preferences and
 correctly load with no explicit choice. No soundfont is installed or bundled,
 and no download/engine/UI code is run.
 
-`v0.0.13-update` and `v0.0.14-browse` also call their production view-preference
-writer with an explicit List choice. The guard reads `config/view.json` through the
-production reader and checks that older tags, which have no such file, still default to
-Cards.
+`v0.0.13-update`, `v0.0.14-browse` and `v0.0.15-local` also call their production
+view-preference writer with an explicit List choice. The guard reads `config/view.json`
+through the production reader and checks that older tags, which have no such file, still
+default to Cards.
+
+`v0.0.15-local` additionally calls its production local-picker writer with `/tmp`, a
+folder both supported hosts can enumerate, so `config/local-picker.json` holds real
+serializer output rather than hand-written JSON. The guard reads it through the
+production reader and accepts either the remembered folder or the documented Home
+fallback when the host cannot enumerate it; older tags have no such file and fall back
+to Home.
 
 For a new release, review the tagged serializers, add the tag to the generator's
-allowlist and, when supported, to its explicit `AUDIO_TAGS` and `VIEW_TAGS` sets;
+allowlist and, when supported, to its explicit `AUDIO_TAGS`, `VIEW_TAGS` and
+`PICKER_TAGS` sets;
 then generate a new tree without changing existing ones and run this guard.
 Keep the scenario's ids and explicitly document any features that the tag
 predates.
