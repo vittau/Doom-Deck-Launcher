@@ -1,7 +1,9 @@
-//! PWAD browsing order and category membership (spec 090).
+//! PWAD browsing order and category membership (spec 090, spec 112).
 //!
-//! Every Discover category, Favorites and Library lists recipes in ascending
-//! first-public-release order (R2). The date is the explicit, optional
+//! Discover leads with installed and favorite mapsets (spec 112, R1) and keeps
+//! the ascending first-public-release order inside each group (spec 090, R2);
+//! Library keeps that chronological order around its own installed/favorite
+//! grouping. The date is the explicit, optional
 //! [`ReleaseDate`](super::ReleaseDate) — never parsed from the free-form
 //! `release` version label — and unknown dates sort last.
 //!
@@ -53,6 +55,38 @@ fn compare_title_and_id(a: &Recipe, b: &Recipe) -> Ordering {
         .to_lowercase()
         .cmp(&b.title.to_lowercase())
         .then_with(|| a.id.cmp(&b.id))
+}
+
+/// Discover's leading group for one mapset (spec 112, R1). A higher group sorts
+/// first: installed favorite (3), installed (2), favorite only (1), the rest (0).
+fn discover_group(installed: bool, favorite: bool) -> u8 {
+    match (installed, favorite) {
+        (true, true) => 3,
+        (true, false) => 2,
+        (false, true) => 1,
+        (false, false) => 0,
+    }
+}
+
+/// Discover order for every category in Cards and List (spec 112, R1).
+///
+/// The `(installed, favorite)` tuple sorts descending — installed favorites,
+/// installed mapsets, favorite-only mapsets, then the rest — and
+/// [`compare_browsing_order`] keeps the chronological order inside each group.
+/// `installed` is the card's installed state (an install manifest is present),
+/// whatever the base-game state.
+#[must_use]
+pub fn compare_discover_order(
+    a: &Recipe,
+    a_installed: bool,
+    a_favorite: bool,
+    b: &Recipe,
+    b_installed: bool,
+    b_favorite: bool,
+) -> Ordering {
+    discover_group(b_installed, b_favorite)
+        .cmp(&discover_group(a_installed, a_favorite))
+        .then_with(|| compare_browsing_order(a, b))
 }
 
 #[cfg(test)]
@@ -170,6 +204,75 @@ role = "maps"
         assert_eq!(date(1997, None, None).iso(), "1997");
         assert_eq!(date(1997, Some(5), None).iso(), "1997-05");
         assert_eq!(date(1997, Some(5), Some(9)).iso(), "1997-05-09");
+    }
+
+    /// Spec 112, R1: installed favorites lead, then installed mapsets, then
+    /// favorite-only mapsets, then the rest, whatever the release dates.
+    #[test]
+    fn discover_leads_with_installed_and_favorite_groups() {
+        let old =
+            |id: &str, title: &str, year: u16| recipe(id, title, Some(date(year, None, None)));
+        let installed_favorite = old("if", "Installed favorite", 2015);
+        let installed = old("i", "Installed", 2014);
+        let favorite = old("f", "Favorite", 2013);
+        let rest = old("r", "Rest", 2012);
+
+        let compare = |a: (&Recipe, bool, bool), b: (&Recipe, bool, bool)| {
+            compare_discover_order(a.0, a.1, a.2, b.0, b.1, b.2)
+        };
+        let if_ = (&installed_favorite, true, true);
+        let i_ = (&installed, true, false);
+        let f_ = (&favorite, false, true);
+        let r_ = (&rest, false, false);
+
+        assert_eq!(compare(if_, i_), Ordering::Less);
+        assert_eq!(compare(i_, f_), Ordering::Less);
+        assert_eq!(compare(f_, r_), Ordering::Less);
+        assert_eq!(compare(r_, if_), Ordering::Greater);
+        assert_eq!(compare(if_, if_), Ordering::Equal);
+    }
+
+    /// Spec 112, R1: inside each group the existing chronological browsing order
+    /// decides, including the title/id tie-break for equal and unknown dates.
+    #[test]
+    fn discover_keeps_chronology_inside_each_group() {
+        let day = Some(date(2005, Some(9), Some(30)));
+        let earlier = recipe("later-id", "Earlier", day);
+        let later = recipe("earlier-id", "Later", Some(date(2010, None, None)));
+        let unknown = recipe("unknown", "Unknown", None);
+
+        for (installed, favorite) in [(true, true), (true, false), (false, true), (false, false)] {
+            let group: Vec<&Recipe> = vec![&earlier, &later, &unknown];
+            let mut sorted = group.clone();
+            sorted.sort_by(|a, b| {
+                compare_discover_order(a, installed, favorite, b, installed, favorite)
+            });
+            assert_eq!(
+                sorted,
+                vec![&earlier, &later, &unknown],
+                "group ({installed}, {favorite}) keeps chronology"
+            );
+        }
+
+        // Equal dates fall back to the case-insensitive title then the recipe id.
+        let alpha = recipe("zeta-id", "Alpha", day);
+        let beta = recipe("alpha-id", "Beta", day);
+        assert_eq!(
+            compare_discover_order(&alpha, true, true, &beta, true, true),
+            Ordering::Less
+        );
+        assert_eq!(
+            compare_discover_order(&beta, false, false, &alpha, false, false),
+            Ordering::Greater
+        );
+    }
+
+    #[test]
+    fn discover_groups_are_the_descending_tuple() {
+        assert_eq!(discover_group(true, true), 3);
+        assert_eq!(discover_group(true, false), 2);
+        assert_eq!(discover_group(false, true), 1);
+        assert_eq!(discover_group(false, false), 0);
     }
 
     #[test]

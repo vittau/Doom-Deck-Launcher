@@ -12,7 +12,7 @@ pub(crate) mod osk;
 use local_ui::LocalUi;
 
 use ddl_core::{
-    catalog::{compare_browsing_order, shows_in_category},
+    catalog::{compare_browsing_order, compare_discover_order, shows_in_category},
     downloads::{CancellationToken, InstallProgress, InstallStage},
     platform::{legacy_import::LegacyInstall, sandbox::Sandbox},
     profiles::Profile,
@@ -1579,9 +1579,10 @@ impl Runtime {
             .first()
             .map_or(CHIP + self.category_index() as i32, |&i| card_id(i))
     }
-    /// Snapshot indexes shown on Discover in the current category, oldest first
-    /// (spec 090, R1/R2). Community Projects hides `doomer-boards` recipes, and a
-    /// favorite never moves a card: chronology decides every position.
+    /// Snapshot indexes shown on Discover in the current category (spec 090,
+    /// R1/R2; spec 112, R1). Community Projects hides `doomer-boards` recipes.
+    /// Installed favorites lead, then installed mapsets, then favorite-only
+    /// mapsets, then the rest; chronology decides positions inside each group.
     fn discover_items(&self) -> Vec<usize> {
         let Some(s) = &self.snapshot else {
             return vec![];
@@ -1592,7 +1593,17 @@ impl Runtime {
                 Category::Favorites => s.items[i].favorite,
             })
             .collect();
-        shown.sort_by(|&a, &b| compare_browsing_order(&s.items[a].recipe, &s.items[b].recipe));
+        shown.sort_by(|&a, &b| {
+            let (a, b) = (&s.items[a], &s.items[b]);
+            compare_discover_order(
+                &a.recipe,
+                a.manifest.is_some(),
+                a.favorite,
+                &b.recipe,
+                b.manifest.is_some(),
+                b.favorite,
+            )
+        });
         shown
     }
     /// Installed favorites lead Library in both layouts (spec 102), retaining
