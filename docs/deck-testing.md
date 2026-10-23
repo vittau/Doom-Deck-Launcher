@@ -271,7 +271,7 @@ Use legally owned content already on the Deck; do not download IWADs for this ch
 | --- | --- | --- | --- |
 | LC1 | Library Y / Add local mapset explains base game → Create setup → Add files; first content filename names the new setup, Rename confirms/cancels without changing profiles or saves | Gaming | ✅ 0.0.16, 2026-10-23: owner ran it with a WAD already on the Deck |
 | LC2 | Browse a large WAD folder on internal storage and SD; compare listing-ready feel, cancel while browsing and while confirming a large selection, verify no partial add | Gaming | ⏳ |
-| LC3 | Browse an SD folder, close/reopen picker and restart DDL; folder is remembered; unmount card and reopen → Home without repeated retry | Gaming | ⏳ 0.0.16, 2026-10-23: not run; no SD card on this Deck, so the unmount step is N/A |
+| LC3 | Browse an SD folder, close/reopen picker and restart DDL; folder is remembered; unmount card and reopen → Home without repeated retry | Gaming | ⚠️ 0.0.16, 2026-10-23: internal-storage folder remembered after reopening the picker and restarting DDL; SD and unmount steps N/A (no SD card on this Deck) |
 | LC4 | Move a middle local file, use Locate file and select the same bytes; original slot, compatibility, profile and saves remain; restart and launch | Gaming | ⏳ |
 | LC5 | Locate different bytes, first cancel then explicitly accept; Cancel starts focused and saves warning is readable; wrong patch/content kind or non-IWAD in IWAD slot fails safely | Gaming | ⏳ |
 | LC6 | Locate a custom file-based IWAD, then catalog/base-game profile extras; only the intended profile changes; registered copies/recipe members retain their existing recovery | Gaming | ⏳ |
