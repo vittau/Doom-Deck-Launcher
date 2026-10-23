@@ -41,16 +41,15 @@ jobs:
       - name: Run the engine under gdb
         run: |
           set -uo pipefail
-          export SDL_AUDIODRIVER=dummy
-          export SDL_VIDEODRIVER=dummy
-          export LD_LIBRARY_PATH="$PWD/squashfs-root/usr/lib:$PWD/squashfs-root/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
           mkdir -p run/data run/save
           timeout 150 gdb -batch -q \
             -ex "set pagination off" \
+            -ex "set environment LD_LIBRARY_PATH $PWD/squashfs-root/usr/lib" \
             -ex "set environment SDL_AUDIODRIVER dummy" \
             -ex "set environment SDL_VIDEODRIVER dummy" \
             -ex "run" \
             -ex "bt" \
+            -ex "info registers rip" \
             --args squashfs-root/usr/bin/dsda-doom \
               -iwad freedoom-0.13.0/freedoom2.wad \
               -file HDLSCHKN.wad \
@@ -58,5 +57,5 @@ jobs:
               -data run/data \
               -save run/save \
               -complevel mbf21 \
-              -nodraw -verbose 2>&1 | tail -60
+              -nodraw -verbose 2>&1 | tail -70
           echo "gdb-exit=$?"
