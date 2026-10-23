@@ -80,6 +80,14 @@ backwards compatibility unless the owner asks for it; instead name the break in 
 notes so a reinstall is expected. Applies to install-layout changes such as spec 109. The owner
 will say when this rule changes.
 
+**D-043 — Discover lists installed and favorite mapsets first (Accepted, owner, 2026-10-23).**
+Within every Discover category, in Cards and List, items sort by the tuple (installed,
+favorite), descending: installed favorites, then other installed mapsets, then favorites that
+are not installed, then the rest. Inside each group the existing chronological browsing order
+(release date, then title and id) is kept. This supersedes spec 102's "Discover retains its
+chronological ordering"; Library already follows the same rule (installed only, favorites
+first). Spec 112.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
