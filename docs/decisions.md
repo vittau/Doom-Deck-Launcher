@@ -73,6 +73,13 @@ requests changes to its scheduled workflow. Focus near-term work on Deck validat
 supported improvements to the existing journey. The owner will perform Deck validation soon;
 UX proposals require evidence and a spec before implementation.
 
+**D-042 — Experimental phase allows breaking changes (Accepted, owner, 2026-10-23).**
+While DDL is experimental and the owner is the only user, releases may change on-disk layouts,
+drop compatibility code and otherwise break previous state. Do not spend work on migration or
+backwards compatibility unless the owner asks for it; instead name the break in the release
+notes so a reinstall is expected. Applies to install-layout changes such as spec 109. The owner
+will say when this rule changes.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |

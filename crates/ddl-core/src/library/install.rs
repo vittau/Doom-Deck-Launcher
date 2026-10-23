@@ -133,22 +133,21 @@ impl Installer {
         &self.cache_dir
     }
 
-    /// `<data>/library/<recipe id>/<release>`, the install directory.
+    /// `<data>/library/<recipe id>/<release dir>`, the install directory.
+    ///
+    /// The directory name is a bounded slug of the release label, not the label
+    /// itself: the catalog's `release` is player-facing citation text, so the
+    /// on-disk path stays short and free of spaces and punctuation (spec 109).
     ///
     /// # Errors
     ///
-    /// Returns [`InstallError::UnsafePath`] when the recipe id or release is not
-    /// a safe single path component.
+    /// Returns [`InstallError::UnsafePath`] when the recipe id is not a safe
+    /// single path component.
     pub fn install_dir(&self, recipe: &Recipe) -> Result<PathBuf, InstallError> {
         let id = safe_component(&recipe.id).ok_or_else(|| InstallError::UnsafePath {
             detail: format!("recipe id `{}` is not a safe path component", recipe.id),
         })?;
-        let release = safe_component(&recipe.release).ok_or_else(|| InstallError::UnsafePath {
-            detail: format!(
-                "recipe release `{}` is not a safe path component",
-                recipe.release
-            ),
-        })?;
+        let release = release_dir_name(&recipe.release);
         Ok(self.data_dir.join(LIBRARY_DIR).join(id).join(release))
     }
 
@@ -1031,6 +1030,35 @@ fn safe_component(value: &str) -> Option<&str> {
     }
 }
 
+/// Bounded directory name for a recipe release (spec 109).
+///
+/// The catalog's `release` is citation text for the player, so it can be a
+/// sentence with spaces, parentheses and commas. The install directory only has
+/// to identify the release: keep the leading label, drop the citation, reduce it
+/// to ASCII letters, digits, `.`, `_` and `-`, and bound its length. Two release
+/// labels that reduce to the same name share one install directory, which the
+/// existing recipe-identity checks already treat as a changed install.
+fn release_dir_name(value: &str) -> String {
+    const MAX: usize = 32;
+    let head = value.split(['(', ';', ',']).next().unwrap_or_default();
+    let mut slug = String::new();
+    for ch in head.chars() {
+        if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-') {
+            slug.push(ch);
+        } else if !slug.is_empty() {
+            slug.push('-');
+        }
+        if slug.len() >= MAX {
+            break;
+        }
+    }
+    let slug = slug.trim_matches('-').trim_end_matches('.').to_owned();
+    if slug.is_empty() || slug == "." || slug == ".." {
+        return "release".to_owned();
+    }
+    slug
+}
+
 /// Hashes a file in bounded chunks so a large import never loads whole.
 fn hash_file(path: &Path, cancel: &CancellationToken) -> Result<String, InstallError> {
     let mut file = fs::File::open(path).map_err(|error| io_error("open imported file", error))?;
@@ -1208,6 +1236,50 @@ fn record_matches(
         Err(error) => {
             tracing::warn!(%error,path=%entry.path.display(),"could not verify prior installed member");
             Ok(false)
+        }
+    }
+}
+
+#[cfg(test)]
+mod release_dir_tests {
+    use super::release_dir_name;
+
+    #[test]
+    fn release_citations_become_short_directory_names() {
+        assert_eq!(
+            release_dir_name(
+                "RC1 2023-12-09, RC14 2026-01-19 (readme, day-first date); idgames archive file dated 2026-02-02"
+            ),
+            "RC1-2023-12-09"
+        );
+        assert_eq!(
+            release_dir_name("V.2407 (author's 'Sunder 2407.zip' download)"),
+            "V.2407"
+        );
+        assert_eq!(
+            release_dir_name("1.0, finalized 2013-12-22 (release date 2013-11-07)"),
+            "1.0"
+        );
+        // Plain labels are preserved exactly, so existing short paths stay put.
+        assert_eq!(release_dir_name("1.23"), "1.23");
+        assert_eq!(release_dir_name("RC14"), "RC14");
+    }
+
+    #[test]
+    fn the_directory_name_is_bounded_and_never_empty() {
+        let long = release_dir_name("version 1.0 with a very long descriptive label that goes on");
+        assert!(long.len() <= 32, "{long}");
+        assert!(!long.ends_with('-'), "{long}");
+        assert_eq!(release_dir_name("   "), "release");
+        assert_eq!(release_dir_name(".."), "release");
+        assert_eq!(release_dir_name("夜"), "release");
+        let slug = release_dir_name("Final release (2015-05 build)");
+        assert_eq!(slug, "Final-release");
+        for name in [long, slug] {
+            assert!(
+                !name.contains([' ', '/', '\\', '(', ')', ',', ';']),
+                "{name}"
+            );
         }
     }
 }

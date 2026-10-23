@@ -768,3 +768,29 @@ fn uninstall_refuses_records_whose_recipe_id_is_unsafe() {
     assert!(installer.finish_uninstall(&recipe.id).unwrap());
     assert!(!data.path().join("library/safe").exists());
 }
+
+#[test]
+fn a_release_citation_no_longer_reaches_the_install_path() {
+    let fixture = fixture("citation-test", "https://127.0.0.1/unused");
+    let mut recipe = fixture.recipe.clone();
+    recipe.release =
+        "RC1 2023-12-09, RC14 2026-01-19 (readme, day-first date); idgames file dated 2026-02-02"
+            .into();
+    let data = TempDir::new().unwrap();
+    let cache = TempDir::new().unwrap();
+    let installer = installer(&data, &cache);
+    assert_eq!(
+        installer.install_dir(&recipe).unwrap(),
+        data.path().join("library/citation-test/RC1-2023-12-09")
+    );
+    assert_eq!(
+        installer
+            .manifest_path(&recipe)
+            .unwrap()
+            .parent()
+            .unwrap()
+            .file_name()
+            .unwrap(),
+        "RC1-2023-12-09"
+    );
+}
