@@ -234,23 +234,23 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Published app: `v0.0.14-browse` (`58e83b8`), with paired release/signed Flatpak
-  publication verified in report104. Tagged serializer fixtures through that release are
-  complete, including Cards/List preferences. Add a new fixture only after the next tag.
-- Source checkpoint: `fa4eb89` passed ordinary Linux CI `39866464560`; current source has
-  114/118 recipe screenshots, ten more than the published app, plus the Headless Chicken
-  MBF21 recipe correction. The remote catalog is published; image bytes still need an app
-  build. See `docs/status.md` for the release/source distinction.
+- Published app: `v0.0.15-local` (`9745d53`), with paired release/signed Flatpak
+  publication verified in report108. Tagged serializer fixtures through that release are
+  complete, including audio, Cards/List and local-picker preferences. Add a new fixture
+  only after the next tag.
+- Source checkpoint: `9745d53` passed ordinary Linux CI `39957952528` and is the published
+  tag, carrying 114/118 recipe screenshots and the Headless Chicken MBF21 correction. The
+  remote catalog is published; only the four recipes with no verified image remain uncovered.
 - Owner will perform Deck validation soon. Focus the current journey and CB/CV/UP checks,
   retained state, audio and file access; old pending checkboxes do not prove current defects.
   Use the D-039 canonical signed channel, not D-035's historical URL.
 - D-041: specs 051–053 are deferred without priority. Preserve the existing index tooling;
   do not dispatch archive-browser work by default. Manual custom setups/extras serve
-  occasional other content. Owner-authorized specs106/107 are now reviewed/merged locally:
-  responsive local listing, remembered folder, Locate file, naming/Rename and clear recipe
-  variant controls with disabled unavailable state. Reports106/107 record 995 ordinary tests
-  plus eight affected follow-up cases and reviewed off-screen frames. These changes are not
-  published; LC/RV physical Deck checks remain pending.
+  occasional other content. Specs106/107 are reviewed, merged and published in
+  `v0.0.15-local`: responsive local listing, remembered folder, Locate file, naming/Rename and
+  clear recipe variant controls with disabled unavailable state. Reports106/107 record 995
+  ordinary tests plus eight affected follow-up cases and reviewed off-screen frames. LC/RV
+  physical Deck checks remain pending.
 
 ## Where state lives
 

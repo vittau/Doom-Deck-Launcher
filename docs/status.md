@@ -2,25 +2,38 @@
 
 ## Current checkpoint — 2026-10-23
 
-**Available for Deck testing:** [v0.0.14-browse](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.14-browse),
-immutable source `58e83b8c8dabdb550633faee002fa6ba977da7ab`, published as a Linux tarball
+**Available for Deck testing:** [v0.0.15-local](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.15-local),
+immutable source `9745d534bf9320b16fd12112ce3017af374bb4d3`, published as a Linux tarball
 and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
 Release and signed publication succeeded; the publication report records matching source
-provenance, version, canonical output and tarball checksum (104).
+provenance, version, canonical output and tarball checksum (108).
 
 ### Shipped
 
+- **Local content:** choosing a folder lists files from bounded inspections instead of hashing
+  every byte; selected files are identified only on confirmation and that capture can be
+  cancelled. The picker remembers the last usable folder, a missing file can be located in its
+  existing slot or profile (silent repair for equal bytes, explicit confirmation otherwise),
+  and new custom setups take the first content filename and can be renamed without touching
+  profiles or saves. Physical feel, Flatpak folder visibility and SD-card behavior are
+  Needs Deck Validation (LC1–LC7).
+- **Catalog controls:** Show recipe variants replaces the old Advanced row. Mapsets without free
+  recipe alternatives keep a visible, greyed-out row that focus skips; where alternatives exist
+  the first one is revealed and focused, and replacing a selection still asks for confirmation.
+  Catalog compatibility reads Set by recipe, while custom setups keep Auto/numeric choices.
+  Contrast and scroll behavior are Needs Deck Validation (RV1–RV3).
 - **Browsing:** shared persistent Cards/List choice on Select/V (095), continuous List
   scrolling and favorite-first installed mapsets in Library (102). Discover retains its
   category filters and chronological ordering. Actual controller feel remains Needs Deck Validation.
 - **Catalog:** 118 recipes, including the player-supplied No Rest for the Living expansion.
-  The published app bundles screenshots for 104 recipes; 14 lacked images at the tag.
-  Downloads, user-supplied components, profiles, base games and local custom setups are implemented.
+  The published app bundles screenshots for 114 recipes; the remaining four lacked a verified
+  usable image. Downloads, user-supplied components, profiles, base games and local custom
+  setups are implemented.
 - **Updates:** catalogs needing a newer client now ask for a DDL update rather than a connection
   retry (098). Flatpak AppStream/display versions and binary version are synchronized (099/100).
 - **Upgrade guards:** real tagged-serializer state fixtures cover releases through
-  `v0.0.14-browse`, including audio and Cards/List preferences. This is automated evidence,
-  not a substitute for upgrading the owner's actual Deck setup.
+  `v0.0.15-local`, including audio, Cards/List and the optional local-picker preferences.
+  This is automated evidence, not a substitute for upgrading the owner's actual Deck setup.
 - **Website:** canonical domain and signed Flatpak identity are D-039. The owner confirmed
   Analytics reception of `donate_click` and `install_click`; D-040 limits them to intent.
   Owner reports Google search visibility; the live favicon is a reachable 256×256 PNG with
@@ -29,24 +42,24 @@ provenance, version, canonical output and tarball checksum (104).
 
 ### After the published app tag
 
-The pre-polish source checkpoint `fa4eb89` is verified by [Linux CI 39866464560](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39866464560):
+The published tag `9745d53` is verified by [Linux CI 39957952528](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39957952528):
 fmt, denied-warning Clippy, ordinary offline tests and catalog lint succeeded. The ordinary
 suite excludes the ten exhaustive render cases specified in 101; it is not a full-suite result.
-The catalog publication job also succeeded, and the served catalog records this source SHA.
-The daily [/idgames index run 39931095281](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39931095281)
+The catalog publication job also succeeded without a catalog change. The daily
+[/idgames index run 39931095281](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/39931095281)
 succeeded on 2026-10-23; the app archive browser remains unimplemented and deprioritized.
 
-- **Ten further recipe screenshots:** current source covers **114 of 118** recipes.
-  Missing: japanese-valentines, mindblood-genesis,
-  spaceballs-the-quest-for-more-dbp-maps and tomatomania. These ten additional image files
-  are not bundled in the published 0.0.14 app. Catalog refresh alone cannot deliver image
-  bytes: `screenshots.rs` resolves embedded assets and otherwise retains the painted fallback.
-- **Headless Chicken:** current/published remote recipe selects MBF21 after the owner's
-  crash at Boom. This changes catalog requirements, not an existing installed launch
-  snapshot automatically. Successful gameplay at MBF21 still needs confirmation; do not
-  present it as validated or assume an already installed copy has adopted the recipe update.
-- **No later app release is claimed.** Post-tag Rust changes concern the release-state
-  test guard, not production app behavior. Latest code/recipe checks do not imply a new binary.
+- **Recipe screenshots:** the published app bundles **114 of 118**. Missing:
+  japanese-valentines, mindblood-genesis, spaceballs-the-quest-for-more-dbp-maps and
+  tomatomania. No verified usable image was found for those four; none was generated or
+  substituted from another mapset.
+- **Headless Chicken:** the catalog recipe now selects MBF21 after the owner's crash at Boom.
+  That changes catalog requirements, not an installed launch snapshot automatically.
+  Successful gameplay at MBF21 still needs confirmation; do not present it as validated or
+  assume an already installed copy has adopted the recipe update.
+- **Only fixture and documentation commits follow the tag.** The post-tag history adds the
+  `v0.0.15-local` saved-state fixture, its guard and this status; it does not imply a newer
+  binary than the published one.
 
 ### Immediate direction
 
@@ -70,8 +83,8 @@ ten documented visual exclusions. The isolated synthetic host diagnostic fell fr
 and pending LC1–LC7 Deck checks.
 
 The owner reported that the catalog Advanced row appeared active but did nothing for tested
-mapsets. [Spec107](specs/107-catalog-variant-clarity.md) is now reviewed and merged locally as
-`b537833`. The row stays visible but greyed out, non-actionable and skipped by focus when
+mapsets. [Spec107](specs/107-catalog-variant-clarity.md) was reviewed and merged as
+`b537833` and is part of the published 0.0.15 app. The row stays visible but greyed out, non-actionable and skipped by focus when
 no recipe variants exist. Available Show/Hide recipe variants reveals and focuses the first
 alternative; selecting one retains player confirmation with the safe action focused. This
 also fixes alternatives previously appearing above the visible viewport. Catalog complevel
@@ -79,9 +92,11 @@ copy now says Set by recipe; custom setups retain Auto/numeric Compatibility. Ei
 follow-up tests, fmt and denied-warning app Clippy passed; five headless states were reviewed.
 The earlier 995-test ordinary suite was not repeated for this scoped presentation follow-up.
 
-These local changes are **not yet pushed or released**. The latest published app remains
-`v0.0.14-browse`; its UI does not contain these fixes. No physical Deck result is claimed.
-Browsing filters/search remain without priority. Source/check evidence lives in reports106/107.
+Both local-content and recipe-variant changes are published in `v0.0.15-local`, whose
+publication, provenance and checksum are recorded in [report108](reports/108-publish-local-content-update.md).
+No physical Deck result is claimed; LC1–LC7 and RV1–RV3 remain pending in
+[the Deck checklist](deck-testing.md). Browsing filters/search remain without priority.
+Source/check evidence lives in reports106/107.
 
 ## Historical milestone tables
 

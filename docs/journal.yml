@@ -1086,3 +1086,20 @@
     No dependency, push, tag, release or physical Deck result. Worker finished before the
     account window was exhausted; no OpenCode transfer or Free model was needed.
   refs: [docs/reports/107-catalog-variant-clarity.md, docs/status.md, docs/deck-testing.md]
+
+- date: 2026-10-23
+  type: change
+  summary: >-
+    Published v0.0.15-local at 9745d53 with the reviewed local-content polish (spec106) and
+    recipe-variant clarity (spec107), the ten further recipe screenshots (114 of 118) and the
+    Headless Chicken MBF21 recipe correction. Workspace/lockfile/AppStream versions aligned to
+    0.0.15 by the existing helper; no behavioural code change in the publication commit.
+    Ordinary Linux CI 39957952528, release 39958981914 and signed Flatpak 39958981795 succeeded
+    on the first attempt, both runs on the same source SHA; the site serves 0.0.15 with an OSTree
+    commit recording that SHA and the tarball checksum matches. The tag's own serializers added
+    the v0.0.15-local fixture, including the optional local-picker preference, and its guard
+    passed with every older fixture unchanged. Physical LC1-LC7 and RV1-RV3 Deck checks remain
+    pending; no new dependency, stable release, force push or tag mutation.
+  refs: [docs/specs/108-publish-local-content-update.md,
+    docs/reports/108-publish-local-content-update.md, docs/releases/v0.0.15-local.md,
+    docs/status.md, docs/deck-testing.md]
