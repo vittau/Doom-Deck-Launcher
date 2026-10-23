@@ -462,9 +462,16 @@ fn local_polish_default_name_respects_custom_names_existing_setups_empty_stems_a
         CustomIwad::File { file } => NewIwad::File(file.path.clone()),
         _ => unreachable!(),
     };
+    s.custom_create(
+        "same name",
+        Some("collision"),
+        base.clone(),
+        Compatibility::Auto,
+    )
+    .unwrap();
     let second = s
         .custom_create(
-            "same name",
+            "placeholder 2",
             Some("second"),
             base.clone(),
             Compatibility::Auto,
@@ -475,6 +482,14 @@ fn local_polish_default_name_respects_custom_names_existing_setups_empty_stems_a
         LocalCommand::AddNamed(second.id.clone(), None, vec![path], Some(second.name)),
     )
     .unwrap();
+    assert_eq!(
+        s.custom_show("second").unwrap().name,
+        s.custom_show("collision").unwrap().name
+    );
+    assert_ne!(
+        s.custom_show("second").unwrap().id,
+        s.custom_show("collision").unwrap().id
+    );
     let third = s
         .custom_create("placeholder", Some("third"), base, Compatibility::Auto)
         .unwrap();

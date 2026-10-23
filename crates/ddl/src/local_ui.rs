@@ -32,7 +32,7 @@ pub(super) enum Dialog {
     Issue(PathBuf, bool),
     Saves,
     Error(String),
-    Replacement(ReplacementTarget, UserFile),
+    Replacement(Box<ReplacementTarget>, UserFile),
 }
 #[derive(Default)]
 pub(super) struct LocalUi {
@@ -160,7 +160,7 @@ impl Runtime {
                         if same {
                             self.local_op(ui, Op::ApplyReplacement(target, file));
                         } else {
-                            self.local.dialog = Some(Dialog::Replacement(target, file));
+                            self.local.dialog = Some(Dialog::Replacement(Box::new(target), file));
                             self.local.dialog_focus = 1;
                             self.focus = 900;
                         }
@@ -400,7 +400,7 @@ impl Runtime {
                                 }
                             }
                             Dialog::Replacement(target, file) => {
-                                self.local_op(ui, Op::ApplyReplacement(target, file));
+                                self.local_op(ui, Op::ApplyReplacement(*target, file));
                             }
                             Dialog::Saves | Dialog::Error(_) => {}
                         }
