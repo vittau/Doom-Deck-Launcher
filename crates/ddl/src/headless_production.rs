@@ -39,7 +39,7 @@ impl Gate {
                 .unwrap(),
         );
     }
-    fn release(&self) {
+    pub(super) fn release(&self) {
         *self.open.lock().unwrap() = true;
         self.wake.notify_all();
     }
@@ -68,7 +68,7 @@ impl EngineRunner for GatedRunner {
         Ok(outcome)
     }
 }
-fn wait(state: &Rc<RefCell<Runtime>>, test: impl Fn(&Runtime) -> bool) {
+pub(super) fn wait(state: &Rc<RefCell<Runtime>>, test: impl Fn(&Runtime) -> bool) {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         pump_events();
@@ -84,7 +84,7 @@ fn wait(state: &Rc<RefCell<Runtime>>, test: impl Fn(&Runtime) -> bool) {
         std::thread::sleep(Duration::from_millis(5));
     }
 }
-fn idle(state: &Rc<RefCell<Runtime>>) {
+pub(super) fn idle(state: &Rc<RefCell<Runtime>>) {
     wait(state, |r| !r.busy);
     assert!(
         state.borrow().problem.is_none(),
@@ -2374,17 +2374,23 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
         assert_eq!(ui.get_focused(), 200 + n as i32);
         assert_eq!(selected_chip(ui), tag.label);
         let (mut cards, mut holding) = tag_cards(&tag.id);
-        // Spec 090 R2: cards are in ascending first-public-release order, with
-        // unknown dates last and the title/id tie-break, never catalog order.
+        // Spec 112 R1: inside every category the (installed, favorite) tuple leads
+        // and the chronological order (unknown dates last, title/id tie-break)
+        // decides each group; catalog order never does.
         let items = state.borrow().snapshot.as_ref().unwrap().items.clone();
         let mut expected = holding.clone();
         expected.sort_by(|a, b| {
-            ddl_core::catalog::compare_browsing_order(
-                &items[(*a - 10) as usize].recipe,
-                &items[(*b - 10) as usize].recipe,
+            let (a, b) = (&items[(*a - 10) as usize], &items[(*b - 10) as usize]);
+            ddl_core::catalog::compare_discover_order(
+                &a.recipe,
+                a.manifest.is_some(),
+                a.favorite,
+                &b.recipe,
+                b.manifest.is_some(),
+                b.favorite,
             )
         });
-        assert_eq!(cards, expected, "category {} is oldest first", tag.id);
+        assert_eq!(cards, expected, "category {} leads with its groups", tag.id);
         if tag.id == "community-projects" {
             for card in &cards {
                 let recipe = &items[(*card - 10) as usize].recipe;
@@ -2454,27 +2460,24 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     let first = card_ids(ui)[0];
     let favorite_id = {
         let mut r = state.borrow_mut();
-        let index = r
-            .snapshot
-            .as_ref()
-            .unwrap()
-            .items
+        // The last drawn card is in the open category and is not the first one;
+        // it needs two tags so the detail assertions exercise them all.
+        let index = card_ids(ui)
             .iter()
-            .enumerate()
-            .find(|(index, item)| 10 + *index as i32 != first && item.recipe.tags.len() >= 2)
-            .map(|(index, _)| index)
+            .rev()
+            .map(|&id| (id - 10) as usize)
+            .find(|&index| r.snapshot.as_ref().unwrap().items[index].recipe.tags.len() >= 2)
             .expect("favorite/detail journey needs a non-first recipe with multiple tags");
         r.focus = 10 + index as i32;
         r.selected = index;
         r.sync(ui);
         r.focus
     };
-    let marked_position = ui
-        .get_nodes()
+    let before_cards = card_ids(ui);
+    let before_position = before_cards
         .iter()
-        .find(|n| n.id == favorite_id)
-        .map(|n| (n.x, n.y))
-        .expect("the card is laid out before favoriting");
+        .position(|&id| id == favorite_id)
+        .expect("the card is in the open category");
     press_char(window, "x");
     idle(&state);
     let marked = state.borrow().snapshot.as_ref().unwrap().items[(favorite_id - 10) as usize]
@@ -2491,16 +2494,24 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
             .collect::<Vec<_>>(),
         [marked.as_str()]
     );
-    let after_favorite = ui
-        .get_nodes()
-        .iter()
-        .find(|n| n.id == favorite_id)
-        .map(|n| (n.x, n.y))
-        .unwrap();
+    // Spec 112 R2: favoriting moves the card to its favorite group (the only
+    // one here, so it leads the category) and focus stays on that mapset.
+    let after_cards = card_ids(ui);
+    assert_eq!(after_cards.len(), before_cards.len(), "no row is lost");
     assert_eq!(
-        after_favorite, marked_position,
-        "spec 090 R2: favoriting never moves a card out of release order"
+        after_cards.iter().filter(|&&id| id == favorite_id).count(),
+        1,
+        "no row is duplicated"
     );
+    assert_eq!(
+        after_cards[0], favorite_id,
+        "the favorite leads the category"
+    );
+    assert!(
+        before_position > 0,
+        "the fixture starts below the first card: first {first}, before {before_cards:?} at {before_position}, favorite {favorite_id}"
+    );
+    assert_eq!(ui.get_focused(), favorite_id, "focus keeps the mapset");
     assert_eq!(ui.get_nodes().iter().filter(|n| n.kind == 12).count(), 1);
     assert_eq!(ui.get_favorite_label(), "Unfavorite");
     capture(window, "015-discover-specific-favorite.png");
