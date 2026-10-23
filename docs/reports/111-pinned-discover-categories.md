@@ -68,7 +68,9 @@ A deliberately overlong second label tests this fallback.
 
 The real-catalog scene also checks the actual production chip nodes for **every
 embedded recipe** using Favorites, then checks the Community Projects category
-with the open category leading. Its top/deep renders show real titles, artwork
+with the open category leading. Additional top/deep Doomer Boards frames show
+the two long labels “Doomer Boards” and “Community Projects” together. Its renders
+show real titles, artwork
 and two-tag cards, including Memento Mori and Eviternity II. Their source recipes
 are unchanged; the test marks recipes favorite in temporary state for the full
 catalog check.
@@ -92,7 +94,7 @@ was opened.
 | `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl compact_discover -- --nocapture` | 2 passed: natural font widths for all vocabulary pairs and real-catalog geometry/renders |
 | `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl headless::library -- --nocapture` | 10 passed: pinned strip, compact production catalog, continuous Discover/Library motion, category/favorites navigation, Library scenes, neutral-scroll preservation and 1,000-item coverage |
 | `cargo test -p ddl runtime::category_tests -- --nocapture` | 6 passed, including compact chip packing/font coverage and existing overflow/ordering tests |
-| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl compact_discover_catalog_scene -- --nocapture` | 1 passed again after adding an explicit zero-offset top-frame check and settling prior layout animation |
+| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl compact_discover_catalog_scene -- --nocapture` | 1 passed again after adding an explicit zero-offset top-frame check, settling prior layout animation, and capturing both long labels on real Doomer Boards recipes |
 | `cargo fmt --all --check` | Passed |
 | `cargo clippy -p ddl --all-targets -- -D warnings` | Passed, including after the final test-only adjustment |
 | `git diff --check` | Passed |
@@ -115,6 +117,9 @@ viewports in both layouts.
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-cards-deep.png`
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-list-top.png`
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-list-deep.png`
+
+- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-long-tags-top.png`
+- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-long-tags-deep.png`
 
 The original focused-chip/focused-item matrix was also regenerated with the final production geometry:
 

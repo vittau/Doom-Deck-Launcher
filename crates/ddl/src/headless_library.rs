@@ -1354,5 +1354,42 @@ fn compact_discover_catalog_scene() {
             );
         }
     }
+    // Real Doomer Boards recipes expose the two long labels together.
+    r.choose_category(Category::Tag("doomer-boards".into()));
+    r.view_format = ViewFormat::Cards;
+    r.focus = -3;
+    r.sync(&ui);
+    advance_time(160);
+    let nodes: Vec<_> = ui.get_nodes().iter().collect();
+    let cards: Vec<_> = nodes
+        .iter()
+        .filter(|n| n.kind == 1 && n.actionable)
+        .collect();
+    for (card, position) in [(cards[0], "top"), (*cards.last().unwrap(), "deep")] {
+        let tags: Vec<_> = nodes
+            .iter()
+            .filter(|n| {
+                n.kind == 13
+                    && n.x >= card.x
+                    && n.x < card.x + card.w
+                    && n.y >= card.y
+                    && n.y < card.y + card.h
+            })
+            .map(|n| n.label.as_str())
+            .collect();
+        assert_eq!(tags, ["Doomer Boards", "Community Projects"]);
+        r.focus = card.id;
+        r.sync(&ui);
+        advance_time(160);
+        if position == "top" {
+            assert_eq!(ui.get_scroll_offset(), 0.);
+        } else {
+            assert!(ui.get_scroll_offset() > 2. * 422.);
+        }
+        write_png(
+            &format!("111-catalog-long-tags-{position}.png"),
+            &render(&window),
+        );
+    }
     r.finish_preferences();
 }
