@@ -301,7 +301,7 @@ focused tests and off-screen renders. Published in `v0.0.17-discover`.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
-| PD1 | Discover Cards and List: scroll deep with the D-pad and the stick; the category strip never moves and no card/row draws over it; the focused item is always fully visible | Gaming | ⏳ |
-| PD2 | Up from the first row reaches the strip without a jump; L2/R2 and choosing a chip return the list to the top; touch on a chip and on a half-hidden card hits the right target | Gaming | ⏳ |
-| PD3 | 340px cards: art, title, author and the one-row tags (14px) are readable at arm's length on the LCD | Gaming | ⏳ |
+| PD1 | Discover Cards and List: scroll deep with the D-pad and the stick; the category strip never moves and no card/row draws over it; the focused item is always fully visible | Gaming | ✅ 0.0.17, 2026-10-23 |
+| PD2 | Up from the first row reaches the strip without a jump; L2/R2 and choosing a chip return the list to the top; touch on a chip and on a half-hidden card hits the right target | Gaming | ✅ 0.0.17, 2026-10-23 |
+| PD3 | 340px cards: art, title, author and the one-row tags (14px) are readable at arm's length on the LCD | Gaming | ✅ 0.0.17, 2026-10-23 |
 
