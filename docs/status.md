@@ -2,12 +2,13 @@
 
 ## Current checkpoint — 2026-10-23
 
-**Available for Deck testing:** [v0.0.17-discover](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.17-discover),
-immutable source `d9281701885b152eb0d0f99754e1f661fc4c7daa`, published as a Linux tarball
+**Available for Deck testing:** [v0.0.18-favorites](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.18-favorites),
+immutable source `3abf320913b1cc1b5e0bc2d9855f5d7b743fb340`, published as a Linux tarball
 and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
-Full offline CI 40014809417 passed on `c6c4f09`; release 40017351006, signed Flatpak
-40017351238 (site version 0.0.17) and CI 40017348300 succeeded on the tag source; the tarball
-matches its published SHA-256. It adds the pinned Discover categories and compact cards (111).
+Release 40034374499, signed Flatpak 40034374595 (site version 0.0.18) and CI 40034372229
+succeeded on the tag source; the tarball matches its published SHA-256. It adds Discover's
+installed-and-favorites-first order (112, D-043) and the Favorites focus fix (113) on top of
+0.0.17's pinned categories and compact cards (111, Deck-validated PD1–PD3).
 
 ### Shipped
 
@@ -78,12 +79,12 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   tests, fmt and app Clippy passed; real-catalog off-screen renders reviewed. The owner
   validated PD1–PD3 on the Deck with 0.0.17 (strip fixed, navigation/touch, 14px tags readable).
 
-- **Discover installed and favorites first (112, merged, not yet released; D-043):** every
+- **Discover installed and favorites first (112, published in 0.0.18; D-043):** every
   Discover category, in Cards and List, lists installed favorites, installed mapsets,
   favorite-only mapsets, then the rest, chronological inside each group. Favorite toggles and
   installs move the item with focus kept; uninstall keeps its spec 022 navigation. Ordinary
-  suite (1,008 tests), the category/favorites journey and CI 40030510101 passed. Follow-up 113
-  fixes focus after unfavoriting inside the Favorites category (pre-existing).
+  suite (1,008 tests), the category/favorites journey and CI 40030510101 passed. Spec 113
+  (also in 0.0.18) fixes focus after unfavoriting inside the Favorites category. Deck checks DF1–DF2.
 
 ### Immediate direction
 

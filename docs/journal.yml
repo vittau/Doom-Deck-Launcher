@@ -1210,3 +1210,12 @@
   refs: [docs/specs/113-favorites-focus-after-unfavorite.md,
     docs/reports/113-favorites-focus-after-unfavorite.md, docs/releases/v0.0.18-favorites.md]
 
+- date: 2026-10-23
+  type: release
+  summary: >-
+    Published v0.0.18-favorites (3abf320): Discover lists installed favorites, installed,
+    favorite-only, then other mapsets (112) and Favorites keeps a visible focus after
+    unfavoriting (113). Release 40034374499, signed Flatpak 40034374595 (site version 0.0.18)
+    and CI 40034372229 succeeded; the tarball matches its SHA-256. Deck checks DF1–DF2 pending.
+  refs: [docs/releases/v0.0.18-favorites.md, docs/status.md, docs/deck-testing.md]
+
