@@ -1,9 +1,31 @@
 # 110 — DSDA-Doom sound precache crash: upstream handoff
 
-**Status:** root cause located; upstream fix not written yet · **Depends on:** 106, 109
+**Status:** upstream fix open as [dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050) (issue [#1049](https://github.com/dsda-org/dsda-doom/issues/1049)) · **Depends on:** 106, 109
 **Purpose:** give an agent on a Linux machine everything needed to reproduce this crash in
 DSDA-Doom, fix it upstream and open a pull request against `dsda-org/dsda-doom`.
 **Not a DDL defect:** the mapset crashes the official engine; DDL only launches it.
+
+## Outcome — 2026-10-23
+
+The owner reproduced the crash on the CachyOS machine and opened
+[dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050) (fixes
+[#1049](https://github.com/dsda-org/dsda-doom/issues/1049); all five upstream CI jobs green,
+awaiting review). The actual root cause is narrower than the suspects listed below:
+
+- The official Linux AppImage is built on ubuntu-22.04 and bundles **SDL 2.0.20**. Its
+  `SDL_ConvertStereoToMono_SSE3` loads input with `_mm_load_ps` (aligned), fixed upstream in
+  SDL 2.0.22 ([libsdl-org/SDL@727eef7064](https://github.com/libsdl-org/SDL/commit/727eef7064)).
+- `ConvertAudioFormat()` allocates the `SDL_AudioCVT` buffer with `Z_Malloc()`, which is only
+  8-byte aligned, so any stereo float sfx can fault. The first one hit is `dsaurgr8`.
+- This explains why the macOS build (a newer SDL) is unaffected. The `int` overflow and spec
+  validation suspects are hardened in the same PR but were not the trigger.
+
+The PR aligns the buffer to 16 bytes, validates the decoded spec, uses `size_t` for the
+length and skips an unconvertible sfx with a warning. A separate truncation in
+`Load_SNDFile` is tracked as [#1051](https://github.com/dsda-org/dsda-doom/issues/1051).
+
+**DDL follow-up:** none until a DSDA-Doom release contains the fix; then add it to
+`crates/ddl-core/data/engines.toml` with its SHA-256 and re-test Headless Chicken.
 
 ## Symptom
 

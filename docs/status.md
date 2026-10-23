@@ -13,8 +13,8 @@ provenance, version, canonical output and tarball checksum (109).
 - **Install paths:** the per-release install folder is now a bounded slug of the release label
   (`library/headless-chicken/RC1-2023-12-09/free/HDLSCHKN.wad`) instead of the whole citation,
   so paths no longer carry spaces, commas or parentheses. Existing installs are not migrated
-  (D-042): reinstall a mapset to adopt the short folder. Whether this changes the owner's
-  Headless Chicken crash is not established (109).
+  (D-042): reinstall a mapset to adopt the short folder. The short path does not fix the
+  owner's Headless Chicken crash, which is an engine defect (110).
 - **Local content:** choosing a folder lists files from bounded inspections instead of hashing
   every byte; selected files are identified only on confirmation and that capture can be
   cancelled. The picker remembers the last usable folder, a missing file can be located in its
@@ -58,10 +58,14 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   japanese-valentines, mindblood-genesis, spaceballs-the-quest-for-more-dbp-maps and
   tomatomania. No verified usable image was found for those four; none was generated or
   substituted from another mapset.
-- **Headless Chicken:** the catalog recipe now selects MBF21 after the owner's crash at Boom.
-  That changes catalog requirements, not an installed launch snapshot automatically.
-  Successful gameplay at MBF21 still needs confirmation; do not present it as validated or
-  assume an already installed copy has adopted the recipe update.
+- **Headless Chicken:** **known broken on Linux with DSDA-Doom 0.30.1**, at any complevel and
+  install path. The engine crashes while precaching the mapset's stereo Ogg sound effects:
+  the official AppImage bundles SDL 2.0.20, whose SSE3 stereo-to-mono conversion makes an
+  aligned load from DSDA's 8-byte-aligned buffer. `-nosound` is the only workaround and DDL
+  does not expose it. Upstream: issue [dsda-doom#1049](https://github.com/dsda-org/dsda-doom/issues/1049),
+  fix [dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050) (opened by the owner
+  2026-10-23, CI green, awaiting review). When a release contains it, add that engine to
+  `engines.toml` and re-test the mapset (110).
 - **Only fixture and documentation commits follow the tag.** The post-tag history adds the
   `v0.0.15-local` saved-state fixture, its guard and this status; it does not imply a newer
   binary than the published one.

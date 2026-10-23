@@ -1141,3 +1141,16 @@
     #4 S_Init. Handoff for an upstream fix and PR to dsda-org/dsda-doom in report110; DDL does
     not patch the engine or the WAD.
   refs: [docs/reports/110-dsda-sound-precache-crash-handoff.md, catalog/headless-chicken.toml]
+
+- date: 2026-10-23
+  type: finding
+  summary: >-
+    The owner opened dsda-org/dsda-doom#1050 (fixes #1049) for the Headless Chicken crash.
+    Actual root cause: the official Linux AppImage bundles SDL 2.0.20, whose
+    SDL_ConvertStereoToMono_SSE3 makes an aligned SSE load, while ConvertAudioFormat's
+    Z_Malloc buffer is only 8-byte aligned; stereo float sfx (first: dsaurgr8) fault. Fixed in
+    SDL 2.0.22, explaining why macOS is unaffected. The PR aligns the buffer, validates the
+    spec, uses size_t lengths and skips unconvertible sfx; upstream CI green, awaiting review.
+    The mapset is known broken on Linux with 0.30.1; DDL adds the fixed engine when released.
+  refs: [docs/reports/110-dsda-sound-precache-crash-handoff.md, catalog/headless-chicken.toml,
+    docs/status.md]
