@@ -91,7 +91,7 @@ const BROWSE: i32 = 230;
 /// Horizontal room for the strip, between the card grid's edges.
 const STRIP_WIDTH: f32 = 1200.;
 /// Vertical room the strip takes above the Discover grid.
-const STRIP_HEIGHT: f32 = 72.;
+const STRIP_HEIGHT: f32 = 80.;
 /// The requested categories that at least one recipe uses, in the owner's order.
 fn requested_categories(used: impl Fn(&str) -> bool) -> Vec<Category> {
     CATEGORY_ORDER
@@ -1195,6 +1195,7 @@ impl Runtime {
             (Screen::Discover, id) if (CHIP..CHIP + CHIPS_MAX as i32).contains(&id) => {
                 if let Some(category) = self.categories().get((id - CHIP) as usize) {
                     self.category = category.clone();
+                    self.scroll_anchor = None;
                 }
                 if let Some(&first) = self.discover_items().first() {
                     self.focus = card_id(first);
@@ -1620,6 +1621,7 @@ impl Runtime {
         }
         let next = (self.category_index() as isize + delta).rem_euclid(list.len() as isize);
         self.category = list[next as usize].clone();
+        self.scroll_anchor = None;
         if !(CHIP..CHIP + CHIPS_MAX as i32).contains(&self.focus) {
             self.focus = self
                 .discover_items()
@@ -2472,18 +2474,19 @@ impl Runtime {
                                 continue;
                             }
                             let x = 12. + 408. * (visible % 3) as f32;
-                            let y = 12. + top + 438. * (visible / 3) as f32;
-                            b.card(card_id(i), x, y, 384., 410.);
+                            let reduction = if discover { 24. } else { 0. };
+                            let y = 12. + top + (438. - reduction) * (visible / 3) as f32;
+                            b.card(card_id(i), x, y, 384., 410. - reduction);
                             // Spec 074: a 28 px inset on every side keeps the art,
                             // text and chips clear of the 20 px ornamental frame and
                             // leaves room for two chip rows above the bottom edge.
-                            b.recipe_art(x + 28., y + 28., 328., 128., &item.recipe);
+                            b.recipe_art(x + 28., y + 28., 328., 128. - reduction, &item.recipe);
                             if item.favorite {
                                 b.favorite(x + 316., y + 36.);
                             }
                             b.title(
                                 x + 28.,
-                                y + 164.,
+                                y + 164. - reduction,
                                 328.,
                                 60.,
                                 display_title(&item.recipe).into(),
@@ -2491,7 +2494,7 @@ impl Runtime {
                             );
                             b.author(
                                 x + 28.,
-                                y + 230.,
+                                y + 230. - reduction,
                                 328.,
                                 24.,
                                 item.recipe.authors.join(", ").into(),
@@ -2512,7 +2515,7 @@ impl Runtime {
                             );
                             b.label(
                                 x + 28.,
-                                y + 258.,
+                                y + 258. - reduction,
                                 328.,
                                 24.,
                                 format!("{} · {status}", game(ui, item.recipe.base_game.game))
@@ -2521,7 +2524,7 @@ impl Runtime {
                             );
                             b.label(
                                 x + 28.,
-                                y + 286.,
+                                y + 286. - reduction,
                                 328.,
                                 24.,
                                 if discover {
@@ -2545,7 +2548,7 @@ impl Runtime {
                             b.chips(
                                 &tag_labels(s, &item.recipe, 2, lead),
                                 x + 28.,
-                                y + 314.,
+                                y + 314. - reduction,
                                 328.,
                             );
                         }
@@ -3883,8 +3886,27 @@ impl Runtime {
                 294.
             })
         .max(64.);
+        let pinned_height = if discover && self.local.view.is_none() {
+            STRIP_HEIGHT
+        } else {
+            0.
+        };
+        ui.set_pinned_height(pinned_height);
+        let viewport = (viewport - pinned_height).max(64.);
         let focus_inset = if discover { 24. } else { 12. };
-        let plane: Vec<&ViewNode> = self.nodes.iter().filter(|n| !setup || n.x < 700.).collect();
+        // Match the clipped scrolling plane's local coordinates. Pinned nodes
+        // remain in the navigation model, but never contribute scroll bounds.
+        let scrolling: Vec<ViewNode> = self
+            .nodes
+            .iter()
+            .filter(|n| !n.pinned && (!setup || n.x < 700.))
+            .cloned()
+            .map(|mut n| {
+                n.y -= pinned_height;
+                n
+            })
+            .collect();
+        let plane: Vec<&ViewNode> = scrolling.iter().collect();
         let focused = plane.iter().find(|n| n.id == self.focus).copied();
         // Geometry is part of the anchor: a favorite toggle can move the same
         // selected item. A neutral refresh with unchanged geometry preserves
@@ -3907,6 +3929,12 @@ impl Runtime {
         if focus_changed {
             let offset = if self.local.view == Some(local_ui::View::Picker) {
                 0.
+            } else if discover && self.nodes.iter().any(|n| n.id == self.focus && n.pinned) {
+                if self.scroll_anchor.is_some() {
+                    ui.get_presented_scroll_offset()
+                } else {
+                    0.
+                }
             } else if list {
                 focused.map_or(0., |n| {
                     continuous_offset(&plane, n, viewport, ui.get_presented_scroll_offset())
@@ -4075,11 +4103,12 @@ impl Runtime {
         let bounds = |right: bool| {
             self.nodes
                 .iter()
-                .filter(|n| !ui.get_setup_screen() || (n.x >= 700.) == right)
+                .filter(|n| !n.pinned && (!ui.get_setup_screen() || (n.x >= 700.) == right))
                 .fold((0_f32, 0_f32), |(w, h), n| {
                     (
                         (n.x + n.w + 20. - if right { 700. } else { 0. }).max(w),
-                        (n.y + n.h + 20.).max(h),
+                        (n.y + n.h + if discover && !list { 24. } else { 20. } - pinned_height)
+                            .max(h),
                     )
                 })
         };
@@ -4462,6 +4491,7 @@ impl Nodes {
             art: 0,
             screenshot: Default::default(),
             fitted_label: false,
+            pinned: false,
         });
     }
     fn panel(&mut self, x: f32, y: f32, w: f32, h: f32) {
@@ -4658,6 +4688,7 @@ impl Nodes {
         start: usize,
         focused: Option<usize>,
     ) -> usize {
+        let first = self.nodes.len();
         let widths: Vec<f32> = chips.iter().map(|(l, _)| chip_width(l, 20.)).collect();
         let span = |a: usize, b: usize| widths[a..=b].iter().sum::<f32>() + 12. * (b - a) as f32;
         let overflow = span(0, chips.len() - 1) > STRIP_WIDTH;
@@ -4696,6 +4727,9 @@ impl Nodes {
                     self.label(gx, 12., 36., 52., glyph.into(), 40.);
                 }
             }
+        }
+        for node in &mut self.nodes[first..] {
+            node.pinned = true;
         }
         start
     }
