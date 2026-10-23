@@ -1042,3 +1042,13 @@
     follow-ups, not implemented defects or new UI. Added the existing manual-content route
     to the Deck guide. No application changes, benchmark, new release or physical Deck result.
   refs: [docs/status.md, docs/reports/105-curated-browsing-and-local-content-review.md, docs/steam-deck-guide.md]
+
+- date: 2026-10-23
+  type: change
+  summary: >-
+    Owner authorized the four manual-content improvements identified in report105 and asked
+    to avoid V4.1 Flash Free. Spec106 defines lightweight bounded listing with identity capture
+    on confirmation, durable last-folder preference, explicit missing-file relocation and
+    readable/renameable custom setups. Started one supervised Codex GPT-6.1 Sol medium worker;
+    implementation/review/checks remain in progress. Archive search stays deferred under D-041.
+  refs: [docs/specs/106-local-content-polish.md, docs/status.md]
