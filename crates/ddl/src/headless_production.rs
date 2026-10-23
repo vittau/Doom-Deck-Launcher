@@ -678,8 +678,9 @@ pub(super) fn install_and_setup(scene: &Scene, capture: Captures) {
         .find(|n| n.label.starts_with("Complevel"))
         .map(|n| n.label.to_string())
         .expect("Play setup shows the complevel");
-    assert_eq!(complevel, "Complevel: Vanilla (3)");
+    assert_eq!(complevel, "Complevel: Vanilla (3) · Set by recipe");
     capture("010-play-setup-ready.png");
+    capture("107-recipe-complevel.png");
     // Spec 060 A2/A3: Play unfocused (primary, not amber), focused (ring), and a
     // focused Skill; the locked required component stays visibly disabled.
     let focus = state.borrow().focus;

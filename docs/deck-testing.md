@@ -276,3 +276,15 @@ Use legally owned content already on the Deck; do not download IWADs for this ch
 | LC5 | Locate different bytes, first cancel then explicitly accept; Cancel starts focused and saves warning is readable; wrong patch/content kind or non-IWAD in IWAD slot fails safely | Gaming | ⏳ |
 | LC6 | Locate a custom file-based IWAD, then catalog/base-game profile extras; only the intended profile changes; registered copies/recipe members retain their existing recovery | Gaming | ⏳ |
 | LC7 | Check Rename text input/Steam keyboard, D-pad/footer/Back behavior and the Library/detail/missing/picker/confirmation layouts at LCD scale; verify Flatpak folder visibility | Gaming | ⏳ |
+
+
+## Recipe variant clarity — source after spec 107
+
+**Needs Deck Validation:** see [report107](reports/107-catalog-variant-clarity.md) for focused
+host evidence. These rows do not record a new physical test or a release result.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| RV1 | On a mapset without alternatives (e.g. Going Down), Show recipe variants stays visible and greyed out with No recipe variants available; D-pad skips it and clicking does nothing | Gaming | ⏳ |
+| RV2 | SIGIL → Show recipe variants immediately focuses/reveals COMPAT; selecting it asks for confirmation with Keep current settings focused; cancel preserves choices, explicit accept changes the variant, Hide preserves the selected components | Gaming | ⏳ |
+| RV3 | Ready setup shows resolved Complevel plus Set by recipe; blocked setup explains recipe control; custom setup Compatibility still offers Auto/numeric choices | Gaming | ⏳ |

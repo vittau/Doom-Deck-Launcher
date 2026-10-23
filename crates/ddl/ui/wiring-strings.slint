@@ -103,8 +103,11 @@ export global WiringStrings {
     out property <string> locked: @tr("Required by the recipe · cannot be unchecked");
     out property <string> optional: @tr("Optional");
     out property <string> import: @tr("Import");
-    out property <string> advanced: @tr("Advanced");
-    out property <string> advanced-help: @tr("Compatibility replacements require confirmation.");
+    out property <string> show-recipe-variants: @tr("Show recipe variants");
+    out property <string> hide-recipe-variants: @tr("Hide recipe variants");
+    out property <string> recipe-variants-help: @tr("Recipe alternatives. You confirm before switching.");
+    out property <string> no-recipe-variants: @tr("No recipe variants available");
+    out property <string> recipe-controlled: @tr("Complevel is set by the recipe.");
     out property <string> compat-confirm: @tr("Use the Episode 3 variant instead?");
     out property <string> keep: @tr("Keep current settings");
     out property <string> use-variant: @tr("Use this variant");
@@ -165,7 +168,7 @@ export global WiringStrings {
     out property <string> bytes: @tr("{} / {}", root.value, root.other);
     out property <string> bytes-unknown: @tr("{} received", root.value);
     out property <string> content-count: @tr("{} content files", root.value);
-    out property <string> complevel: @tr("Complevel: {}", root.value);
+    out property <string> complevel: @tr("Complevel: {} · Set by recipe", root.value);
     out property <string> engine-version: @tr("DSDA-Doom {}", root.value);
     out property <string> source: @tr("Source and license");
     out property <string> not-provided: @tr("Not provided — import your purchased file");

@@ -1,6 +1,6 @@
 # 107 — Explain recipe variants without implying a complevel override
 
-**Status:** Ready · **Depends on:** 010, 026, 106
+**Status:** Implemented · Focused host checks passed; physical Deck validation pending · **Depends on:** 010, 026, 106
 **Origin:** owner, 2026-10-23: the setup's apparent complevel/approval control is confusing;
 what approval is required, and how can the player change the complevel? Clicking it seems
 to do nothing. Owner correction: an unavailable button should stay visible and greyed out;
