@@ -2571,7 +2571,13 @@ pub(super) fn categories_journey(window: &MinimalSoftwareWindow, ui: &AppWindow)
     assert_eq!(state.borrow().screen, Screen::Discover);
     assert_eq!(selected_chip(ui), "Favorites");
     assert!(card_ids(ui).is_empty());
-    assert!(card_ids(ui).iter().all(|id| *id != ui.get_focused()));
+    // Spec 113 R2: the mapset was unfavorited on detail, so the empty
+    // Favorites panel shows and the chip holds focus, never the removed card.
+    assert_eq!(
+        ui.get_focused(),
+        200 + used.len() as i32,
+        "the Favorites chip is focused after returning from detail"
+    );
     press(window, Key::F2);
     assert_eq!(state.borrow().screen, Screen::Library);
     press(window, Key::F3);

@@ -83,6 +83,25 @@ fn card_index(id: i32) -> Option<usize> {
         None
     }
 }
+/// Spec 113 R1: the slot `index` held in Favorites just before its mark was
+/// removed. It still counted as a favorite for `compare_discover_order`, which
+/// is what decides the position the replacement card now occupies.
+fn former_favorites_position(snapshot: &Snapshot, index: usize) -> usize {
+    let favorite = |i: usize| i == index || snapshot.items[i].favorite;
+    let mut shown: Vec<usize> = (0..snapshot.items.len()).filter(|&i| favorite(i)).collect();
+    shown.sort_by(|&a, &b| {
+        let (ia, ib) = (&snapshot.items[a], &snapshot.items[b]);
+        compare_discover_order(
+            &ia.recipe,
+            ia.manifest.is_some(),
+            favorite(a),
+            &ib.recipe,
+            ib.manifest.is_some(),
+            favorite(b),
+        )
+    });
+    shown.iter().position(|&i| i == index).unwrap_or(0)
+}
 /// First node id of the category strip; chip `k` has id `CHIP + k`.
 const CHIP: i32 = 200;
 const CHIPS_MAX: usize = 30;
@@ -1606,6 +1625,32 @@ impl Runtime {
         });
         shown
     }
+    /// Spec 113 R1/R2: a Favorites card whose mark was removed leaves the
+    /// list (on Discover itself, or before returning from Mapset detail) while
+    /// focus still holds its id. Focus moves to the card now in its former
+    /// position, else to the new last card, else to the Favorites chip and its
+    /// empty panel. Membership only changes with the favorite mark, so no
+    /// other category loses an item this way.
+    fn settle_unfavorited_focus(&mut self) {
+        let Some(index) = card_index(self.focus) else {
+            return;
+        };
+        let shown = self.discover_items();
+        if shown.contains(&index) {
+            return;
+        }
+        let Some(snapshot) = self.snapshot.as_ref() else {
+            return;
+        };
+        if index >= snapshot.items.len() {
+            return;
+        }
+        let position = former_favorites_position(snapshot, index);
+        self.focus = shown
+            .get(position)
+            .or_else(|| shown.last())
+            .map_or(CHIP + self.category_index() as i32, |&i| card_id(i));
+    }
     /// Installed favorites lead Library in both layouts (spec 102), retaining
     /// the chronological/title order within each group.
     fn library_items(&self) -> Vec<usize> {
@@ -2204,6 +2249,13 @@ impl Runtime {
         }
         if self.screen == Screen::Settings && (1..=5).contains(&self.focus) {
             self.settings_section = (self.focus - 1) as usize;
+        }
+        // Spec 113 R1/R2: unfavoriting the focused card removes it from
+        // Favorites while focus keeps its id, on Discover itself or after
+        // returning from Mapset detail. Neighbour focus keeps a drawn card
+        // under the ring, or the Favorites chip for the empty panel.
+        if self.screen == Screen::Discover && self.category == Category::Favorites {
+            self.settle_unfavorited_focus();
         }
         let heading = if self.playing {
             T::Playing
@@ -5985,5 +6037,361 @@ mod startup_and_pistol_tests {
         runtime.replace_snapshot(third);
         assert!(runtime.selected < runtime.snapshot.as_ref().unwrap().items.len());
         assert_eq!(runtime.focus, CARD + runtime.selected as i32);
+    }
+}
+
+/// Spec 113 R1–R5: unfavoriting the focused card in Favorites leaves focus on
+/// the card now in its slot, else the new last card, else the Favorites chip,
+/// fully visible beneath the pinned strip, in both Discover layouts.
+#[cfg(test)]
+mod favorites_focus_tests {
+    use super::*;
+    use crate::services::ViewFormat;
+
+    fn environment() -> Environment {
+        // Unique per call: tests run in parallel and must not share state.
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let unique = NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let home =
+            std::env::temp_dir().join(format!("ddl-113-favorites-{}-{unique}", std::process::id()));
+        let paths = ddl_core::platform::paths::resolve(&|key: &str| {
+            (key == "HOME").then(|| home.display().to_string())
+        })
+        .expect("paths resolve from HOME");
+        Environment {
+            paths,
+            home,
+            screen: None,
+            test: None,
+        }
+    }
+
+    /// A Discover runtime whose stored state marks the first `count` catalog
+    /// recipes as favorites; the catalog order never decides the shown order.
+    fn favorites_runtime(count: usize, view: ViewFormat) -> Runtime {
+        let env = environment();
+        let mut services = Services::open(env.clone()).expect("services open");
+        let ids: Vec<String> = services
+            .snapshot()
+            .expect("snapshot")
+            .items
+            .iter()
+            .take(count)
+            .map(|item| item.recipe.id.clone())
+            .collect();
+        assert!(
+            ids.len() == count,
+            "the embedded catalog is larger than the fixture"
+        );
+        for id in &ids {
+            services
+                .execute(
+                    Command::Favorite(id.clone()),
+                    &CancellationToken::new(),
+                    &mut |_| {},
+                )
+                .expect("the favorite mark persists");
+        }
+        let mut runtime = Runtime::new(env);
+        runtime.snapshot = Some(services.snapshot().expect("snapshot"));
+        runtime.screen = Screen::Discover;
+        runtime.view_format = view;
+        runtime.choose_category(Category::Favorites);
+        runtime
+    }
+
+    /// Waits for the favorite write and the snapshot it returns.
+    fn settle(runtime: &mut Runtime, ui: &AppWindow) {
+        for _ in 0..600 {
+            crate::headless::pump_events();
+            runtime.drain(ui);
+            if !runtime.busy && runtime.pending.is_none() {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        panic!("the favorite write did not settle");
+    }
+
+    /// R3: the focused node is drawn and fully visible in the scrolling plane,
+    /// which starts below the pinned strip on the Deck's 1280×800 panel. Node
+    /// y includes the strip offset, so the plane's local y subtracts it.
+    fn assert_focus_visible(runtime: &Runtime, ui: &AppWindow) {
+        let id = runtime.focus;
+        let node = ui
+            .get_nodes()
+            .iter()
+            .find(|node| node.id == id)
+            .unwrap_or_else(|| panic!("focused node {id} is not drawn"));
+        let pinned = ui.get_pinned_height();
+        let viewport = 800. - 298. - pinned;
+        let offset = ui.get_scroll_offset();
+        let inset = if runtime.view_format == ViewFormat::List {
+            16.
+        } else {
+            24.
+        };
+        let y = node.y - pinned;
+        assert!(
+            y >= offset - 0.01,
+            "{id} is cut at the top: y {y} offset {offset}"
+        );
+        assert!(
+            y + node.h + inset <= offset + viewport + 0.01,
+            "{id} is not fully visible beneath the strip: y {y} h {} offset {offset} viewport {viewport}",
+            node.h
+        );
+    }
+
+    fn recipe_at(runtime: &Runtime, id: i32) -> String {
+        let index = card_index(id).expect("a card id");
+        runtime.snapshot.as_ref().unwrap().items[index]
+            .recipe
+            .id
+            .clone()
+    }
+
+    fn unfavorite_middle(view: ViewFormat) {
+        let (_window, ui) = crate::headless::setup();
+        let mut runtime = favorites_runtime(5, view);
+        let shown = runtime.discover_items();
+        assert!(shown.len() >= 5, "five favorites are shown");
+        let removed = shown[2];
+        let neighbour = shown[3];
+        runtime.focus = card_id(removed);
+        runtime.sync(&ui);
+        let offset = ui.get_scroll_offset();
+        // X removes the mark optimistically, so the card leaves at once.
+        runtime.action(&ui, Action::X);
+        assert_eq!(
+            runtime.focus,
+            card_id(neighbour),
+            "{view:?}: the next card takes the slot"
+        );
+        assert_focus_visible(&runtime, &ui);
+        assert_eq!(
+            ui.get_scroll_offset(),
+            offset,
+            "{view:?}: the replacement card keeps the same slot, no page jump"
+        );
+        settle(&mut runtime, &ui);
+        assert_eq!(
+            runtime.focus,
+            card_id(neighbour),
+            "{view:?}: the saved snapshot keeps the neighbour focused"
+        );
+        assert_focus_visible(&runtime, &ui);
+        // R3: re-favoriting the removed mapset later does not move focus.
+        let mut reordered = runtime.snapshot.clone().unwrap();
+        reordered.items[removed].favorite = true;
+        runtime.replace_snapshot(reordered);
+        runtime.sync(&ui);
+        assert_eq!(
+            runtime.focus,
+            card_id(neighbour),
+            "{view:?}: a later re-favorite keeps the same mapset focused"
+        );
+    }
+
+    fn unfavorite_last(view: ViewFormat) {
+        let (_window, ui) = crate::headless::setup();
+        let mut runtime = favorites_runtime(5, view);
+        let shown = runtime.discover_items();
+        let removed = *shown.last().unwrap();
+        let new_last = shown[shown.len() - 2];
+        runtime.focus = card_id(removed);
+        runtime.sync(&ui);
+        runtime.action(&ui, Action::X);
+        assert_eq!(
+            runtime.focus,
+            card_id(new_last),
+            "{view:?}: the new last card takes focus"
+        );
+        assert_focus_visible(&runtime, &ui);
+        settle(&mut runtime, &ui);
+        assert_eq!(runtime.focus, card_id(new_last));
+        assert_focus_visible(&runtime, &ui);
+    }
+
+    fn unfavorite_only(view: ViewFormat) {
+        let (_window, ui) = crate::headless::setup();
+        let mut runtime = favorites_runtime(1, view);
+        let shown = runtime.discover_items();
+        assert_eq!(shown.len(), 1);
+        runtime.focus = card_id(shown[0]);
+        runtime.sync(&ui);
+        runtime.action(&ui, Action::X);
+        assert!(runtime.discover_items().is_empty());
+        let chip = CHIP + runtime.category_index() as i32;
+        assert_eq!(
+            runtime.focus, chip,
+            "{view:?}: the Favorites chip is focused"
+        );
+        assert!(
+            ui.get_nodes().iter().any(|n| n.id == chip && n.pinned),
+            "{view:?}: the chip is drawn in the pinned strip"
+        );
+        assert!(
+            ui.get_nodes()
+                .iter()
+                .any(|n| n.label == text(&ui, T::NoFavorites)),
+            "{view:?}: the empty Favorites panel is shown"
+        );
+        assert!(
+            ui.get_nodes().iter().all(|n| !(10..200).contains(&n.id)),
+            "{view:?}: no card is drawn"
+        );
+        settle(&mut runtime, &ui);
+        assert_eq!(runtime.focus, chip, "{view:?}: the chip keeps focus");
+    }
+
+    #[test]
+    fn unfavoriting_a_middle_card_in_cards_focuses_the_card_in_its_slot() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_a_middle_card_in_cards_focuses_the_card_in_its_slot",
+        ) {
+            return;
+        }
+        unfavorite_middle(ViewFormat::Cards);
+    }
+
+    #[test]
+    fn unfavoriting_a_middle_card_in_list_focuses_the_card_in_its_slot() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_a_middle_card_in_list_focuses_the_card_in_its_slot",
+        ) {
+            return;
+        }
+        unfavorite_middle(ViewFormat::List);
+    }
+
+    #[test]
+    fn unfavoriting_the_last_card_in_cards_focuses_the_new_last_card() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_the_last_card_in_cards_focuses_the_new_last_card",
+        ) {
+            return;
+        }
+        unfavorite_last(ViewFormat::Cards);
+    }
+
+    #[test]
+    fn unfavoriting_the_last_card_in_list_focuses_the_new_last_card() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_the_last_card_in_list_focuses_the_new_last_card",
+        ) {
+            return;
+        }
+        unfavorite_last(ViewFormat::List);
+    }
+
+    #[test]
+    fn unfavoriting_the_only_card_in_cards_focuses_the_favorites_chip() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_the_only_card_in_cards_focuses_the_favorites_chip",
+        ) {
+            return;
+        }
+        unfavorite_only(ViewFormat::Cards);
+    }
+
+    #[test]
+    fn unfavoriting_the_only_card_in_list_focuses_the_favorites_chip() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_the_only_card_in_list_focuses_the_favorites_chip",
+        ) {
+            return;
+        }
+        unfavorite_only(ViewFormat::List);
+    }
+
+    /// R2: unfavoriting on Mapset detail removes the mapset from Favorites;
+    /// returning applies the same neighbour rule, using its former position.
+    #[test]
+    fn returning_from_detail_after_unfavoriting_lands_on_the_former_position() {
+        if crate::headless::isolated(
+            module_path!(),
+            "returning_from_detail_after_unfavoriting_lands_on_the_former_position",
+        ) {
+            return;
+        }
+        let (_window, ui) = crate::headless::setup();
+        let mut runtime = favorites_runtime(3, ViewFormat::Cards);
+        let shown = runtime.discover_items();
+        let removed = shown[1];
+        runtime.focus = card_id(removed);
+        runtime.sync(&ui);
+        runtime.action(&ui, Action::Confirm);
+        assert_eq!(runtime.screen, Screen::Detail);
+        let recipe = recipe_at(&runtime, card_id(removed));
+        runtime.action(&ui, Action::X);
+        settle(&mut runtime, &ui);
+        assert_eq!(runtime.screen, Screen::Detail, "detail stays open");
+        assert!(
+            !runtime
+                .snapshot
+                .as_ref()
+                .unwrap()
+                .items
+                .iter()
+                .find(|item| item.recipe.id == recipe)
+                .unwrap()
+                .favorite,
+            "the unfavorite persisted"
+        );
+        runtime.action(&ui, Action::Back);
+        assert_eq!(runtime.screen, Screen::Discover);
+        assert_eq!(
+            runtime.focus,
+            card_id(shown[2]),
+            "the card now in the former position is focused"
+        );
+        assert_focus_visible(&runtime, &ui);
+    }
+
+    /// R3: unfavoriting in a tag category keeps the item in the list, so focus
+    /// stays on the same mapset even though the favorite group leads now.
+    #[test]
+    fn unfavoriting_in_a_tag_category_keeps_focus_on_the_same_mapset() {
+        if crate::headless::isolated(
+            module_path!(),
+            "unfavoriting_in_a_tag_category_keeps_focus_on_the_same_mapset",
+        ) {
+            return;
+        }
+        let (_window, ui) = crate::headless::setup();
+        let mut runtime = favorites_runtime(0, ViewFormat::Cards);
+        let mut chosen = None;
+        for category in runtime.categories() {
+            if matches!(category, Category::Tag(_)) {
+                runtime.choose_category(category.clone());
+                if runtime.discover_items().len() >= 3 {
+                    chosen = Some(category);
+                    break;
+                }
+            }
+        }
+        let category = chosen.expect("a tag category with three cards");
+        let shown = runtime.discover_items();
+        let focused = shown[1];
+        runtime.focus = card_id(focused);
+        runtime.sync(&ui);
+        let recipe = recipe_at(&runtime, card_id(focused));
+        runtime.action(&ui, Action::X);
+        settle(&mut runtime, &ui);
+        assert_eq!(runtime.chosen_category(), &category);
+        let index = card_index(runtime.focus).expect("still a card");
+        assert_eq!(
+            runtime.snapshot.as_ref().unwrap().items[index].recipe.id,
+            recipe,
+            "focus stays on the same mapset"
+        );
+        assert_focus_visible(&runtime, &ui);
     }
 }
