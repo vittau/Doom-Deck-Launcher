@@ -1232,24 +1232,126 @@ fn pinned_discover_categories() {
         r.focus = 10;
         r.sync(&ui);
         advance_time(160);
+    }
+    r.finish_preferences();
+}
+
+/// Owner-selected production density, with real catalog titles/artwork/tags.
+#[test]
+fn compact_discover_catalog_scene() {
+    if isolated(module_path!(), "compact_discover_catalog_scene") {
+        return;
+    }
+    use crate::{runtime::Category, services::ViewFormat};
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    r.screen = Screen::Discover;
+    for item in &mut r.snapshot.as_mut().unwrap().items {
+        item.favorite = true;
+    }
+    r.choose_category(Category::Favorites);
+    r.view_format = ViewFormat::Cards;
+    r.sync(&ui);
+    let all_nodes: Vec<_> = ui.get_nodes().iter().collect();
+    let all_cards: Vec<_> = all_nodes
+        .iter()
+        .filter(|n| n.kind == 1 && n.actionable)
+        .collect();
+    assert_eq!(all_cards.len(), r.snapshot.as_ref().unwrap().items.len());
+    // Exercise actual production chips for every recipe's tag combination.
+    for card in all_cards {
+        let tags: Vec<_> = all_nodes
+            .iter()
+            .filter(|n| {
+                n.kind == 13
+                    && n.x >= card.x
+                    && n.x < card.x + card.w
+                    && n.y >= card.y
+                    && n.y < card.y + card.h
+            })
+            .collect();
+        assert!((1..=2).contains(&tags.len()));
+        for tag in tags {
+            assert_eq!((tag.y, tag.h, tag.size), (card.y + 282., 26., 14.));
+            assert!(tag.x >= card.x + 28. && tag.x + tag.w <= card.x + 356.);
+        }
+    }
+    r.choose_category(Category::Tag("community-projects".into()));
+    for (layout, name, kind) in [
+        (ViewFormat::Cards, "cards", 1),
+        (ViewFormat::List, "list", 24),
+    ] {
+        r.view_format = layout;
+        r.focus = -3;
+        r.sync(&ui);
+        advance_time(160);
+        let items: Vec<_> = ui
+            .get_nodes()
+            .iter()
+            .filter(|n| n.actionable && n.kind == kind)
+            .collect();
+        assert!(items.len() > 9, "real catalog has several card rows");
         if layout == ViewFormat::Cards {
-            // Review-only compact alternative: transform the same production nodes.
-            let mut nodes: Vec<_> = ui.get_nodes().iter().collect();
-            for n in &mut nodes {
-                if n.pinned {
-                    continue;
+            let nodes: Vec<_> = ui.get_nodes().iter().collect();
+            for card in &items {
+                assert_eq!((card.w, card.h), (384., 340.));
+                let tags: Vec<_> = nodes
+                    .iter()
+                    .filter(|n| {
+                        n.kind == 13
+                            && n.x >= card.x
+                            && n.x < card.x + card.w
+                            && n.y >= card.y
+                            && n.y < card.y + card.h
+                    })
+                    .collect();
+                assert!((1..=2).contains(&tags.len()));
+                assert_eq!(tags[0].label, "Community Projects", "open category leads");
+                for tag in tags {
+                    assert_eq!((tag.y, tag.h, tag.size), (card.y + 282., 26., 14.));
+                    assert!(tag.x >= card.x + 28. && tag.x + tag.w <= card.x + 356.);
                 }
-                let row = ((n.y - 92.) / 414.).floor().max(0.);
-                let relative = n.y - (92. + row * 414.);
-                n.y -= row * 46.;
-                if (n.kind == 1 && n.actionable) || n.kind == 4 {
-                    n.h -= 46.;
-                } else if relative >= 140. {
-                    n.y -= 46.;
-                }
+                let art = nodes
+                    .iter()
+                    .find(|n| n.kind == 4 && n.x == card.x + 28. && n.y == card.y + 28.)
+                    .unwrap();
+                assert_eq!((art.w, art.h), (328., 96.));
             }
-            ui.set_nodes(slint::ModelRc::new(slint::VecModel::from(nodes)));
-            write_png("111-cards-compact-340-review-only.png", &render(&window));
+        } else {
+            assert!(items.iter().all(|n| n.h == 74.), "List geometry unchanged");
+        }
+        let two_tag_items: Vec<_> = items
+            .iter()
+            .filter(|n| {
+                r.snapshot.as_ref().unwrap().items[(n.id - 10) as usize]
+                    .recipe
+                    .tags
+                    .len()
+                    >= 2
+            })
+            .collect();
+        for (item, position) in [
+            (*two_tag_items.first().unwrap(), "top"),
+            (*two_tag_items.last().unwrap(), "deep"),
+        ] {
+            r.focus = item.id;
+            r.sync(&ui);
+            advance_time(160);
+            if position == "top" {
+                assert_eq!(ui.get_scroll_offset(), 0.);
+            }
+            if position == "deep" {
+                assert!(
+                    ui.get_scroll_offset() > 0.,
+                    "last real catalog item is scrolled into view"
+                );
+            }
+            write_png(
+                &format!("111-catalog-{name}-{position}.png"),
+                &render(&window),
+            );
         }
     }
     r.finish_preferences();

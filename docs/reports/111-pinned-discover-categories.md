@@ -1,86 +1,122 @@
 # 111 — Pinned Discover category strip
 
-## Result
+## Final result and owner decision
 
 **Confirmed:** Discover categories remain pinned in Cards and List. The independent
 80px strip occupies y=230–310 at 1280×800; the scrolling plane clips painting and
-pointer input below y=310. It uses the existing `Tokens.deep` background, and amber
-continues to indicate focus only. `Nodes::strip` marks chips and overflow glyphs as
-pinned while retaining them in the existing navigation model.
+pointer input below y=310. It uses the existing `Tokens.deep` background. Amber
+continues to indicate focus only. Chips and overflow glyphs remain in the existing
+navigation model, with their original selection, overflow and memory behavior.
 
-Focus-follow calculations exclude pinned nodes and convert scrolling nodes into
-the reduced viewport's local coordinates. Discover has 422px of scrolling height
-at 1280×800. List retains minimum-distance movement and its existing 120ms
-retargetable interpolation. Entering the strip preserves the presented offset;
-category changes reset the list even if the chip keeps focus. Content bounds
-include the final focus ring. Library and the remaining planes retain their
-previous geometry, bounds and scroll functions; local pickers do not reserve a
-pinned strip.
+After reviewing the initial 386px implementation and 340px alternative, the owner
+chose **340px Discover cards as the production default**, compact single-row tag
+chips, and returning the freed tag-row space to the screenshot. The former
+review-only node transformation was removed; every new render uses production
+geometry directly.
 
-### Authorized geometry adjustment
+| Discover Cards element | Final geometry |
+| --- | --- |
+| Card | 384×340px, three columns, 368px vertical pitch |
+| Frame content inset | 28px |
+| Screenshot | 328×96px at relative y=28 |
+| Title | Relative y=132, 60px slot, unchanged 26px font |
+| Author | Relative y=198, unchanged 20px font |
+| Base-game/status line | Relative y=226, unchanged 18px font |
+| Installed state | Relative y=254, unchanged 20px font |
+| Tag chips | One row at relative y=282, 26px high, 14px Barlow text |
+| Tag spacing | 6px gap; 5px text inset on each side |
 
-The original 410px card plus its 32px focus ring cannot fit below a fully visible
-category strip. The coordinator authorized **386px Discover cards**: screenshot
-height decreases from 128px to 104px, lower content shifts up 24px, and vertical
-row pitch decreases from 438px to 414px. Width remains 384px with three columns.
-Library cards remain 410px; List rows remain 74px with an 82px pitch. At the initial
-position, the first card's full ring spans y=314–732, below the strip.
+The 340px preview previously had 58px of screenshot height. Removing the second
+tag row returns exactly 38px to that image, producing 96px of art while retaining
+legible title/author/status sizes and 32px below the tag row. The initial card's
+full focus ring spans y=314–686 at 1280×800.
 
-The coordinator also authorized the mechanical `pinned: false` initializer in
-`crates/ddl/src/shell.rs:1062`, required by the shared Slint node structure. No
-other shell behavior changed. No dependencies, tokens, catalog data, persisted
-schemas or coordinator-owned documents changed.
+Library cards remain 410px with their original 128px art, 18px tags and two-row
+wrapping. Mapset detail retains its existing tag layout. List rows remain 74px
+with an 82px pitch. The smaller chip text inset applies only to compact tags;
+existing 18px chips retain their 10px inset. No dependencies, catalog files,
+persisted schemas, tokens or protected coordinator-owned documents changed.
+
+## Scrolling and input
+
+Focus-follow calculations exclude pinned nodes and use scrolling-plane local
+coordinates. Discover has a 422px scrolling viewport at 1280×800. List retains
+minimum-distance movement and its existing 120ms retargetable interpolation.
+Entering the strip preserves the presented offset; switching categories resets
+the list from either a chip or a scrolled item. Bounds reveal the final focus
+ring. Local pickers do not reserve strip space; other screens keep their previous
+geometry and scroll functions.
+
+The original implementation required the authorized mechanical `pinned: false`
+initializer in `crates/ddl/src/shell.rs:1062`. This follow-up makes no shell change.
+
+## Chip packing and evidence
+
+Discover uses a separate single-row packing method. The existing shared
+`Nodes::chips` and `chip_width` behavior remains unchanged for Library/detail.
+Compact width is estimated as `ceil(character_count × 14 × 0.60 + 12)`; the wider
+glyph allowance was verified against the real bundled Barlow font, rather than
+assuming the legacy estimate was sufficient. The initial 15px/legacy estimate
+failed the font check for “Megawads”; the final 14px estimate passes every label.
+
+“Community Projects” and “Beginner Friendly” occupy 164px and 155px respectively:
+with the 6px gap, their combined width is 325px inside the 328px content region.
+Every ordered pair of distinct tags in the vocabulary is checked for containment,
+identical y, full natural Barlow text width and height, and preserved lead order.
+If a second label cannot fit, it is omitted; it never wraps or truncates the first.
+A deliberately overlong second label tests this fallback.
+
+The real-catalog scene also checks the actual production chip nodes for **every
+embedded recipe** using Favorites, then checks the Community Projects category
+with the open category leading. Its top/deep renders show real titles, artwork
+and two-tag cards, including Memento Mori and Eviternity II. Their source recipes
+are unchanged; the test marks recipes favorite in temporary state for the full
+catalog check.
+
+The pinned regression retains both layouts' byte-for-byte strip pixel comparison
+across top/deep/arbitrary offsets, stick input, wheel input and Flickable drag;
+full focus-ring bounds for every item forward and backward; repeated directional
+reversals; Up/Down between the strip and first item; category reset from chips and
+items; and real pointer clicks at y=305 (hidden content cannot activate), y=315
+(visible content activates the correct item) and on the scrolled strip.
 
 ## Verification
 
-`git merge main` returned **Already up to date** before the final checks
-(main `a160306272d6d3cb755cf29d77e3c6142245c62f`). All tests run offline with synthetic
-state and the production Slint software renderer; no desktop window or screen
-capture was used.
+`git merge main` returned **Already up to date** before final checks
+(main `a160306272d6d3cb755cf29d77e3c6142245c62f`). All tests are offline. Every PNG
+uses the production Slint software renderer; no visible window or screen capture
+was opened.
 
 | Exact command | Result |
 | --- | --- |
-| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl headless::library -- --nocapture` | 9 passed (including the final rerun after the category-reset fix); includes the new pinned test, existing Discover/Library continuous motion, category/favorites navigation, Library scenes, setup/sheet neutral-scroll preservation and 1,000-item coverage |
-| `cargo test -p ddl runtime::category_tests -- --nocapture` | 5 passed; category ordering/reachability, overflow window and glyphs, tag chips |
-| `cargo test -p ddl runtime::scroll_tests -- --nocapture` | 3 passed; continuous minimum-distance bounds, reversals and existing card/section follow math |
-| `cargo test -p ddl compact_toggle_contexts_empty_lists_and_save_failure_remain_usable -- --nocapture` | 1 passed; empty category, layout toggle and unrelated-screen behavior |
+| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl compact_discover -- --nocapture` | 2 passed: natural font widths for all vocabulary pairs and real-catalog geometry/renders |
+| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl headless::library -- --nocapture` | 10 passed: pinned strip, compact production catalog, continuous Discover/Library motion, category/favorites navigation, Library scenes, neutral-scroll preservation and 1,000-item coverage |
+| `cargo test -p ddl runtime::category_tests -- --nocapture` | 6 passed, including compact chip packing/font coverage and existing overflow/ordering tests |
+| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl compact_discover_catalog_scene -- --nocapture` | 1 passed again after adding an explicit zero-offset top-frame check and settling prior layout animation |
 | `cargo fmt --all --check` | Passed |
-| `cargo clippy -p ddl --all-targets -- -D warnings` | Passed; app scope matches the changed Rust/Slint code |
-| `DDL_HEADLESS_DIR="$PWD/.scratch/111" cargo test -p ddl pinned_discover_categories -- --nocapture` | 1 passed again after simplifying equivalent branches in the review-only preview to satisfy Clippy |
+| `cargo clippy -p ddl --all-targets -- -D warnings` | Passed, including after the final test-only adjustment |
 | `git diff --check` | Passed |
 
-The new regression covers both layouts equally:
+The preceding implementation also passed the three focused scroll-math tests and
+the empty-category/layout-toggle regression. This follow-up changes card/tag
+geometry only; the focused headless suite rechecks the unchanged scroll math,
+continuous List behavior and Library behavior. No full title matrix, full workspace
+suite, network e2e or SDK build was needed.
 
-- Byte-for-byte strip-region pixel equality at the top, deep scroll, arbitrary
-  focus offsets, manual stick scrolling, native wheel input and a Flickable drag.
-- Every focused item from first to last and back, with its complete focus ring
-  bounded between y=310 and y=732; repeated directional movement and reversal
-  preserve the selected identity. Deep navigation exceeds two scrolling viewports.
-- Up from the first item to the selected chip without an offset jump, Down back
-  to the first item, and category switching back to offset zero from both a
-  focused chip and a deeply scrolled focused item.
-- Real pointer events at y=305 (hidden content must receive no activation), y=315
-  (the visible part of that same card/row activates the correct item), and on a
-  chip while content is scrolled.
-- Existing spec 102 regression now measures Discover in the reduced local viewport,
-  preserving its timed animation, rapid reversal, manual takeover, neutral refresh,
-  bounds, activation and detail-return checks. Library's 522px viewport is unchanged.
+## Fresh production renders
 
-An initial compile identified the required shared-node initializer in `shell.rs`;
-it was added after authorization. The first Clippy pass identified identical
-branches in the optional preview transform; those branches were combined and the
-final Clippy and affected test both passed. Final review also corrected a 12px
-List category-reset offset when switching from an item, added regression coverage,
-and reran all nine focused headless cases plus formatting and Clippy successfully.
-No full workspace suite, title matrix,
-network e2e or SDK build was needed for this focused UI change.
+The following real-catalog frames were visually inspected. Top frames explicitly
+use offset zero; deep frames focus the last applicable two-tag recipe. The smaller
+Community Projects category has fewer than two List viewports of scroll travel;
+the independent 30-item pinned regression still proves traversal beyond two
+viewports in both layouts.
 
-## Off-screen production PNGs
+- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-cards-top.png`
+- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-cards-deep.png`
+- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-list-top.png`
+- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/compact_discover_catalog_scene/111-catalog-list-deep.png`
 
-All nine frames below were visually inspected. The fixture uses 30 catalog-derived
-mapsets with deterministic titles to exercise deep scrolling; actual production
-nodes, artwork, fonts, tokens, input clipping and software rendering are used.
-Each layout has top/deep frames with a focused chip and a focused item.
+The original focused-chip/focused-item matrix was also regenerated with the final production geometry:
 
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/pinned_discover_categories/111-cards-top-chip.png`
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/pinned_discover_categories/111-cards-top-item.png`
@@ -90,22 +126,13 @@ Each layout has top/deep frames with a focused chip and a focused item.
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/pinned_discover_categories/111-list-top-item.png`
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/pinned_discover_categories/111-list-deep-chip.png`
 - `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/pinned_discover_categories/111-list-deep-item.png`
-- `/Users/vitor/orca/workspaces/Doom-Deck-Launcher/pinned-discover-categories/.scratch/111/pinned_discover_categories/111-cards-compact-340-review-only.png`
 
-### Review-only compact alternative
+The old `111-cards-compact-340-review-only.png` is historical output only and is
+superseded by these production frames; its transformation is no longer in the test.
 
-`111-cards-compact-340-review-only.png` shows 340px Discover cards beside the
-386px default evidence (`111-cards-top-item.png`). It is generated only by the
-headless test's transformation of production nodes: card height and row pitch
-are reduced by another 46px, screenshot height becomes 58px, and lower text and
-chips move up 46px. Width, three-column layout, text sizes, category strip and
-List mode stay the same. The image reveals part of the next row and gives art
-less prominence; it does not change the production default or add a preference.
+## Remaining validation
 
-## Open questions and remaining validation
-
-No implementation questions or automated acceptance items remain open for R1–R5.
-**Needs Deck Validation:** physical Steam Deck LCD feel, controller/stick and touch
-comfort, visual density of the 386px default, and any owner choice to pursue the
-340px alternative. No changes to the protected overview, decisions, status,
-journal or user guide are proposed by this implementation.
+No implementation questions or automated acceptance items remain open for R1–R5
+or the owner's compact-card follow-up. **Needs Deck Validation:** physical Steam
+Deck LCD readability and feel, including compact tag text and controller/stick/touch
+comfort. No protected documentation changes are proposed by this implementation.
