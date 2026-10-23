@@ -35,8 +35,7 @@ workers keep their current conversations for the same task and review correction
 | Work | Agent | Fallback at usage/token usage ≥90% |
 | --- | --- | --- |
 | High complexity or extensive context | Codex, GPT-6.1 Sol, medium | OpenCode, DeepSeek V4.1 Flash, high |
-| Medium complexity, likely long | OpenCode, DeepSeek V4.1 Flash, high | — |
-| Medium complexity, likely short | OpenCode, DeepSeek V4.1 Flash Free, high | — |
+| Medium complexity, average task | OpenCode, DeepSeek V4.1 Flash, high | — |
 | Simple parallel work | Claude Haiku 5.5, high | OpenCode, DeepSeek V4.1 Flash, medium |
 
 The former OpenCode-only and unconditional one-day Codex preferences are superseded. Orca
@@ -142,10 +141,8 @@ orca orchestration worker-start --run <run> --spec "$(cat brief.md)" --task-titl
   --terminal <handle> --worktree path:<worktree> --json
 ```
 
-Use `opencode/deepseek-v4.1-flash-free` in place of `opencode-go/deepseek-v4.1-flash` for bounded
-tasks (footer: "DeepSeek V4.1 Flash Free OpenCode · high"). The Free endpoint sometimes answers
-"Upstream request failed: Endpoint is unavailable" and retries by itself; if it keeps failing,
-relaunch on the paid model. Close the fallback shell that a bare `worktree create` opens, after
+Owner instruction: avoid the V4.1 Flash Free model; use the paid Flash provider when
+routing work to OpenCode. Close the fallback shell that a bare `worktree create` opens after
 confirming it is idle. When an opencode task is settled: `worker-release` (it stays `retained`),
 `opencode api session.list` → `opencode api session.interrupt --param sessionID=<id>` for its
 session, then close the terminal.
@@ -260,8 +257,8 @@ reading these and this file, then `orca orchestration run-use --id <run>` (neede
 coordinator runs in a new terminal) and `orca orchestration worker-list --run <id> --json` for live
 workers, and `orca worktree list --repo id:<repo-id> --json` for leftover worktrees.
 
-Current identifiers: repo id `7bde2174-d352-4dd8-9057-f2b433ecbbf2`; Run `run_005c6aad7366`
-(holds every task since 2026-10-16). Monitors (inbox wait, `worker_health.py`, `gui_guard.sh`)
+Current identifiers: repo id `7bde2174-d352-4dd8-9057-f2b433ecbbf2`; current Run
+`run_705f06678595` (reused for post-099 work and the current local-content polish). Monitors (inbox wait, `worker_health.py`, `gui_guard.sh`)
 are Claude Code Monitors that expire every 30 minutes and must be re-armed while workers run;
 stop them when no worker is active. Published branches written by CI: `catalog` (catalog bundle,
 spec 019) and `idgames-index` (daily /idgames index, spec 050; first publish 2026-10-20, 10,885
