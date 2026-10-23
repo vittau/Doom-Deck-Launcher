@@ -1177,3 +1177,12 @@
     UI geometry changes and warns that a [skip ci] head skips the whole push.
   refs: [docs/orchestration.md, crates/ddl/src/headless_production.rs]
 
+- date: 2026-10-23
+  type: release
+  summary: >-
+    Published v0.0.17-discover (d928170): pinned Discover categories and compact 340px cards
+    with one-row tags. Release 40017351006, signed Flatpak 40017351238 (site version 0.0.17)
+    and CI 40017348300 succeeded; the tarball matches its SHA-256. Deck checks PD1–PD3 pending.
+    The tag's saved-state fixture is still to be added (spec 055).
+  refs: [docs/releases/v0.0.17-discover.md, docs/status.md, docs/deck-testing.md]
+

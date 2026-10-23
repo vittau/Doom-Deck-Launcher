@@ -297,7 +297,7 @@ host evidence. These rows do not record a new physical test or a release result.
 ## Pinned Discover categories — source after spec 111
 
 **Needs Deck Validation:** see [report111](reports/111-pinned-discover-categories.md) for the
-focused tests and off-screen renders. Not yet in a published build.
+focused tests and off-screen renders. Published in `v0.0.17-discover`.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |

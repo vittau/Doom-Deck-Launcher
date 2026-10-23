@@ -2,11 +2,12 @@
 
 ## Current checkpoint — 2026-10-23
 
-**Available for Deck testing:** [v0.0.16-path](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.16-path),
-immutable source `7d3e5d01139fa7445d4d3f5d7f0b661899773139`, published as a Linux tarball
+**Available for Deck testing:** [v0.0.17-discover](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.17-discover),
+immutable source `d9281701885b152eb0d0f99754e1f661fc4c7daa`, published as a Linux tarball
 and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
-Release and signed publication succeeded; the publication report records matching source
-provenance, version, canonical output and tarball checksum (109).
+Full offline CI 40014809417 passed on `c6c4f09`; release 40017351006, signed Flatpak
+40017351238 (site version 0.0.17) and CI 40017348300 succeeded on the tag source; the tarball
+matches its published SHA-256. It adds the pinned Discover categories and compact cards (111).
 
 ### Shipped
 
@@ -70,7 +71,7 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   `v0.0.15-local` saved-state fixture, its guard and this status; it does not imply a newer
   binary than the published one.
 
-- **Pinned Discover categories (111, merged, not yet released):** the category strip stays fixed
+- **Pinned Discover categories (111, published in 0.0.17):** the category strip stays fixed
   above the scrolling content in Cards and List; the focused item is always fully visible below
   it and switching category returns to the top. Owner-chosen compact Discover cards: 340px
   tall with 96px art and one row of smaller tag chips; Library cards unchanged. Sixteen focused
