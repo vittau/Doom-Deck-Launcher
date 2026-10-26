@@ -1229,3 +1229,12 @@
     bug report form was added. The owner validated DF1–DF2 on 0.0.18 and did a fresh Flatpak
     install from the .flatpakref; the repository side of the outreach gates is done.
   refs: [docs/outreach.md, docs/deck-testing.md, README.md]
+
+- date: 2026-10-26
+  type: outreach
+  summary: >-
+    First outreach post, written and published by the owner on r/DoomMods: "I've been working on
+    a Doom WAD launcher for the Steam Deck" (personal tone, DSDA-Doom, signed self-hosted Flatpak,
+    AI disclosure). Next channels per docs/outreach.md after its feedback.
+  refs: [docs/outreach.md,
+    "https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/"]

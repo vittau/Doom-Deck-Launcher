@@ -119,7 +119,7 @@ read Search Console referrals and GitHub traffic; report numbers, not guesses.
 
 | Channel | State | Link | Result |
 | --- | --- | --- | --- |
-| r/DoomMods | To post | — | — |
+| r/DoomMods | Posted 2026-10-26 | [post](https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/) | Pending |
 | Steam DOOM + DOOM II | Ask moderation | — | — |
 | Doomworld | To post | — | — |
 | r/SteamDeck | Ask moderation (modmail) | — | — |
