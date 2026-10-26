@@ -46,7 +46,7 @@ started building a launcher for it." No launch speech, no forced comparison with
 | 4 | [r/SteamDeck](https://www.reddit.com/r/SteamDeck/) | Well-validated build | Discover → install → play in Gaming Mode | **Modmail approval before self-promotion** *(2026-10-21)*. Don't say "one-click install"; say not Flathub |
 | 5 | [r/SteamDeckHQ](https://www.reddit.com/r/SteamDeckHQ/) | After 4 | Practical use on the Deck | Check rules/flair; short post |
 | 6 | [GamingOnLinux](https://www.gamingonlinux.com/contact-us/), [SteamDeckHQ](https://steamdeckhq.com/) editorial | When strangers install and play without help | Native tool for classic maps | One short tip, not a press release; AI disclosure |
-| 7 | [awesome-steam-deck](https://github.com/airscripts/awesome-steam-deck) | Documented, working release | Be found when people look for tools | Neutral PR per its guide, no donation link |
+| 7 | [awesome-steam-deck](https://github.com/airscripts/awesome-steam-deck) | After independent users and traction | Be found when people look for tools | Its CONTRIBUTING asks to discuss in an issue first and to disclose affiliation; software that downloads needs "reasonable maturity and independent usage". The maintainer declined new projects without a user base ([#63](https://github.com/airscripts/awesome-steam-deck/pull/63), [#61](https://github.com/airscripts/awesome-steam-deck/issues/61)), checked 2026-10-26. Neutral entry, no donation link |
 | 8 | [r/linux_gaming](https://www.reddit.com/r/linux_gaming/) | **Not before 2026-12-14**, then re-evaluate | Technical SteamOS story | Two-month minimum for substantially AI-assisted projects *(2026-10-21; repo created 2026-10-14)*; post text written by the owner |
 | — | [r/Doom](https://www.reddit.com/r/Doom/) | Only with explicit moderator green light | General DOOM interest | Ads and AI rules; skip if refused |
 
@@ -125,6 +125,6 @@ read Search Console referrals and GitHub traffic; report numbers, not guesses.
 | r/SteamDeck | Ask moderation (modmail) | — | — |
 | r/SteamDeckHQ | Check rules | — | — |
 | GamingOnLinux / SteamDeckHQ | Contact when mature | — | — |
-| awesome-steam-deck | PR pending | — | — |
+| awesome-steam-deck | Wait for traction (2026-10-26) | — | — |
 | r/linux_gaming | Re-evaluate from 2026-12-14 | — | — |
 | r/Doom | Only with approval | — | — |
