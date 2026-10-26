@@ -1,9 +1,9 @@
 # Steam Deck guide
 
-DDL is pre-alpha: the repository implements installing DSDA-Doom, identifying your own
-IWADs, browsing and installing mapsets, and launching through Play setup. Release features
-may lag the source tree. **Needs Deck Validation:** Gaming Mode, controller handoff and
-real gameplay; see the [hardware checklist](deck-testing.md).
+DDL is experimental: updates may reset launcher data. The core journey (update, find owned
+games, install a mapset, play and return) works on a Steam Deck LCD in Gaming Mode with the
+Flatpak. Newer features may still be **Needs Deck Validation**; see the
+[hardware checklist](deck-testing.md).
 
 - [Install](#install-from-a-github-release)
 - [Local WADs and extra files](#local-wads-and-extra-files)

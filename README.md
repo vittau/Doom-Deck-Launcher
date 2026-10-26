@@ -11,8 +11,8 @@
 Discover community maps, choose your setup, and play from Gaming Mode.
 Built in Rust and [Slint](https://slint.dev).
 
-**Pre-alpha:** these screenshots show the current source tree; published releases may lag.
-**Needs Deck Validation:** Gaming Mode, input handoff and gameplay — [test checklist](docs/deck-testing.md).
+**Experimental:** updates may reset launcher data; expect rough edges.
+Tested on a Steam Deck LCD in Gaming Mode; newer features may still await a Deck pass ([checklist](docs/deck-testing.md)).
 
 | Home | Discover |
 | --- | --- |
@@ -41,7 +41,7 @@ Click an image to inspect it at 1280×800.
 [installation instructions on the DDL website](https://doomdecklauncher.com/).
 Launcher updates arrive through Discover; the mapset catalog updates inside DDL.
 The [Steam Deck guide](docs/steam-deck-guide.md#flatpak-discover) covers adding DDL to Steam
-and troubleshooting. Physical Deck installation checks are still pending.
+and troubleshooting.
 
 Alternatively, use the portable Linux tarball:
 

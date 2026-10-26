@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Add or fix a mapset recipe
+    url: https://github.com/vittau/Doom-Deck-Launcher/blob/main/CONTRIBUTING.md#add-a-mapset
+    about: Mapsets are TOML recipes contributed by pull request.
+  - name: Steam Deck setup help
+    url: https://github.com/vittau/Doom-Deck-Launcher/blob/main/docs/steam-deck-guide.md#faq
+    about: Install, controls, IWADs and troubleshooting.

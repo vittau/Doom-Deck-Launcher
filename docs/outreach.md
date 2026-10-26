@@ -29,24 +29,23 @@ started building a launcher for it." No launch speech, no forced comparison with
 
 | # | Gate | Who | State |
 | --- | --- | --- | --- |
-| G1 | README and Deck guide match reality: drop "Pre-alpha" and "Physical Deck installation checks are still pending"; the 0.0.16 owner pass validated update → owned games found → install → play → return with data, input and Flatpak audio OK ([deck-testing](deck-testing.md)) | Coordinator | Open |
-| G2 | **Known issues** in the README: Headless Chicken on DSDA-Doom 0.30.1 ([dsda-doom#1049](https://github.com/dsda-org/dsda-doom/issues/1049)); four mapsets without screenshots; experimental state may reset (D-042) | Coordinator | Open |
-| G3 | Bug intake: GitHub issue templates (DDL version, install type, `ddl doctor` output; mapset requests point at CONTRIBUTING). Issues are enabled; Discussions stay off | Coordinator | Open |
-| G4 | Real Deck media: 30–60 s clip (controller navigation → pick a mapset → Play → gameplay → back to DDL) and 3–4 Gaming Mode screenshots. Site images are off-screen renders with sample data; never present them as Deck captures | **Owner** | Open |
-| G5 | Open `doomdecklauncher.com` in the Deck browser and do one fresh install from the `.flatpakref` (HTTPS, layout, links, remote identity, permissions) | **Owner** | Open |
-| G6 | DF1–DF2 on 0.0.18 pass, or the post points at a build where they pass | **Owner** | Open |
-| G7 | Re-read the channel's rules and get moderation approval where §3 says so | **Owner** | Per channel |
+| G1 | README and Deck guide match reality, README kept lean: drop "Pre-alpha" and "Physical Deck installation checks are still pending"; the 0.0.16 owner pass validated update → owned games found → install → play → return with data, input and Flatpak audio OK ([deck-testing](deck-testing.md)) | Coordinator | Done 2026-10-26 |
+| G2 | Bug intake: GitHub issue templates (DDL version, install type, `ddl doctor` output; mapset requests point at CONTRIBUTING). Issues are enabled; Discussions stay off | Coordinator | Done 2026-10-26 |
+| G3 | Optional: a few Gaming Mode screenshots (Steam + R1) for posts. No video (owner, 2026-10-26). Site images are off-screen renders with sample data; never present them as Deck captures | **Owner** | Optional |
+| G4 | Open `doomdecklauncher.com` in the Deck browser and do one fresh install from the `.flatpakref` (HTTPS, layout, links, remote identity, permissions) | **Owner** | Open |
+| G5 | DF1–DF2 on 0.0.18 pass, or the post points at a build where they pass | **Owner** | Open |
+| G6 | Re-read the channel's rules and get moderation approval where §3 says so | **Owner** | Per channel |
 
 ## 3. Channel order
 
 | # | Channel | When | Hook | Main rule / care |
 | --- | --- | --- | --- | --- |
 | 1 | [r/DoomMods](https://www.reddit.com/r/DoomMods/) | Now (testable experimental build) | Feedback on playing mapsets on the Deck | Confirm launchers are welcome (not only mods); check flair and AI rules |
-| 2 | [Steam — DOOM + DOOM II discussions](https://steamcommunity.com/app/2280/discussions/0/) | After G4 and permission | The pain of playing WADs on the Deck | Ads/commercial content restricted; FOSS is no automatic exception ([rules](https://help.steampowered.com/en/faqs/view/6862-8119-C23E-EA7B), [conduct](https://store.steampowered.com/online_conduct/)). **Ask moderation before an own thread.** No donation link. Update one thread per milestone |
+| 2 | [Steam — DOOM + DOOM II discussions](https://steamcommunity.com/app/2280/discussions/0/) | After permission | The pain of playing WADs on the Deck | Ads/commercial content restricted; FOSS is no automatic exception ([rules](https://help.steampowered.com/en/faqs/view/6862-8119-C23E-EA7B), [conduct](https://store.steampowered.com/online_conduct/)). **Ask moderation before an own thread.** No donation link. Update one thread per milestone |
 | 3 | [Doomworld](https://www.doomworld.com/forum/) | After first fixes from 1–2 | DSDA-Doom, complevel, IWAD, load order | Pick the right subforum for tools; one long-lived thread. Open [generative-AI debate](https://www.doomworld.com/forum/topic/156896-generative-ai-and-policy/) (no staff ban found): disclose plainly. Don't lead with Doomer Boards Projects ([history](https://www.doomworld.com/forum/topic/123980-ban-lifted-doomer-boards-projects-will-no-longer-be-permitted-on-the-forums/)) |
-| 4 | [r/SteamDeck](https://www.reddit.com/r/SteamDeck/) | Well-validated build + G4 | Discover → install → play in Gaming Mode | **Modmail approval before self-promotion** *(2026-10-21)*. Don't say "one-click install"; say not Flathub |
-| 5 | [r/SteamDeckHQ](https://www.reddit.com/r/SteamDeckHQ/) | After 4 | Practical use on the Deck | Check rules/flair; short post with the real clip |
-| 6 | [GamingOnLinux](https://www.gamingonlinux.com/contact-us/), [SteamDeckHQ](https://steamdeckhq.com/) editorial | When strangers install and play without help | Native tool for classic maps | One short tip, not a press release; real Deck footage; AI disclosure |
+| 4 | [r/SteamDeck](https://www.reddit.com/r/SteamDeck/) | Well-validated build | Discover → install → play in Gaming Mode | **Modmail approval before self-promotion** *(2026-10-21)*. Don't say "one-click install"; say not Flathub |
+| 5 | [r/SteamDeckHQ](https://www.reddit.com/r/SteamDeckHQ/) | After 4 | Practical use on the Deck | Check rules/flair; short post |
+| 6 | [GamingOnLinux](https://www.gamingonlinux.com/contact-us/), [SteamDeckHQ](https://steamdeckhq.com/) editorial | When strangers install and play without help | Native tool for classic maps | One short tip, not a press release; AI disclosure |
 | 7 | [awesome-steam-deck](https://github.com/airscripts/awesome-steam-deck) | Documented, working release | Be found when people look for tools | Neutral PR per its guide, no donation link |
 | 8 | [r/linux_gaming](https://www.reddit.com/r/linux_gaming/) | **Not before 2026-12-14**, then re-evaluate | Technical SteamOS story | Two-month minimum for substantially AI-assisted projects *(2026-10-21; repo created 2026-10-14)*; post text written by the owner |
 | — | [r/Doom](https://www.reddit.com/r/Doom/) | Only with explicit moderator green light | General DOOM interest | Ads and AI rules; skip if refused |
@@ -89,8 +88,7 @@ A third party recommending GZDeck in a Steam thread shows relevance, not permiss
 **Doomworld additions:** why DSDA-Doom; recipes record files, SHA-256, load order and complevel;
 hashes are verified and archives never executed; local WADs/DEH run with a player-set order. What
 it does not do: other ports, bundled IWADs, map redistribution (screenshots credited, removed on
-the author's request). Credit UZDeck and GZDeck as inspiration without competing. Known issues
-and a link to CONTRIBUTING for recipe corrections.
+the author's request). Credit UZDeck and GZDeck as inspiration without competing, plus a link to CONTRIBUTING for recipe corrections.
 
 **Editorial tip** (subject: *A new open-source Doom WAD launcher built around the Steam Deck*):
 
@@ -107,7 +105,7 @@ classic Doom mapsets on Steam Deck, using DSDA-Doom.*
 
 - [ ] Rules re-read and moderation approval where required.
 - [ ] Personal, Deck-focused title.
-- [ ] What works vs. what is missing is clear; real-hardware demo, not site renders.
+- [ ] What works vs. what is missing is clear; site renders are not passed off as Deck captures.
 - [ ] Flatpak named experimental and self-hosted, not Flathub.
 - [ ] Authorship and AI use disclosed.
 - [ ] Site as the main link for players; GitHub second.
