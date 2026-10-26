@@ -32,8 +32,8 @@ started building a launcher for it." No launch speech, no forced comparison with
 | G1 | README and Deck guide match reality, README kept lean: drop "Pre-alpha" and "Physical Deck installation checks are still pending"; the 0.0.16 owner pass validated update → owned games found → install → play → return with data, input and Flatpak audio OK ([deck-testing](deck-testing.md)) | Coordinator | Done 2026-10-26 |
 | G2 | Bug intake: GitHub issue templates (DDL version, install type, `ddl doctor` output; mapset requests point at CONTRIBUTING). Issues are enabled; Discussions stay off | Coordinator | Done 2026-10-26 |
 | G3 | Optional: a few Gaming Mode screenshots (Steam + R1) for posts. No video (owner, 2026-10-26). Site images are off-screen renders with sample data; never present them as Deck captures | **Owner** | Optional |
-| G4 | Open `doomdecklauncher.com` in the Deck browser and do one fresh install from the `.flatpakref` (HTTPS, layout, links, remote identity, permissions) | **Owner** | Open |
-| G5 | DF1–DF2 on 0.0.18 pass, or the post points at a build where they pass | **Owner** | Open |
+| G4 | Open `doomdecklauncher.com` in the Deck browser and do one fresh install from the `.flatpakref` (HTTPS, layout, links, remote identity, permissions) | **Owner** | Done 2026-10-26 (fresh install) |
+| G5 | DF1–DF2 on 0.0.18 pass, or the post points at a build where they pass | **Owner** | Done 2026-10-26 |
 | G6 | Re-read the channel's rules and get moderation approval where §3 says so | **Owner** | Per channel |
 
 ## 3. Channel order

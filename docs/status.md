@@ -84,7 +84,7 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   favorite-only mapsets, then the rest, chronological inside each group. Favorite toggles and
   installs move the item with focus kept; uninstall keeps its spec 022 navigation. Ordinary
   suite (1,008 tests), the category/favorites journey and CI 40030510101 passed. Spec 113
-  (also in 0.0.18) fixes focus after unfavoriting inside the Favorites category. Deck checks DF1–DF2.
+  (also in 0.0.18) fixes focus after unfavoriting inside the Favorites category. The owner validated DF1–DF2 on the Deck (2026-10-26).
 
 ### Immediate direction
 

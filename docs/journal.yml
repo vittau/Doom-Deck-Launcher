@@ -1219,3 +1219,13 @@
     and CI 40034372229 succeeded; the tarball matches its SHA-256. Deck checks DF1–DF2 pending.
   refs: [docs/releases/v0.0.18-favorites.md, docs/status.md, docs/deck-testing.md]
 
+
+- date: 2026-10-26
+  type: decision
+  summary: >-
+    Outreach plan in docs/outreach.md, merged from the owner's earlier publishing plan: personal
+    tone, moderation first, r/DoomMods before Steam, Doomworld and r/SteamDeck, r/linux_gaming
+    not before 2026-12-14; no video. README and Deck guide drop the stale pre-alpha wording and a
+    bug report form was added. The owner validated DF1–DF2 on 0.0.18 and did a fresh Flatpak
+    install from the .flatpakref; the repository side of the outreach gates is done.
+  refs: [docs/outreach.md, docs/deck-testing.md, README.md]
