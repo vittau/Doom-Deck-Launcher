@@ -119,7 +119,7 @@ read Search Console referrals and GitHub traffic; report numbers, not guesses.
 
 | Channel | State | Link | Result |
 | --- | --- | --- | --- |
-| r/DoomMods | Posted 2026-10-26 | [post](https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/) | Pending |
+| r/DoomMods | Posted 2026-10-26; removed by moderators the same day, no reason given | [post](https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/) | Ask modmail whether launchers are on topic; do not repost before an answer |
 | Steam DOOM + DOOM II | Ask moderation | — | — |
 | Doomworld | Posted 2026-10-26 in Source Ports | [topic](https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/) | Pending |
 | r/SteamDeck | Ask moderation (modmail) | — | — |
