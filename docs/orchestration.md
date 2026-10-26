@@ -246,8 +246,9 @@ below are the ones most easily lost between sessions.
   (111, Deck-validated PD1–PD3 on 0.0.17), installed-and-favorites-first order (112, D-043) and
   Favorites focus after unfavoriting (113). Owner validated DF1–DF2 on the Deck (2026-10-26).
 - Outreach: plan in `docs/outreach.md`; repository gates done, owner did a fresh `.flatpakref`
-  install. r/DoomMods and Doomworld (Source Ports) posted 2026-10-26, links in the plan; collect
-  feedback before r/SteamDeckHQ or Lemmy.
+  install. r/DoomMods and Doomworld (Source Ports) posted 2026-10-26; r/DoomMods removed it and
+  Doomworld warned the account for "AI slop" (posting restricted). Outreach is on hold until the
+  owner picks the next channel; every post is written by the owner, never from an agent draft.
 - Saved-state fixtures (spec 055) exist through `v0.0.15-local`; 0.0.16–0.0.18 have none.
   D-042 allows breaking state while experimental, so add fixtures only if the owner wants them.
 - Pending Deck checks that need the owner's own WAD folder: LC2, LC4–LC6, the remaining parts

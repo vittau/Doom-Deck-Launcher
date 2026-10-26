@@ -1,6 +1,8 @@
 # Outreach plan
 
-**Status:** Proposed, awaiting the owner's go. Nothing has been posted.
+**Status:** On hold. The first two posts (2026-10-26) were rejected by DOOM-community moderators:
+r/DoomMods removed it without a reason, Doomworld penalized the account for "AI slop" (§6).
+The next channel waits for the owner's call.
 Merged on 2026-10-26 from the owner's earlier plan (`PUBLISHING.MD`, revision 2026-10-21, kept
 outside the repository) and the channel list in [report 080](reports/080-seo-and-ai-discovery-audit.md)
 F10. Channel rules marked *(2026-10-21)* come from that plan; agents cannot re-read them
@@ -20,8 +22,8 @@ started building a launcher for it." No launch speech, no forced comparison with
 - Never hide authorship or AI assistance. DDL generates no maps, art or music.
 - Do not mention donations where ads/commerce are restricted (above all Steam); no star or
   upvote requests; no indiscriminate crossposting.
-- Where a channel forbids LLM-written posts, the owner writes the post from scratch. The draft in
-  §4 is a starting point to rewrite per community, never a template to fire everywhere.
+- The owner writes every post from scratch, in their own words. The drafts in §4 are notes on
+  what to cover, not text to paste: Doomworld staff called the first thread "AI slop".
 - Players get the **site** as the main link (Releases alone means tarball, checksum and manual
   setup); technical communities get site **and** GitHub.
 
@@ -41,14 +43,14 @@ started building a launcher for it." No launch speech, no forced comparison with
 | # | Channel | When | Hook | Main rule / care |
 | --- | --- | --- | --- | --- |
 | 1 | [r/DoomMods](https://www.reddit.com/r/DoomMods/) | Now (testable experimental build) | Feedback on playing mapsets on the Deck | Confirm launchers are welcome (not only mods); check flair and AI rules |
-| 2 | [Steam — DOOM + DOOM II discussions](https://steamcommunity.com/app/2280/discussions/0/) | After permission | The pain of playing WADs on the Deck | Ads/commercial content restricted; FOSS is no automatic exception ([rules](https://help.steampowered.com/en/faqs/view/6862-8119-C23E-EA7B), [conduct](https://store.steampowered.com/online_conduct/)). **Ask moderation before an own thread.** No donation link. Update one thread per milestone |
-| 3 | [Doomworld](https://www.doomworld.com/forum/) | After first fixes from 1–2 | DSDA-Doom, complevel, IWAD, load order | Pick the right subforum for tools; one long-lived thread. Open [generative-AI debate](https://www.doomworld.com/forum/topic/156896-generative-ai-and-policy/) (no staff ban found): disclose plainly. Don't lead with Doomer Boards Projects ([history](https://www.doomworld.com/forum/topic/123980-ban-lifted-doomer-boards-projects-will-no-longer-be-permitted-on-the-forums/)) |
+| 2 | [Steam — DOOM + DOOM II discussions](https://steamcommunity.com/app/2280/discussions/0/) | After permission | The pain of playing WADs on the Deck | Ads/commercial content restricted; FOSS is no automatic exception ([rules](https://help.steampowered.com/en/faqs/view/6862-8119-C23E-EA7B), [conduct](https://store.steampowered.com/online_conduct/)). **Ask moderation before an own thread**, naming the AI-assisted development up front: the same DOOM audience rejected the first two posts. No donation link. Update one thread per milestone |
+| 3 | [Doomworld](https://www.doomworld.com/forum/) | **Closed** | — | Posted 2026-10-26; staff warned the account for "AI slop" ("Generative or low effort AI is not welcome here") and restricted posting. No new thread, no second account; any contact with staff is the owner's, in their own words |
 | 4 | [r/SteamDeck](https://www.reddit.com/r/SteamDeck/) | Well-validated build | Discover → install → play in Gaming Mode | **Modmail approval before self-promotion** *(2026-10-21)*. Don't say "one-click install"; say not Flathub |
 | 5 | [r/SteamDeckHQ](https://www.reddit.com/r/SteamDeckHQ/) | After 4 | Practical use on the Deck | Check rules/flair; short post |
 | 6 | [GamingOnLinux](https://www.gamingonlinux.com/contact-us/), [SteamDeckHQ](https://steamdeckhq.com/) editorial | When strangers install and play without help | Native tool for classic maps | One short tip, not a press release; AI disclosure |
 | 7 | [awesome-steam-deck](https://github.com/airscripts/awesome-steam-deck) | After independent users and traction | Be found when people look for tools | Its CONTRIBUTING asks to discuss in an issue first and to disclose affiliation; software that downloads needs "reasonable maturity and independent usage". The maintainer declined new projects without a user base ([#63](https://github.com/airscripts/awesome-steam-deck/pull/63), [#61](https://github.com/airscripts/awesome-steam-deck/issues/61)), checked 2026-10-26. Neutral entry, no donation link |
 | 8 | [r/linux_gaming](https://www.reddit.com/r/linux_gaming/) | **Not before 2026-12-14**, then re-evaluate | Technical SteamOS story | Two-month minimum for substantially AI-assisted projects *(2026-10-21; repo created 2026-10-14)*; post text written by the owner |
-| — | [r/Doom](https://www.reddit.com/r/Doom/) | Only with explicit moderator green light | General DOOM interest | Ads and AI rules; skip if refused |
+| — | [r/Doom](https://www.reddit.com/r/Doom/) | Only with explicit moderator green light | General DOOM interest | Ads and AI rules; expect the r/DoomMods and Doomworld reception. Skip if refused |
 
 Passive, no thread to babysit: the SteamGridDB page for `DoomDeckLauncher` with the existing
 Steam art ([research](research/steam-shortcuts.md)). Do not advertise in the DSDA-Doom, UZDeck or
@@ -121,7 +123,7 @@ read Search Console referrals and GitHub traffic; report numbers, not guesses.
 | --- | --- | --- | --- |
 | r/DoomMods | Posted 2026-10-26; removed by moderators the same day, no reason given | [post](https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/) | Ask modmail whether launchers are on topic; do not repost before an answer |
 | Steam DOOM + DOOM II | Ask moderation | — | — |
-| Doomworld | Posted 2026-10-26 in Source Ports; no moderation issues so far. Precedent: another launcher's release thread, [Simple Doom Launcher](https://www.doomworld.com/forum/topic/159291-simple-doom-launcher/) (owner, 2026-10-26) | [topic](https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/) | Pending |
+| Doomworld | Posted 2026-10-26 in Source Ports (a launcher thread such as [Simple Doom Launcher](https://www.doomworld.com/forum/topic/159291-simple-doom-launcher/) was the precedent). Same day: moderator warning, reason "AI slop", note "Generative or low effort AI is not welcome here"; 1 permanent point, posting restricted for 6 days 6 hours | [topic](https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/) | Closed: do not repost or open another account |
 | r/SteamDeck | Ask moderation (modmail) | — | — |
 | r/SteamDeckHQ | Check rules | — | — |
 | GamingOnLinux / SteamDeckHQ | Contact when mature | — | — |

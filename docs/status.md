@@ -92,9 +92,10 @@ The owner validated 0.0.18 on the Deck (DF1–DF2) and a fresh `.flatpakref` ins
 reports no further compatibility problem found. Keep outstanding hardware checks honest; do
 not treat every historical pending checkbox as an observed defect.
 
-**Outreach started (2026-10-26):** the owner posted on r/DoomMods and in Doomworld's Source
-Ports subforum. Channel order, rules, drafts and post links live in [outreach.md](outreach.md);
-player feedback from those threads now feeds the next specs. Prioritize the install/update → find owned games → install → play →
+**Outreach on hold (2026-10-26):** the owner posted on r/DoomMods and in Doomworld's Source
+Ports subforum; r/DoomMods removed the post and Doomworld warned the account for "AI slop"
+(posting restricted). Channel order, rules and post links live in [outreach.md](outreach.md);
+the next channel is the owner's call. Prioritize the install/update → find owned games → install → play →
 return journey, including retained data, physical input and Flatpak audio/file access.
 
 **D-041:** `/idgames` browsing (051–053) is deferred without priority. The curated Discover
