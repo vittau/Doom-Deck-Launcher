@@ -266,7 +266,8 @@ below are the ones most easily lost between sessions.
 
 `docs/status.md` (now), `docs/journal.yml` (history), `docs/decisions.md` (decisions in force),
 `docs/specs/` (contracts), `docs/research/` (evidence), `docs/reports/` (worker reports),
-`docs/deck-testing.md` (owner's Deck checklist and results). An orchestrator taking over starts by
+`docs/deck-testing.md` (owner's Deck checklist and results), `docs/outreach.md` (community posts).
+An orchestrator taking over starts by
 reading these and this file, then `orca orchestration run-use --id <run>` (needed whenever the
 coordinator runs in a new terminal) and `orca orchestration worker-list --run <id> --json` for live
 workers, and `orca worktree list --repo id:<repo-id> --json` for leftover worktrees.

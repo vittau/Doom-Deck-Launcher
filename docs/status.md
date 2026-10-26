@@ -88,9 +88,13 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
 
 ### Immediate direction
 
-The owner will validate the Deck soon and reports no further compatibility problem found.
-Keep outstanding hardware checks honest; do not treat every historical pending checkbox
-as an observed defect. Prioritize the install/update → find owned games → install → play →
+The owner validated 0.0.18 on the Deck (DF1–DF2) and a fresh `.flatpakref` install, and
+reports no further compatibility problem found. Keep outstanding hardware checks honest; do
+not treat every historical pending checkbox as an observed defect.
+
+**Outreach started (2026-10-26):** the owner posted on r/DoomMods and in Doomworld's Source
+Ports subforum. Channel order, rules, drafts and post links live in [outreach.md](outreach.md);
+player feedback from those threads now feeds the next specs. Prioritize the install/update → find owned games → install → play →
 return journey, including retained data, physical input and Flatpak audio/file access.
 
 **D-041:** `/idgames` browsing (051–053) is deferred without priority. The curated Discover

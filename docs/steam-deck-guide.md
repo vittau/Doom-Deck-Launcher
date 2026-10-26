@@ -184,8 +184,9 @@ Repository owners can upload [social-preview.png](design/logo/social-preview.png
 
 ## Flatpak (Discover)
 
-DDL currently uses its own signed Flatpak repository. Physical Deck installation and migration
-remain **Needs Deck Validation**; publication and signed installation checks pass in CI.
+DDL currently uses its own signed Flatpak repository. A fresh install from the `.flatpakref`
+and updates through Discover work on the owner's Deck; moving an existing tarball install to the
+Flatpak remains **Needs Deck Validation**. Publication and signed installation checks pass in CI.
 
 **Install.** In Desktop Mode open the [DDL download page](https://doomdecklauncher.com/),
 choose **Install on Steam Deck**, and open the downloaded `.flatpakref` in Discover to install.

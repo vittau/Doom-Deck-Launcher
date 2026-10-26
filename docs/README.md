@@ -11,6 +11,7 @@ Spec-driven, deliberately small. Each file holds **current** truth; history live
 | `research/*.md` | Evidence gathered from upstream source, docs and APIs, each claim cited and labelled. |
 | `orchestration.md` | How the orchestrator and worker agents run the project (Orca ADE). |
 | `deck-testing.md` | Manual test checklist for the physical Steam Deck (added with the first release build). |
+| `outreach.md` | Outreach plan: channel order and rules, post drafts, and a log of what was posted where. |
 
 ## Flow
 
