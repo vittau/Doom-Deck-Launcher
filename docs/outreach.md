@@ -121,7 +121,7 @@ read Search Console referrals and GitHub traffic; report numbers, not guesses.
 | --- | --- | --- | --- |
 | r/DoomMods | Posted 2026-10-26 | [post](https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/) | Pending |
 | Steam DOOM + DOOM II | Ask moderation | — | — |
-| Doomworld | Draft ready for Source Ports (launchers such as Doom Runner and uZDL post there); owner's new account could not sign in yet (2026-10-26) | — | — |
+| Doomworld | Posted 2026-10-26 in Source Ports | [topic](https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/) | Pending |
 | r/SteamDeck | Ask moderation (modmail) | — | — |
 | r/SteamDeckHQ | Check rules | — | — |
 | GamingOnLinux / SteamDeckHQ | Contact when mature | — | — |

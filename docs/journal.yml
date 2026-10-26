@@ -1238,3 +1238,14 @@
     AI disclosure). Next channels per docs/outreach.md after its feedback.
   refs: [docs/outreach.md,
     "https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/"]
+
+- date: 2026-10-26
+  type: outreach
+  summary: >-
+    Second outreach post, published by the owner in Doomworld's Source Ports subforum as the
+    project's long-lived thread: recipes with hashes, load order and complevel, downloads from
+    /idgames or the author, no rehosting, AI disclosure, invitation for authors to correct
+    recipes. The awesome-steam-deck entry waits for independent users (its maintainer declines
+    new projects without a user base).
+  refs: [docs/outreach.md,
+    "https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/"]
