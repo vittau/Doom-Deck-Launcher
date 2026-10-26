@@ -121,7 +121,7 @@ read Search Console referrals and GitHub traffic; report numbers, not guesses.
 | --- | --- | --- | --- |
 | r/DoomMods | Posted 2026-10-26; removed by moderators the same day, no reason given | [post](https://www.reddit.com/r/DoomMods/comments/1xfwaie/ive_been_working_on_a_doom_wad_launcher_for_the/) | Ask modmail whether launchers are on topic; do not repost before an answer |
 | Steam DOOM + DOOM II | Ask moderation | — | — |
-| Doomworld | Posted 2026-10-26 in Source Ports | [topic](https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/) | Pending |
+| Doomworld | Posted 2026-10-26 in Source Ports; no moderation issues so far. Precedent: another launcher's release thread, [Simple Doom Launcher](https://www.doomworld.com/forum/topic/159291-simple-doom-launcher/) (owner, 2026-10-26) | [topic](https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/) | Pending |
 | r/SteamDeck | Ask moderation (modmail) | — | — |
 | r/SteamDeckHQ | Check rules | — | — |
 | GamingOnLinux / SteamDeckHQ | Contact when mature | — | — |
