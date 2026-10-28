@@ -1260,3 +1260,14 @@
     every future post is written by the owner rather than adapted from an agent draft.
   refs: [docs/outreach.md,
     "https://www.doomworld.com/forum/topic/160659-doomdecklauncher-a-controller-first-dsda-doom-launcher-for-the-steam-deck/"]
+
+- date: 2026-10-28
+  type: decision
+  summary: >-
+    D-044: every ordinary launch opens DSDA-Doom at its title and menu; DDL removes its skill
+    setting and stops passing -skill/-warp (either flag autostarts the first map), while pistol
+    start stays as -pistolstart and still applies to a menu New Game. Spec 114 written. The
+    owner also asked for research into per-mapset progress from DSDA-Doom's own stats before
+    any implementation: spec 115.
+  refs: [docs/decisions.md, docs/specs/114-launch-at-dsda-menu.md,
+    docs/specs/115-dsda-stats-research.md]

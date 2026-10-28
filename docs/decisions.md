@@ -88,6 +88,18 @@ are not installed, then the rest. Inside each group the existing chronological b
 chronological ordering"; Library already follows the same rule (installed only, favorites
 first). Spec 112.
 
+**D-044 — Games always open at DSDA-Doom's menu; DDL has no skill setting (Accepted, owner,
+2026-10-28).** Every ordinary launch (catalog mapsets, base games, custom setups, Home Continue)
+starts DSDA-Doom at its title screen and menu, where the player picks New Game, the episode and
+the skill, or loads a save. DDL removes its skill setting and never passes `-skill` or `-warp`
+for ordinary play, because either flag makes DSDA-Doom start the first map at once
+([d_main.c:1616–1623, 1995–2000 at v0.30.1](https://github.com/dsda-org/dsda-doom/blob/v0.30.1/prboom2/src/d_main.c#L1995-L2000)).
+Pistol start stays a per-profile toggle passed as `-pistolstart`; it still applies to a game
+started from the menu, since DSDA-Doom copies it into its game modifiers at startup and re-reads
+them when a new game sets the skill (`skill_info.c:170–241`, `g_game.c:1229–1232, 3083`).
+Recipes may no longer prescribe a starting map (`compatibility.runtime.warp`); no catalog
+recipe used it. Spec 114.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |
