@@ -31,7 +31,25 @@ pub struct Recipe {
     pub packages: Vec<Package>,
     pub components: Vec<Component>,
     pub compatibility: Compatibility,
+    /// Optional progress settings (spec 116, R5). Absent means every map DSDA
+    /// detects counts toward the total.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<ProgressConfig>,
     pub verification: Verification,
+}
+
+/// Optional per-mapset progress settings (spec 116, R5).
+///
+/// The denominator is DSDA-Doom's own detected map list, which can include
+/// ending, secret, unused or test maps. A recipe may name the map lumps that
+/// should never count without changing how the engine plays them. DDL never
+/// writes, repairs or deletes the engine's stats file.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProgressConfig {
+    /// Map lump IDs (`MAPxx` / `ExMy`) that never count toward the total.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude_maps: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

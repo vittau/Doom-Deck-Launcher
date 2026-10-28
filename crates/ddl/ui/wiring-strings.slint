@@ -253,4 +253,20 @@ export global WiringStrings {
     out property <string> audio-custom-help: @tr("A MIDI backend or soundfont was set outside DDL. Choose Default or Arachno to replace it.");
     out property <string> audio-terms: @tr("Original terms and documentation");
     out property <string> audio-link-failed: @tr("Could not open the link.");
+
+    // Spec 116: per-mapset progress read from DSDA-Doom's `stats.txt`.
+    out property <string> progress-title: @tr("Progress");
+    out property <string> progress-count: @tr("{}/{} maps", root.value, root.other);
+    out property <string> progress-summary: @tr("{}/{} maps completed", root.value, root.other);
+    out property <string> progress-no-stats: @tr("No DSDA-Doom stats yet for this profile.");
+    out property <string> progress-unavailable: @tr("Progress unavailable for this load.");
+    out property <string> progress-map: @tr("Map");
+    out property <string> progress-done: @tr("Done");
+    out property <string> progress-exits: @tr("Exits");
+    out property <string> progress-skill: @tr("Skill");
+    out property <string> progress-kills: @tr("Kills");
+    out property <string> progress-secrets: @tr("Secrets");
+    out property <string> uv-max: @tr("UV-Max");
+    out property <string> progress-yes: @tr("Yes");
+    out property <string> progress-no-mark: @tr("—");
 }

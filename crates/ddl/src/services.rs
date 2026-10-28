@@ -28,7 +28,8 @@ use ddl_core::{
         paths::Paths,
         sandbox::Sandbox,
     },
-    profiles::{Profile, ProfileStore},
+    profiles::{Profile, ProfileDirs, ProfileStore},
+    progress::{self, Progress, Unavailable},
     resolver::{self, Blocker, Summary},
     soundfonts::{self, Choice, Soundfonts},
 };
@@ -462,6 +463,8 @@ pub struct Item {
     /// History across every run, even when the selected profile has never played.
     pub last_played: Option<u64>,
     pub launch: Result<Summary, Blocker>,
+    /// Spec 116, R7: progress for the selected profile and this launch.
+    pub progress: Progress,
     pub favorite: bool,
     pub recipe_status: RecipeStatus,
     pub change_summary: String,
@@ -474,6 +477,8 @@ pub struct BaseItem {
     pub profile: Profile,
     pub profiles: Vec<Profile>,
     pub last_played: Option<u64>,
+    /// Spec 116, R7: progress for the selected profile and this base game.
+    pub progress: Progress,
 }
 impl BaseItem {
     pub fn copy_notice(&self, entries: &[RegistryEntry]) -> Option<&'static str> {
@@ -502,6 +507,8 @@ pub struct Snapshot {
     pub items: Vec<Item>,
     pub custom: Vec<CustomSetup>,
     pub custom_profiles: Vec<Profile>,
+    /// Spec 116, R7: progress per custom setup for its selected profile.
+    pub custom_progress: BTreeMap<String, Progress>,
     pub local_issues: BTreeMap<String, (PathBuf, bool)>,
     pub profiles_with_saves: BTreeSet<String>,
     /// The reviewed tag vocabulary, for Discover categories and chips.
@@ -1976,12 +1983,23 @@ impl Services {
                 .is_some_and(|hash| self.state.kept_recipes.get(&recipe.id) == Some(&hash));
             let active = self.active(&recipe.id)?;
             let update_notice = active.as_ref().map_or_else(Vec::new, |a| a.notices.clone());
+            // Spec 116, R6/R7: read progress here, when the Library snapshot is
+            // built (outside play, after the engine was reaped), never while a
+            // game runs and never from a cache.
+            let progress = item_progress(
+                &self.env.paths.data,
+                &profile,
+                engine.as_ref().map(|e| e.version.as_str()),
+                &launch,
+                &recipe,
+            );
             items.push(Item {
                 recipe_status,
                 change_summary,
                 update_dismissed,
                 update_notice,
                 favorite: self.state.favorites.contains(&recipe.id),
+                progress,
                 recipe,
                 manifest,
                 profile,
@@ -1992,6 +2010,23 @@ impl Services {
         }
         let config = self.config.state().ok();
         let setups = self.custom.list().map_err(|e| logged(Problem::State, e))?;
+        let engine_version = engine.as_ref().map(|e| e.version.as_str());
+        let mut custom_progress: BTreeMap<String, Progress> = BTreeMap::new();
+        for setup in &setups {
+            let profiles: Vec<_> = held_profiles
+                .iter()
+                .filter(|p| p.recipe_id == setup.id)
+                .cloned()
+                .collect();
+            if profiles.is_empty() {
+                continue;
+            }
+            let profile = selected_profile(&profiles, self.state.last_profiles.get(&setup.id));
+            custom_progress.insert(
+                setup.id.clone(),
+                custom_progress_for(&self.env.paths.data, setup, &profile, engine_version),
+            );
+        }
         let mut local_issues: BTreeMap<String, (PathBuf, bool)> = setups
             .iter()
             .filter_map(|setup| {
@@ -2029,6 +2064,7 @@ impl Services {
             profiles_with_saves,
             custom: setups,
             custom_profiles: held_profiles,
+            custom_progress,
             items,
             tags: self.catalog.tags.clone(),
             previous: engines.previous_good,
@@ -3646,11 +3682,25 @@ impl Services {
             selected_profile(&profiles, self.state.last_profiles.get(id))
         };
         let last_played = profiles.iter().filter_map(|p| p.last_played).max();
+        let active = self
+            .engine
+            .active_engine()
+            .map_err(|e| CliFailure::message(e.to_string()))?;
+        // Spec 116, R7: the base game's card and detail read progress for the
+        // selected profile, from the same resolved IWAD the launch would use.
+        let progress = base_progress(
+            &self.env.paths.data,
+            &base,
+            &profile,
+            &self.registry,
+            active.as_ref().map(|e| e.version.as_str()),
+        );
         Ok(BaseItem {
             base,
             profile,
             profiles,
             last_played,
+            progress,
         })
     }
     pub fn base_copy_notice(&self, item: &BaseItem) -> Option<&'static str> {
@@ -4432,6 +4482,123 @@ fn selected_profile(profiles: &[Profile], remembered: Option<&String>) -> Profil
         .or_else(|| profiles.iter().max_by_key(|p| p.last_played))
         .expect("at least one profile")
         .clone()
+}
+
+/// A profile's extra user files split into the launch's `-file` and `-deh`
+/// lists (spec 026, R3). Patches never contribute to the organizer path.
+fn extra_paths(profile: &Profile) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    let mut files = Vec::new();
+    let mut patches = Vec::new();
+    for extra in &profile.extras {
+        if extra.kind.is_patch() {
+            patches.push(extra.path.clone());
+        } else {
+            files.push(extra.path.clone());
+        }
+    }
+    (files, patches)
+}
+
+/// Spec 116, R7: progress for a catalog mapset's selected profile. The resolved
+/// summary is the launch's own file list, so the derived path is the one DSDA
+/// writes; an unresolved launch cannot claim a path and is unavailable.
+fn item_progress(
+    data: &Path,
+    profile: &Profile,
+    engine_version: Option<&str>,
+    launch: &Result<Summary, Blocker>,
+    recipe: &Recipe,
+) -> Progress {
+    let Some(version) = engine_version else {
+        return Progress::Unavailable(Unavailable::EngineMissing);
+    };
+    let Ok(summary) = launch else {
+        return Progress::Unavailable(Unavailable::Unresolved);
+    };
+    let files: Vec<PathBuf> = summary.content.iter().map(|c| c.path.clone()).collect();
+    let exclude_maps: &[String] = recipe
+        .progress
+        .as_ref()
+        .map_or(&[], |progress| progress.exclude_maps.as_slice());
+    progress::Request {
+        profile_data_dir: &ProfileDirs::new(data, &profile.id).data,
+        iwad: &summary.iwad_path,
+        files: &files,
+        // A Summary carries the `-file` list only; patches never contribute.
+        patches: &[],
+        engine_version: version,
+        exclude_maps,
+    }
+    .read()
+}
+
+/// Spec 116, R7: progress for one base game and its selected profile.
+fn base_progress(
+    data: &Path,
+    base: &iwads::base_games::BaseGame,
+    profile: &Profile,
+    registry: &Registry,
+    engine_version: Option<&str>,
+) -> Progress {
+    let Some(version) = engine_version else {
+        return Progress::Unavailable(Unavailable::EngineMissing);
+    };
+    let Some(entry) = iwads::base_games::selected_iwad(base, profile, registry) else {
+        return Progress::Unavailable(Unavailable::Unresolved);
+    };
+    let Some(variant) = entry.variant.as_deref() else {
+        return Progress::Unavailable(Unavailable::Unresolved);
+    };
+    // The launch passes DDL's canonical link; its name, not the user's file
+    // name, is the organizer's first segment.
+    let Some(iwad) = iwads::CanonicalLinks::link_path(data, variant, &iwads::IwadTable::embedded())
+    else {
+        return Progress::Unavailable(Unavailable::Unresolved);
+    };
+    let (files, patches) = extra_paths(profile);
+    progress::Request {
+        profile_data_dir: &ProfileDirs::new(data, &profile.id).data,
+        iwad: &iwad,
+        files: &files,
+        patches: &patches,
+        engine_version: version,
+        exclude_maps: &[],
+    }
+    .read()
+}
+
+/// Spec 116, R7: progress for one custom setup and its selected profile.
+fn custom_progress_for(
+    data: &Path,
+    setup: &CustomSetup,
+    profile: &Profile,
+    engine_version: Option<&str>,
+) -> Progress {
+    let Some(version) = engine_version else {
+        return Progress::Unavailable(Unavailable::EngineMissing);
+    };
+    let iwad = match &setup.iwad {
+        CustomIwad::Identified { variant } => {
+            let table = iwads::IwadTable::embedded();
+            match iwads::CanonicalLinks::link_path(data, variant, &table) {
+                // The canonical link name is what DSDA receives (D-017).
+                Some(path) => path,
+                None => return Progress::Unavailable(Unavailable::Unresolved),
+            }
+        }
+        CustomIwad::File { file } => file.path.clone(),
+    };
+    let files: Vec<PathBuf> = setup.files.iter().map(|file| file.path.clone()).collect();
+    let patches: Vec<PathBuf> = setup.patches.iter().map(|file| file.path.clone()).collect();
+    progress::Request {
+        profile_data_dir: &ProfileDirs::new(data, &profile.id).data,
+        iwad: &iwad,
+        files: &files,
+        patches: &patches,
+        engine_version: version,
+        exclude_maps: &[],
+    }
+    .read()
 }
 /// The registry source for a GOG candidate's launcher (spec 021, R2).
 /// Attaches the detected drawable size to a locally built plan (spec 064, R6).
@@ -6332,3 +6499,113 @@ mod release_state_tests {
 #[cfg(test)]
 #[path = "local_polish_tests.rs"]
 mod local_polish_tests;
+
+#[cfg(test)]
+mod progress_tests {
+    use super::*;
+    use ddl_core::progress::{Progress, Recorded};
+    use ddl_core::resolver::SummaryContent;
+
+    const ABANDON: &[u8] =
+        include_bytes!("../../ddl-core/tests/fixtures/stats/abandon-18-rows.txt");
+
+    /// Spec 116 R1/R4/R6: the snapshot helper reads the file at the launch's
+    /// organizer path and applies Abandon's exclusion, for the selected profile.
+    #[test]
+    fn item_progress_reads_the_launch_stats_and_applies_the_recipe_exclusion() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path();
+        let profile = Profile::new("abandon-default", "Default", "abandon");
+        let organized = ProfileDirs::new(data, &profile.id)
+            .data
+            .join("dsda_doom_data/doom2/abandon");
+        fs::create_dir_all(&organized).unwrap();
+        fs::write(organized.join("stats.txt"), ABANDON).unwrap();
+
+        let recipe = Catalog::embedded().recipe("abandon").unwrap().clone();
+        let summary = Summary {
+            base_game: Game::Doom2,
+            iwad_present: true,
+            iwad_variant: Some("doom2-1.9".to_owned()),
+            iwad_path: data.join("iwads/doom2-1.9/doom2.wad"),
+            content: vec![SummaryContent {
+                position: 1,
+                label: "Abandon".to_owned(),
+                path: PathBuf::from("/library/abandon/Abandon.wad"),
+            }],
+            complevel: dsda::Complevel::BOOM_2_02,
+            pistol_start: false,
+            engine_version: "0.30.1".to_owned(),
+        };
+        let launch = Ok(summary);
+        let progress = item_progress(data, &profile, Some("0.30.1"), &launch, &recipe);
+        let Progress::Recorded(Recorded {
+            completed,
+            total,
+            maps,
+        }) = progress
+        else {
+            panic!("the fixture must be read: {progress:?}");
+        };
+        assert_eq!((completed, total), (12, 17));
+        assert_eq!(maps.len(), 17);
+        assert!(!maps.iter().any(|map| map.id == "MAP18"));
+
+        // A different engine version is never imported (spec 116, R3).
+        assert!(matches!(
+            item_progress(data, &profile, Some("0.31.0"), &launch, &recipe),
+            Progress::Unavailable(Unavailable::UnsupportedEngine { .. })
+        ));
+        assert!(matches!(
+            item_progress(data, &profile, None, &launch, &recipe),
+            Progress::Unavailable(Unavailable::EngineMissing)
+        ));
+
+        // A profile with no file yet is "no stats", never zero completed.
+        let fresh = Profile::new("abandon-second", "Second", "abandon");
+        assert_eq!(
+            item_progress(data, &fresh, Some("0.30.1"), &launch, &recipe),
+            Progress::NoStatsYet
+        );
+    }
+
+    /// Spec 116 R1/R4: a base game's path uses the canonical IWAD link name plus
+    /// the profile's extra WADs, and patches stay out of it.
+    #[test]
+    fn base_progress_uses_the_canonical_iwad_and_ignores_patches() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path();
+        let mut profile = Profile::new("base-doom2-default", "Default", "base:doom2");
+        let wad = temp.path().join("weapons.wad");
+        fs::write(&wad, b"PWAD\0\0\0\0\x0c\0\0\0").unwrap();
+        profile.extras.push(local::UserFile::read(&wad).unwrap());
+        let patch = temp.path().join("fix.deh");
+        fs::write(&patch, b"Patch File for DeHackEd v3.0\n").unwrap();
+        profile.extras.push(local::UserFile::read(&patch).unwrap());
+
+        let base = iwads::base_games::BaseGame {
+            game: iwads::Game::Doom2,
+            iwad: RegistryEntry {
+                path: temp.path().join("doom2.wad"),
+                variant: Some("doom2-1.9".to_owned()),
+                candidates: Vec::new(),
+                game: Some(iwads::Game::Doom2),
+                sha256: "0".repeat(64),
+                size: 1,
+                mtime: iwads::FileTime::from_system_time(std::time::UNIX_EPOCH).unwrap(),
+                source: iwads::Source::Manual,
+            },
+        };
+        let organized = ProfileDirs::new(data, &profile.id)
+            .data
+            .join("dsda_doom_data/doom2/weapons");
+        fs::create_dir_all(&organized).unwrap();
+        fs::write(organized.join("stats.txt"), ABANDON).unwrap();
+
+        let progress = base_progress(data, &base, &profile, &Registry::new(), Some("0.30.1"));
+        let Progress::Recorded(recorded) = progress else {
+            panic!("the base-game stats must be read: {progress:?}");
+        };
+        assert_eq!((recorded.completed, recorded.total), (12, 18));
+    }
+}

@@ -34,6 +34,16 @@ impl CanonicalLinks {
         }
     }
 
+    /// The link path for `variant_id` without creating, refreshing or verifying
+    /// it (spec 116, R1). A read-only consumer needs the name DSDA receives, not
+    /// a filesystem side effect. `None` when the variant is not in `table`.
+    #[must_use]
+    pub fn link_path(data_dir: &Path, variant_id: &str, table: &IwadTable) -> Option<PathBuf> {
+        let variant = table.get(variant_id)?;
+        let links = Self::new(data_dir);
+        Some(links.root.join(&variant.id).join(&variant.filename))
+    }
+
     /// The managed root directory.
     #[must_use]
     pub fn root(&self) -> &Path {

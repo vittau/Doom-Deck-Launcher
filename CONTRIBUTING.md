@@ -87,7 +87,7 @@ are shown in the complete example. Optional fields and constraints:
 
 | Table | Optional fields / accepted values |
 | --- | --- |
-| Root | `images` (`[[images]]`: `path`, `permission`); `screenshots` (`[[screenshots]]`: `asset`, `credit`; see [Screenshots](#screenshots)); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)); `original_release` (first public release, optional; see [Original release date](#original-release-date)) |
+| Root | `images` (`[[images]]`: `path`, `permission`); `screenshots` (`[[screenshots]]`: `asset`, `credit`; see [Screenshots](#screenshots)); `tags` (list of ids from `catalog/tags.toml`, absent = none; see [Tags](#tags)); `original_release` (first public release, optional; see [Original release date](#original-release-date)); `progress` (optional `[progress]` table with `exclude_maps`; see [Progress exclusions](#progress-exclusions)) |
 | `base_game` | `game`: `doom`, `doom2`, `tnt`, `plutonia`; `variants` defaults empty (any variant of that game). IDs refer to the known-IWAD table; currently lowercase letters, digits, dots and hyphens. The runtime must block Play without a matching IWAD; that gate is outside catalog lint. |
 | `packages` | `kind`: `zip` or bare `wad`; optional canonical `idgames_path`; `urls`: primary followed by mirrors. Bare WADs name one member with identical package/member size/hash. |
 | `packages.members` | `keep` defaults false; unique `id` and `path` within a package. All members have exact positive `size` and `sha256`. |
@@ -163,6 +163,25 @@ calendar value and a day without a month. Lists sort ascending with unknown date
 by title then recipe id; a coarser date sorts after the dated entries of the same period, so a
 year-only date follows that year's months and a month-only date follows that month's days.
 Explain the source in a comment or in `verification.inspected`.
+
+### Progress exclusions
+
+DDL reads DSDA-Doom's own `stats.txt` for the selected profile. A map counts as completed
+only when the engine recorded a skill for it (`best_skill > 0`), and the total is every map
+DSDA detected in the loaded WADs. That detection can include an ending map, a test map or an
+unused slot, so a recipe may name IDs that never count without changing the launch:
+
+```toml
+[progress]
+exclude_maps = ["MAP18"]
+```
+
+Use uppercase map lump IDs (`MAPxx` or `ExMy`), once each; lint rejects anything else. A
+listed ID that DSDA does not detect is ignored at runtime. Exclusions are a claim about the
+mapset's structure, so record the evidence in `[verification]` — Abandon's
+`verification.inspected` notes that MAP18 is a four-thing ending map. Leave the table out
+when every detected map is a real level, and never use it to hide a map a player can reach
+and finish.
 
 ### Screenshots
 

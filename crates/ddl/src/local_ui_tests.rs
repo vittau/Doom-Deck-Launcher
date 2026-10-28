@@ -647,7 +647,7 @@ fn base_games_library_page_setup_sources_and_recent_history() {
         .collect();
     assert_eq!(base_cards.len(), 4, "all four original games have a card");
     for card in base_cards {
-        assert_eq!((card.w, card.h), (282., 108.));
+        assert_eq!((card.w, card.h), (282., 140.));
         let art = r
             .nodes
             .iter()
@@ -660,20 +660,20 @@ fn base_games_library_page_setup_sources_and_recent_history() {
             .find(|n| n.kind == 20 && n.x == card.x + 112. && n.y == card.y + 24.)
             .expect("base-game title starts beside the art");
         assert_eq!(title.h, 60., "two lines need the multiline title slot");
-        assert!(title.y + title.h <= card.y + 108. - 24.);
+        assert!(title.y + title.h <= card.y + 140. - 24.);
         assert!(title.x + title.w <= card.x + 282. - 24.);
         for node in r.nodes.iter().filter(|n| {
-            matches!(n.kind, 4 | 20)
+            (matches!(n.kind, 4 | 20) || (n.kind == 0 && !n.label.is_empty()))
                 && n.x >= card.x
                 && n.x < card.x + 282.
                 && n.y >= card.y
-                && n.y < card.y + 108.
+                && n.y < card.y + 140.
         }) {
             assert!(
                 node.x >= card.x + 24.
                     && node.y >= card.y + 24.
                     && node.x + node.w <= card.x + 282. - 24.
-                    && node.y + node.h <= card.y + 108. - 24.,
+                    && node.y + node.h <= card.y + 140. - 24.,
                 "base-game content stays inside the card inset"
             );
         }

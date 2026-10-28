@@ -11,6 +11,12 @@ description = "DOOM II: 17 Boom-compatible slaughter maps (MAP01–MAP17) in som
 permission = "Authors may NOT use the contents of this file as a base for modification or reuse; permissions were obtained from the original authors of any resources modified or included. You MAY distribute this file provided you include this text file intact and unmodified, in any electronic format. DDL downloads the unmodified archive and keeps the bundled text."
 tags = ["cacowards", "challenging"]
 
+# Progress (spec 116, D-045): DSDA-Doom detects all eighteen map slots, but MAP18
+# is a four-thing ending map rather than an eighteenth level (see verification),
+# so it never counts toward the per-mapset total.
+[progress]
+exclude_maps = ["MAP18"]
+
 # Bundled screenshot(s) (spec 023, D-024): the images live under
 # crates/ddl/ui/assets/screenshots/abandon/ with source, credit and permission
 # text in SOURCES.toml beside them; the build embeds them for card, detail and band.

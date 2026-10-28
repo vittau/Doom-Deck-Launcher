@@ -159,10 +159,26 @@ component Node inherits Rectangle {
         x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
         background: transparent; border-width: root.chip && root.item.primary && !root.disabled-control ? 2px : 1px; border-color: root.chip && root.item.primary && !root.disabled-control ? Tokens.success : root.primary-fill ? Tokens.text : Tokens.line; border-radius: Tokens.row-radius;
     }
+    // Spec 116 R9: a count's progress bar. It is decoration, never a control.
+    // `art` is the filled proportion in permille; `tone` 2 selects the success
+    // fill (never focus amber, never the launch red).
     if item.kind == 6: Rectangle {
         y: (parent.height - 12px) / 2; height: 12px; width: parent.width;
-        background: Tokens.raised; border-radius: 6px;
-        Rectangle {height: parent.height; x: root.item.art < 0 ? parent.width / 3 : 0px; width: root.item.art < 0 ? parent.width / 3 : parent.width * root.item.art / 1000; background: Tokens.ember; border-radius: 6px;}
+        background: Tokens.deep; border-radius: 6px;
+        Rectangle {
+            height: parent.height;
+            x: root.item.art < 0 ? parent.width / 3 : 0px;
+            width: root.item.art < 0 ? parent.width / 3 : parent.width * root.item.art / 1000;
+            background: root.item.tone == 2 ? Tokens.success : Tokens.ember;
+            border-radius: 6px;
+        }
+    }
+    // Spec 116 R10: the UV-Max trophy, a vector cup with two handles and a base.
+    if item.kind == 30: Path {
+        x: 0px; y: 0px; width: parent.width; height: parent.height;
+        viewbox-width: 24; viewbox-height: 24;
+        fill: root.item.tone == 2 ? Tokens.success : Tokens.text;
+        commands: "M7 3 L17 3 L17 5.5 C17 9.8 15 12.5 12 12.5 C9 12.5 7 9.8 7 5.5 Z M10.8 12.5 L13.2 12.5 L13.2 16 L16 16 L16 19 L8 19 L8 16 L10.8 16 Z M7 5 L4.6 5 L4.6 6.4 C4.6 8.6 5.8 10 7.6 10.4 L8 9.3 C6.8 9 6 8 6 6.4 L6 6.1 L7 6.1 Z M17 5 L19.4 5 L19.4 6.4 C19.4 8.6 18.2 10 16.4 10.4 L16 9.3 C17.2 9 18 8 18 6.4 L18 6.1 L17 6.1 Z";
     }
     if item.kind == 4: Rectangle {
         clip: true; border-radius: Tokens.card-radius;

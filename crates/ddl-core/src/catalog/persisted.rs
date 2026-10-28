@@ -30,6 +30,9 @@ struct StoredRecipe {
     #[serde(default)]
     packages: Vec<Package>,
     components: Vec<Component>,
+    /// Spec 116: optional progress exclusions. Old copies omit it (no exclusions).
+    #[serde(default)]
+    progress: Option<ProgressConfig>,
     compatibility: StoredCompatibility,
     verification: Verification,
 }
@@ -80,6 +83,7 @@ impl From<StoredRecipe> for Recipe {
             base_game: old.base_game,
             packages: old.packages,
             components: old.components,
+            progress: old.progress,
             verification: old.verification,
             compatibility: Compatibility {
                 family: old.compatibility.family,

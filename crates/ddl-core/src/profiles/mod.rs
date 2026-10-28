@@ -106,6 +106,7 @@ pub(crate) fn test_recipe() -> crate::catalog::Recipe {
                 members: empty_members(),
             },
         ],
+        progress: None,
         compatibility: Compatibility {
             family: PortFamily::Vanilla,
             complevel: Complevel::Number(3),

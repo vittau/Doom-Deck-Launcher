@@ -54,6 +54,7 @@ fn base_recipe(id: &str) -> Recipe {
         },
         packages: Vec::new(),
         components: Vec::new(),
+        progress: None,
         compatibility: Compatibility {
             family: PortFamily::Vanilla,
             complevel: Complevel::Number(2),

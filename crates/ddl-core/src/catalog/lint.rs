@@ -54,6 +54,21 @@ pub(crate) fn slug(s: &str) -> bool {
 pub(crate) fn hash(s: &str) -> bool {
     s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
+
+/// A map lump ID a recipe may exclude from progress (spec 116, R5): `MAPxx`
+/// with exactly two digits, or the classic `ExMy` shape.
+pub(crate) fn map_lump_id(s: &str) -> bool {
+    let bytes = s.as_bytes();
+    if let Some(rest) = s.strip_prefix("MAP") {
+        rest.len() == 2 && rest.bytes().all(|b| b.is_ascii_digit())
+    } else {
+        bytes.len() == 4
+            && bytes[0] == b'E'
+            && bytes[1].is_ascii_digit()
+            && bytes[2] == b'M'
+            && bytes[3].is_ascii_digit()
+    }
+}
 pub(crate) fn safe_path(s: &str) -> bool {
     !s.is_empty()
         && !s.contains(['\\', ':', '\0'])
@@ -688,6 +703,27 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
         "warp is not allowed (D-044)",
         "remove compatibility.runtime.warp so ordinary launches open the DSDA-Doom menu",
     );
+    // Spec 116, R5: a recipe may exclude ending/test maps from progress, but only
+    // real map lump IDs, once each. An excluded ID absent from DSDA's file is
+    // ignored at runtime, so no cross-check against a map inventory is made.
+    if let Some(progress) = &r.progress {
+        let mut excluded = HashSet::new();
+        for (index, id) in progress.exclude_maps.iter().enumerate() {
+            let key = format!("progress.exclude_maps.{index}");
+            issue(
+                key.clone(),
+                !map_lump_id(id),
+                "invalid progress map ID",
+                "use a map lump name like MAP18 or E1M1, uppercase and at most eight characters",
+            );
+            issue(
+                key,
+                !excluded.insert(id),
+                "duplicate progress map ID",
+                "list each excluded map once",
+            );
+        }
+    }
     issue(
         "verification.date".into(),
         !valid_date(&r.verification.date),
