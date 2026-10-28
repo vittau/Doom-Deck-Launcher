@@ -327,3 +327,19 @@ longer has a skill setting and passes neither `-skill` nor `-warp`. Published in
 | MM2 | With Pistol start On, start from the menu and finish the first map: the second map starts with only the pistol and 50 bullets; with it Off, the inventory carries over | Gaming | ⏳ |
 | MM3 | Home Continue also opens the menu; Load Game lists that profile's saves and loading one works | Gaming | ⏳ |
 | MM4 | Play setup, base-game setup and Mapset detail show no skill row or skill text; D-pad and Back still move cleanly around Pistol start | Gaming | ⏳ |
+
+## Per-mapset progress — source after spec 116
+
+**Needs Deck Validation:** see [report116](reports/116-mapset-progress.md) and the research
+checks in [report115](reports/115-dsda-stats-research.md) (D-045). Published in
+`v0.0.20-progress`.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| PG1 | Before playing an installed mapset, its page says there are no DSDA-Doom stats yet (no `0/N`). Finish one map from the menu and quit DSDA normally: back in DDL, the Library card shows `1/N maps` with a bar and the page's table marks that map done with exits, skill, kills % and secrets % | Gaming | ⏳ |
+| PG2 | Finish a map on UV killing every monster and finding every secret: it shows the UV-Max trophy; one on HMP, or with a secret missed, does not | Gaming | ⏳ |
+| PG3 | If DSDA-Doom's options offer a no-monsters game modifier, exit a map with it on: the exit is counted but the map is not marked done (skip if the option is not there) | Gaming | ⏳ |
+| PG4 | Two profiles on the same mapset keep separate progress; adding an extra WAD to a profile starts a separate, empty progress; removing it brings the old one back | Gaming | ⏳ |
+| PG5 | Abandon's total is 17 (its closing MAP18 is left out); a base game (e.g. DOOM II) counts its own maps | Gaming | ⏳ |
+| PG6 | The table reads at arm's length on the LCD; the right stick scrolls a long table while focus stays on the buttons; the bar and trophy are clear | Gaming | ⏳ |
+

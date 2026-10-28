@@ -1327,3 +1327,16 @@
     (floor of best ÷ recorded total, `—` for unknown or zero totals, kills above 100% shown as
     computed); items stay out. Spec 116 R11.
   refs: [docs/decisions.md, docs/specs/116-mapset-progress.md]
+
+- date: 2026-10-28
+  type: merge
+  summary: >-
+    Spec 116 merged (7a38cfc): read-only per-mapset progress from DSDA-Doom's stats.txt for the
+    selected profile — strict bounded parser, organizer-path derivation, engine gate (0.30.1),
+    optional recipe `[progress] exclude_maps` (Abandon MAP18) with the catalog floor raised to
+    0.0.20, Library `N/M maps` with a bar, Mapset detail table with done, exits, skill, kills %,
+    secrets % and a UV-Max mark (D-045 and its two amendments). OpenCode DeepSeek V4.1 Flash high
+    worker (Codex was at 93%); owner approved the renders; fmt, denied-warning Clippy and the
+    ordinary suite passed. Deck checks PG1–PG6 added.
+  refs: [docs/specs/116-mapset-progress.md, docs/reports/116-mapset-progress.md,
+    docs/deck-testing.md]
