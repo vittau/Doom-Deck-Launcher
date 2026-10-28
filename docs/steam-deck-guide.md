@@ -527,7 +527,7 @@ Usage: ddl [OPTIONS]
        ddl iwad scan [PATH...]
        ddl mapset list
        ddl mapset install <id> [--with <component>...]
-       ddl launch <id> [--dry-run] [--with <component>...] [--skill <1-5>] [--pistol-start]
+       ddl launch <id> [--dry-run] [--with <component>...] [--pistol-start]
        ddl doctor
 
 Options:

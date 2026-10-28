@@ -1271,3 +1271,25 @@
     any implementation: spec 115.
   refs: [docs/decisions.md, docs/specs/114-launch-at-dsda-menu.md,
     docs/specs/115-dsda-stats-research.md]
+
+- date: 2026-10-28
+  type: merge
+  summary: >-
+    Spec 115 research merged (55fd127): DSDA-Doom writes a per-profile stats.txt per resolved
+    WAD combination with exits, best skill and best kills/items/secrets per detected map
+    (PWAD maps only once a PWAD map exists); best times only for the first map completed in a
+    session; no playtime, last map or run history. Proposal: read-only "maps exited" count and
+    per-map table for the selected profile, pending the owner's scope decision and Deck checks.
+    Codex GPT-6.1 Sol medium worker.
+  refs: [docs/research/dsda-stats.md, docs/reports/115-dsda-stats-research.md]
+
+- date: 2026-10-28
+  type: merge
+  summary: >-
+    Spec 114 merged (a43f8e3): ordinary launches pass neither -skill nor -warp, so DSDA-Doom
+    opens at its menu; the skill setting is gone from profiles, UI and `ddl launch`; retired
+    profile `skill` fields are ignored on load; lint rejects recipe warp. Codex GPT-6.1 Sol
+    medium worker; fmt, denied-warning Clippy, catalog lint and 1,019 ordinary tests passed;
+    four headless renders reviewed. Deck checks MM1–MM4 added; V1, U6 and U7 superseded.
+  refs: [docs/specs/114-launch-at-dsda-menu.md, docs/reports/114-launch-at-dsda-menu.md,
+    docs/deck-testing.md]

@@ -36,7 +36,7 @@ DDL is **not** a DOOM engine, an Electron application, a general-purpose cross-s
 - A player can use the launcher in Steam Deck Gaming Mode without switching to Desktop Mode, connecting a keyboard, opening a web browser, or entering shell commands.
 - A player with legally obtained IWADs can discover vetted PWADs, download them, and launch them with known-good settings.
 - DDL manages acquisition and updates of an **unmodified official DSDA-Doom AppImage**; compilation of DSDA-Doom on the Deck is never required.
-- A player can toggle supported play preferences (including pistol-start behavior where technically implementable), select difficulty, and save independent profiles for different mapsets.
+- A player can toggle supported play preferences (including pistol-start behavior where technically implementable) and save independent profiles for different mapsets.
 - DDL provisions a consistent, isolated **DSDA-Doom configuration baseline** for Steam Deck while preserving user changes; **Steam Input mappings and gyro are configured manually using README instructions**, not by DDL.
 - Users can understand clearly whether a mapset is verified, unverified, or known to be incompatible with the installed DSDA-Doom version.
 
@@ -89,7 +89,7 @@ DDL is **not** a DOOM engine, an Electron application, a general-purpose cross-s
 - **Discover:** curated categories in order: Cacowards, Megawads, Community Projects, Doomer Boards, Classics, Episodes, Challenging; Favorites follows as a personal filter. All and Featured are not navigation categories (072). General `/idgames` search is deferred without current priority (D-041); occasional other content uses manual custom setups/extras.
 - **Detail:** description, authorship, previews, source, dependencies, requirements, badges for verified/support status, Install/Play.
 - **Library:** installed mapsets and user-imported PWADs; filter/search with on-screen keyboard only if needed.
-- **Profile / Game Options:** game and skill selection, play mode, pistol-start availability, gameplay flags, advanced load order and compatibility information.
+- **Profile / Game Options:** game selection, play mode, pistol-start availability, gameplay flags, advanced load order and compatibility information.
 - **Settings:** engine version/update/rollback, IWAD directories, downloads/storage, logs/diagnostics, DSDA configuration defaults/restore, and Audio with Default/installed MIDI soundfont selection. **Do not add Steam Input setup or Steam layout management screens.**
 
 ### Interaction standards
@@ -266,7 +266,7 @@ Unknown metadata must remain unknown; do not fabricate compatibility from heuris
 
 | Layer | Owner | Responsibilities | Delivery |
 | --- | --- | --- | --- |
-| PWAD launch recipe/profile | **DDL** | IWAD, exact content files/order, complevel, gameplay flags, difficulty, save/profile identity, pistol start where verified | Versioned catalog + per-user launch profile |
+| PWAD launch recipe/profile | **DDL** | IWAD, exact content files/order, complevel, gameplay flags, save/profile identity, pistol start where verified | Versioned catalog + per-user launch profile |
 | **DSDA-Doom runtime configuration** | **DDL `DsdaConfigManager`** | DSDA key/button bindings, gamepad/mouse enablement, analog response/deadzones, mouse response, video/audio/HUD defaults, user changes and migrations | Isolated DSDA config file selected via supported DSDA CLI |
 | **Steam Input layout** | **User, using Steam UI** | Mapping Deck buttons/triggers/trackpads, gyroscope mode, activation behavior, Steam-side sensitivity/action sets | **Step-by-step `README.md` instructions only** |
 
@@ -337,7 +337,7 @@ These are recommendations to document and validate, **not a promise of automatic
 
 ### 8.3 Pistol start, gameplay flags, and profile isolation
 
-- Expose friendly controls for difficulty and DSDA-Doom-supported gameplay options.
+- Expose friendly controls for DSDA-Doom-supported gameplay options. Difficulty is chosen in DSDA-Doom's own menu: every launch opens there (D-044).
 - **Pistol start requires explicit design/verification.** Initial-map start with basic inventory and **automatic reset on every subsequent map** are different behaviors. Check DSDA-Doom's actual features/CLI and persistence semantics before presenting a global toggle. If automatic per-map pistol start cannot be implemented reliably without modifying game behavior, label the limitation rather than simulating it.
 - Keep recipe-required compatibility flags separate from player-chosen gameplay preferences; do not let toggling an option silently change a verified complevel or file order.
 - Profiles must be scoped to a specific mapset/install and may override defaults, without corrupting underlying verified metadata.

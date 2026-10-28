@@ -26,7 +26,7 @@ which V1 replaces.
 
 | # | Check | Mode | Result | Notes |
 | --- | --- | --- | --- | --- |
-| V1 | Play setup: D-pad down from Advanced lands on **Skill** (left); Right reaches Pistol start; up from Recipe load order lands on Skill | Gaming | ⏳ | spec 060 R1 |
+| V1 | Play setup: D-pad down from Advanced lands on **Skill** (left); Right reaches Pistol start; up from Recipe load order lands on Skill | Gaming | — | spec 060 R1; superseded by spec 114 (no Skill row) |
 | V2 | The Play button is ember red when not focused and no longer looks selected; every focused item shows the same amber ring | Gaming | ⏳ | spec 060 R2 |
 | V3 | A recipe's required component ("cannot be unchecked") looks greyed out with a lock, so it is clear why the D-pad skips it; unavailable buttons look disabled | Gaming | ⏳ | spec 060 R3 |
 | V4 | Library opens with "Mapsets and custom setups" at the top and no frame strips under the header; moving focus never leaves a sliver of a card under the header | Gaming | ⏳ | 061 |
@@ -45,8 +45,8 @@ upgrade path. The 0.0.7 checks below (R1–R13) still apply.
 | U3 | In DSDA: no tearing, motion still smooth, fan/power lower than 0.0.7 on the same scene (VSync on, uncapped interpolation) | Gaming | ⏳ | spec 056; Options → Video → FPS shows Vertical Sync on |
 | U4 | DSDA Options → Mouse: Horizontal and Vertical Sensitivity are 5 (unless you changed them before); gyro with the guide's settings (Gyro to Mouse, 25000, deadzone 0, Yaw) feels right | Gaming | ⏳ | spec 056, [guide](steam-deck-guide.md) |
 | U5 | Right stick scrolls long screens (error text, Settings pages, mapset detail, dialogs) without moving the selection | Gaming | ⏳ | spec 057 |
-| U6 | Play setup: D-pad down from Advanced lands on Skill/Pistol start, then Recipe load order; up mirrors it | Gaming | ⏳ | spec 057 |
-| U7 | A new profile starts on "Skill 4 (UV)"; skill 5 reads "(Nightmare)"; your existing profiles keep their skill | Gaming | ⏳ | spec 057, D-032 |
+| U6 | Play setup: D-pad down from Advanced lands on Skill/Pistol start, then Recipe load order; up mirrors it | Gaming | — | spec 057; superseded by spec 114 (no Skill row) |
+| U7 | A new profile starts on "Skill 4 (UV)"; skill 5 reads "(Nightmare)"; your existing profiles keep their skill | Gaming | — | spec 057, D-032; superseded by D-044 (skill is chosen in DSDA's menu) |
 | U8 | Tabs read Home, Library, Discover, Settings | Gaming | ⏳ | spec 057 |
 | U9 | B on a tab's top level opens Quit with Quit selected; B closes it; in Settings' right page B first returns to the list | Gaming | ⏳ | spec 057, D-032 |
 
@@ -316,3 +316,14 @@ Owner-validated on the Deck with 0.0.18 (2026-10-26); see [report112](reports/11
 | DF1 | In a Discover category with installed and favorite mapsets: installed favorites first, then installed, then favorite-only, then the rest (Cards and List); X on a card moves it to its new group with focus kept | Gaming | ✅ 0.0.18, 2026-10-26 |
 | DF2 | Favorites category: X on a middle, the last and the only card leaves focus on a visible card (or the Favorites chip with the empty panel); same after unfavoriting on the mapset page and pressing B | Gaming | ✅ 0.0.18, 2026-10-26 |
 
+## Games open at DSDA-Doom's menu — source after spec 114
+
+**Needs Deck Validation:** see [report114](reports/114-launch-at-dsda-menu.md) (D-044). DDL no
+longer has a skill setting and passes neither `-skill` nor `-warp`.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| MM1 | Play any catalog mapset, a base game and a custom setup: DSDA-Doom opens at its title screen and menu, not in the first map; New Game asks for the episode (where the mapset has several) and the skill | Gaming | ⏳ |
+| MM2 | With Pistol start On, start from the menu and finish the first map: the second map starts with only the pistol and 50 bullets; with it Off, the inventory carries over | Gaming | ⏳ |
+| MM3 | Home Continue also opens the menu; Load Game lists that profile's saves and loading one works | Gaming | ⏳ |
+| MM4 | Play setup, base-game setup and Mapset detail show no skill row or skill text; D-pad and Back still move cleanly around Pistol start | Gaming | ⏳ |
