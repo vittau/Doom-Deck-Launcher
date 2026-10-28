@@ -242,6 +242,13 @@ fn the_path_follows_the_engine_organizer() {
         data.join("dsda_doom_data/doom2/abandon/stats.txt")
     );
 
+    // Catalog plus an extra WAD: profile extras append in load order.
+    let with_extra = paths(&["/library/Abandon.wad", "/extras/Weapons.wad"]);
+    assert_eq!(
+        stats_path(&layout(&data, &iwad, &with_extra, &[])).unwrap(),
+        data.join("dsda_doom_data/doom2/abandon/weapons/stats.txt")
+    );
+
     // Base game: no `-file` at all.
     assert_eq!(
         stats_path(&layout(&data, &iwad, &[], &[])).unwrap(),
