@@ -252,10 +252,6 @@ impl Shell {
                     Self::toast(ui);
                 }
             }
-            (Screen::Setup, 44) => {
-                let i = self.index();
-                self.profiles[i].skill = self.profiles[i].skill % 5 + 1;
-            }
             (Screen::Setup, 45) => {
                 let i = self.index();
                 self.profiles[i].pistol = !self.profiles[i].pistol;
@@ -641,24 +637,10 @@ impl Shell {
                     606.
                 };
                 b.button(
-                    44,
+                    45,
                     64.,
                     y,
-                    304.,
-                    [
-                        Copy::Skill1,
-                        Copy::Skill2,
-                        Copy::Skill3,
-                        Copy::Skill4,
-                        Copy::Skill5,
-                    ][p.skill - 1],
-                    false,
-                );
-                b.button(
-                    45,
-                    384.,
-                    y,
-                    312.,
+                    632.,
                     if p.pistol {
                         Copy::PistolOn
                     } else {
@@ -739,7 +721,6 @@ impl Shell {
                     false,
                     true,
                 );
-                ui.global::<crate::Strings>().set_skill(p.skill as i32);
                 ui.global::<crate::Strings>().set_pistol(p.pistol);
                 b.node(
                     -100,

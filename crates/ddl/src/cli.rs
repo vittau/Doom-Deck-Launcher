@@ -347,8 +347,6 @@ pub enum Command {
         profile: Option<String>,
         /// Optional component ids to enable (`--with`).
         components: Vec<String>,
-        /// Starting skill override (`--skill`).
-        skill: Option<u8>,
         /// Reset to a pistol start on every map (`--pistol-start`).
         pistol_start: bool,
         /// Re-record changed user files instead of blocking (spec 026, R4).
@@ -434,7 +432,7 @@ Usage: {BIN} [OPTIONS]
        {BIN} mapset update <id>
        {BIN} mapset uninstall <id> [--delete-profiles]
        {BIN} mapset install <id> [--with <component>...]
-       {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start] [--accept-changes]
+       {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--pistol-start] [--accept-changes]
        {BIN} custom list
        {BIN} custom show <id>
        {BIN} custom create <name> [--id <id>] (--iwad <variant> | --iwad-file <path>) [--complevel auto|<n>]
@@ -582,19 +580,18 @@ Usage: {BIN} mapset install <id> [--with <component>...]
         ),
         HelpTopic::Launch => format!(
             "\
-{BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start] [--accept-changes]
+{BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--pistol-start] [--accept-changes]
 
 Resolve a mapset — or a custom setup — exactly as the UI's Play does. With
 --dry-run it prints the argv (one argument per line) and the working directory,
 or the typed blocker with its explanation. Without --dry-run it starts
 DSDA-Doom through the same run guard as the UI.
 
-Usage: {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--skill <1-5>] [--pistol-start] [--accept-changes]
+Usage: {BIN} launch <id> [--dry-run] [--profile <name|id>] [--with <component>...] [--pistol-start] [--accept-changes]
 
 Options:
       --dry-run        Print the launch plan instead of starting the engine
       --with <C>       Enable an optional component (repeatable)
-      --skill <1-5>    Starting skill
       --profile <name|id>  Select a saved profile
       --pistol-start   Reset to a pistol start on every map
       --accept-changes Re-record user files that changed since DDL read them
@@ -1323,7 +1320,6 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
     let mut dry_run = false;
     let mut profile = None;
     let mut components = Vec::new();
-    let mut skill = None;
     let mut pistol_start = false;
     let mut accept_changes = false;
     let mut positional = false;
@@ -1360,23 +1356,6 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
                 .ok_or_else(|| ParseError::message("the component id must be valid UTF-8"))?;
             components.push(value.to_owned());
             index += 1;
-        } else if !positional && arg == "--skill" {
-            let value = args
-                .get(index + 1)
-                .ok_or_else(|| ParseError::message("`--skill` needs a number from 1 to 5"))?;
-            let value = value
-                .to_str()
-                .ok_or_else(|| ParseError::message("`--skill` must be a number from 1 to 5"))?;
-            let parsed: u8 = value
-                .parse()
-                .map_err(|_| ParseError::message("`--skill` must be a number from 1 to 5"))?;
-            if !(1..=5).contains(&parsed) {
-                return Err(ParseError::message(
-                    "`--skill` must be a number from 1 to 5",
-                ));
-            }
-            skill = Some(parsed);
-            index += 1;
         } else if !positional && arg.to_string_lossy().starts_with('-') {
             return Err(ParseError::unknown(&arg.to_string_lossy()));
         } else if id.is_none() {
@@ -1392,7 +1371,6 @@ fn parse_launch(args: &[OsString]) -> Result<Command, ParseError> {
         dry_run,
         profile,
         components,
-        skill,
         pistol_start,
         accept_changes,
     })
@@ -2211,7 +2189,6 @@ mod tests {
                 dry_run: true,
                 profile: None,
                 components: vec![],
-                skill: None,
                 pistol_start: false,
                 accept_changes: false
             })
@@ -2219,8 +2196,6 @@ mod tests {
         assert_eq!(
             parse_str(&[
                 "launch",
-                "--skill",
-                "4",
                 "auger-zenith",
                 "--with",
                 "alternate-blaster",
@@ -2231,13 +2206,15 @@ mod tests {
                 dry_run: false,
                 profile: None,
                 components: vec!["alternate-blaster".into()],
-                skill: Some(4),
                 pistol_start: true,
                 accept_changes: false
             })
         );
         assert!(parse_str(&["launch"]).is_err());
-        assert!(parse_str(&["launch", "sigil", "--skill", "9"]).is_err());
+        assert_eq!(
+            parse_str(&["launch", "sigil", "--skill", "4"]),
+            Err(ParseError::unknown("--skill"))
+        );
         assert!(parse_str(&["launch", "sigil", "--skill"]).is_err());
         assert_eq!(
             parse_str(&["launch", "--help"]),
@@ -2742,7 +2719,6 @@ mod local_content_tests {
                 dry_run: false,
                 profile: None,
                 components: vec![],
-                skill: None,
                 pistol_start: false,
                 accept_changes: true
             })

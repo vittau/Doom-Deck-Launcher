@@ -974,10 +974,8 @@ impl Services {
         let mut profile =
             existing.unwrap_or_else(|| Profile::new(profile_id, "Default", base.id()));
         // Base profiles have no recipe component combination to validate; keep
-        // the same schema and skill rules `Profile::validate` applies.
-        if profile.schema_version != ddl_core::profiles::SCHEMA_VERSION
-            || !(1..=5).contains(&profile.skill)
-        {
+        // the same schema rules `Profile::validate` applies.
+        if profile.schema_version != ddl_core::profiles::SCHEMA_VERSION {
             return Err(Problem::State);
         }
         profile.pistol_start = value;
@@ -3137,8 +3135,6 @@ pub struct LaunchOverrides {
     pub profile: Option<String>,
     /// Optional component ids to enable (`--with`).
     pub components: Vec<String>,
-    /// Starting skill override (`--skill`).
-    pub skill: Option<u8>,
     /// Reset to a pistol start on every map (`--pistol-start`).
     pub pistol_start: bool,
 }
@@ -3462,9 +3458,6 @@ impl Services {
                         CliFailure::message(format!("invalid launch selection: {error}"))
                     })?;
         }
-        if let Some(skill) = overrides.skill {
-            profile.skill = skill;
-        }
         if overrides.pistol_start {
             profile.pistol_start = true;
         }
@@ -3683,9 +3676,6 @@ impl Services {
             return Err(CliFailure::message(format!(
                 "cannot launch `{id}`: {issue}"
             )));
-        }
-        if let Some(skill) = overrides.skill {
-            profile.skill = skill;
         }
         if overrides.pistol_start {
             profile.pistol_start = true;
@@ -4319,7 +4309,7 @@ impl Services {
     }
 
     /// The selected profile of a catalog recipe, for extras editing (spec 026,
-    /// R5). Validated against the recipe so a bad skill or component fails early.
+    /// R5). Validated against the recipe so a bad component fails early.
     fn extras_profile(
         &self,
         recipe_id: &str,
@@ -4623,7 +4613,6 @@ mod tests {
         let mut first = s.profile(&recipe).unwrap();
         assert_eq!(first.components, ["wide-status-bar"]);
         first.set_component("wide-status-bar", false);
-        first.skill = 5;
         first.pistol_start = true;
         first.set_component("compat", true);
         first.overrides.insert("test_scalar".into(), 1);
@@ -4633,7 +4622,6 @@ mod tests {
         command(&mut s, Command::NewProfile("sigil".into(), true)).unwrap();
         let second = s.profile(&recipe).unwrap();
         assert_eq!(second.name, "Profile 2");
-        assert_eq!(second.skill, 5);
         assert!(second.pistol_start);
         assert_eq!(second.components, first.components);
         assert_eq!(second.overrides, first.overrides);
@@ -4643,7 +4631,6 @@ mod tests {
         command(&mut s, Command::NewProfile("sigil".into(), false)).unwrap();
         let third = s.profile(&recipe).unwrap();
         assert_eq!(third.name, "Profile 3");
-        assert_eq!(third.skill, 4);
         assert!(!third.pistol_start);
         assert_eq!(third.components, ["wide-status-bar"]);
         command(
@@ -4765,7 +4752,6 @@ mod tests {
             .unwrap()
             .profile
             .clone();
-        profile.skill = 5;
         profile.pistol_start = true;
         s.execute(
             Command::Save(profile.clone()),
@@ -4952,7 +4938,7 @@ mod tests {
         let mut s = Services::open(env.clone()).unwrap();
         let recipe = s.recipe("sigil").unwrap();
         let mut profile = s.profile(&recipe).unwrap();
-        profile.skill = 5;
+        profile.overrides.insert("allow_freelook".into(), 1);
         run(&mut s, Command::Save(profile.clone())).unwrap();
         let snapshots = s.counters().snapshots();
         let resolves = s.counters().resolves();
@@ -4973,8 +4959,8 @@ mod tests {
         match toggle(&mut s, true) {
             Refresh::Profile(saved) => {
                 assert!(saved.pistol_start);
-                assert_eq!(saved.skill, 5, "other fields are preserved");
                 assert_eq!(saved.components, profile.components);
+                assert_eq!(saved.overrides, profile.overrides);
             }
             Refresh::Full | Refresh::None => panic!("the toggle must not rebuild the snapshot"),
         }
@@ -5000,9 +4986,9 @@ mod tests {
         let reopened = Services::open(env).unwrap();
         let stored = reopened.profiles.load(&profile.id).unwrap();
         assert!(!stored.pistol_start);
-        assert_eq!(stored.skill, 5);
         assert_eq!(stored.components, profile.components);
         assert_eq!(stored.extras, profile.extras);
+        assert_eq!(stored.overrides, profile.overrides);
 
         let mut s = reopened;
         assert!(
@@ -6190,20 +6176,16 @@ mod release_state_tests {
                 .unwrap();
             assert_eq!(auger.profiles.len(), 2);
             assert_eq!(auger.profile.id, "fixture-alternate");
-            assert_eq!(auger.profile.skill, 2);
-            assert_eq!(
-                auger
-                    .profiles
-                    .iter()
-                    .find(|p| p.id == "fixture-auger-zenith")
-                    .unwrap()
-                    .skill,
-                match tag {
-                    "v0.0.5-screens.1" | "v0.0.6-local" | "v0.0.7-deck" => 3,
-                    _ => 4,
-                },
-                "saved default skill is preserved for {tag}"
-            );
+
+            for profile in &auger.profiles {
+                assert!(
+                    serde_json::to_value(profile)
+                        .unwrap()
+                        .get("skill")
+                        .is_none(),
+                    "{tag}"
+                );
+            }
             assert_eq!(auger.profile.components, ["alternate-blaster"]);
             assert!(auger.favorite);
             assert_eq!(

@@ -689,8 +689,6 @@ fn base_games_library_page_setup_sources_and_recent_history() {
     click(&mut r, &ui, 2);
     assert_eq!(r.local.view, Some(View::BaseSetup));
     write_png("032-base-play-setup.png", &render(&window));
-    click(&mut r, &ui, 4);
-    assert_eq!(r.base_item().unwrap().profile.skill, 5);
     click(&mut r, &ui, 5);
     assert!(r.base_item().unwrap().profile.pistol_start);
     click(&mut r, &ui, 2);
@@ -852,7 +850,6 @@ fn controller_057_focus_walks_every_multi_item_screen() {
     s.register_fake_iwads(&temp.path().join("identified"))
         .unwrap();
     let mut r = runtime(&env, &s, &ui);
-    assert_eq!(r.snapshot.as_ref().unwrap().custom_profiles[0].skill, 4);
     r.selected = r
         .snapshot
         .as_ref()
@@ -864,8 +861,8 @@ fn controller_057_focus_walks_every_multi_item_screen() {
     r.screen = Screen::Setup;
     r.focus = 60;
     r.sync(&ui);
-    // Advanced → Skill/Pistol start → Recipe load order, and the exact reverse.
-    walk_rows(&mut r, &ui, &[&[42], &[40, 41], &[43]]);
+    // Advanced → Pistol start → Recipe load order, and the exact reverse.
+    walk_rows(&mut r, &ui, &[&[42], &[41], &[43]]);
     // Include every preceding option row, even if a recipe adds components.
     let mut options: Vec<_> = r
         .nodes
@@ -913,7 +910,7 @@ fn controller_057_focus_walks_every_multi_item_screen() {
         assert_eq!(r.focus, id);
     }
     click(&mut r, &ui, 2);
-    walk_rows(&mut r, &ui, &[&[1], &[2], &[3], &[4, 5], &[6]]);
+    walk_rows(&mut r, &ui, &[&[1], &[2], &[3], &[5], &[6]]);
     r.local = LocalUi::default();
     r.sync(&ui);
     click(&mut r, &ui, CUSTOM);
@@ -962,26 +959,23 @@ fn controller_060_rows_are_entered_at_their_leftmost_item() {
     r.screen = Screen::Setup;
     r.focus = 60;
     r.sync(&ui);
-    // Down from the full-width Advanced card lands on Skill, not Pistol start.
+    // Down from the full-width Advanced card lands on Pistol start.
     r.focus = 42;
     r.action(&ui, Action::Down);
-    assert_eq!(r.focus, 40, "Advanced → Skill");
-    // Up from the full-width Recipe load order lands on Skill as well.
+    assert_eq!(r.focus, 41, "Advanced → Pistol start");
+    // Up from the full-width Recipe load order lands on Pistol start as well.
     r.focus = 43;
     r.action(&ui, Action::Up);
-    assert_eq!(r.focus, 40, "Recipe load order → Skill");
-    // Pistol start stays one Right away, and Left returns.
-    r.action(&ui, Action::Right);
-    assert_eq!(r.focus, 41, "Skill → Pistol start");
-    r.action(&ui, Action::Left);
-    assert_eq!(r.focus, 40);
+    assert_eq!(r.focus, 41, "Recipe load order → Pistol start");
+    // The remaining option occupies the full row.
+    assert!(!r.nodes.iter().any(|n| n.id == 40));
     // A source over exactly one column keeps it: Pistol start → Load order →
     // back up lands on the leftmost of the row it spans.
     r.focus = 41;
     r.action(&ui, Action::Down);
     assert_eq!(r.focus, 43);
     r.action(&ui, Action::Up);
-    assert_eq!(r.focus, 40);
+    assert_eq!(r.focus, 41);
     let locked = r.nodes.iter().find(|n| n.id == 100).unwrap();
     assert_eq!(locked.kind, 16);
     assert!(!locked.actionable);
@@ -997,7 +991,7 @@ fn controller_060_rows_are_entered_at_their_leftmost_item() {
         .iter()
         .position(|i| i.recipe.id == "auger-zenith")
         .unwrap();
-    r.focus = 40; // The unavailable variants row is skipped.
+    r.focus = 41; // The unavailable variants row is skipped.
     r.sync(&ui);
     let chips: Vec<_> = r
         .nodes
@@ -1009,7 +1003,7 @@ fn controller_060_rows_are_entered_at_their_leftmost_item() {
     r.action(&ui, Action::Up);
     assert_eq!(
         r.focus, chips[0],
-        "Skill skips unavailable variants and enters add-ons at the leftmost chip"
+        "Pistol start skips unavailable variants and enters add-ons at the leftmost chip"
     );
     r.action(&ui, Action::Right);
     assert_eq!(r.focus, chips[1]);
@@ -1085,7 +1079,7 @@ fn render_060_primary_selection_and_focus_are_distinct() {
 }
 
 /// Spec 060 A2/A3: one focus language. Renders the states the owner compared
-/// (Play unfocused/focused, Skill focused, first-run Install, a dialog, add-on
+/// (Play unfocused/focused, Pistol start focused, first-run Install, a dialog, add-on
 /// chips with a selected chip, a locked required component).
 #[test]
 fn render_060_focus_language() {
@@ -1119,7 +1113,7 @@ fn render_060_focus_language() {
     pick(&mut r, "sigil");
     shot(&mut r, "060-setup-play-unfocused.png", Screen::Setup, 42);
     shot(&mut r, "060-setup-play-focused.png", Screen::Setup, 50);
-    shot(&mut r, "060-setup-skill-focused.png", Screen::Setup, 40);
+    shot(&mut r, "060-setup-pistol-focused.png", Screen::Setup, 41);
     pick(&mut r, "auger-zenith");
     shot(&mut r, "060-setup-addon-chips.png", Screen::Setup, 42);
     r.snapshot.as_mut().unwrap().engine = None;
@@ -1430,7 +1424,7 @@ fn recipe_variants_107_disabled_available_and_confirmed_states() {
             .unwrap()
     };
     r.selected = select(&r, "going-down");
-    r.focus = 40;
+    r.focus = 41;
     r.sync(&ui);
     let row = r.nodes.iter().find(|n| n.id == 42).unwrap();
     assert_eq!(row.label, "Show recipe variants");
@@ -1449,19 +1443,17 @@ fn recipe_variants_107_disabled_available_and_confirmed_states() {
     r.focus = 42;
     act(&mut r, &ui, Action::Confirm);
     assert!(!r.advanced, "stale controller activation is also guarded");
-    r.focus = 40;
+    r.focus = 41;
     r.sync(&ui);
     act(&mut r, &ui, Action::Up);
     assert_ne!(r.focus, 42);
     assert!(r.nodes.iter().any(|n| n.id == r.focus && n.actionable));
     act(&mut r, &ui, Action::Down);
-    assert_eq!(r.focus, 40);
-    act(&mut r, &ui, Action::Right);
     assert_eq!(r.focus, 41);
     act(&mut r, &ui, Action::Down);
     assert_eq!(r.focus, 43);
     act(&mut r, &ui, Action::Up);
-    assert_eq!(r.focus, 40);
+    assert_eq!(r.focus, 41);
     r.selected = select(&r, "sigil");
     r.focus = 42;
     r.sync(&ui);
@@ -1547,4 +1539,68 @@ fn recipe_variants_107_disabled_available_and_confirmed_states() {
             .iter()
             .any(|c| c.replaces.is_some() && c.user_supplied)
     );
+}
+
+/// D-044: production screens render without a skill setting or summary.
+#[test]
+fn launch_114_profiles_and_setup_have_no_skill() {
+    if isolated("launch_114_profiles_and_setup_have_no_skill") {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let env = environment(&temp.path().join("home"));
+    let (mut s, _) = custom(&env);
+    s.register_fake_iwads(&temp.path().join("identified"))
+        .unwrap();
+    let mut r = runtime(&env, &s, &ui);
+    let no_skill = |r: &Runtime| {
+        assert!(
+            !r.nodes
+                .iter()
+                .any(|n| n.label.to_lowercase().contains("skill")
+                    || n.detail.to_lowercase().contains("skill"))
+        );
+    };
+    r.selected = r
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .position(|i| i.recipe.id == "sigil")
+        .unwrap();
+    r.screen = Screen::Setup;
+    r.focus = 41;
+    r.sync(&ui);
+    no_skill(&r);
+    assert!(!r.nodes.iter().any(|n| n.id == 40));
+    assert!(r.nodes.iter().any(|n| n.id == 41 && n.w == 632.));
+    write_png("114-play-setup.png", &render(&window));
+    r.screen = Screen::Detail;
+    r.focus = 6;
+    r.sync(&ui);
+    no_skill(&r);
+    assert!(
+        r.nodes
+            .iter()
+            .any(|n| n.label.contains("Pistol start Off") && n.label.contains("Add-ons:"))
+    );
+    write_png("114-mapset-detail.png", &render(&window));
+    r.screen = Screen::Library;
+    r.local.open_base_for_tests("base:doom2");
+    r.focus = 5;
+    r.sync(&ui);
+    no_skill(&r);
+    assert!(!r.nodes.iter().any(|n| n.id == 4));
+    assert!(r.nodes.iter().any(|n| n.id == 5 && n.w == 824.));
+    write_png("114-base-game-setup.png", &render(&window));
+    r.local = LocalUi::default();
+    r.screen = Screen::Library;
+    r.sync(&ui);
+    click(&mut r, &ui, CUSTOM);
+    no_skill(&r);
+    assert_eq!(r.local.view, Some(View::Detail));
+    write_png("114-custom-setup-profile.png", &render(&window));
 }

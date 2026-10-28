@@ -654,12 +654,6 @@ impl Runtime {
                 1 => self.play_base(ui),
                 2 => self.local_open(View::BaseCopies),
                 3 => self.local_open(View::BaseProfiles),
-                4 => {
-                    if let Some(mut p) = self.local_profile() {
-                        p.skill = p.skill % 5 + 1;
-                        self.local_op(ui, Op::BaseSave(p));
-                    }
-                }
                 5 => {
                     // Spec 075, R1/R2: the base-game Pistol start goes through
                     // the light profile path, never a full snapshot rebuild.
@@ -953,9 +947,13 @@ impl Runtime {
                                 824.,
                                 56.,
                                 format!(
-                                    "{} · Skill {} · {} extra files",
+                                    "{} · Pistol start {} · {} extra files",
                                     item.profile.name,
-                                    item.profile.skill,
+                                    if item.profile.pistol_start {
+                                        "On"
+                                    } else {
+                                        "Off"
+                                    },
                                     item.profile.extras.len()
                                 )
                                 .into(),
@@ -1010,22 +1008,11 @@ impl Runtime {
                                 true,
                             );
                             b.nodes.last_mut().unwrap().h = 72.;
-                            c.set_value(item.profile.skill.to_string().into());
-                            b.row(
-                                4,
-                                340.,
-                                308.,
-                                394.,
-                                "Skill".into(),
-                                c.get_skill_value(),
-                                true,
-                            );
-                            b.nodes.last_mut().unwrap().h = 72.;
                             b.row(
                                 5,
-                                758.,
+                                340.,
                                 308.,
-                                406.,
+                                824.,
                                 "Pistol start".into(),
                                 if item.profile.pistol_start {
                                     "On"
@@ -1101,8 +1088,8 @@ impl Runtime {
                                 1152.,
                                 p.name.clone().into(),
                                 format!(
-                                    "Skill {} · {} extra files{}",
-                                    p.skill,
+                                    "Pistol start {} · {} extra files{}",
+                                    if p.pistol_start { "On" } else { "Off" },
                                     p.extras.len(),
                                     if p.id == item.profile.id {
                                         " · Selected"

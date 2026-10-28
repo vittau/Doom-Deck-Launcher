@@ -533,11 +533,7 @@ fn shell_navigation_and_focus_render_headlessly() {
         !state.borrow().profiles[1].pistol,
         "mapset options stay independent"
     );
-    for expected in [5, 1, 2, 3, 4] {
-        ui.invoke_clicked(44);
-        assert_eq!(state.borrow().profiles[1].skill, expected);
-    }
-    assert_eq!(state.borrow().profiles[0].skill, 4);
+
     // Use the same public click callback as pointer activation, never private rendering shortcuts.
     ui.invoke_clicked(43);
     assert_eq!(

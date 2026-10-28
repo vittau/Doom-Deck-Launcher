@@ -643,8 +643,11 @@ fn resuming_download_row() {
 }
 
 #[test]
-fn controller_057_tabs_skills_and_root_quit() {
-    if isolated(module_path!(), "controller_057_tabs_skills_and_root_quit") {
+fn controller_057_tabs_pistol_start_and_root_quit() {
+    if isolated(
+        module_path!(),
+        "controller_057_tabs_pistol_start_and_root_quit",
+    ) {
         return;
     }
     use crate::runtime::Screen;
@@ -653,25 +656,21 @@ fn controller_057_tabs_skills_and_root_quit() {
     let scene = production::scene();
     replay(&scene, 4);
     let ui = &scene.ui;
-    assert!(ui.get_nodes().iter().any(|n| n.label == "Skill 4 (UV)"));
-    scene.state.borrow_mut().focus = 40;
+    assert!(ui.get_nodes().iter().any(|n| n.label == "Pistol start Off"));
+    scene.state.borrow_mut().focus = 41;
     scene.state.borrow_mut().sync(ui);
-    scene.capture("057-skill-picker-uv.png");
-    ui.invoke_clicked(40);
-    // Save completion updates the production skill control.
+    scene.capture("114-pistol-start-off.png");
+    ui.invoke_clicked(41);
+    // Save completion updates the production pistol-start control.
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     while scene.state.borrow().busy {
         super::pump_events();
         assert!(std::time::Instant::now() < deadline);
         std::thread::sleep(std::time::Duration::from_millis(2));
     }
-    assert!(
-        ui.get_nodes()
-            .iter()
-            .any(|n| n.label == "Skill 5 (Nightmare)")
-    );
-    scene.capture("057-skill-picker-nightmare.png");
-    for label in ["Skill 4 (UV)", "Skill 5 (Nightmare)"] {
+    assert!(ui.get_nodes().iter().any(|n| n.label == "Pistol start On"));
+    scene.capture("114-pistol-start-on.png");
+    for label in ["Pistol start Off", "Pistol start On"] {
         ui.set_fit_label(label.into());
         ui.set_fit_width(272.);
         ui.set_fit_height(36.);

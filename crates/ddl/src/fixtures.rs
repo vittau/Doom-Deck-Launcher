@@ -70,7 +70,6 @@ pub fn mapset(id: MapsetId) -> MapsetView {
 }
 #[derive(Clone, Debug)]
 pub struct ProfileView {
-    pub skill: usize,
     pub pistol: bool,
     pub advanced: bool,
     pub compat: bool,
@@ -79,7 +78,6 @@ pub struct ProfileView {
 impl Default for ProfileView {
     fn default() -> Self {
         Self {
-            skill: 4,
             pistol: false,
             advanced: false,
             compat: false,

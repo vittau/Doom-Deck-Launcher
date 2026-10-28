@@ -1329,13 +1329,6 @@ impl Runtime {
                     self.start(ui, Command::Install(item.recipe.id.clone()));
                 }
             }
-            (Screen::Setup, 40) => {
-                if let Some(item) = self.item() {
-                    let mut profile = item.profile.clone();
-                    profile.skill = profile.skill % 5 + 1;
-                    self.start(ui, Command::Save(profile));
-                }
-            }
             (Screen::Setup, 41) => {
                 if let Some(item) = self.item() {
                     let recipe_id = item.recipe.id.clone();
@@ -2818,7 +2811,6 @@ impl Runtime {
                             56.,
                             text(ui, T::ProfileSummary)
                                 .as_str()
-                                .replace("{skill}", &item.profile.skill.to_string())
                                 .replace(
                                     "{pistol}",
                                     text(
@@ -3053,18 +3045,10 @@ impl Runtime {
                         );
                         y += b.nodes.last().unwrap().h + 16.;
                         b.button(
-                            40,
+                            41,
                             36.,
                             y,
-                            304.,
-                            value(ui, T::Skill, item.profile.skill),
-                            false,
-                        );
-                        b.button(
-                            41,
-                            356.,
-                            y,
-                            312.,
+                            632.,
                             text(
                                 ui,
                                 if item.profile.pistol_start {
@@ -3158,19 +3142,14 @@ impl Runtime {
                                 288. + summary.content.len() as f32 * 38.,
                                 448.,
                                 32.,
-                                format!(
-                                    "{} · {}",
-                                    value(ui, T::Skill, summary.skill),
-                                    text(
-                                        ui,
-                                        if summary.pistol_start {
-                                            T::PistolOn
-                                        } else {
-                                            T::PistolOff
-                                        }
-                                    )
-                                )
-                                .into(),
+                                text(
+                                    ui,
+                                    if summary.pistol_start {
+                                        T::PistolOn
+                                    } else {
+                                        T::PistolOff
+                                    },
+                                ),
                                 20.,
                             );
                             b.button(
@@ -5606,7 +5585,6 @@ mod startup_and_pistol_tests {
                 path: PathBuf::from("/tmp/sigil.wad"),
             }],
             complevel: Complevel::from_word(ComplevelWord::Vanilla, 2).expect("vanilla"),
-            skill: 3,
             pistol_start,
             engine_version: "0.30.1".into(),
         };

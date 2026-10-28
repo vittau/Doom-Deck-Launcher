@@ -1,7 +1,6 @@
 export global Strings {
-    in-out property <int> skill: 4;
     in-out property <bool> pistol: false;
-    out property <string> summary: @tr("Skill {} · Pistol start {}", self.skill, self.pistol ? @tr("On") : @tr("Off"));
+    out property <string> summary: @tr("Pistol start {}", self.pistol ? @tr("On") : @tr("Off"));
     out property <[string]> values: [
         @tr("Profiles"),
         @tr("Optional soundtrack: user-supplied"),
@@ -62,11 +61,6 @@ export global Strings {
         @tr("Use the Episode 3 variant instead?"),
         @tr("Keep main variant"),
         @tr("Use Episode 3 variant"),
-        @tr("Skill 1"),
-        @tr("Skill 2"),
-        @tr("Skill 3"),
-        @tr("Skill 4 (UV)"),
-        @tr("Skill 5 (Nightmare)"),
         @tr("Pistol start: Off"),
         @tr("Pistol start: On"),
         @tr("Reset inventory at each map"),
