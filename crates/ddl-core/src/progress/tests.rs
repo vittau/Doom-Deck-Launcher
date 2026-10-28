@@ -77,6 +77,8 @@ fn the_abandon_fixture_yields_twelve_of_seventeen() {
             total_exits: 2,
             best_skill: Some(4),
             uv_max: true,
+            kills_percent: Some(100),
+            secrets_percent: Some(100),
         }
     );
     // A no-monsters exit is counted as exits but never as completed.
@@ -85,6 +87,8 @@ fn the_abandon_fixture_yields_twelve_of_seventeen() {
     assert!(!map13.completed);
     assert_eq!(map13.best_skill, None);
     assert!(!map13.uv_max, "a map with no recorded skill has no trophy");
+    assert_eq!(map13.kills_percent, Some(0), "0 of 61 kills is 0%");
+    assert_eq!(map13.secrets_percent, None, "an unknown total is not 0%");
     assert!(!recorded.maps.iter().any(|map| map.id == "MAP18"));
 }
 
@@ -120,6 +124,37 @@ fn the_uv_max_mark_follows_the_documented_rule() {
         );
         assert_eq!(stats.rows[0].uv_max(), expected);
     }
+}
+
+#[test]
+fn kills_and_secrets_percentages_follow_the_rule() {
+    // (best, recorded total, expected floor percentage)
+    for (best, max, expected) in [
+        (199, 200, 99),
+        (200, 200, 100),
+        (0, 61, 0),
+        (1, 3, 33),
+        // Resurrected or spawned monsters can push kills above the total.
+        (120, 100, 120),
+    ] {
+        let stats = parse(&document(&[detail_row("MAP01", 4, best, max, best, max)]))
+            .expect("the generated row is valid");
+        let map = &stats.progress(&[]).maps[0];
+        assert_eq!(map.kills_percent, Some(expected), "kills {best}/{max}");
+        assert_eq!(map.secrets_percent, Some(expected), "secrets {best}/{max}");
+    }
+    // An unknown (-1) or zero total has no percentage at all.
+    for max in [-1, 0] {
+        let stats = parse(&document(&[detail_row("MAP01", 4, 5, max, 5, max)])).unwrap();
+        let map = &stats.progress(&[]).maps[0];
+        assert_eq!(map.kills_percent, None, "kills total {max}");
+        assert_eq!(map.secrets_percent, None, "secrets total {max}");
+    }
+    // The two columns are independent: kills known, secrets unknown.
+    let stats = parse(&document(&[detail_row("MAP01", 4, 50, 100, 2, -1)])).unwrap();
+    let map = &stats.progress(&[]).maps[0];
+    assert_eq!(map.kills_percent, Some(50));
+    assert_eq!(map.secrets_percent, None);
 }
 
 #[test]

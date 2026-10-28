@@ -94,6 +94,30 @@ impl Row {
             && self.best_kills as i64 >= self.max_kills as i64
             && self.best_secrets as i64 >= self.max_secrets as i64
     }
+
+    /// Kills percentage for the table (spec 116, R11): `floor(100 × best ÷ max)`,
+    /// or `None` when the recorded total is unknown (`-1`) or zero. Never capped,
+    /// so resurrected or spawned monsters can read above 100%.
+    #[must_use]
+    pub const fn kills_percent(&self) -> Option<u64> {
+        percentage(self.best_kills, self.max_kills)
+    }
+
+    /// Secrets percentage, with the same rule as [`Row::kills_percent`].
+    #[must_use]
+    pub const fn secrets_percent(&self) -> Option<u64> {
+        percentage(self.best_secrets, self.max_secrets)
+    }
+}
+
+/// `floor(100 × best ÷ max)`, or `None` for an unknown (`-1`) or zero total.
+const fn percentage(best: u32, max: i32) -> Option<u64> {
+    if max <= 0 {
+        return None;
+    }
+    #[allow(clippy::cast_sign_loss)]
+    let total = max as u64;
+    Some(best as u64 * 100 / total)
 }
 
 /// A whole parsed file.

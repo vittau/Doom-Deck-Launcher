@@ -51,6 +51,12 @@ pub struct MapProgress {
     pub best_skill: Option<u8>,
     /// D-045's UV-Max mark: UV or higher with all kills and secrets recorded.
     pub uv_max: bool,
+    /// `floor(100 × best kills ÷ recorded total)`, or `None` when the total is
+    /// unknown or zero (spec 116, R11). Never capped.
+    pub kills_percent: Option<u64>,
+    /// `floor(100 × best secrets ÷ recorded total)`, or `None` when the total is
+    /// unknown or zero.
+    pub secrets_percent: Option<u64>,
 }
 
 /// A readable stats file reduced to D-045's rule for one profile.
@@ -81,6 +87,8 @@ impl Stats {
                 total_exits: row.total_exits,
                 best_skill: (row.best_skill > 0).then_some(row.best_skill),
                 uv_max: row.uv_max(),
+                kills_percent: row.kills_percent(),
+                secrets_percent: row.secrets_percent(),
             })
             .collect();
         Recorded {
