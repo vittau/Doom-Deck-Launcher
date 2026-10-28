@@ -1948,6 +1948,19 @@ fn detail_renders_a_short_and_a_long_scrolled_table() {
     assert!(!labels.iter().any(|label| label == "MAP05"));
     // Three UV-Max rows (MAP01–MAP03); MAP13 has no skill and no trophy.
     assert_detail_marks(&ui, 750, 3);
+    // Spec 116 R11: the six aligned columns, with exact per-row percentages.
+    for header in ["Map", "Done", "Exits", "Skill", "Kills", "Secrets"] {
+        assert!(labels.iter().any(|label| label == header), "{header}");
+    }
+    let cells = |x: f32| -> Vec<String> {
+        ui.get_nodes()
+            .iter()
+            .filter(|node| node.kind == 0 && node.x == x && node.size == 20.)
+            .map(|node| node.label.to_string())
+            .collect()
+    };
+    assert_eq!(cells(848.), ["100%", "100%", "100%", "0%"]);
+    assert_eq!(cells(946.), ["100%", "100%", "100%", "—"]);
     // The short table still sits below the metadata fold; bring it into view
     // the way a player does with the right stick.
     ui.invoke_scroll(0., 230.);

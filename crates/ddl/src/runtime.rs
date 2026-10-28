@@ -2909,10 +2909,12 @@ impl Runtime {
                                 );
                                 progress_y += 34.;
                                 for (x, width, label) in [
-                                    (428., 200., T::ProgressMap),
-                                    (640., 90., T::ProgressDone),
-                                    (736., 100., T::ProgressExits),
-                                    (846., 200., T::ProgressSkill),
+                                    (428., 190., T::ProgressMap),
+                                    (626., 66., T::ProgressDone),
+                                    (700., 66., T::ProgressExits),
+                                    (774., 66., T::ProgressSkill),
+                                    (848., 90., T::ProgressKills),
+                                    (946., 120., T::ProgressSecrets),
                                 ] {
                                     b.label(x, progress_y, width, 24., text(ui, label), 18.);
                                     b.nodes.last_mut().unwrap().tone = 1;
@@ -2938,27 +2940,43 @@ impl Runtime {
                                     );
                                     if map.uv_max {
                                         // Spec 116 R10: mark and text beside the ID.
-                                        b.trophy(504., progress_y + 5., 18.);
+                                        b.trophy(500., progress_y + 5., 18.);
                                         b.label(
-                                            528.,
+                                            522.,
                                             progress_y,
-                                            100.,
+                                            96.,
                                             28.,
                                             text(ui, T::UvMax),
                                             18.,
                                         );
                                         b.nodes.last_mut().unwrap().tone = 2;
                                     }
-                                    b.label(640., progress_y, 90., 28., mark, 20.);
+                                    b.label(626., progress_y, 66., 28., mark, 20.);
                                     b.label(
-                                        736.,
+                                        700.,
                                         progress_y,
-                                        100.,
+                                        66.,
                                         28.,
                                         map.total_exits.to_string().into(),
                                         20.,
                                     );
-                                    b.label(846., progress_y, 200., 28., skill, 20.);
+                                    b.label(774., progress_y, 66., 28., skill, 20.);
+                                    b.label(
+                                        848.,
+                                        progress_y,
+                                        90.,
+                                        28.,
+                                        percent_text(ui, map.kills_percent),
+                                        20.,
+                                    );
+                                    b.label(
+                                        946.,
+                                        progress_y,
+                                        120.,
+                                        28.,
+                                        percent_text(ui, map.secrets_percent),
+                                        20.,
+                                    );
                                     progress_y += 30.;
                                 }
                             }
@@ -4570,6 +4588,14 @@ fn item_availability(ui: &AppWindow, snapshot: &Snapshot, item: &Item) -> Shared
         },
     )
 }
+/// Spec 116, R11: `N%` for a best/total value, or the plain unknown mark.
+fn percent_text(ui: &AppWindow, percent: Option<u64>) -> SharedString {
+    percent.map_or_else(
+        || text(ui, T::ProgressNoMark),
+        |percent| format!("{percent}%").into(),
+    )
+}
+
 /// Spec 116, R7: "N/M maps" for a Library card, only when a valid stats file was
 /// read for the selected profile. *No stats yet* and *unavailable* show nothing.
 pub(crate) fn progress_count(
