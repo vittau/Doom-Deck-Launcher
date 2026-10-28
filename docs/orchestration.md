@@ -242,11 +242,10 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Published app: `v0.0.19-menu` (`84ca7b5`): games open at DSDA-Doom's menu, no skill setting
-  (114, D-044); Deck checks MM1–MM4 pending. 0.0.18's Discover order (112–113) was
-  Deck-validated DF1–DF2 (2026-10-26).
-- Progress (116, D-045): owner approved the scope 2026-10-28; spec 116 ready. Visible UI
-  change: show the owner headless renders before merging.
+- Published app: `v0.0.20-progress` (`4ff47e9`): per-mapset progress (116, D-045) on top of
+  0.0.19's menu launch (114, D-044). Deck checks PG1–PG6 and MM1–MM4 pending. Catalog floor
+  is 0.0.20.
+- Progress follow-ups: `exclude_maps` candidates Arrival MAP10 and Haste MAP17 (report 116).
 - Outreach: plan in `docs/outreach.md`; repository gates done, owner did a fresh `.flatpakref`
   install. r/DoomMods and Doomworld (Source Ports) posted 2026-10-26; r/DoomMods removed it and
   Doomworld warned the account for "AI slop" (posting restricted). Outreach is on hold until the

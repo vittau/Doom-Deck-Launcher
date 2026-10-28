@@ -1340,3 +1340,13 @@
     ordinary suite passed. Deck checks PG1–PG6 added.
   refs: [docs/specs/116-mapset-progress.md, docs/reports/116-mapset-progress.md,
     docs/deck-testing.md]
+
+- date: 2026-10-28
+  type: release
+  summary: >-
+    Published v0.0.20-progress (4ff47e9): per-mapset progress from DSDA-Doom's stats with bars,
+    a per-map table with kills and secrets percentages and a UV-Max mark (116, D-045). Release
+    40764580767, signed Flatpak 40764581060 (site version 0.0.20) and CI 40762808667 succeeded;
+    the tarball matches its SHA-256; the catalog branch (c87c72e) requires 0.0.20. Deck checks
+    PG1–PG6 and MM1–MM4 pending.
+  refs: [docs/releases/v0.0.20-progress.md, docs/status.md, docs/deck-testing.md]

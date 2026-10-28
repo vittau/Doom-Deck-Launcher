@@ -2,18 +2,22 @@
 
 ## Current checkpoint — 2026-10-28
 
-**Available for Deck testing:** [v0.0.19-menu](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.19-menu),
-immutable source `84ca7b533695e609df5c2b615f3858ff65b94a83`, published as a Linux tarball
+**Available for Deck testing:** [v0.0.20-progress](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.20-progress),
+immutable source `4ff47e999090ff6095312a7fdd501a07645cb7af`, published as a Linux tarball
 and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
-Release 40735115609, signed Flatpak 40735115503 (site version 0.0.19) and CI 40733494293
-succeeded on the tag source; the tarball matches its published SHA-256. Every game now opens
-at DSDA-Doom's title and menu: DDL has no skill setting and passes neither `-skill` nor
-`-warp` (114, D-044); pistol start is unchanged. Deck checks MM1–MM4 are pending.
+Release 40764580767, signed Flatpak 40764581060 (site version 0.0.20) and CI 40762808667
+succeeded on the tag source; the tarball matches its published SHA-256. The `catalog` branch
+(c87c72e) publishes 120 files from the same source with `min_ddl_version` 0.0.20.
 
-**Per-mapset progress (116, D-045):** the owner approved the scope from report 115 —
-completed maps need a recorded skill, total = DSDA's detected PWAD maps minus an optional recipe
-`progress.exclude_maps`, a simple per-map table on Mapset detail without times, per selected
-profile. Spec 116 is ready for implementation.
+- **Per-mapset progress (116, D-045 with two owner amendments):** read-only from DSDA-Doom's
+  per-profile `stats.txt` (engine 0.30.1 only): Library `N/M maps` with a bar, Mapset detail
+  summary bar and per-map table (done, exits, skill, kills %, secrets %, UV-Max mark); a map
+  is done with a recorded skill; totals are DSDA's detected PWAD maps minus a recipe's
+  `[progress] exclude_maps` (Abandon MAP18). Deck checks PG1–PG6 pending.
+- **Menu launch (114, D-044, since 0.0.19):** games open at DSDA-Doom's menu; no skill setting.
+  Deck checks MM1–MM4 pending.
+- **Follow-up candidates:** `exclude_maps` for Arrival MAP10 and Haste MAP17 (ending maps per
+  their recipe evidence; report 116); a bar on base-game and custom-setup cards if wanted.
 
 ### Shipped
 
