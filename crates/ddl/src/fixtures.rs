@@ -68,22 +68,12 @@ pub fn mapset(id: MapsetId) -> MapsetView {
         },
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ProfileView {
     pub pistol: bool,
     pub advanced: bool,
     pub compat: bool,
     pub addon: usize,
-}
-impl Default for ProfileView {
-    fn default() -> Self {
-        Self {
-            pistol: false,
-            advanced: false,
-            compat: false,
-            addon: 0,
-        }
-    }
 }
 /// The fixed recipe order is inspectable, never freely reordered.
 pub fn files(id: MapsetId, p: &ProfileView) -> Vec<&'static str> {
