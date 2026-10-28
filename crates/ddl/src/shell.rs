@@ -920,7 +920,6 @@ impl Shell {
                 (Screen::Home, 3) => Copy::DiscoverMapsets,
                 (Screen::Setup, 42) => Copy::Import,
                 (Screen::Setup, 43) if self.mapset == MapsetId::Auger => Copy::Choose,
-                (Screen::Setup, 44) => Copy::Choose,
                 (Screen::Setup, 45) => Copy::Toggle,
                 (Screen::Setup, 50) => {
                     if m.iwad_ready {

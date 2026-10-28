@@ -656,7 +656,11 @@ fn controller_057_tabs_pistol_start_and_root_quit() {
     let scene = production::scene();
     replay(&scene, 4);
     let ui = &scene.ui;
-    assert!(ui.get_nodes().iter().any(|n| n.label == "Pistol start Off"));
+    assert!(
+        ui.get_nodes()
+            .iter()
+            .any(|n| n.label == "Pistol start: Off")
+    );
     scene.state.borrow_mut().focus = 41;
     scene.state.borrow_mut().sync(ui);
     scene.capture("114-pistol-start-off.png");
@@ -668,9 +672,9 @@ fn controller_057_tabs_pistol_start_and_root_quit() {
         assert!(std::time::Instant::now() < deadline);
         std::thread::sleep(std::time::Duration::from_millis(2));
     }
-    assert!(ui.get_nodes().iter().any(|n| n.label == "Pistol start On"));
+    assert!(ui.get_nodes().iter().any(|n| n.label == "Pistol start: On"));
     scene.capture("114-pistol-start-on.png");
-    for label in ["Pistol start Off", "Pistol start On"] {
+    for label in ["Pistol start: Off", "Pistol start: On"] {
         ui.set_fit_label(label.into());
         ui.set_fit_width(272.);
         ui.set_fit_height(36.);
