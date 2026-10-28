@@ -47,6 +47,9 @@ fn visible_slint_literals_are_translatable() {
                 || before.ends_with("import")
                 || before.ends_with("from")
                 || before.ends_with("@image-url(")
+                // Spec 116 R10: vector geometry for the UV-Max trophy is data,
+                // not player copy.
+                || before.ends_with("commands:")
                 || (matches!(value.as_str(), "x" | "y" | "v" | "[" | "]")
                     && before.ends_with("event.text =="));
             assert!(
