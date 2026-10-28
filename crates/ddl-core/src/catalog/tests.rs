@@ -2321,3 +2321,49 @@ fn runtime_warp_is_forbidden_even_when_empty_or_in_range() {
         );
     }
 }
+
+/// Spec 116, R5/A2: `progress.exclude_maps` accepts real map lump IDs, once
+/// each, and the shipped Abandon recipe declares its ending map.
+#[test]
+fn progress_exclusions_accept_map_lump_ids_once() {
+    let abandon = recipe("abandon");
+    assert_eq!(
+        abandon.progress,
+        Some(ProgressConfig {
+            exclude_maps: vec!["MAP18".to_owned()],
+        })
+    );
+    assert_eq!(
+        validate(&abandon, Path::new("abandon.toml"), &hosts()),
+        vec![]
+    );
+
+    let mut r = abandon.clone();
+    r.progress = Some(ProgressConfig {
+        exclude_maps: vec!["E1M1".to_owned(), "MAP01".to_owned()],
+    });
+    assert!(validate(&r, Path::new("abandon.toml"), &hosts()).is_empty());
+
+    for (ids, message) in [
+        (vec!["map18".to_owned()], "invalid progress map ID"),
+        (vec!["MAP1".to_owned()], "invalid progress map ID"),
+        (vec!["MAP018".to_owned()], "invalid progress map ID"),
+        (
+            vec!["MAP18".to_owned(), "MAP18".to_owned()],
+            "duplicate progress map ID",
+        ),
+    ] {
+        r.progress = Some(ProgressConfig { exclude_maps: ids });
+        let violations = validate(&r, Path::new("abandon.toml"), &hosts());
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.message == message && v.key.starts_with("progress.exclude_maps.")),
+            "{message}: {violations:?}"
+        );
+    }
+
+    // Unknown keys inside the table are a parse error, like every other table.
+    let table: Result<ProgressConfig, _> = toml::from_str("exclude_maps = [\"MAP18\"]\nother = 1");
+    assert!(table.is_err());
+}

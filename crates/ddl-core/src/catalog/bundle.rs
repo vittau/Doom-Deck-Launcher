@@ -57,7 +57,13 @@ pub const BUNDLE_SCHEMA: u32 = 1;
 /// silently reduced catalog; the bundle gate must refuse the whole document
 /// instead, leaving that client on its embedded or cached catalog. This is an
 /// actual capability change (D-038), not a version-follow-Cargo bump.
-pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.12";
+///
+/// Raised from `0.0.12` to `0.0.20` for spec 116, R5: a recipe may declare the
+/// optional `[progress]` table. A pre-0.0.20 reader refuses unknown fields and
+/// would drop Abandon (and every later recipe that uses the field) per recipe;
+/// the bundle gate refuses the whole document instead. The field ships in the
+/// 0.0.20 release, so that is the capability version, not this build's number.
+pub const DEFAULT_MIN_DDL_VERSION: &str = "0.0.20";
 
 /// Largest bundle DDL accepts, matching spec 019 R3's ≤ 2 MiB bound.
 pub const MAX_BUNDLE_BYTES: u64 = 2 * 1024 * 1024;
@@ -836,29 +842,29 @@ limitations = []
         assert!(load_cache(dir.path()).is_none());
     }
 
-    /// Spec 090, R3/R4: the published catalog's stable minimum client is the
-    /// 0.0.12 release that understands the optional `original_release` field. A
-    /// pre-0.0.12 client refuses the bundle whole instead of dropping every dated
-    /// recipe through its `deny_unknown_fields` reader.
+    /// Spec 116, R5 (after spec 090, R3/R4): the published catalog's stable
+    /// minimum client is the 0.0.20 release that understands the optional `[progress]` table. A
+    /// pre-0.0.20 client refuses the bundle whole instead of dropping every
+    /// recipe that excludes a map through its `deny_unknown_fields` reader.
     #[test]
-    fn the_stable_minimum_client_is_the_release_date_capability_release() {
-        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.12");
+    fn the_stable_minimum_client_is_the_progress_capability_release() {
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.20");
         let bundle = bundle_with(
             900,
             DEFAULT_MIN_DDL_VERSION,
             &[("good.toml", &recipe("good", "www.gamers.org"))],
         );
         assert_eq!(
-            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.11").unwrap_err(),
+            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.19").unwrap_err(),
             BundleRejection::TooNew {
-                min: "0.0.12".into(),
-                running: "0.0.11".into(),
+                min: "0.0.20".into(),
+                running: "0.0.19".into(),
             },
-            "the release that cannot parse `original_release` is refused whole, offline"
+            "the release that cannot parse `[progress]` is refused whole, offline"
         );
         assert!(
-            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.12").is_ok(),
-            "the release-date release accepts it"
+            accept_bundle(&bundle, HOSTS_EMBEDDED, 100, "0.0.20").is_ok(),
+            "the progress-capability release accepts it"
         );
         // A later recipe-only bundle keeps the same stable minimum.
         let later = bundle_with(
@@ -866,7 +872,7 @@ limitations = []
             DEFAULT_MIN_DDL_VERSION,
             &[("good.toml", &recipe("good", "www.gamers.org"))],
         );
-        assert_eq!(later.min_ddl_version, "0.0.12");
+        assert_eq!(later.min_ddl_version, "0.0.20");
     }
 
     #[test]
@@ -907,10 +913,11 @@ limitations = []
         // Spec 019 review fix: the minimum is a deliberate constant, not the
         // building binary's version, so a Cargo.toml bump cannot make installed
         // DDLs reject every published bundle.
-        // Spec 077, R6 raised it to 0.0.11 for the card-reachability fix and
-        // spec 090, R4 to 0.0.12 for the `original_release` capability; it stays
+        // Spec 077, R6 raised it to 0.0.11 for the card-reachability fix,
+        // spec 090, R4 to 0.0.12 for the `original_release` capability and
+        // spec 116, R5 to 0.0.20 for the optional `[progress]` table; it stays
         // a deliberate constant, not the building binary's version.
-        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.12");
+        assert_eq!(DEFAULT_MIN_DDL_VERSION, "0.0.20");
         assert!(semver::Version::parse(DEFAULT_MIN_DDL_VERSION).is_ok());
         let bundle = bundle_with(
             200,
@@ -920,7 +927,7 @@ limitations = []
         assert!(accept_bundle(&bundle, HOSTS, 100, DEFAULT_MIN_DDL_VERSION).is_ok());
         // Anything older than the stable minimum is refused whole.
         assert!(matches!(
-            accept_bundle(&bundle, HOSTS, 100, "0.0.10"),
+            accept_bundle(&bundle, HOSTS, 100, "0.0.19"),
             Err(BundleRejection::TooNew { .. })
         ));
         assert!(matches!(
