@@ -38,7 +38,7 @@ pub const STATS_FILE: &str = "stats.txt";
 /// The organizer uses the IWAD stem plus at most the first eight PWAD stems.
 pub const MAX_PWADS: usize = 8;
 
-/// One map's progress (spec 116, R4).
+/// One map's progress (spec 116, R4/R10).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapProgress {
     /// The map lump name.
@@ -49,6 +49,8 @@ pub struct MapProgress {
     pub total_exits: u32,
     /// The highest recorded skill, or `None` when DSDA recorded none.
     pub best_skill: Option<u8>,
+    /// D-045's UV-Max mark: UV or higher with all kills and secrets recorded.
+    pub uv_max: bool,
 }
 
 /// A readable stats file reduced to D-045's rule for one profile.
@@ -78,6 +80,7 @@ impl Stats {
                 completed: row.completed(),
                 total_exits: row.total_exits,
                 best_skill: (row.best_skill > 0).then_some(row.best_skill),
+                uv_max: row.uv_max(),
             })
             .collect();
         Recorded {

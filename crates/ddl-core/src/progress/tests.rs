@@ -14,6 +14,20 @@ fn row(id: &str, skill: u8, exits: u32) -> String {
     format!("{id} 1 1 {skill} -1 -1 -1 {exits} 0 0 0 0 -1 -1 -1\n")
 }
 
+/// A valid row with explicit kill/secret bests and totals (spec 116, R10).
+fn detail_row(
+    id: &str,
+    skill: u8,
+    best_kills: u32,
+    max_kills: i32,
+    best_secrets: u32,
+    max_secrets: i32,
+) -> String {
+    format!(
+        "{id} 1 1 {skill} -1 -1 -1 1 {best_kills} {best_kills} 0 {best_secrets} {max_kills} -1 {max_secrets}\n"
+    )
+}
+
 /// A document with the two header lines and `rows`.
 fn document(rows: &[String]) -> Vec<u8> {
     let mut text = String::from("1\n0\n");
@@ -62,6 +76,7 @@ fn the_abandon_fixture_yields_twelve_of_seventeen() {
             completed: true,
             total_exits: 2,
             best_skill: Some(4),
+            uv_max: true,
         }
     );
     // A no-monsters exit is counted as exits but never as completed.
@@ -69,7 +84,42 @@ fn the_abandon_fixture_yields_twelve_of_seventeen() {
     assert_eq!(map13.total_exits, 3);
     assert!(!map13.completed);
     assert_eq!(map13.best_skill, None);
+    assert!(!map13.uv_max, "a map with no recorded skill has no trophy");
     assert!(!recorded.maps.iter().any(|map| map.id == "MAP18"));
+}
+
+#[test]
+fn the_uv_max_mark_follows_the_documented_rule() {
+    // (skill, best kills, max kills, best secrets, max secrets, expected)
+    for (skill, best_kills, max_kills, best_secrets, max_secrets, expected) in [
+        (4, 100, 100, 5, 5, true),
+        (5, 80, 80, 3, 3, true),
+        (3, 100, 100, 5, 5, false),
+        (2, 100, 100, 5, 5, false),
+        (4, 99, 100, 5, 5, false),
+        (4, 100, 100, 4, 5, false),
+        (4, 100, -1, 5, 5, false),
+        (4, 100, 100, 5, -1, false),
+        (4, 0, 0, 0, 0, true),
+        // Independently accumulated bests may exceed a later denominator.
+        (4, 120, 100, 6, 5, true),
+    ] {
+        let stats = parse(&document(&[detail_row(
+            "MAP01",
+            skill,
+            best_kills,
+            max_kills,
+            best_secrets,
+            max_secrets,
+        )]))
+        .expect("the generated row is valid");
+        let recorded = stats.progress(&[]);
+        assert_eq!(
+            recorded.maps[0].uv_max, expected,
+            "skill {skill}, kills {best_kills}/{max_kills}, secrets {best_secrets}/{max_secrets}"
+        );
+        assert_eq!(stats.rows[0].uv_max(), expected);
+    }
 }
 
 #[test]

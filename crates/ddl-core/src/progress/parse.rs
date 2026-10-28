@@ -79,6 +79,21 @@ impl Row {
     pub const fn completed(&self) -> bool {
         self.best_skill > 0
     }
+
+    /// Whether this row earns the D-045 **UV-Max** mark (spec 116, R10): a UV or
+    /// higher skill, both totals known, and best kills/secrets reaching them.
+    ///
+    /// DSDA keeps each best independently, so the mark means "all kills and all
+    /// secrets at UV", possibly across separate runs; it is not proof of one
+    /// continuous UV-Max demo. Totals of `-1` mean unknown and never qualify.
+    #[must_use]
+    pub const fn uv_max(&self) -> bool {
+        self.best_skill >= 4
+            && self.max_kills >= 0
+            && self.max_secrets >= 0
+            && self.best_kills as i64 >= self.max_kills as i64
+            && self.best_secrets as i64 >= self.max_secrets as i64
+    }
 }
 
 /// A whole parsed file.
