@@ -2,7 +2,7 @@
 //! fixture shell (spec 060, R1).
 //!
 //! Rows are entered at their leftmost item. When the source spans more than
-//! one item of the nearest row (a full-width card above Skill | Pistol start),
+//! one item of the nearest row (a full-width card above Pistol start),
 //! focus lands on the row's leftmost item. Only a source that lines up with
 //! exactly one item keeps its column. A source that overlaps nothing falls back
 //! to the nearest centre.

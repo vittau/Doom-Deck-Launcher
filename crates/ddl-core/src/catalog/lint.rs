@@ -684,13 +684,9 @@ pub fn validate(r: &Recipe, filename: &Path, hosts: &Hosts) -> Vec<Violation> {
     );
     issue(
         "compatibility.runtime.warp".into(),
-        r.compatibility
-            .runtime
-            .warp
-            .as_ref()
-            .is_some_and(|w| w.len() > 2 || w.iter().any(|n| *n > 99)),
-        "invalid warp",
-        "use zero to two integers in 0–99, per DSDA v0.30.1",
+        r.compatibility.runtime.warp.is_some(),
+        "warp is not allowed (D-044)",
+        "remove compatibility.runtime.warp so ordinary launches open the DSDA-Doom menu",
     );
     issue(
         "verification.date".into(),

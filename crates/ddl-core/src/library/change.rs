@@ -82,6 +82,19 @@ pub fn classify(
     if installed == new {
         return RecipeStatus::Current;
     }
+    // D-044: dropping a legacy warp changes neither launch behavior nor the
+    // recipe status. Other metadata and launch changes still classify normally.
+    if installed.compatibility.runtime.warp != new.compatibility.runtime.warp {
+        let mut without_legacy_warp = installed.clone();
+        without_legacy_warp
+            .compatibility
+            .runtime
+            .warp
+            .clone_from(&new.compatibility.runtime.warp);
+        if &without_legacy_warp == new {
+            return RecipeStatus::Current;
+        }
+    }
     let content_changed = manifest.release != new.release
         || content(installed) != content(new)
         || manifest.packages.iter().any(|held| {
@@ -91,8 +104,7 @@ pub fn classify(
         });
     let launch_changed = installed.base_game != new.base_game
         || installed.compatibility.complevel != new.compatibility.complevel
-        || installed.compatibility.engine.range != new.compatibility.engine.range
-        || installed.compatibility.runtime.warp != new.compatibility.runtime.warp;
+        || installed.compatibility.engine.range != new.compatibility.engine.range;
     let mut changes = Changes {
         content: content_changed,
         launch: launch_changed,

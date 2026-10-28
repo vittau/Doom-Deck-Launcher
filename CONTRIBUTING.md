@@ -95,7 +95,7 @@ are shown in the complete example. Optional fields and constraints:
 | `components.members` | For downloaded content, `package` and `member` refer to declared IDs. Roles: `maps`, `music`, `graphics`, `sounds` (WAD) or `dehacked` (DEH/BEX). Kept members cannot be loaded. Each user-supplied component has exactly one imported member with a role, no package/member reference, nonempty `obtain` instructions, and optional known hashes. No guessed filename or download URL. |
 | `compatibility` | `family`: `vanilla`, `limit-removing`, `boom`, `mbf`, `mbf21`; mandatory `complevel`: `"vanilla"`, `"boom"`, `"mbf"`, `"mbf21"` or a number 0–17 or 21 that no alias names for the recipe's `base_game` (see [Choosing the complevel](#choosing-the-complevel)); 18–20 forbidden. There is no `complevel_status`: lint rejects the key. |
 | `compatibility.engine` | Semantic version requirement `range`, evidence `status`. Include the exact evidence version; a range is only as strong as its evidence status. |
-| `compatibility.runtime` | Optional typed `warp = [episode, map]` (or `[map]`, or `[]`; up to two integers 0–99) and `pistol_start = true/false` (player profile suggestion only). No arbitrary flags or shell strings. |
+| `compatibility.runtime` | Optional `pistol_start = true/false` (player profile suggestion only). `warp` is forbidden: ordinary launches open the DSDA-Doom menu (D-044). No arbitrary flags or shell strings. |
 | `verification` | Real `YYYY-MM-DD` date, semantic engine version. `inspected` lists what was inspected; nonempty when status is inspected. `limitations` can be empty only when there are no known limitations. |
 
 ### Choosing the complevel
@@ -221,8 +221,7 @@ This is the actual [SIGIL recipe](catalog/sigil.toml), backed by
 gameplay **Needs Deck Validation**. Start with
 this structure, replace the researched data, then delete components your release
 does not provide. The compat and soundtrack components replace main at the same
-position; they do not add a second map WAD. The menu selects the episode, so no
-variant-dependent `warp` is prescribed here.
+position; they do not add a second map WAD. The DSDA-Doom menu selects the episode; recipes must not prescribe `warp` (D-044).
 
 ```toml
 # Confirmed bytes and release metadata: docs/research/reference-sigil.md §1–§5; gathered 2026-10-16.
@@ -248,7 +247,7 @@ range = "=0.30.1"
 status = "inspected"
 
 [compatibility.runtime]
-# Optional typed defaults: warp = [episode, map], pistol_start = false.
+# Optional profile suggestion: pistol_start = false. Runtime warp is forbidden (D-044).
 
 [verification]
 status = "inspected"

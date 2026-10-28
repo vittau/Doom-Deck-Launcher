@@ -317,7 +317,8 @@ pub struct EngineEvidence {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RuntimeDefaults {
-    /// DSDA -warp integers (map, or episode/map); no free-form argv.
+    /// Legacy start map retained for reading installed recipes. Catalog lint
+    /// rejects this field and ordinary resolution ignores it (D-044).
     #[serde(default)]
     pub warp: Option<Vec<u8>>,
     /// Suggestion only; the player's profile owns the actual setting.

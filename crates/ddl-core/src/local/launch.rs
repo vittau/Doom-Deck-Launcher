@@ -125,7 +125,7 @@ pub fn accept_changed(files: &mut [UserFile]) -> Result<Vec<PathBuf>, SetupError
 
 /// Builds the launch plan for `setup` and `profile` (spec 026, R3).
 ///
-/// The profile supplies skill, pistol start and `-assign` overrides; the setup
+/// The profile supplies pistol start and `-assign` overrides; the setup
 /// supplies the IWAD, the two ordered groups and the compatibility choice. The
 /// plan's directories are created by [`LaunchPlan::prepare_dirs`] before the
 /// caller validates and runs it.
@@ -149,8 +149,6 @@ pub fn build_plan(
 
     let iwad = resolve_iwad(&setup.iwad, registry, data_dir)?;
     let dirs = ProfileDirs::new(data_dir, &profile.id);
-    let skill = crate::engines::dsda::Skill::new(profile.skill)
-        .map_err(|error| LaunchError::Setup(SetupError::Invalid(error.to_string())))?;
 
     Ok(LaunchPlan {
         executable: engine.executable.clone(),
@@ -158,7 +156,7 @@ pub fn build_plan(
         files: setup.files.iter().map(|f| f.path.clone()).collect(),
         patches: setup.patches.iter().map(|p| p.path.clone()).collect(),
         complevel: setup.compatibility.level(),
-        skill,
+        skill: None,
         warp: None,
         pistol_start: profile.pistol_start,
         record: None,
@@ -354,7 +352,6 @@ mod tests {
 
     fn profile() -> Profile {
         let mut profile = Profile::new("my-setup-default", "Default", "my-setup");
-        profile.skill = 4;
         profile.pistol_start = true;
         profile
     }
@@ -423,6 +420,25 @@ mod tests {
             source: Source::Manual,
         });
 
+        for pistol_start in [false, true] {
+            let mut choice = profile();
+            choice.pistol_start = pistol_start;
+            let plan = build_plan(
+                &setup(files.clone(), patches.clone(), Compatibility::Auto),
+                &choice,
+                &engine(),
+                &registry,
+                &data,
+                &config,
+            )
+            .unwrap();
+            let argv = plan.to_command();
+            assert!(!argv.iter().any(|a| a == "-skill" || a == "-warp"));
+            assert_eq!(
+                argv.iter().filter(|a| *a == "-pistolstart").count(),
+                usize::from(pistol_start)
+            );
+        }
         let plan = build_plan(
             &setup(files.clone(), patches.clone(), Compatibility::Auto),
             &profile(),
@@ -443,7 +459,7 @@ mod tests {
         }
         assert_eq!(argv[deh_at + 1], patches[0].path.to_string_lossy());
         assert!(argv.contains(&"-noautoload".to_owned()));
-        assert_eq!(plan.skill.value(), 4);
+        assert_eq!(plan.skill, None);
         assert!(plan.pistol_start);
 
         // Pinned: `-complevel 21`.

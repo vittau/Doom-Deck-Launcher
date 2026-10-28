@@ -134,7 +134,6 @@ fn update_publishes_atomically_preserves_profiles_and_retries_cleanup_after_cras
     let mut p = item(&s).profile;
     let old_recipe = s.recipe("auger-zenith").unwrap();
     p.components = vec![old_recipe.components[1].id.clone()];
-    p.skill = 5;
     s.execute(
         Command::Save(p.clone()),
         &CancellationToken::new(),
@@ -181,7 +180,6 @@ fn update_publishes_atomically_preserves_profiles_and_retries_cleanup_after_cras
     let after = item(&s);
     assert_eq!(after.recipe_status, RecipeStatus::Current);
     assert_eq!(after.profile.components, ["new-addon"]);
-    assert_eq!(after.profile.skill, 5);
     assert!(!after.update_notice.is_empty());
     assert_eq!(after.profile.id, p.id);
     for dir in s.profiles.dirs(&p.id).all() {
@@ -210,15 +208,15 @@ fn update_publishes_atomically_preserves_profiles_and_retries_cleanup_after_cras
     }
     // Profile changes after publication still survive reopening.
     let mut p = item(&reopened).profile;
-    p.skill = 2;
+    p.pistol_start = true;
+
     reopened
         .execute(Command::Save(p), &CancellationToken::new(), &mut |_| {})
         .unwrap();
-    assert_eq!(
+    assert!(
         item(&Services::open(reopened.env.clone()).unwrap())
             .profile
-            .skill,
-        2
+            .pistol_start
     );
 }
 

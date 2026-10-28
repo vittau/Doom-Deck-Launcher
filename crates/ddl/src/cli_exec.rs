@@ -176,7 +176,6 @@ pub fn run_io(
             dry_run,
             profile,
             components,
-            skill,
             pistol_start,
             accept_changes,
         } => {
@@ -193,7 +192,6 @@ pub fn run_io(
                 let overrides = LaunchOverrides {
                     profile,
                     components,
-                    skill,
                     pistol_start,
                 };
                 if dry_run {
@@ -207,7 +205,6 @@ pub fn run_io(
                 let overrides = LaunchOverrides {
                     profile,
                     components,
-                    skill,
                     pistol_start,
                 };
                 let item = services.base_item(&id, overrides.profile.as_deref())?;
@@ -1749,7 +1746,6 @@ exit 1
                 dry_run: true,
                 profile: None,
                 components: vec![],
-                skill: Some(5),
                 pistol_start: true,
                 accept_changes: false,
             },
@@ -1766,7 +1762,6 @@ exit 1
                 dry_run: false,
                 profile: None,
                 components: vec![],
-                skill: None,
                 pistol_start: false,
                 accept_changes: false,
             },
@@ -1798,7 +1793,6 @@ exit 1
                 dry_run: true,
                 profile: None,
                 components: vec![],
-                skill: None,
                 pistol_start: false,
                 accept_changes: false,
             },
@@ -1819,7 +1813,6 @@ exit 1
                 dry_run: true,
                 profile: None,
                 components: vec![],
-                skill: None,
                 pistol_start: false,
                 accept_changes: false,
             },
@@ -1855,7 +1848,6 @@ exit 1
                     dry_run: true,
                     profile: None,
                     components,
-                    skill: None,
                     pistol_start: false,
                     accept_changes: false,
                 },
@@ -1877,7 +1869,6 @@ exit 1
                 dry_run: true,
                 profile: None,
                 components: vec!["compat-soundtrack".to_owned()],
-                skill: None,
                 pistol_start: false,
                 accept_changes: false,
             },
@@ -1902,6 +1893,30 @@ exit 1
             services.register_fake_iwads(&seam).expect("seam");
         }
 
+        for pistol_start in [false, true] {
+            let (out, _) = run(
+                &fx,
+                cli::Command::Launch {
+                    id: "sigil".into(),
+                    dry_run: true,
+                    profile: None,
+                    components: vec![],
+                    pistol_start,
+                    accept_changes: false,
+                },
+            )
+            .unwrap();
+            let argv: Vec<_> = out.lines().collect();
+            assert!(
+                !argv.contains(&"-skill") && !argv.contains(&"-warp"),
+                "{out}"
+            );
+            assert_eq!(
+                argv.iter().filter(|a| **a == "-pistolstart").count(),
+                usize::from(pistol_start)
+            );
+        }
+
         let (out, _) = run(
             &fx,
             cli::Command::Launch {
@@ -1909,7 +1924,6 @@ exit 1
                 dry_run: true,
                 profile: None,
                 components: vec![],
-                skill: Some(4),
                 pistol_start: true,
                 accept_changes: false,
             },
@@ -1970,7 +1984,8 @@ exit 1
         assert!(iwad.starts_with('/'), "canonical link is absolute: {iwad}");
         assert!(iwad.ends_with("doomu.wad"), "{iwad}");
         assert_eq!(after("-complevel"), "vanilla", "alias complevel: {out}");
-        assert_eq!(after("-skill"), "4", "{out}");
+        assert!(!lines.contains(&"-skill"), "{out}");
+        assert!(!lines.contains(&"-warp"), "{out}");
         assert!(
             lines
                 .iter()
@@ -2017,7 +2032,6 @@ exit 1
                     dry_run: true,
                     profile: Some(selector),
                     components: vec![],
-                    skill: Some(5),
                     pistol_start: true,
                     accept_changes: false,
                 },
@@ -2045,7 +2059,6 @@ exit 1
                 dry_run: false,
                 profile: Some(selected.name),
                 components: vec![],
-                skill: Some(5),
                 pistol_start: true,
                 accept_changes: false,
             },
@@ -2054,7 +2067,6 @@ exit 1
         let restored = Services::open(fx.env.clone()).unwrap().snapshot().unwrap();
         assert_eq!(restored.items[0].profile.id, selected.id);
         assert!(restored.items[0].profile.last_played.is_some());
-        assert_eq!(restored.items[0].profile.skill, 4);
         assert!(!restored.items[0].profile.pistol_start);
         let (out, _) = run(&fx, cli::Command::Doctor).unwrap();
         assert!(

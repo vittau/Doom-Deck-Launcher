@@ -683,12 +683,12 @@ pub(super) fn install_and_setup(scene: &Scene, capture: Captures) {
     capture("010-play-setup-ready.png");
     capture("107-recipe-complevel.png");
     // Spec 060 A2/A3: Play unfocused (primary, not amber), focused (ring), and a
-    // focused Skill; the locked required component stays visibly disabled.
+    // focused Pistol start; the locked required component stays visibly disabled.
     let focus = state.borrow().focus;
     for (name, id) in [
         ("060-play-ready-unfocused.png", 42),
         ("060-play-ready-focused.png", 50),
-        ("060-play-ready-skill-focused.png", 40),
+        ("060-play-ready-pistol-focused.png", 41),
     ] {
         state.borrow_mut().focus = id;
         state.borrow_mut().sync(ui);
@@ -910,16 +910,8 @@ pub(super) fn play_setup_options(scene: &Scene, capture: Captures) {
     let ui = &scene.ui;
     let state = scene.state.clone();
     // Profile values persist; advanced replacement never combines with main.
-    ui.invoke_clicked(40);
-    idle(&state);
     ui.invoke_clicked(41);
     idle(&state);
-    assert_eq!(
-        state.borrow().snapshot.as_ref().unwrap().items[1]
-            .profile
-            .skill,
-        5
-    );
     assert!(
         state.borrow().snapshot.as_ref().unwrap().items[1]
             .profile
@@ -1512,7 +1504,6 @@ pub(super) fn install_error(scene: &Scene, capture: Captures) {
     );
     // Restart uses stored manifest/recipe and profile, with no discovery download.
     let restarted = Services::open(env.clone()).unwrap().snapshot().unwrap();
-    assert_eq!(restarted.items[1].profile.skill, 5);
     assert!(restarted.items[1].manifest.is_some());
     assert!(restarted.items[1].profile.last_played.is_some());
 }
@@ -1701,7 +1692,7 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
     assert!(
         ui.get_nodes()
             .iter()
-            .any(|n| n.label.contains("Skill 4 · Pistol start"))
+            .any(|n| n.label.contains("Pistol start"))
     );
     capture("031-detail-profile.png");
     press(window, Key::Return);
@@ -1874,6 +1865,36 @@ pub(super) fn profiles(scene: &Scene, capture: Captures) {
         copied.id
     );
     assert_profile_dirs(fake, &store.dirs(&copied.id));
+    // D-044: Continue re-resolves the remembered profile for either pistol-start choice.
+    for pistol_start in [false, true] {
+        let mut profile = store.load(&copied.id).unwrap();
+        profile.pistol_start = pistol_start;
+        store.save(&profile).unwrap();
+        {
+            let mut r = state.borrow_mut();
+            r.snapshot = Some(Services::open(env.clone()).unwrap().snapshot().unwrap());
+            r.screen = Screen::Home;
+            r.focus = 1;
+            r.sync(ui);
+        }
+        let count = fake.launches().len();
+        press(window, Key::Return);
+        idle(state);
+        state.borrow_mut().neutral_poll(true);
+        assert_eq!(fake.launches().len(), count + 1);
+        assert_profile_dirs(fake, &store.dirs(&copied.id));
+        let launches = fake.launches();
+        assert_eq!(
+            launches
+                .last()
+                .unwrap()
+                .argv
+                .iter()
+                .filter(|a| *a == "-pistolstart")
+                .count(),
+            usize::from(pistol_start)
+        );
+    }
     // Library shows the count using the same snapshot.
     {
         let mut r = state.borrow_mut();
@@ -1965,6 +1986,10 @@ fn assert_detail_actions(ui: &AppWindow) {
 fn assert_profile_dirs(fake: &dsda::FakeEngineRunner, dirs: &ddl_core::profiles::ProfileDirs) {
     let launches = fake.launches();
     let args = &launches.last().unwrap().argv;
+    assert!(
+        !args.iter().any(|a| a == "-skill" || a == "-warp"),
+        "{args:?}"
+    );
     for (flag, path) in [
         ("-save", &dirs.save),
         ("-data", &dirs.data),

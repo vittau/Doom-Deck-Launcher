@@ -21,7 +21,7 @@ export global WiringStrings {
     out property <string> profile-count: @tr("{} profiles", root.value);
     out property <string> profiles: @tr("Profiles");
     out property <string> save-profile-name: @tr("Save name");
-    out property <string> profile-summary: @tr("Skill {{skill}} · Pistol start {{pistol}}\nAdd-ons: {{addons}} · Extra files: {{extras}}");
+    out property <string> profile-summary: @tr("Pistol start {{pistol}}\nAdd-ons: {{addons}} · Extra files: {{extras}}");
     out property <string> edit-profile: @tr("Edit");
     out property <string> done: @tr("Done");
     out property <string> copy-profile: @tr("New — copy settings");
@@ -111,7 +111,6 @@ export global WiringStrings {
     out property <string> compat-confirm: @tr("Use the Episode 3 variant instead?");
     out property <string> keep: @tr("Keep current settings");
     out property <string> use-variant: @tr("Use this variant");
-    out property <string> skill: root.value.to-float() == 4 ? @tr("Skill 4 (UV)") : root.value.to-float() == 5 ? @tr("Skill 5 (Nightmare)") : @tr("Skill {}", root.value);
     out property <string> pistol-on: @tr("Pistol start: On");
     out property <string> pistol-off: @tr("Pistol start: Off");
     out property <string> pistol-help: @tr("Reset inventory at each map");

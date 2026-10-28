@@ -285,7 +285,7 @@ fn local_polish_extras_relocation_keeps_exact_profile_and_unrelated_saves() {
         assert_eq!(fs::read(saves.join("slot.dsg")).unwrap(), b"save sentinel");
         let target = ReplacementTarget::Extras(actual.clone(), 0);
         let mut newer = actual;
-        newer.skill = 3;
+        newer.pistol_start = !newer.pistol_start;
         s.profiles.save(&newer).unwrap();
         assert!(
             op(

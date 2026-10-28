@@ -77,7 +77,7 @@ fn plan_for(tree: &TestDir, executable: &str) -> LaunchPlan {
         ],
         patches: vec![tree.file("augzen.deh")],
         complevel: Some(Complevel::DOOM_1_9),
-        skill: Skill::new(3).expect("3 is a valid skill"),
+        skill: Some(Skill::new(3).expect("3 is a valid skill")),
         warp: Some(Warp::single(1).expect("1 is a valid warp")),
         pistol_start: false,
         record: None,

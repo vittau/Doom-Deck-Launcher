@@ -144,8 +144,6 @@ pub struct Summary {
     /// The compatibility level: DSDA's word when the recipe uses one, with the
     /// number it resolves to (D-030).
     pub complevel: Complevel,
-    /// The starting skill, 1–5.
-    pub skill: u8,
     /// Whether pistol start is on.
     pub pistol_start: bool,
     /// The engine version.
@@ -179,7 +177,6 @@ impl fmt::Display for Summary {
             }
         }
         writeln!(f, "  complevel: {}", self.complevel)?;
-        writeln!(f, "  skill: {}", self.skill)?;
         writeln!(
             f,
             "  pistol start: {}",
@@ -225,7 +222,6 @@ mod tests {
                 },
             ],
             complevel: Complevel::from_word(ComplevelWord::Vanilla, 2).unwrap(),
-            skill: 3,
             pistol_start: false,
             engine_version: "0.30.1".to_owned(),
         };
