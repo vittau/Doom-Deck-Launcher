@@ -252,6 +252,7 @@ pub enum Text {
     ProgressDone,
     ProgressExits,
     ProgressSkill,
+    UvMax,
     ProgressYes,
     ProgressNoMark,
 }
@@ -506,6 +507,7 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::ProgressDone => s.get_progress_done(),
         Text::ProgressExits => s.get_progress_exits(),
         Text::ProgressSkill => s.get_progress_skill(),
+        Text::UvMax => s.get_uv_max(),
         Text::ProgressYes => s.get_progress_yes(),
         Text::ProgressNoMark => s.get_progress_no_mark(),
     }

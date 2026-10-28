@@ -1884,8 +1884,36 @@ fn library_card_shows_recorded_progress() {
         progress_node.y + progress_node.h <= card.y + card.h - 28.,
         "progress stays inside the card's 28 px inset"
     );
+    // Spec 116 R9: the bar sits beside the count, filled to 12/17, and is not a
+    // control; amber stays focus-only.
+    let bars: Vec<_> = nodes.iter().filter(|node| node.kind == 6).collect();
+    assert_eq!(bars.len(), 1, "one bar beside the card count");
+    assert_eq!(bars[0].art, 705, "12/17 filled in permille");
+    assert_eq!(bars[0].tone, 2, "success fill, not focus amber");
+    assert!(!bars[0].actionable, "the bar never takes focus");
     let path = write_png("116-library-progress.png", &render(&window));
     assert!(path.is_file());
+}
+
+/// Spec 116 R9/R10: the summary bar and the trophy nodes in a detail render.
+fn assert_detail_marks(ui: &AppWindow, filled: i32, trophies: usize) {
+    let nodes = ui.get_nodes();
+    let bars: Vec<_> = nodes.iter().filter(|node| node.kind == 6).collect();
+    assert_eq!(bars.len(), 1, "one bar beside the detail summary");
+    assert_eq!(bars[0].art, filled);
+    assert!(!bars[0].actionable);
+    assert_eq!(
+        nodes.iter().filter(|node| node.kind == 30).count(),
+        trophies,
+        "one vector trophy per UV-Max row"
+    );
+    assert_eq!(
+        nodes
+            .iter()
+            .filter(|node| node.kind == 0 && node.label == "UV-Max")
+            .count(),
+        trophies
+    );
 }
 
 /// Spec 116 R7/A3: Mapset detail's short table and a long, scrolled one.
@@ -1918,6 +1946,8 @@ fn detail_renders_a_short_and_a_long_scrolled_table() {
     assert!(labels.iter().any(|label| label == "Yes"));
     assert!(labels.iter().any(|label| label == "MAP13"));
     assert!(!labels.iter().any(|label| label == "MAP05"));
+    // Three UV-Max rows (MAP01–MAP03); MAP13 has no skill and no trophy.
+    assert_detail_marks(&ui, 750, 3);
     // The short table still sits below the metadata fold; bring it into view
     // the way a player does with the right stick.
     ui.invoke_scroll(0., 230.);
@@ -1938,6 +1968,7 @@ fn detail_renders_a_short_and_a_long_scrolled_table() {
     let labels = progress_labels(&ui);
     assert!(labels.iter().any(|label| label == "12/18 maps completed"));
     assert!(labels.iter().any(|label| label == "MAP18"));
+    assert_detail_marks(&ui, 666, 12);
     write_png("116-detail-long-scrolled.png", &render(&window));
 }
 
@@ -1973,6 +2004,9 @@ fn detail_distinguishes_no_stats_yet_from_unavailable() {
             .any(|label| label.contains("0/")),
         "no stats is never shown as zero completed"
     );
+    // Spec 116 R9/R10: no count means no bar, and no rows mean no trophy.
+    assert!(!ui.get_nodes().iter().any(|node| node.kind == 6));
+    assert!(!ui.get_nodes().iter().any(|node| node.kind == 30));
     ui.invoke_scroll(0., 140.);
     advance_time(20);
     write_png("116-detail-no-stats.png", &render(&window));
@@ -1994,5 +2028,7 @@ fn detail_distinguishes_no_stats_yet_from_unavailable() {
             .iter()
             .any(|label| label == no_stats.as_str())
     );
+    assert!(!ui.get_nodes().iter().any(|node| node.kind == 6));
+    assert!(!ui.get_nodes().iter().any(|node| node.kind == 30));
     write_png("116-detail-unavailable.png", &render(&window));
 }

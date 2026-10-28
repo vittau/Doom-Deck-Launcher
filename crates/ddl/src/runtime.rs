@@ -2619,9 +2619,30 @@ impl Runtime {
                                 b.discover_chips(&labels, x + 28., y + 314. - content_shift, 328.);
                             } else {
                                 b.chips(&labels, x + 28., y + 314., 328.);
-                                // Below the two tag rows, inside the 28 px inset.
-                                if let Some(line) = progress_count(ui, &item.progress) {
-                                    b.label(x + 28., y + 384., 328., 26., line, 18.);
+                                // Below the two tag rows, inside the 28 px inset:
+                                // the count and its bar (spec 116, R9).
+                                if let Some(recorded) = item.progress.recorded() {
+                                    b.label(
+                                        x + 28.,
+                                        y + 384.,
+                                        130.,
+                                        26.,
+                                        pair(
+                                            ui,
+                                            T::ProgressCount,
+                                            recorded.completed,
+                                            recorded.total,
+                                        ),
+                                        18.,
+                                    );
+                                    b.bar(
+                                        x + 164.,
+                                        y + 384.,
+                                        164.,
+                                        26.,
+                                        recorded.completed,
+                                        recorded.total,
+                                    );
                                 }
                             }
                         }
@@ -2868,7 +2889,7 @@ impl Runtime {
                                 b.label(
                                     428.,
                                     progress_y,
-                                    760.,
+                                    300.,
                                     30.,
                                     pair(
                                         ui,
@@ -2878,12 +2899,20 @@ impl Runtime {
                                     ),
                                     22.,
                                 );
+                                b.bar(
+                                    740.,
+                                    progress_y,
+                                    388.,
+                                    30.,
+                                    recorded.completed,
+                                    recorded.total,
+                                );
                                 progress_y += 34.;
                                 for (x, width, label) in [
-                                    (428., 110., T::ProgressMap),
-                                    (548., 90., T::ProgressDone),
-                                    (648., 100., T::ProgressExits),
-                                    (758., 200., T::ProgressSkill),
+                                    (428., 200., T::ProgressMap),
+                                    (640., 90., T::ProgressDone),
+                                    (736., 100., T::ProgressExits),
+                                    (846., 200., T::ProgressSkill),
                                 ] {
                                     b.label(x, progress_y, width, 24., text(ui, label), 18.);
                                     b.nodes.last_mut().unwrap().tone = 1;
@@ -2902,21 +2931,34 @@ impl Runtime {
                                     b.label(
                                         428.,
                                         progress_y,
-                                        110.,
+                                        100.,
                                         28.,
                                         map.id.clone().into(),
                                         20.,
                                     );
-                                    b.label(548., progress_y, 90., 28., mark, 20.);
+                                    if map.uv_max {
+                                        // Spec 116 R10: mark and text beside the ID.
+                                        b.trophy(504., progress_y + 5., 18.);
+                                        b.label(
+                                            528.,
+                                            progress_y,
+                                            100.,
+                                            28.,
+                                            text(ui, T::UvMax),
+                                            18.,
+                                        );
+                                        b.nodes.last_mut().unwrap().tone = 2;
+                                    }
+                                    b.label(640., progress_y, 90., 28., mark, 20.);
                                     b.label(
-                                        648.,
+                                        736.,
                                         progress_y,
                                         100.,
                                         28.,
                                         map.total_exits.to_string().into(),
                                         20.,
                                     );
-                                    b.label(758., progress_y, 200., 28., skill, 20.);
+                                    b.label(846., progress_y, 200., 28., skill, 20.);
                                     progress_y += 30.;
                                 }
                             }
@@ -4953,6 +4995,47 @@ impl Nodes {
             true,
             false,
         );
+    }
+    /// Spec 116, R9: a proportional bar beside an `N/M` count. `art` carries the
+    /// filled permille and `tone` 2 selects the success fill; the node is never
+    /// actionable, so focus and the right stick keep their usual behaviour.
+    fn bar(&mut self, x: f32, y: f32, w: f32, h: f32, filled: usize, total: usize) {
+        self.push(
+            -999,
+            x,
+            y,
+            w,
+            h,
+            6,
+            Default::default(),
+            Default::default(),
+            false,
+            false,
+        );
+        let node = self.nodes.last_mut().unwrap();
+        node.tone = 2;
+        node.art = filled
+            .saturating_mul(1000)
+            .checked_div(total)
+            .map_or(0, |permille| {
+                i32::try_from(permille).unwrap_or(1000).clamp(0, 1000)
+            });
+    }
+    /// Spec 116, R10: the small vector trophy drawn beside a UV-Max map ID.
+    fn trophy(&mut self, x: f32, y: f32, size: f32) {
+        self.push(
+            -999,
+            x,
+            y,
+            size,
+            size,
+            30,
+            Default::default(),
+            Default::default(),
+            false,
+            false,
+        );
+        self.nodes.last_mut().unwrap().tone = 2;
     }
 }
 /// The drawable size of DDL's fullscreen window (spec 064, R6).
