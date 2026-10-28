@@ -239,6 +239,11 @@ below are the ones most easily lost between sessions.
   `idgames-index`); always use `refs/heads/<name>`.
 - Never start a background `cargo test` on a tree with unresolved merge conflicts; resolve, commit,
   then verify.
+- Codex budget: two concurrent GPT-6.1 Sol medium workers (one implementation, one research)
+  took the 5h window from ~3% to ~93% in about 25 minutes (2026-10-28). Check usage before each
+  Codex dispatch and expect one wide Codex task per window; route the rest per the fallback.
+- An opencode worker may end its turn while its own background `cargo test` still runs; it
+  usually resumes when the shell finishes. Check for the test process before nudging.
 
 ## Open follow-ups (keep this list current)
 
