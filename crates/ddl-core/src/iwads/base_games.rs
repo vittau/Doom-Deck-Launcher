@@ -84,6 +84,26 @@ pub fn list(registry: &Registry) -> Vec<BaseGame> {
         })
         .collect()
 }
+/// The identified copy a base game launches: the profile's chosen path, then a
+/// variant override, then the registry's preferred copy (spec 032).
+#[must_use]
+pub fn selected_iwad<'a>(
+    base: &'a BaseGame,
+    profile: &Profile,
+    registry: &'a Registry,
+) -> Option<&'a RegistryEntry> {
+    if let Some(path) = &profile.iwad_path {
+        registry
+            .get(path)
+            .filter(|e| e.game == Some(base.game) && e.variant.is_some() && e.path.is_file())
+            .or(Some(&base.iwad))
+    } else if let Some(variant) = &profile.iwad_variant {
+        registry.best_for(base.game, std::slice::from_ref(variant))
+    } else {
+        Some(&base.iwad)
+    }
+}
+
 /// Builds through spec 026's verified user-file path; no recipe or setup is saved.
 ///
 /// # Errors
@@ -101,17 +121,7 @@ pub fn build_plan(
             "profile belongs to another game".into(),
         ));
     }
-    let selected = if let Some(path) = &profile.iwad_path {
-        registry
-            .get(path)
-            .filter(|e| e.game == Some(base.game) && e.variant.is_some() && e.path.is_file())
-            .or(Some(&base.iwad))
-    } else if let Some(variant) = &profile.iwad_variant {
-        registry.best_for(base.game, std::slice::from_ref(variant))
-    } else {
-        Some(&base.iwad)
-    }
-    .ok_or_else(|| {
+    let selected = selected_iwad(base, profile, registry).ok_or_else(|| {
         local::LaunchError::Iwad(
             "selected IWAD copy is no longer identified; rescan IWAD folders".into(),
         )

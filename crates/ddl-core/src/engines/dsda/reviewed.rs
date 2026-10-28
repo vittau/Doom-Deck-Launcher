@@ -27,6 +27,10 @@ pub const EMBEDDED_LIST: &str = include_str!("../../../data/engines.toml");
 /// Schema version this build understands.
 pub const SCHEMA_VERSION: u32 = 1;
 
+/// The only `stats.txt` format DDL's progress reader understands (spec 116 R2,
+/// audited for DSDA-Doom v0.30.1 in `docs/research/dsda-stats.md`).
+pub const SUPPORTED_STATS_VERSION: u32 = 1;
+
 /// Base URL of the official release downloads. Asset URLs are
 /// `<base>/<tag>/<asset>`.
 pub const RELEASE_DOWNLOAD_BASE: &str = "https://github.com/dsda-org/dsda-doom/releases/download";
@@ -52,6 +56,10 @@ pub struct ReviewedVersion {
     /// Whether this version passed the Deck validation (spec 004 A5).
     #[serde(default)]
     pub validated: bool,
+    /// The audited `stats.txt` format this release writes, when DDL may read it
+    /// (spec 116 R2/R3). `None` means the release is not audited for progress.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats_version: Option<u32>,
     /// Upstream licence of the engine payload.
     pub license: String,
     /// GitHub release page (attribution).
@@ -215,6 +223,16 @@ impl ReviewedList {
             .first()
             .expect("a validated list is never empty")
     }
+
+    /// Whether progress may be imported for `version` (spec 116 R3): the entry
+    /// exists and was audited for the stats format this build reads. A newer
+    /// release needs an explicit audit and a new `stats_version`, never an
+    /// assumption that the format did not change.
+    #[must_use]
+    pub fn audits_stats(&self, version: &str) -> bool {
+        self.get_by_version(version)
+            .is_some_and(|entry| entry.stats_version == Some(SUPPORTED_STATS_VERSION))
+    }
 }
 
 impl ReviewedVersion {
@@ -246,6 +264,16 @@ impl ReviewedVersion {
         }
         if self.size == 0 {
             return Err(invalid("size", "must be greater than zero".to_owned()));
+        }
+        if let Some(stats) = self.stats_version
+            && stats != SUPPORTED_STATS_VERSION
+        {
+            return Err(invalid(
+                "stats_version",
+                format!(
+                    "must be {SUPPORTED_STATS_VERSION} (the audited stats.txt format) when present"
+                ),
+            ));
         }
         if !is_lower_hex_64(&self.sha256) {
             return Err(invalid(
@@ -345,6 +373,37 @@ mod tests {
             Some("v0.30.1".to_owned())
         );
         assert!(list.get_by_version("9.9.9").is_none());
+    }
+
+    #[test]
+    fn only_the_audited_release_may_import_stats() {
+        let list = ReviewedList::embedded();
+        assert_eq!(
+            list.get_by_tag("v0.30.1")
+                .expect("seed entry")
+                .stats_version,
+            Some(SUPPORTED_STATS_VERSION)
+        );
+        assert!(list.audits_stats("0.30.1"));
+        assert!(!list.audits_stats("0.30.0"));
+        assert!(!list.audits_stats("9.9.9"));
+
+        // An entry without the audit is offered as an engine but never read for
+        // progress, even when its asset is otherwise reviewed.
+        let text = minimal("v1.0.0", "a.appimage", 1);
+        let list = ReviewedList::parse(&text).unwrap();
+        assert_eq!(list.get_by_tag("v1.0.0").unwrap().stats_version, None);
+        assert!(!list.audits_stats("1.0.0"));
+
+        // An unknown stats format cannot be enabled by a reviewed entry.
+        let bad = text.replace("source_url", "stats_version = 2\nsource_url");
+        assert!(matches!(
+            ReviewedList::parse(&bad),
+            Err(ListError::Invalid {
+                field: "stats_version",
+                ..
+            })
+        ));
     }
 
     #[test]

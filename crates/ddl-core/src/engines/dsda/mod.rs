@@ -49,7 +49,7 @@ pub use plan::{
 };
 pub use reviewed::{
     EMBEDDED_LIST, ListError, RELEASE_DOWNLOAD_BASE, RELEASE_TAG_BASE, ReviewedList,
-    ReviewedVersion, SOURCE_TREE_BASE,
+    ReviewedVersion, SOURCE_TREE_BASE, SUPPORTED_STATS_VERSION,
 };
 pub use runner::{
     EngineRunner, FakeEngineRunner, LaunchError, LaunchExit, LaunchOutcome, RealEngineRunner,
