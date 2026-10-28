@@ -117,6 +117,11 @@ skill is UV or higher (`best_skill >= 4`), its best kills reach the recorded tot
 (`best_secrets >= max_secrets`), with both totals known (`>= 0`). DSDA keeps each best
 independently, so the mark means "all kills and all secrets at UV", possibly across separate
 runs; it never claims a verified single-run UV-Max demo.
+A second amendment the same day adds **Kills %** and **Secrets %** columns to the per-map table:
+`floor(100 × best ÷ recorded total)`, shown as `—` when the total is unknown (`-1`) or zero;
+kills above 100% (resurrected or spawned monsters) are shown as computed, never capped. Like the
+trophy, these are the bests at the highest recorded skill, kept independently by DSDA. Items
+stay out.
 
 | ID | Decision | Status |
 | --- | --- | --- |

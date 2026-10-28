@@ -1319,3 +1319,11 @@
     best kills and best secrets reach the recorded totals (independent bests, so not a
     single-run claim). Spec 116 gains R9–R10.
   refs: [docs/decisions.md, docs/specs/116-mapset-progress.md]
+
+- date: 2026-10-28
+  type: decision
+  summary: >-
+    D-045 second amendment by the owner: the per-map table also shows Kills % and Secrets %
+    (floor of best ÷ recorded total, `—` for unknown or zero totals, kills above 100% shown as
+    computed); items stay out. Spec 116 R11.
+  refs: [docs/decisions.md, docs/specs/116-mapset-progress.md]

@@ -71,13 +71,21 @@ per-profile `-data` directory (`ProfileDirs::data`).
   unknown → no trophy). No trophy for excluded maps. Draw the mark in Slint (vector/paths or an
   existing bundled asset style), not a new raster download; it must stay legible at 1280×800
   and not be amber or launch red. Expose the rule in `ddl-core` beside the D-045 rule.
+- **R11 — Kills % and Secrets % (owner, 2026-10-28; D-045 second amendment).** Add two table
+  columns, `Kills` and `Secrets`, each `floor(100 × best ÷ max)` followed by `%`
+  (`best_kills`/`max_kills`, `best_secrets`/`max_secrets`). Show `—` when the max is `-1` or
+  `0`. Do not cap: a kills value above 100% is shown as computed. Compute in `ddl-core` beside
+  the other rules and carry the values in `MapProgress`. Items stay out. Keep every column
+  aligned and legible at 1280×800 with the UV-Max mark; shorten headers (e.g. `Skill`) or
+  rebalance widths if needed rather than shrinking text below the detail body size.
 - **R8 — Evidence.** Unit fixtures for the parser (valid, zero/unknown values, LF/CRLF, short
   and long rows, overflow, version 2, duplicates, oversize, non-ASCII, symlink escape,
   directory instead of file), path derivation (catalog, base game, custom, extras, nine WADs,
   DEH ignored, mixed case), the progress rule (skill 0 vs >0, exclusions) and lint of
   `exclude_maps`. Headless renders: a Library card with progress and its bar, Mapset detail with the
   table and summary bar (short and long lists, scrolled, at least one UV-Max row), *no stats yet*
-  and *unavailable*. Unit tests for R10: UV with all kills/secrets → trophy; HMP (3), one kill
+  and *unavailable*; the tables show the R11 columns. Unit tests for R11: exact, rounding down
+  (e.g. 199/200 → 99%), `-1` and `0` maxima → none, kills above 100%. Unit tests for R10: UV with all kills/secrets → trophy; HMP (3), one kill
   or secret short, unknown `-1` totals, a no-secrets map (`max_secrets = 0`) → trophy only when
   the rule holds. This adds production UI
   nodes, so run the ordinary test command from `docs/orchestration.md` § Verification.
