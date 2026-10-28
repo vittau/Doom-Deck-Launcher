@@ -58,12 +58,28 @@ per-profile `-data` directory (`ProfileDirs::data`).
   plain line each. No time, kills, items or secrets columns; no map titles. Follow
   `docs/design/ui.md` (amber = focus only, tone rule of spec 033, no decorative subtitles).
   Focus and the right stick behave as on other long Mapset detail content.
+- **R9 — Progress bar (owner, 2026-10-28).** Next to every `N/M` count — Library card and the
+  Mapset detail summary — draw a horizontal bar filled to `N/M` (empty at 0, full at M; no bar
+  when there is no count). It is decoration of the count, not a focusable control. Its fill must
+  be neither amber (focus only) nor the launch-action red (D-020, D-036, spec 064); pick a
+  tone from `docs/design/ui.md` that reads clearly on the card and detail backgrounds at Deck
+  LCD distance, and say which in the report.
+- **R10 — UV-Max trophy (owner, 2026-10-28; D-045 amendment).** In the per-map table, a map
+  shows a small trophy mark with the text `UV-Max` beside its ID when `best_skill >= 4`,
+  `max_kills >= 0`, `max_secrets >= 0`, `best_kills >= max_kills` and
+  `best_secrets >= max_secrets` (the parser already reads these fields; `-1` totals mean
+  unknown → no trophy). No trophy for excluded maps. Draw the mark in Slint (vector/paths or an
+  existing bundled asset style), not a new raster download; it must stay legible at 1280×800
+  and not be amber or launch red. Expose the rule in `ddl-core` beside the D-045 rule.
 - **R8 — Evidence.** Unit fixtures for the parser (valid, zero/unknown values, LF/CRLF, short
   and long rows, overflow, version 2, duplicates, oversize, non-ASCII, symlink escape,
   directory instead of file), path derivation (catalog, base game, custom, extras, nine WADs,
   DEH ignored, mixed case), the progress rule (skill 0 vs >0, exclusions) and lint of
-  `exclude_maps`. Headless renders: a Library card with progress, Mapset detail with the table
-  (short and long lists, scrolled), *no stats yet* and *unavailable*. This adds production UI
+  `exclude_maps`. Headless renders: a Library card with progress and its bar, Mapset detail with the
+  table and summary bar (short and long lists, scrolled, at least one UV-Max row), *no stats yet*
+  and *unavailable*. Unit tests for R10: UV with all kills/secrets → trophy; HMP (3), one kill
+  or secret short, unknown `-1` totals, a no-secrets map (`max_secrets = 0`) → trophy only when
+  the rule holds. This adds production UI
   nodes, so run the ordinary test command from `docs/orchestration.md` § Verification.
 
 ## Out of scope

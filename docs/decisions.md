@@ -110,6 +110,13 @@ shows a simple per-map table (map ID, completed, exits, highest recorded skill) 
 kills, items or secrets columns; progress is per selected profile, never merged across
 profiles. No playtime, last map or run history: the file does not record them. Research in
 `docs/research/dsda-stats.md` and report 115; spec 116.
+Amended by the owner the same day: progress counts also get a progress bar (Library card and
+Mapset detail summary), and a map earns a **UV-Max** trophy mark in the table when its recorded
+skill is UV or higher (`best_skill >= 4`), its best kills reach the recorded total
+(`best_kills >= max_kills`) and its best secrets reach the recorded total
+(`best_secrets >= max_secrets`), with both totals known (`>= 0`). DSDA keeps each best
+independently, so the mark means "all kills and all secrets at UV", possibly across separate
+runs; it never claims a verified single-run UV-Max demo.
 
 | ID | Decision | Status |
 | --- | --- | --- |

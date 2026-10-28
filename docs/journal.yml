@@ -1310,3 +1310,12 @@
     recipe `progress.exclude_maps`, Mapset detail gets a simple per-map table without times,
     progress is per selected profile. Spec 116 written.
   refs: [docs/decisions.md, docs/specs/116-mapset-progress.md]
+
+- date: 2026-10-28
+  type: decision
+  summary: >-
+    D-045 amended by the owner after reviewing the 116 renders: a progress bar beside every
+    N/M count, and a UV-Max trophy mark per map when the recorded skill is UV or higher and the
+    best kills and best secrets reach the recorded totals (independent bests, so not a
+    single-run claim). Spec 116 gains R9–R10.
+  refs: [docs/decisions.md, docs/specs/116-mapset-progress.md]
