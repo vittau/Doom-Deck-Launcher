@@ -45,7 +45,6 @@ mod release_state_fixture {
             if id == "auger-zenith" {
                 profile.id = "fixture-alternate".into();
                 profile.name = "Alternate".into();
-                profile.skill = 2;
                 if let Some(optional) = recipe.components.iter().find(|c| c.optional && !c.user_supplied) {
                     profile.components = vec![optional.id.clone()];
                 }

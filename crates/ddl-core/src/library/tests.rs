@@ -545,6 +545,8 @@ fn recipe_change_categories_and_combinations() {
     assert_eq!(classify(&manifest, &old, Some(&old)), RecipeStatus::Current);
     assert_eq!(classify(&manifest, &old, None), RecipeStatus::Removed);
     let mut new = old.clone();
+    new.compatibility.runtime.warp = Some(vec![5, 1]);
+    assert_eq!(classify(&manifest, &old, Some(&new)), RecipeStatus::Current);
     new.authors.push("Another author".into());
     new.compatibility.engine.status = VerificationStatus::Verified;
     new.tags.push("test".into());
@@ -612,11 +614,15 @@ fn profile_reconciliation_drops_removed_and_applies_only_new_defaults() {
     new.components[1].default = true;
     let mut profile = crate::profiles::Profile::new("run", "Run", &old.id);
     profile.components.push("addon".into());
-    profile.skill = 5;
     profile.last_played = Some(100);
     assert_eq!(reconcile_profile(&mut profile, &old, &new), ["addon"]);
     assert_eq!(profile.components, ["new-addon"]);
-    assert_eq!(profile.skill, 5);
+    assert!(
+        serde_json::to_value(&profile)
+            .unwrap()
+            .get("skill")
+            .is_none()
+    );
     assert_eq!(profile.last_played, Some(100));
 }
 

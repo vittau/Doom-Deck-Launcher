@@ -180,6 +180,18 @@ mod tests {
             version: "0.30.1".into(),
         };
         let config = DsdaConfigManager::new(temp.path().join("config")).unwrap();
+        for pistol_start in [false, true] {
+            let mut choice = profile.clone();
+            choice.pistol_start = pistol_start;
+            let plan =
+                build_plan(&base, &choice, &engine, &registry, temp.path(), &config).unwrap();
+            let argv = plan.to_command();
+            assert!(!argv.iter().any(|a| a == "-skill" || a == "-warp"));
+            assert_eq!(
+                argv.iter().filter(|a| *a == "-pistolstart").count(),
+                usize::from(pistol_start)
+            );
+        }
         let plan = build_plan(&base, &profile, &engine, &registry, temp.path(), &config).unwrap();
         let argv: Vec<_> = plan
             .to_command()
@@ -199,7 +211,6 @@ mod tests {
         );
         let mut selected = profile.clone();
         selected.iwad_path = Some(registry.entries()[1].path.clone());
-        selected.skill = 5;
         selected.pistol_start = true;
         let extra = temp.path().join("fix.deh");
         std::fs::write(&extra, b"Patch File for DeHackEd v3.0\n").unwrap();
@@ -209,7 +220,7 @@ mod tests {
             std::fs::read_link(&plan.iwad).unwrap(),
             std::fs::canonicalize(&registry.entries()[1].path).unwrap()
         );
-        assert_eq!(plan.skill.value(), 5);
+        assert_eq!(plan.skill, None);
         assert!(plan.pistol_start);
         assert_eq!(plan.patches, vec![extra.clone()]);
         std::fs::remove_file(&extra).unwrap();

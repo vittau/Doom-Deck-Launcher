@@ -16,8 +16,8 @@ use crate::catalog::{
 };
 use crate::dsda_config::{ALLOWED_KEYS, DsdaConfigManager, Overrides};
 use crate::engines::dsda::{
-    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, ScreenSize, Skill,
-    ValidationError, Warp,
+    AssignAllowlist, AssignOverride, Complevel, ComplevelWord, LaunchPlan, ScreenSize,
+    ValidationError,
 };
 use crate::iwads::{CanonicalLinks, Game as IwadsGame, IwadTable, Registry, RegistryEntry};
 use crate::library::{InstallManifest, InstalledMember};
@@ -136,14 +136,6 @@ pub fn resolve(
             ),
         });
     }
-    if !(1..=5).contains(&profile.skill) {
-        return Err(Blocker::IncompatibleChoice {
-            detail: format!(
-                "skill {} is outside DDL's accepted range 1-5",
-                profile.skill
-            ),
-        });
-    }
     let engine = engine.ok_or(Blocker::EngineMissing)?;
     if !engine.executable.is_absolute() || !engine.executable.is_file() {
         return Err(Blocker::EngineMissing);
@@ -234,10 +226,6 @@ pub fn resolve(
         }
     }
 
-    let skill = Skill::new(profile.skill).map_err(|error| Blocker::IncompatibleChoice {
-        detail: error.to_string(),
-    })?;
-    let warp = resolve_warp(recipe)?;
     let dirs = ProfileDirs::new(&iwads.data_dir, &profile.id);
     let assigns = resolve_assigns(profile)?;
 
@@ -247,8 +235,8 @@ pub fn resolve(
         files,
         patches,
         complevel: Some(complevel),
-        skill,
-        warp,
+        skill: None,
+        warp: None,
         pistol_start: profile.pistol_start,
         record: None,
         config: config.active_path(),
@@ -267,7 +255,6 @@ pub fn resolve(
         iwad_path: canonical,
         content,
         complevel,
-        skill: profile.skill,
         pistol_start: profile.pistol_start,
         engine_version: engine.version.clone(),
     };
@@ -383,20 +370,6 @@ fn vanilla_complevel(game: IwadsGame) -> u8 {
         IwadsGame::Doom2 => 2,
         IwadsGame::Tnt | IwadsGame::Plutonia => 4,
         IwadsGame::Nerve => 2,
-    }
-}
-
-fn resolve_warp(recipe: &Recipe) -> Result<Option<Warp>, Blocker> {
-    let Some(values) = recipe.compatibility.runtime.warp.as_ref() else {
-        return Ok(None);
-    };
-    let detail = |error: crate::engines::dsda::ValueRangeError| Blocker::IncompatibleChoice {
-        detail: error.to_string(),
-    };
-    match values.as_slice() {
-        [] => Ok(None),
-        [single] => Warp::single(*single).map(Some).map_err(detail),
-        [episode, map, ..] => Warp::episode_map(*episode, *map).map(Some).map_err(detail),
     }
 }
 

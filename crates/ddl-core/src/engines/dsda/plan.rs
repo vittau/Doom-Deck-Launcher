@@ -713,8 +713,8 @@ pub struct LaunchPlan {
     /// setup's **Auto**; spec 026, R2/R3). Reviewed catalog mapsets always pin
     /// one.
     pub complevel: Option<Complevel>,
-    /// The starting skill sent as `-skill`.
-    pub skill: Skill,
+    /// Optional explicit skill for recording; ordinary launches leave this unset.
+    pub skill: Option<Skill>,
     /// Optional `-warp` target.
     pub warp: Option<Warp>,
     /// Whether to reset to a pistol start on every map (`-pistolstart`).
@@ -775,8 +775,10 @@ impl LaunchPlan {
             argv.push(OsString::from("-complevel"));
             argv.push(OsString::from(complevel.argument()));
         }
-        argv.push(OsString::from("-skill"));
-        argv.push(OsString::from(self.skill.value().to_string()));
+        if let Some(skill) = self.skill {
+            argv.push(OsString::from("-skill"));
+            argv.push(OsString::from(skill.value().to_string()));
+        }
 
         if let Some(warp) = self.warp {
             argv.push(OsString::from("-warp"));
@@ -937,7 +939,9 @@ impl LaunchPlan {
             Some(complevel) => out.push_str(&format!("  complevel: {complevel}\n")),
             None => out.push_str("  complevel: (engine default)\n"),
         }
-        out.push_str(&format!("  skill: {}\n", self.skill));
+        if let Some(skill) = self.skill {
+            out.push_str(&format!("  skill: {skill}\n"));
+        }
         match self.warp {
             Some(warp) => out.push_str(&format!("  warp: {warp}\n")),
             None => out.push_str("  warp: (none)\n"),
@@ -1107,7 +1111,7 @@ mod tests {
                 "/home/deck/.local/share/ddl/content/dbp37/augzen.deh",
             )],
             complevel: Some(Complevel::DOOM_1_9),
-            skill: Skill::new(3).expect("3 is a valid skill"),
+            skill: Some(Skill::new(3).expect("3 is a valid skill")),
             warp: Some(Warp::single(1).expect("1 is a valid warp")),
             pistol_start: true,
             record: None,
@@ -1502,7 +1506,7 @@ mod tests {
             files: Vec::new(),
             patches: Vec::new(),
             complevel: Some(Complevel::DOOM_1_9),
-            skill: Skill::new(3).expect("3 is a valid skill"),
+            skill: Some(Skill::new(3).expect("3 is a valid skill")),
             warp: None,
             pistol_start: false,
             record: None,

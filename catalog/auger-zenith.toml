@@ -34,7 +34,7 @@ range = "=0.30.1"
 status = "inspected"
 
 [compatibility.runtime]
-# Optional typed defaults: warp = [episode, map], pistol_start = false.
+# Optional profile suggestion: pistol_start = false. Runtime warp is forbidden (D-044).
 
 [verification]
 status = "inspected"

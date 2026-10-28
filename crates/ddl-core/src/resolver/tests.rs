@@ -13,7 +13,7 @@ use super::*;
 use crate::catalog::{Catalog, Complevel as RecipeComplevel, ComplevelAlias, Game, Recipe};
 use crate::downloads::Sha256;
 use crate::dsda_config::DsdaConfigManager;
-use crate::engines::dsda::{AssignOverride, Warp};
+use crate::engines::dsda::AssignOverride;
 use crate::iwads::{
     FileTime, Game as IwadsGame, Registry, RegistryEntry, Source, identify::sha256_file,
 };
@@ -706,7 +706,7 @@ fn blockers_cover_not_installed_engine_missing_integrity_and_bad_overrides() {
 }
 
 #[test]
-fn warp_pistol_start_and_assign_overrides_reach_the_plan() {
+fn legacy_warp_is_ignored_and_pistol_start_and_assigns_reach_the_plan() {
     let dir = TempDir::new().unwrap();
     let data = dir.path();
     let mut recipe = embedded("auger-zenith");
@@ -718,24 +718,32 @@ fn warp_pistol_start_and_assign_overrides_reach_the_plan() {
     add_member(data, &mut manifest, &recipe, "free", "maps", b"maps");
 
     let mut profile = Profile::new("p1", "Play", "auger-zenith");
-    profile.pistol_start = true;
-    profile.overrides.insert("allow_freelook".to_owned(), 1);
-    let resolution = resolve(
-        &recipe,
-        &profile,
-        &Iwads::new(data, &registry),
-        &manifest,
-        Some(&engine),
-        &config,
-    )
-    .expect("resolve");
-    let plan = resolution.plan();
-    assert_eq!(plan.warp, Some(Warp::EpisodeMap(5, 1)));
-    assert!(plan.pistol_start);
-    assert_eq!(
-        plan.assigns,
-        vec![AssignOverride::new("allow_freelook", "1")]
-    );
+    for pistol_start in [false, true] {
+        profile.pistol_start = pistol_start;
+        profile.overrides.insert("allow_freelook".to_owned(), 1);
+        let resolution = resolve(
+            &recipe,
+            &profile,
+            &Iwads::new(data, &registry),
+            &manifest,
+            Some(&engine),
+            &config,
+        )
+        .expect("resolve");
+        let plan = resolution.plan();
+        assert_eq!(plan.warp, None);
+        assert_eq!(plan.pistol_start, pistol_start);
+        let argv = plan.to_command();
+        assert!(!argv.iter().any(|a| a == "-skill" || a == "-warp"));
+        assert_eq!(
+            argv.iter().filter(|a| *a == "-pistolstart").count(),
+            usize::from(pistol_start)
+        );
+        assert_eq!(
+            plan.assigns,
+            vec![AssignOverride::new("allow_freelook", "1")]
+        );
+    }
 }
 
 #[test]
@@ -916,7 +924,7 @@ fn summary_snapshot_for_the_three_reference_recipes() {
         .expect("resolve");
         let text = normalize(&resolution.summary().to_string(), data);
         let expected = format!(
-            "Will launch\n  base game: {} (present)\n  IWAD: <data>/iwads/{variant}/{filename} ({variant})\n  content (load order):\n    1. {label}\n       <data>/library/{id}/{release}/free/maps.wad\n  complevel: {complevel}\n  skill: 4\n  pistol start: no\n  engine: 0.30.1",
+            "Will launch\n  base game: {} (present)\n  IWAD: <data>/iwads/{variant}/{filename} ({variant})\n  content (load order):\n    1. {label}\n       <data>/library/{id}/{release}/free/maps.wad\n  complevel: {complevel}\n  pistol start: no\n  engine: 0.30.1",
             crate::resolver::game_label(recipe.base_game.game),
             release = recipe.release,
         );

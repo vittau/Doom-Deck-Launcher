@@ -1,7 +1,7 @@
 //! Per-mapset play profiles (spec 009, R4).
 //!
 //! A [`Profile`] records the player's choices for one recipe: enabled optional
-//! components (honouring exclusive groups and replacements), skill, pistol
+//! components (honouring exclusive groups and replacements), pistol
 //! start, an optional IWAD-variant override, the last played time and the
 //! transient scalar overrides spec 005 renders as `-assign`. Each profile owns
 //! its `save`, `data` and `shots` directories under `<data>/profiles/<id>/`
@@ -22,7 +22,7 @@ mod profile;
 mod store;
 
 pub use names::validate_name;
-pub use profile::{DEFAULT_SKILL, Profile, ProfileError, SCHEMA_VERSION};
+pub use profile::{Profile, ProfileError, SCHEMA_VERSION};
 pub use store::{CONFIG_DIR, DATA_DIR, ProfileDirs, ProfileStore};
 
 /// A small recipe with a main component, an exclusive replacement and a

@@ -448,6 +448,19 @@ mod tests {
         fs::write(store.root().join("p1.json"), legacy).unwrap();
         let profile = store.load("p1").expect("legacy profile loads");
         assert!(profile.extras.is_empty());
-        assert_eq!(profile.skill, 3, "existing skill stays unchanged");
+        store.save(&profile).unwrap();
+        let written = fs::read_to_string(store.root().join("p1.json")).unwrap();
+        assert!(
+            serde_json::from_str::<serde_json::Value>(&written)
+                .unwrap()
+                .get("skill")
+                .is_none()
+        );
+        assert!(
+            serde_json::to_value(&profile)
+                .unwrap()
+                .get("skill")
+                .is_none()
+        );
     }
 }

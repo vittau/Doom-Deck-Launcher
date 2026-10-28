@@ -469,7 +469,7 @@ fn every_semantic_rule_rejects_a_bad_recipe() {
         ("invalid engine version", |r| {
             r.verification.engine_version = "not a version".into()
         }),
-        ("invalid warp", |r| {
+        ("warp is not allowed (D-044)", |r| {
             r.compatibility.runtime.warp = Some(vec![100])
         }),
         ("verification date", |r| {
@@ -571,7 +571,6 @@ fn reviewed_complevels_runtime_defaults_and_dates() {
         ComplevelAlias::Mbf21,
     ] {
         r.compatibility.complevel = Complevel::Alias(alias);
-        r.compatibility.runtime.warp = Some(vec![5, 1]);
         r.compatibility.runtime.pistol_start = Some(true);
         r.verification.date = "2024-02-29".into();
         assert!(validate(&r, Path::new("sigil.toml"), &hosts()).is_empty());
@@ -2307,4 +2306,18 @@ fn screenshots_lint_reports_missing_oversize_small_and_uncredited_assets() {
             .any(|e| e.message.contains("no SOURCES.toml entry")),
         "{errors:?}"
     );
+}
+
+#[test]
+fn runtime_warp_is_forbidden_even_when_empty_or_in_range() {
+    for warp in [vec![], vec![1], vec![5, 1], vec![100]] {
+        let mut r = recipe("sigil");
+        r.compatibility.runtime.warp = Some(warp);
+        let violations = validate(&r, Path::new("sigil.toml"), &hosts());
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.key == "compatibility.runtime.warp" && v.message.contains("D-044"))
+        );
+    }
 }

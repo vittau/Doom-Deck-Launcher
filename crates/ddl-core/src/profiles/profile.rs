@@ -1,7 +1,7 @@
 //! A per-mapset play profile (spec 009, R4).
 //!
 //! A profile is the player's choices layered on top of a recipe: which optional
-//! components are enabled, skill, pistol start, an optional IWAD-variant
+//! components are enabled, pistol start, an optional IWAD-variant
 //! override, the last time it was played, and the transient scalar overrides
 //! spec 005 renders as `-assign`. It never contains recipe-required
 //! compatibility values, which stay owned by the recipe.
@@ -16,11 +16,8 @@ use crate::catalog::Recipe;
 /// Schema version written into each profile document.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// The skill a new profile starts on (Ultra-Violence).
-pub const DEFAULT_SKILL: u8 = 4;
-
 /// One saved profile.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     /// Persisted schema version.
@@ -34,8 +31,6 @@ pub struct Profile {
     /// Enabled optional component ids (main is implicit).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub components: Vec<String>,
-    /// Starting skill, 1–5.
-    pub skill: u8,
     /// Whether to reset to a pistol start on every map (`-pistolstart`).
     #[serde(default)]
     pub pistol_start: bool,
@@ -59,8 +54,53 @@ pub struct Profile {
     pub extras: Vec<crate::local::UserFile>,
 }
 
+impl<'de> Deserialize<'de> for Profile {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // Accept only the retired field in addition to the current schema. Its
+        // value is discarded by the deserializer and never reaches the model.
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Document {
+            schema_version: u32,
+            id: String,
+            name: String,
+            recipe_id: String,
+            #[serde(default)]
+            components: Vec<String>,
+            #[serde(default)]
+            pistol_start: bool,
+            #[serde(default)]
+            iwad_variant: Option<String>,
+            #[serde(default)]
+            iwad_path: Option<std::path::PathBuf>,
+            #[serde(default)]
+            last_played: Option<u64>,
+            #[serde(default)]
+            overrides: BTreeMap<String, i64>,
+            #[serde(default)]
+            extras: Vec<crate::local::UserFile>,
+            #[serde(default, rename = "skill")]
+            _retired_skill: serde::de::IgnoredAny,
+        }
+        let doc = Document::deserialize(deserializer)?;
+        Ok(Self {
+            schema_version: doc.schema_version,
+            id: doc.id,
+            name: doc.name,
+            recipe_id: doc.recipe_id,
+            components: doc.components,
+            pistol_start: doc.pistol_start,
+            iwad_variant: doc.iwad_variant,
+            iwad_path: doc.iwad_path,
+            last_played: doc.last_played,
+            overrides: doc.overrides,
+            extras: doc.extras,
+        })
+    }
+}
+
 impl Profile {
-    /// A new profile for `recipe_id` at the default skill.
+    /// A new profile for `recipe_id`.
     #[must_use]
     pub fn new(
         id: impl Into<String>,
@@ -73,7 +113,6 @@ impl Profile {
             name: name.into(),
             recipe_id: recipe_id.into(),
             components: Vec::new(),
-            skill: DEFAULT_SKILL,
             pistol_start: false,
             iwad_variant: None,
             iwad_path: None,
@@ -96,7 +135,7 @@ impl Profile {
         }
     }
 
-    /// Checks the profile against `recipe`: schema, target, skill and a legal
+    /// Checks the profile against `recipe`: schema, target and a legal
     /// component combination (exclusive groups and replacements included).
     ///
     /// # Errors
@@ -111,9 +150,6 @@ impl Profile {
                 profile: self.recipe_id.clone(),
                 recipe: recipe.id.clone(),
             });
-        }
-        if !(1..=5).contains(&self.skill) {
-            return Err(ProfileError::InvalidSkill(self.skill));
         }
         let enabled: Vec<&str> = self.components.iter().map(String::as_str).collect();
         recipe
@@ -143,8 +179,6 @@ pub enum ProfileError {
         /// The recipe id it was validated against.
         recipe: String,
     },
-    /// The skill is outside 1–5.
-    InvalidSkill(u8),
     /// The enabled components are not a legal combination.
     InvalidCombination(String),
 }
@@ -162,9 +196,6 @@ impl fmt::Display for ProfileError {
             Self::UnsafeId(id) => write!(f, "`{id}` is not a safe profile id"),
             Self::RecipeMismatch { profile, recipe } => {
                 write!(f, "this profile is for `{profile}`, not `{recipe}`")
-            }
-            Self::InvalidSkill(skill) => {
-                write!(f, "skill {skill} is outside DDL's accepted range 1-5")
             }
             Self::InvalidCombination(detail) => write!(f, "invalid component selection: {detail}"),
         }
@@ -196,33 +227,28 @@ mod tests {
         let recipe = test_recipe();
         let profile = Profile::new("p1", "Play SIGIL", "sigil-test");
         assert!(profile.validate(&recipe).is_ok());
-        assert_eq!(profile.skill, 4);
         assert!(profile.components.is_empty());
     }
 
     #[test]
-    fn loading_an_existing_skill_three_preserves_the_choice() {
-        let mut saved = Profile::new("p1", "Existing", "sigil-test");
-        saved.skill = 3;
-        let json = serde_json::to_vec(&saved).unwrap();
-        let loaded: Profile = serde_json::from_slice(&json).unwrap();
-        assert_eq!(loaded.skill, 3);
-        assert_eq!(
-            Profile::new("p2", "New custom setup", "custom-test").skill,
-            4
-        );
+    fn old_skill_is_ignored_and_not_saved() {
+        for skill in [
+            serde_json::json!(3),
+            serde_json::json!(999),
+            serde_json::json!("ignored"),
+        ] {
+            let mut document =
+                serde_json::to_value(Profile::new("p1", "Existing", "sigil-test")).unwrap();
+            document["skill"] = skill;
+            let loaded: Profile = serde_json::from_value(document).unwrap();
+            assert!(loaded.validate(&test_recipe()).is_ok());
+            assert!(serde_json::to_value(loaded).unwrap().get("skill").is_none());
+        }
     }
 
     #[test]
-    fn invalid_skill_target_and_combination_are_rejected() {
+    fn invalid_target_and_combination_are_rejected() {
         let recipe = test_recipe();
-        let mut profile = Profile::new("p1", "Play", "sigil-test");
-        profile.skill = 9;
-        assert!(matches!(
-            profile.validate(&recipe),
-            Err(ProfileError::InvalidSkill(9))
-        ));
-
         let profile = Profile::new("p1", "Play", "other");
         assert!(matches!(
             profile.validate(&recipe),
@@ -245,5 +271,12 @@ mod tests {
         assert_eq!(profile.components, ["compat"]);
         profile.set_component("compat", false);
         assert!(profile.components.is_empty());
+    }
+
+    #[test]
+    fn unknown_profile_fields_still_fail() {
+        let mut document = serde_json::to_value(Profile::new("p1", "Play", "sigil")).unwrap();
+        document["unknown"] = serde_json::json!(true);
+        assert!(serde_json::from_value::<Profile>(document).is_err());
     }
 }

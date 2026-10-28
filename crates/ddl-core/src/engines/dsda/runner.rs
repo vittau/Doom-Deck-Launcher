@@ -374,7 +374,7 @@ mod tests {
             files: Vec::new(),
             patches: Vec::new(),
             complevel: Some(Complevel::DOOM_1_9),
-            skill: Skill::new(3).expect("in range"),
+            skill: Some(Skill::new(3).expect("in range")),
             warp: None,
             pistol_start: false,
             record: None,
