@@ -530,7 +530,7 @@ fn library_owner_scene_renders() {
     );
     let cards: Vec<_> = nodes
         .iter()
-        .filter(|n| n.actionable && n.kind == 1 && n.y == 322.)
+        .filter(|n| n.actionable && n.kind == 1 && n.y == 354.)
         .collect();
     assert_eq!(cards.len(), 3, "three full-width columns");
     assert_eq!(
@@ -1779,4 +1779,220 @@ fn compact_discover_catalog_scene() {
         );
     }
     r.finish_preferences();
+}
+
+// Spec 116, R8/A3: production renders of per-mapset progress, off-screen.
+use ddl_core::progress::{MapProgress, Progress, Recorded};
+
+/// The reviewed 18-row Abandon fixture, reduced by D-045's rule.
+const ABANDON_STATS: &[u8] =
+    include_bytes!("../../ddl-core/tests/fixtures/stats/abandon-18-rows.txt");
+
+fn abandon_recorded(exclude: bool) -> Recorded {
+    let stats = ddl_core::progress::parse(ABANDON_STATS).expect("the fixture parses");
+    let exclude = if exclude {
+        vec!["MAP18".to_owned()]
+    } else {
+        Vec::new()
+    };
+    stats.progress(&exclude)
+}
+
+/// A short table: three recorded maps plus one with only no-monsters exits.
+fn short_recorded() -> Recorded {
+    let recorded = abandon_recorded(true);
+    let mut maps: Vec<MapProgress> = recorded.maps.iter().take(3).cloned().collect();
+    maps.push(
+        recorded
+            .maps
+            .iter()
+            .find(|map| map.id == "MAP13")
+            .cloned()
+            .expect("MAP13 is in the fixture"),
+    );
+    Recorded {
+        completed: maps.iter().filter(|map| map.completed).count(),
+        total: maps.len(),
+        maps,
+    }
+}
+
+/// Installs Abandon in the owner-like snapshot and gives it `progress`.
+fn abandon_with_progress(r: &mut Runtime, progress: Progress) -> usize {
+    let snapshot = r.snapshot.as_mut().unwrap();
+    let index = snapshot
+        .items
+        .iter()
+        .position(|item| item.recipe.id == "abandon")
+        .expect("the embedded catalog has Abandon");
+    let item = &mut snapshot.items[index];
+    item.manifest = Some(InstallManifest {
+        schema_version: 1,
+        recipe_id: item.recipe.id.clone(),
+        release: item.recipe.release.clone(),
+        recipe_sha256: "a".repeat(64),
+        installed_at: 0,
+        packages: vec![],
+        members: vec![],
+    });
+    item.progress = progress;
+    index
+}
+
+fn progress_labels(ui: &AppWindow) -> Vec<String> {
+    ui.get_nodes()
+        .iter()
+        .filter(|node| node.kind == 0 && !node.label.is_empty())
+        .map(|node| node.label.to_string())
+        .collect()
+}
+
+/// Spec 116 R7/A3: a Library card shows `N/M maps` for the profile.
+#[test]
+fn library_card_shows_recorded_progress() {
+    if isolated(module_path!(), "library_card_shows_recorded_progress") {
+        return;
+    }
+    use crate::services::ViewFormat;
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let index = abandon_with_progress(&mut r, Progress::Recorded(abandon_recorded(true)));
+    r.view_format = ViewFormat::Cards;
+    r.screen = Screen::Library;
+    r.focus = 10 + index as i32;
+    r.sync(&ui);
+    advance_time(20);
+
+    let line = progress_labels(&ui)
+        .into_iter()
+        .find(|label| label == "12/17 maps")
+        .expect("the card draws the exact recorded count");
+    assert!(!line.is_empty());
+    let nodes = ui.get_nodes();
+    let card = nodes
+        .iter()
+        .find(|node| node.id == 10 + index as i32 && node.kind == 1)
+        .expect("the focused card");
+    let progress_node = nodes
+        .iter()
+        .find(|node| node.kind == 0 && node.label == "12/17 maps")
+        .unwrap();
+    assert_eq!(card.h, 448., "the Library card reserves the progress row");
+    assert!(
+        progress_node.y + progress_node.h <= card.y + card.h - 28.,
+        "progress stays inside the card's 28 px inset"
+    );
+    let path = write_png("116-library-progress.png", &render(&window));
+    assert!(path.is_file());
+}
+
+/// Spec 116 R7/A3: Mapset detail's short table and a long, scrolled one.
+#[test]
+fn detail_renders_a_short_and_a_long_scrolled_table() {
+    if isolated(
+        module_path!(),
+        "detail_renders_a_short_and_a_long_scrolled_table",
+    ) {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+
+    let index = abandon_with_progress(&mut r, Progress::Recorded(short_recorded()));
+    r.selected = index;
+    r.screen = Screen::Detail;
+    r.focus = 1;
+    r.sync(&ui);
+    advance_time(20);
+    let labels = progress_labels(&ui);
+    assert!(labels.iter().any(|label| label == "Progress"));
+    assert!(
+        labels.iter().any(|label| label == "3/4 maps completed"),
+        "{labels:?}"
+    );
+    assert!(labels.iter().any(|label| label == "MAP01"));
+    assert!(labels.iter().any(|label| label == "Yes"));
+    assert!(labels.iter().any(|label| label == "MAP13"));
+    assert!(!labels.iter().any(|label| label == "MAP05"));
+    // The short table still sits below the metadata fold; bring it into view
+    // the way a player does with the right stick.
+    ui.invoke_scroll(0., 230.);
+    advance_time(20);
+    write_png("116-detail-short.png", &render(&window));
+
+    // Long: all eighteen detected rows (Abandon's MAP18 not excluded) need more
+    // than the visible pane; the right stick scrolls the read-only table.
+    r.snapshot.as_mut().unwrap().items[index].progress =
+        Progress::Recorded(abandon_recorded(false));
+    r.sync(&ui);
+    ui.invoke_scroll(0., 360.);
+    advance_time(20);
+    assert!(
+        ui.get_presented_scroll_offset() > 0.,
+        "the table scrolls with the right stick"
+    );
+    let labels = progress_labels(&ui);
+    assert!(labels.iter().any(|label| label == "12/18 maps completed"));
+    assert!(labels.iter().any(|label| label == "MAP18"));
+    write_png("116-detail-long-scrolled.png", &render(&window));
+}
+
+/// Spec 116 R7/A3: the two non-recorded states are one plain line each.
+#[test]
+fn detail_distinguishes_no_stats_yet_from_unavailable() {
+    if isolated(
+        module_path!(),
+        "detail_distinguishes_no_stats_yet_from_unavailable",
+    ) {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let index = abandon_with_progress(&mut r, Progress::NoStatsYet);
+    r.selected = index;
+    r.screen = Screen::Detail;
+    r.focus = 1;
+    r.sync(&ui);
+    advance_time(20);
+    let copy = ui.global::<crate::WiringStrings>();
+    let no_stats = copy.get_progress_no_stats();
+    assert!(
+        progress_labels(&ui)
+            .iter()
+            .any(|label| label == no_stats.as_str())
+    );
+    assert!(
+        !progress_labels(&ui)
+            .iter()
+            .any(|label| label.contains("0/")),
+        "no stats is never shown as zero completed"
+    );
+    ui.invoke_scroll(0., 140.);
+    advance_time(20);
+    write_png("116-detail-no-stats.png", &render(&window));
+
+    r.snapshot.as_mut().unwrap().items[index].progress =
+        Progress::Unavailable(ddl_core::progress::Unavailable::UnsupportedEngine {
+            version: "0.31.0".to_owned(),
+        });
+    r.sync(&ui);
+    advance_time(20);
+    let unavailable = copy.get_progress_unavailable();
+    assert!(
+        progress_labels(&ui)
+            .iter()
+            .any(|label| label == unavailable.as_str())
+    );
+    assert!(
+        !progress_labels(&ui)
+            .iter()
+            .any(|label| label == no_stats.as_str())
+    );
+    write_png("116-detail-unavailable.png", &render(&window));
 }

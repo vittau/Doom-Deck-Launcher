@@ -1426,12 +1426,18 @@ impl Runtime {
                     b.title(12., y, 1200., 38., "Base games".into(), 28.);
                     y += 44.;
                     for (index, item) in s.base_games.iter().enumerate() {
+                        let ready = text(ui, T::BaseReady);
+                        let detail = crate::runtime::progress_count(ui, &item.progress)
+                            .map_or_else(
+                                || ready.clone(),
+                                |line| format!("{ready} · {line}").into(),
+                            );
                         b.compact(
                             BASE + index as i32,
                             12.,
                             y,
                             item.base.title().into(),
-                            text(ui, T::BaseReady),
+                            detail,
                             text(ui, T::Installed),
                             false,
                         );
@@ -1465,12 +1471,19 @@ impl Runtime {
                     y += 82.;
                 }
                 for (index, setup) in s.custom.iter().enumerate() {
+                    let detail = s
+                        .custom_progress
+                        .get(&setup.id)
+                        .and_then(|progress| crate::runtime::progress_count(ui, progress));
                     b.compact(
                         CUSTOM + index as i32,
                         12.,
                         y,
                         setup.name.clone().into(),
-                        c.get_badge(),
+                        detail.map_or_else(
+                            || c.get_badge(),
+                            |line| format!("{} · {line}", c.get_badge()).into(),
+                        ),
                         Default::default(),
                         false,
                     );
@@ -1496,12 +1509,20 @@ impl Runtime {
                 for (index, setup) in snapshot.custom.iter().enumerate() {
                     let slot = shown + index;
                     let x = 12. + 408. * (slot % 3) as f32;
-                    let y = 96. + 438. * (slot / 3) as f32;
-                    b.card(CUSTOM + index as i32, x, y, 384., 410.);
+                    // Spec 116 R7: one extra row inside the card for progress.
+                    let y = 96. + 476. * (slot / 3) as f32;
+                    b.card(CUSTOM + index as i32, x, y, 384., 448.);
                     b.art(x + 20., y + 20., 344., 142., 4);
                     b.title(x + 24., y + 174., 336., 80., setup.name.clone().into(), 26.);
                     b.label(x + 24., y + 270., 336., 56., c.get_badge(), 22.);
                     b.label(x + 24., y + 340., 336., 40., c.get_order(), 20.);
+                    if let Some(line) = snapshot
+                        .custom_progress
+                        .get(&setup.id)
+                        .and_then(|progress| crate::runtime::progress_count(ui, progress))
+                    {
+                        b.label(x + 24., y + 384., 336., 26., line, 18.);
+                    }
                 }
             }
         }
@@ -1517,21 +1538,26 @@ impl Runtime {
             }
             for node in &mut b.nodes {
                 if node.y >= 96. {
-                    node.y += 226.;
+                    node.y += 258.;
                 }
             }
             b.title(12., 96., 1200., 42., "Base games".into(), 30.);
             for (index, item) in s.base_games.iter().enumerate() {
                 let x = 12. + index as f32 * 306.;
-                b.card(BASE + index as i32, x, 148., 282., 108.);
+                // Spec 116 R7: 32 px taller so the base game shows its progress
+                // below the two-line title, still inside the card inset.
+                b.card(BASE + index as i32, x, 148., 282., 140.);
                 // Spec 074: base-game cards keep the cover inside the 20 px
                 // ornamental frame with a 24 px inset and room for two lines.
                 base_art(b, x + 24., 172., 80., 60., item.base.game);
                 b.title(x + 112., 172., 146., 60., item.base.title().into(), 22.);
+                if let Some(line) = crate::runtime::progress_count(ui, &item.progress) {
+                    b.label(x + 112., 232., 146., 24., line, 18.);
+                }
             }
             b.title(
                 12.,
-                280.,
+                312.,
                 1200.,
                 42.,
                 "Mapsets and custom setups".into(),

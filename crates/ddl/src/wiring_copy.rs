@@ -242,6 +242,18 @@ pub enum Text {
     AudioCustomHelp,
     AudioTerms,
     AudioLinkFailed,
+
+    ProgressTitle,
+    ProgressCount,
+    ProgressSummary,
+    ProgressNoStats,
+    ProgressUnavailable,
+    ProgressMap,
+    ProgressDone,
+    ProgressExits,
+    ProgressSkill,
+    ProgressYes,
+    ProgressNoMark,
 }
 pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
     let s = ui.global::<WiringStrings>();
@@ -484,10 +496,35 @@ pub fn text(ui: &AppWindow, key: Text) -> slint::SharedString {
         Text::AudioCustomHelp => s.get_audio_custom_help(),
         Text::AudioTerms => s.get_audio_terms(),
         Text::AudioLinkFailed => s.get_audio_link_failed(),
+
+        Text::ProgressTitle => s.get_progress_title(),
+        Text::ProgressCount => s.get_progress_count(),
+        Text::ProgressSummary => s.get_progress_summary(),
+        Text::ProgressNoStats => s.get_progress_no_stats(),
+        Text::ProgressUnavailable => s.get_progress_unavailable(),
+        Text::ProgressMap => s.get_progress_map(),
+        Text::ProgressDone => s.get_progress_done(),
+        Text::ProgressExits => s.get_progress_exits(),
+        Text::ProgressSkill => s.get_progress_skill(),
+        Text::ProgressYes => s.get_progress_yes(),
+        Text::ProgressNoMark => s.get_progress_no_mark(),
     }
 }
 pub fn value(ui: &AppWindow, key: Text, value: impl ToString) -> slint::SharedString {
     ui.global::<WiringStrings>()
         .set_value(value.to_string().into());
+    text(ui, key)
+}
+/// Fills both placeholders of a two-value resource (e.g. `"{}/{} maps"`, spec
+/// 116 R7). The catalog's context title uses the same `value`/`other` pair.
+pub fn pair(
+    ui: &AppWindow,
+    key: Text,
+    first: impl ToString,
+    second: impl ToString,
+) -> slint::SharedString {
+    let strings = ui.global::<WiringStrings>();
+    strings.set_value(first.to_string().into());
+    strings.set_other(second.to_string().into());
     text(ui, key)
 }

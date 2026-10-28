@@ -3,7 +3,7 @@ use crate::{
     AppWindow, ViewNode,
     input::Action,
     services::{self, Command, Directory, Environment, Event, Item, Problem, Services, Snapshot},
-    wiring_copy::{Text as T, text, value},
+    wiring_copy::{Text as T, pair, text, value},
 };
 #[path = "local_ui.rs"]
 mod local_ui;
@@ -2506,13 +2506,15 @@ impl Runtime {
                             if self.view_format == services::ViewFormat::List {
                                 let y = 12. + top + 82. * visible as f32;
                                 let status = item_availability(ui, s, item);
+                                let progress = progress_count(ui, &item.progress)
+                                    .map_or_else(String::new, |line| format!(" · {line}"));
                                 b.compact(
                                     card_id(i),
                                     12.,
                                     y,
                                     display_title(&item.recipe).into(),
                                     format!(
-                                        "{} · {status} · {}",
+                                        "{} · {status}{progress} · {}",
                                         game(ui, item.recipe.base_game.game),
                                         item.recipe.authors.join(", ")
                                     )
@@ -2533,8 +2535,12 @@ impl Runtime {
                             let reduction = if discover { 70. } else { 0. };
                             // A single tag row returns 38px to the screenshot.
                             let content_shift = reduction - if discover { 38. } else { 0. };
-                            let y = 12. + top + (438. - reduction) * (visible / 3) as f32;
-                            b.card(card_id(i), x, y, 384., 410. - reduction);
+                            // Spec 116 R7: the Library card reserves one more text
+                            // row for progress; Discover keeps its exact geometry.
+                            let pitch = if discover { 438. - reduction } else { 476. };
+                            let height = if discover { 410. - reduction } else { 448. };
+                            let y = 12. + top + pitch * (visible / 3) as f32;
+                            b.card(card_id(i), x, y, 384., height);
                             // Preserve the 28px frame inset. Only Discover uses
                             // compact, single-row tags; Library retains two rows.
                             b.recipe_art(
@@ -2613,6 +2619,10 @@ impl Runtime {
                                 b.discover_chips(&labels, x + 28., y + 314. - content_shift, 328.);
                             } else {
                                 b.chips(&labels, x + 28., y + 314., 328.);
+                                // Below the two tag rows, inside the 28 px inset.
+                                if let Some(line) = progress_count(ui, &item.progress) {
+                                    b.label(x + 28., y + 384., 328., 26., line, 18.);
+                                }
                             }
                         }
                         if discover && self.category == Category::Favorites && shown.is_empty() {
@@ -2847,15 +2857,104 @@ impl Runtime {
                             20.,
                         );
                         b.button(6, 1052., y + 52., 136., text(ui, T::EditProfile), false);
+                        // Spec 116 R7: a short summary plus the plain per-map table
+                        // for this profile. The table is read-only content: focus
+                        // stays on the actions and the right stick scrolls it.
+                        let mut progress_y = y + 146.;
+                        b.label(428., progress_y, 760., 30., text(ui, T::ProgressTitle), 22.);
+                        progress_y += 34.;
+                        match &item.progress {
+                            ddl_core::progress::Progress::Recorded(recorded) => {
+                                b.label(
+                                    428.,
+                                    progress_y,
+                                    760.,
+                                    30.,
+                                    pair(
+                                        ui,
+                                        T::ProgressSummary,
+                                        recorded.completed,
+                                        recorded.total,
+                                    ),
+                                    22.,
+                                );
+                                progress_y += 34.;
+                                for (x, width, label) in [
+                                    (428., 110., T::ProgressMap),
+                                    (548., 90., T::ProgressDone),
+                                    (648., 100., T::ProgressExits),
+                                    (758., 200., T::ProgressSkill),
+                                ] {
+                                    b.label(x, progress_y, width, 24., text(ui, label), 18.);
+                                    b.nodes.last_mut().unwrap().tone = 1;
+                                }
+                                progress_y += 28.;
+                                for map in &recorded.maps {
+                                    let mark = if map.completed {
+                                        text(ui, T::ProgressYes)
+                                    } else {
+                                        text(ui, T::ProgressNoMark)
+                                    };
+                                    let skill = map.best_skill.map_or_else(
+                                        || text(ui, T::ProgressNoMark),
+                                        |skill| skill.to_string().into(),
+                                    );
+                                    b.label(
+                                        428.,
+                                        progress_y,
+                                        110.,
+                                        28.,
+                                        map.id.clone().into(),
+                                        20.,
+                                    );
+                                    b.label(548., progress_y, 90., 28., mark, 20.);
+                                    b.label(
+                                        648.,
+                                        progress_y,
+                                        100.,
+                                        28.,
+                                        map.total_exits.to_string().into(),
+                                        20.,
+                                    );
+                                    b.label(758., progress_y, 200., 28., skill, 20.);
+                                    progress_y += 30.;
+                                }
+                            }
+                            ddl_core::progress::Progress::NoStatsYet => {
+                                b.label(
+                                    428.,
+                                    progress_y,
+                                    760.,
+                                    32.,
+                                    text(ui, T::ProgressNoStats),
+                                    20.,
+                                );
+                                b.nodes.last_mut().unwrap().tone = 1;
+                                progress_y += 36.;
+                            }
+                            ddl_core::progress::Progress::Unavailable(_) => {
+                                b.label(
+                                    428.,
+                                    progress_y,
+                                    760.,
+                                    32.,
+                                    text(ui, T::ProgressUnavailable),
+                                    20.,
+                                );
+                                b.nodes.last_mut().unwrap().tone = 1;
+                                progress_y += 36.;
+                            }
+                        }
+                        let page_y = progress_y + 6.;
                         b.label(
                             428.,
-                            y + 142.,
+                            page_y,
                             760.,
                             28.,
                             item.recipe.page.clone().into(),
                             20.,
                         );
-                        let mut notes_y = y + 170.;
+                        let mut notes_y = page_y + 28.;
                         let credits = crate::screenshots::recipe_credits(&item.recipe);
                         if !credits.is_empty() {
                             b.label(
@@ -4429,6 +4528,16 @@ fn item_availability(ui: &AppWindow, snapshot: &Snapshot, item: &Item) -> Shared
         },
     )
 }
+/// Spec 116, R7: "N/M maps" for a Library card, only when a valid stats file was
+/// read for the selected profile. *No stats yet* and *unavailable* show nothing.
+pub(crate) fn progress_count(
+    ui: &AppWindow,
+    progress: &ddl_core::progress::Progress,
+) -> Option<SharedString> {
+    progress
+        .recorded()
+        .map(|recorded| pair(ui, T::ProgressCount, recorded.completed, recorded.total))
+}
 fn base_ready(s: &Snapshot, r: &ddl_core::catalog::Recipe) -> bool {
     s.iwads.iter().any(|e| {
         e.game
@@ -5358,6 +5467,7 @@ mod category_tests {
             automatic_folders: vec![],
             custom: vec![],
             custom_profiles: vec![],
+            custom_progress: Default::default(),
             local_issues: Default::default(),
             profiles_with_saves: Default::default(),
             tags: catalog.tags.clone(),
@@ -5596,6 +5706,7 @@ mod startup_and_pistol_tests {
                 profiles: vec![],
                 last_played: None,
                 launch: Ok(summary),
+                progress: ddl_core::progress::Progress::NoStatsYet,
                 favorite: false,
                 recipe_status: RecipeStatus::Current,
                 change_summary: String::new(),
@@ -5606,6 +5717,7 @@ mod startup_and_pistol_tests {
             automatic_folders: vec![],
             custom: vec![],
             custom_profiles: vec![],
+            custom_progress: Default::default(),
             local_issues: Default::default(),
             profiles_with_saves: Default::default(),
             tags: catalog.tags.clone(),
