@@ -10,11 +10,10 @@ succeeded on the tag source; the tarball matches its published SHA-256. Every ga
 at DSDA-Doom's title and menu: DDL has no skill setting and passes neither `-skill` nor
 `-warp` (114, D-044); pistol start is unchanged. Deck checks MM1–MM4 are pending.
 
-**Stats research (115) done; owner decision pending.** DSDA-Doom's per-profile `stats.txt`
-supports a read-only "maps exited" count and per-map table for the selected profile, with
-DSDA's detected PWAD maps as the denominator; no playtime, last map or run history. Scope
-proposal and draft requirements in [report115](reports/115-dsda-stats-research.md). No
-implementation spec until the owner approves the scope.
+**Per-mapset progress (116, D-045):** the owner approved the scope from report 115 —
+completed maps need a recorded skill, total = DSDA's detected PWAD maps minus an optional recipe
+`progress.exclude_maps`, a simple per-map table on Mapset detail without times, per selected
+profile. Spec 116 is ready for implementation.
 
 ### Shipped
 

@@ -100,6 +100,17 @@ them when a new game sets the skill (`skill_info.c:170–241`, `g_game.c:1229–
 Recipes may no longer prescribe a starting map (`compatibility.runtime.warp`); no catalog
 recipe used it. Spec 114.
 
+**D-045 — Read-only per-mapset progress from DSDA-Doom's stats (Accepted, owner, 2026-10-28).**
+DDL shows progress read from the `stats.txt` that DSDA-Doom writes in each profile's `-data`
+directory, never writing, repairing or deleting it. Owner choices: a map counts as completed
+only when DSDA recorded a skill for it (`best_skill > 0`, which excludes no-monsters exits);
+the total is DSDA's detected map list for the loaded PWADs, minus maps a recipe lists in an
+optional `progress.exclude_maps` (for ending or test maps, e.g. Abandon's MAP18); Mapset detail
+shows a simple per-map table (map ID, completed, exits, highest recorded skill) without time,
+kills, items or secrets columns; progress is per selected profile, never merged across
+profiles. No playtime, last map or run history: the file does not record them. Research in
+`docs/research/dsda-stats.md` and report 115; spec 116.
+
 | ID | Decision | Status |
 | --- | --- | --- |
 | D-001 | **License GPL-3.0-or-later.** Slint is used under its GPLv3 option, so no Slint attribution badge is required. | Accepted |

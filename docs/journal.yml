@@ -1301,3 +1301,12 @@
     setting (114, D-044). Release 40735115609, signed Flatpak 40735115503 (site version 0.0.19)
     and CI 40733494293 succeeded; the tarball matches its SHA-256. Deck checks MM1–MM4 pending.
   refs: [docs/releases/v0.0.19-menu.md, docs/status.md, docs/deck-testing.md]
+
+- date: 2026-10-28
+  type: decision
+  summary: >-
+    D-045: the owner approved read-only per-mapset progress from DSDA-Doom's stats.txt — a map
+    counts only with a recorded skill, the total is DSDA's detected PWAD maps minus an optional
+    recipe `progress.exclude_maps`, Mapset detail gets a simple per-map table without times,
+    progress is per selected profile. Spec 116 written.
+  refs: [docs/decisions.md, docs/specs/116-mapset-progress.md]
