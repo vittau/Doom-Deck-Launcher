@@ -99,28 +99,41 @@ ending map through the new `[progress] exclude_maps` recipe field, and the catal
   a later denominator because DSDA stores them independently.
 - `MapProgress` carries the `uv_max` flag for non-excluded rows only (excluded maps never reach
   the table, so they cannot earn a trophy).
-- The table reserves a wider ID column (`Map` 428–628) and draws, for a UV-Max row, an 18 px
-  vector trophy at x=504 plus the text `UV-Max` at x=528, both in the success token. The mark is
-  a Slint `Path` (a cup with two handles and a base in a 24×24 viewbox) — no raster asset, no
-  new download. `Done`, `Exits` and `Highest skill` move to 640/736/846 so nothing overlaps.
+- The table reserves a wider ID column and draws, for a UV-Max row, an 18 px vector trophy at
+  x=500 plus the text `UV-Max` at x=522, both in the success token. The mark is a Slint `Path` (a
+  cup with two handles and a base in a 24×24 viewbox) — no raster asset, no new download.
+
+### Kills % and Secrets % (R11)
+
+- `Row::kills_percent` and `Row::secrets_percent` sit beside the other two rules: both are
+  `floor(100 × best ÷ max)` (`best_kills`/`max_kills`, `best_secrets`/`max_secrets`) and return
+  `None` when the total is unknown (`-1`) or zero. The value is not capped, so resurrected or
+  spawned monsters can read above 100% (`120/100` → `120%`); the arithmetic uses `u64`, so no
+  parsed value can overflow.
+- `MapProgress` carries `kills_percent` and `secrets_percent` as `Option<u64>`; the table renders
+  `N%`, or the plain `—` for an unknown/zero total. Items stay out.
+- The table now has six columns at x 428/626/700/774/848/946: `Map` (with the trophy),
+  `Done`, `Exits`, `Skill`, `Kills`, `Secrets`. The `Highest skill` header shortens to `Skill`
+  (R11 allows it) instead of shrinking 20 px body text; column widths leave the whole table
+  inside the detail panel at 1280×800.
 
 No dependency was added.
 
 ## Verification
 
-Merged local `main` (`9880b0a`, "Add a progress bar and a UV-Max mark to spec 116") before the
-final checks. All Rust builds used `--jobs 2`, one Cargo build at a time.
+Merged local `main` (`d829689`, "Add kills and secrets percentages to spec 116") before the final
+checks. All Rust builds used `--jobs 2`, one Cargo build at a time.
 
 | Check | Result / real output |
 | --- | --- |
 | `cargo fmt --all --check` | Exit 0, no output. |
-| `cargo clippy --workspace --all-targets --jobs 2 -- -D warnings` | Exit 0: `Finished dev profile [unoptimized + debuginfo] target(s) in 10.42s`; no warnings. |
-| `cargo test -p ddl-core --jobs 2` | `674 passed; 0 failed` in the core unit group, plus every integration group (0 failures). |
+| `cargo clippy --workspace --all-targets --jobs 2 -- -D warnings` | Exit 0: `Finished dev profile [unoptimized + debuginfo] target(s) in 15.95s`; no warnings. |
+| `cargo test -p ddl-core --jobs 2` | `675 passed; 0 failed` in the core unit group, plus every integration group (0 failures). |
 | `cargo test -p ddl --jobs 2 services::progress_tests` | `2 passed; 0 failed`: the launch's own file list, Abandon's 12/17 rule, engine gate and base-game canonical path. |
-| `cargo test -p ddl-core --jobs 2 --lib progress::` | `19 passed; 0 failed`, including the R10 trophy matrix. |
+| `cargo test -p ddl-core --jobs 2 --lib progress::` | `20 passed; 0 failed`, including the R10 trophy matrix and the R11 percentage matrix. |
 | `cargo test -p ddl --jobs 2 "headless::library::"` | All Library journey and render tests pass, including the three progress cases and their bar/trophy assertions. |
 | `target/debug/ddl catalog lint catalog` | Exit 0: `Catalog lint passed (offline).` |
-| `cargo test --workspace --locked --jobs 2 -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots` | Exit 0: **1,045 passed**, 0 failed, 0 ignored across 23 unit/integration/doctest groups; DDL unit group `262 passed; 0 failed; 10 filtered out`, core unit group `674 passed; 0 failed`. |
+| `cargo test --workspace --locked --jobs 2 -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots` | Exit 0: **1,046 passed**, 0 failed, 0 ignored across 23 unit/integration/doctest groups; DDL unit group `262 passed; 0 failed; 10 filtered out`, core unit group `675 passed; 0 failed`. |
 
 ### Core evidence (A1)
 
@@ -155,18 +168,20 @@ was opened and no screen was captured. The new cases live in
   Library card with `12/17 maps` and its success-filled bar, inside the 28 px card inset.
 - `target/headless/detail_renders_a_short_and_a_long_scrolled_table/116-detail-short.png` —
   detail with the `3/4 maps completed` summary bar and a four-row table: MAP01–MAP03 carry the
-  trophy and `UV-Max`, MAP13 has no skill and no mark.
+  trophy and `UV-Max` with `100%` kills/secrets, MAP13 has no skill, no mark, `0%` kills and `—`
+  secrets; headers are `Map`, `Done`, `Exits`, `Skill`, `Kills`, `Secrets`.
 - `target/headless/detail_renders_a_short_and_a_long_scrolled_table/116-detail-long-scrolled.png`
   — all eighteen detected rows after a right-stick scroll (`12/18 maps completed`); the twelve
-  UV-Max rows carry the mark and MAP13–MAP18 do not.
+  UV-Max rows carry the mark and MAP13–MAP18 do not, and the percentage columns stay aligned
+  (`100%`/`0%`/`—`).
 - `target/headless/detail_distinguishes_no_stats_yet_from_unavailable/116-detail-no-stats.png` —
   one plain line, no `0/N`.
 - `target/headless/detail_distinguishes_no_stats_yet_from_unavailable/116-detail-unavailable.png`
   — one plain line for an unaudited engine.
 
 All five PNGs were opened and inspected: the bars read clearly at 1280×800, the trophy is
-legible as a cup, columns stay aligned after the wider ID column, the table scrolls, focus
-remains on the actions and amber is only the focus ring. The owner/coordinator must review them before
+legible as a cup, all six columns stay aligned in both tables, the table scrolls, focus remains
+on the actions and amber is only the focus ring. The owner/coordinator must review them before
 merge (visible UI change, A3).
 
 ### Deck (A5) — Needs Deck Validation
@@ -199,7 +214,7 @@ final run above is the green one.
   `best_skill > 0` yields `12/17` with Abandon's exclusion in both the core test and the
   services wiring test. R10's trophy matrix (UV and Nightmare full bests, HMP, one kill short,
   one secret short, each unknown `-1` total, a `max_secrets = 0` map) passes and the fixture's
-  MAP01 is a trophy while MAP13 is not.
+  MAP01 is a trophy while MAP13 is not, and the R11 percentage matrix passes.
 - **A2 passed:** lint accepts Abandon's `exclude_maps` and rejects malformed/duplicate IDs; the
   bundle's `min_ddl_version` is raised to `0.0.20`; the real catalog lints clean.
 - **A3 passed (worker evidence):** the five PNGs above were rendered headlessly and inspected;
