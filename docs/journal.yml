@@ -1293,3 +1293,11 @@
     four headless renders reviewed. Deck checks MM1–MM4 added; V1, U6 and U7 superseded.
   refs: [docs/specs/114-launch-at-dsda-menu.md, docs/reports/114-launch-at-dsda-menu.md,
     docs/deck-testing.md]
+
+- date: 2026-10-28
+  type: release
+  summary: >-
+    Published v0.0.19-menu (84ca7b5): every game opens at DSDA-Doom's menu and DDL has no skill
+    setting (114, D-044). Release 40735115609, signed Flatpak 40735115503 (site version 0.0.19)
+    and CI 40733494293 succeeded; the tarball matches its SHA-256. Deck checks MM1–MM4 pending.
+  refs: [docs/releases/v0.0.19-menu.md, docs/status.md, docs/deck-testing.md]

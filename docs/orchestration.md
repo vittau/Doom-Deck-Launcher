@@ -242,9 +242,12 @@ below are the ones most easily lost between sessions.
 
 ## Open follow-ups (keep this list current)
 
-- Published app: `v0.0.18-favorites` (`3abf320`): pinned Discover categories and compact cards
-  (111, Deck-validated PD1–PD3 on 0.0.17), installed-and-favorites-first order (112, D-043) and
-  Favorites focus after unfavoriting (113). Owner validated DF1–DF2 on the Deck (2026-10-26).
+- Published app: `v0.0.19-menu` (`84ca7b5`): games open at DSDA-Doom's menu, no skill setting
+  (114, D-044); Deck checks MM1–MM4 pending. 0.0.18's Discover order (112–113) was
+  Deck-validated DF1–DF2 (2026-10-26).
+- Stats (115): research merged; waiting for the owner's scope decision (count policy,
+  detected-map denominator plus an optional recipe correction, no time columns) before any
+  implementation spec.
 - Outreach: plan in `docs/outreach.md`; repository gates done, owner did a fresh `.flatpakref`
   install. r/DoomMods and Doomworld (Source Ports) posted 2026-10-26; r/DoomMods removed it and
   Doomworld warned the account for "AI slop" (posting restricted). Outreach is on hold until the

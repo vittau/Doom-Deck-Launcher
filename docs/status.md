@@ -1,14 +1,20 @@
 # Status
 
-## Current checkpoint — 2026-10-23
+## Current checkpoint — 2026-10-28
 
-**Available for Deck testing:** [v0.0.18-favorites](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.18-favorites),
-immutable source `3abf320913b1cc1b5e0bc2d9855f5d7b743fb340`, published as a Linux tarball
+**Available for Deck testing:** [v0.0.19-menu](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.19-menu),
+immutable source `84ca7b533695e609df5c2b615f3858ff65b94a83`, published as a Linux tarball
 and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
-Release 40034374499, signed Flatpak 40034374595 (site version 0.0.18) and CI 40034372229
-succeeded on the tag source; the tarball matches its published SHA-256. It adds Discover's
-installed-and-favorites-first order (112, D-043) and the Favorites focus fix (113) on top of
-0.0.17's pinned categories and compact cards (111, Deck-validated PD1–PD3).
+Release 40735115609, signed Flatpak 40735115503 (site version 0.0.19) and CI 40733494293
+succeeded on the tag source; the tarball matches its published SHA-256. Every game now opens
+at DSDA-Doom's title and menu: DDL has no skill setting and passes neither `-skill` nor
+`-warp` (114, D-044); pistol start is unchanged. Deck checks MM1–MM4 are pending.
+
+**Stats research (115) done; owner decision pending.** DSDA-Doom's per-profile `stats.txt`
+supports a read-only "maps exited" count and per-map table for the selected profile, with
+DSDA's detected PWAD maps as the denominator; no playtime, last map or run history. Scope
+proposal and draft requirements in [report115](reports/115-dsda-stats-research.md). No
+implementation spec until the owner approves the scope.
 
 ### Shipped
 

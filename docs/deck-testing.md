@@ -319,7 +319,7 @@ Owner-validated on the Deck with 0.0.18 (2026-10-26); see [report112](reports/11
 ## Games open at DSDA-Doom's menu — source after spec 114
 
 **Needs Deck Validation:** see [report114](reports/114-launch-at-dsda-menu.md) (D-044). DDL no
-longer has a skill setting and passes neither `-skill` nor `-warp`.
+longer has a skill setting and passes neither `-skill` nor `-warp`. Published in `v0.0.19-menu`.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
