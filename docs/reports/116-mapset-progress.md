@@ -79,22 +79,48 @@ ending map through the new `[progress] exclude_maps` recipe field, and the catal
   `wiring_copy.rs`; a two-placeholder `pair` helper sets `{}/{}` without concatenating
   fragments. Amber remains focus-only; no decorative subtitles were added.
 
+### Progress bar (R9)
+
+- The existing `ViewNode` kind `6` (previously unused) now draws the bar: a `deep` track and a
+  proportional fill, with `art` carrying the filled permille. The fill uses the **success**
+  token `#88D9B0` (`Tokens.success`), with the count text as its explicit meaning; the track is
+  **deep** `#120C0D`. Neither amber (focus only) nor the launch red is involved.
+- The bar sits beside the count on the catalog Library card line (`12/17 maps` + bar, inside
+  the 28 px inset) and beside the Mapset detail summary (`12/17 maps completed` + bar). It is a
+  plain `ViewNode`, never actionable, so focus skips it and the right stick/scroll behaviour is
+  unchanged. With no count (*no stats yet* or *unavailable*) no bar is created; 0 filled renders
+  as an empty track.
+
+### UV-Max trophy (R10)
+
+- `Row::uv_max` in `ddl-core` implements the D-045 amendment beside `Row::completed`:
+  `best_skill >= 4`, `max_kills >= 0`, `max_secrets >= 0`, `best_kills >= max_kills` and
+  `best_secrets >= max_secrets`. Totals of `-1` are unknown and never qualify; bests may exceed
+  a later denominator because DSDA stores them independently.
+- `MapProgress` carries the `uv_max` flag for non-excluded rows only (excluded maps never reach
+  the table, so they cannot earn a trophy).
+- The table reserves a wider ID column (`Map` 428–628) and draws, for a UV-Max row, an 18 px
+  vector trophy at x=504 plus the text `UV-Max` at x=528, both in the success token. The mark is
+  a Slint `Path` (a cup with two handles and a base in a 24×24 viewbox) — no raster asset, no
+  new download. `Done`, `Exits` and `Highest skill` move to 640/736/846 so nothing overlaps.
+
 No dependency was added.
 
 ## Verification
 
-Merged local `main` (`06b42ec`, "Decide and specify per-mapset progress…") before the final
-checks; it was already up to date. All Rust builds used `--jobs 2`, one Cargo build at a time.
+Merged local `main` (`9880b0a`, "Add a progress bar and a UV-Max mark to spec 116") before the
+final checks. All Rust builds used `--jobs 2`, one Cargo build at a time.
 
 | Check | Result / real output |
 | --- | --- |
 | `cargo fmt --all --check` | Exit 0, no output. |
-| `cargo clippy --workspace --all-targets --jobs 2 -- -D warnings` | Exit 0: `Finished dev profile [unoptimized + debuginfo] target(s) in 16.90s`; no warnings. |
-| `cargo test -p ddl-core --jobs 2` | `673 passed; 0 failed` in the core unit group, plus every integration group (0 failures). |
+| `cargo clippy --workspace --all-targets --jobs 2 -- -D warnings` | Exit 0: `Finished dev profile [unoptimized + debuginfo] target(s) in 10.42s`; no warnings. |
+| `cargo test -p ddl-core --jobs 2` | `674 passed; 0 failed` in the core unit group, plus every integration group (0 failures). |
 | `cargo test -p ddl --jobs 2 services::progress_tests` | `2 passed; 0 failed`: the launch's own file list, Abandon's 12/17 rule, engine gate and base-game canonical path. |
-| `cargo test -p ddl --jobs 2 "headless::library::"` | All Library journey and render tests pass, including the three new progress cases. |
+| `cargo test -p ddl-core --jobs 2 --lib progress::` | `19 passed; 0 failed`, including the R10 trophy matrix. |
+| `cargo test -p ddl --jobs 2 "headless::library::"` | All Library journey and render tests pass, including the three progress cases and their bar/trophy assertions. |
 | `target/debug/ddl catalog lint catalog` | Exit 0: `Catalog lint passed (offline).` |
-| `cargo test --workspace --locked --jobs 2 -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots` | Exit 0: **1,044 passed**, 0 failed, 0 ignored across 23 unit/integration/doctest groups; DDL unit group `262 passed; 0 failed; 10 filtered out`, core unit group `673 passed; 0 failed`. |
+| `cargo test --workspace --locked --jobs 2 -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots` | Exit 0: **1,045 passed**, 0 failed, 0 ignored across 23 unit/integration/doctest groups; DDL unit group `262 passed; 0 failed; 10 filtered out`, core unit group `674 passed; 0 failed`. |
 
 ### Core evidence (A1)
 
@@ -106,7 +132,10 @@ row/byte/line limits; catalog/base/custom/extras paths; nine WADs (first eight);
 mixed case; missing file → *no stats yet*; invalid file and unaudited engine → *unavailable*;
 oversize file; directory instead of a file; symlink escape refused and a contained symlink read.
 The path derivation is also checked in `crates/ddl/src/services.rs` against the real Abandon
-recipe and a base game with an extra WAD plus a patch.
+recipe and a base game with an extra WAD plus a patch. R10's matrix covers UV (4), Nightmare (5),
+HMP (3), one kill short, one secret short, each unknown `-1` total, a no-secrets map
+(`max_secrets = 0`) and independent bests above a later denominator; the fixture's MAP01 earns
+the mark and MAP13 does not.
 
 ### Lint evidence (A2)
 
@@ -123,18 +152,21 @@ was opened and no screen was captured. The new cases live in
 `crates/ddl/src/headless_library.rs` and write:
 
 - `target/headless/library_card_shows_recorded_progress/116-library-progress.png` — Abandon's
-  Library card with `12/17 maps`, inside the 28 px card inset.
+  Library card with `12/17 maps` and its success-filled bar, inside the 28 px card inset.
 - `target/headless/detail_renders_a_short_and_a_long_scrolled_table/116-detail-short.png` —
-  detail with a four-row table (`3/4 maps completed`, MAP13 completed no with `—` skill).
+  detail with the `3/4 maps completed` summary bar and a four-row table: MAP01–MAP03 carry the
+  trophy and `UV-Max`, MAP13 has no skill and no mark.
 - `target/headless/detail_renders_a_short_and_a_long_scrolled_table/116-detail-long-scrolled.png`
-  — all eighteen detected rows after a right-stick scroll (`12/18 maps completed`).
+  — all eighteen detected rows after a right-stick scroll (`12/18 maps completed`); the twelve
+  UV-Max rows carry the mark and MAP13–MAP18 do not.
 - `target/headless/detail_distinguishes_no_stats_yet_from_unavailable/116-detail-no-stats.png` —
   one plain line, no `0/N`.
 - `target/headless/detail_distinguishes_no_stats_yet_from_unavailable/116-detail-unavailable.png`
   — one plain line for an unaudited engine.
 
-All five PNGs were opened and inspected: columns stay aligned, the table scrolls, focus remains
-on the actions and amber is only the focus ring. The owner/coordinator must review them before
+All five PNGs were opened and inspected: the bars read clearly at 1280×800, the trophy is
+legible as a cup, columns stay aligned after the wider ID column, the table scrolls, focus
+remains on the actions and amber is only the focus ring. The owner/coordinator must review them before
 merge (visible UI change, A3).
 
 ### Deck (A5) — Needs Deck Validation
@@ -152,14 +184,22 @@ in particular:
   and that an unwritable `-data` directory shows *unavailable* rather than a crash.
 - Compare normal exit, controlled engine error and force-stop; corrupt/truncate a disposable
   fixture and confirm *unavailable*; check the right stick scrolls an 18-row table on the Deck.
-- Confirm the wording is understandable at handheld distance and that no-monsters exits are not
-  presented as completed maps.
+- Confirm the wording, the bar fill and the trophy are legible at handheld distance, and that
+  no-monsters exits are not presented as completed maps; check a UV-Max row and one that is not
+  side by side.
+
+`crates/ddl/tests/ui_strings.rs` now recognises a Slint `Path` `commands:` string as vector
+geometry data rather than player copy (spec 116 R10); every visible literal still goes through
+`@tr`. The first ordinary-suite attempt failed only on that lint, before the exception; the
+final run above is the green one.
 
 ### Acceptance coverage
 
 - **A1 passed:** the R8 unit tests above pass; the 18-row fixture with 12 rows at
   `best_skill > 0` yields `12/17` with Abandon's exclusion in both the core test and the
-  services wiring test.
+  services wiring test. R10's trophy matrix (UV and Nightmare full bests, HMP, one kill short,
+  one secret short, each unknown `-1` total, a `max_secrets = 0` map) passes and the fixture's
+  MAP01 is a trophy while MAP13 is not.
 - **A2 passed:** lint accepts Abandon's `exclude_maps` and rejects malformed/duplicate IDs; the
   bundle's `min_ddl_version` is raised to `0.0.20`; the real catalog lints clean.
 - **A3 passed (worker evidence):** the five PNGs above were rendered headlessly and inspected;
@@ -177,6 +217,9 @@ in particular:
 - **Detected-map qualifier.** The card and summary say `N/M maps` without the research's
   “detected maps” qualifier, to keep the card line short. Report 115 recommended the qualifier;
   if the owner wants it, it belongs in the detail summary only.
+- **Base/custom cards.** Their compact cards keep a text-only `N/M maps`: R9 names the Library
+  card line and the detail summary, and the 282 px base-game card has no room beside its count
+  for a bar. Custom cards could take one in the same line if the owner wants it.
 - **Base/custom detail tables.** R7 asks for the table on Mapset detail only; base-game and
   custom setup cards show the count but their setup screens do not show a table yet.
 - **Exclusion candidates noticed (not added, per the brief):** `arrival` documents MAP10 as the
