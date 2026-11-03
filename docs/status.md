@@ -2,12 +2,11 @@
 
 ## Current checkpoint — 2026-11-03
 
-**Available for Deck testing:** [v0.0.20-progress](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.20-progress),
-immutable source `4ff47e999090ff6095312a7fdd501a07645cb7af`, published as a Linux tarball
-and signed Flatpak at [doomdecklauncher.com](https://doomdecklauncher.com/).
-Release 40764580767, signed Flatpak 40764581060 (site version 0.0.20) and CI 40762808667
-succeeded on the tag source; the tarball matches its published SHA-256. The `catalog` branch
-(c87c72e) publishes 120 files from the same source with `min_ddl_version` 0.0.20.
+**Available for Deck testing:** [v0.0.21-polish](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.21-polish),
+immutable source `927275f`, published as a Linux tarball and signed Flatpak at
+[doomdecklauncher.com](https://doomdecklauncher.com/). Release 41689529706, signed Flatpak
+41689529480 (site version 0.0.21), CI 41689500183 and packaging metadata 41689500195 succeeded
+on the tag source; the tarball matches its published SHA-256. The catalog floor stays 0.0.20.
 
 - **Per-mapset progress (116, D-045 with two owner amendments):** read-only from DSDA-Doom's
   per-profile `stats.txt` (engine 0.30.1 only): Library `N/M maps` with a bar, Mapset detail
@@ -21,11 +20,11 @@ succeeded on the tag source; the tarball matches its published SHA-256. The `cat
   monsters; the release text's "1 ending") and Haste MAP17 (one thing, "Thanks for Playing")
   are excluded from progress totals, read from the hash-verified WADs' THINGS lumps. The
   catalog floor stays 0.0.20, so 0.0.20 users get them from the catalog branch; no Deck check.
-- **Progress polish (117, merged on `main` 8c7ecc7, not yet released):** Mapset detail shows
+- **Progress polish (117, since 0.0.21):** Mapset detail shows
   the progress summary above the description (visible without scrolling) and contains long
   profile summaries; custom-setup cards draw the bar; base-game and custom-setup screens show
   the same summary and per-map table through one shared builder. fmt, Clippy and the ordinary
-  suite (1049 tests) passed; headless PNGs reviewed. Deck checks PP1–PP3 after the next release.
+  suite (1049 tests) passed; headless PNGs reviewed. Deck checks PP1–PP3 pending.
 
 ### Shipped
 

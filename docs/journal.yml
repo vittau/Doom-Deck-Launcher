@@ -1376,3 +1376,11 @@
     PNGs reviewed after one spacing fix. Not yet released; Deck checks PP1–PP3.
   refs: [docs/specs/117-progress-polish.md, docs/reports/117-progress-polish.md,
     docs/deck-testing.md]
+
+- date: 2026-11-03
+  type: release
+  summary: >-
+    Published v0.0.21-polish (927275f): progress polish from spec 117. Release 41689529706,
+    signed Flatpak 41689529480 (site version 0.0.21), CI 41689500183 and packaging metadata
+    41689500195 succeeded; the tarball matches its SHA-256. Deck checks PP1–PP3 pending.
+  refs: [docs/releases/v0.0.21-polish.md, docs/status.md, docs/deck-testing.md]
