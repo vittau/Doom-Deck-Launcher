@@ -345,8 +345,8 @@ checks in [report115](reports/115-dsda-stats-research.md) (D-045). Published in
 
 ## Progress polish — source after spec 117
 
-**Needs Deck Validation:** see [report117](reports/117-progress-polish.md). Merged on `main`
-(8c7ecc7); not yet in a release.
+**Needs Deck Validation:** see [report117](reports/117-progress-polish.md). Published in
+`v0.0.21-polish`.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
