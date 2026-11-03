@@ -922,7 +922,7 @@ impl Runtime {
                             );
                             b.label(
                                 340.,
-                                132.,
+                                206.,
                                 824.,
                                 60.,
                                 elide_path_middle(&tilde(&entry.path, &self.env.home), 78).into(),
@@ -931,7 +931,7 @@ impl Runtime {
                             if missing {
                                 b.label(
                                     340.,
-                                    196.,
+                                    270.,
                                     824.,
                                     60.,
                                     "Selected copy unavailable. Using the preferred IWAD copy."
@@ -939,11 +939,11 @@ impl Runtime {
                                     20.,
                                 );
                             }
-                            b.button(1, 340., 284., 394., c.get_play(), true);
-                            b.button(2, 758., 284., 406., "Play setup".into(), false);
+                            b.button(1, 340., 358., 394., c.get_play(), true);
+                            b.button(2, 758., 358., 406., "Play setup".into(), false);
                             b.label(
                                 340.,
-                                376.,
+                                450.,
                                 824.,
                                 56.,
                                 format!(
@@ -959,6 +959,7 @@ impl Runtime {
                                 .into(),
                                 22.,
                             );
+                            b.progress_section(ui, &item.progress, 340., 132., 824., 520.);
                         } else {
                             base_art(b, 36., 36., 270., 224., base.game);
                             b.label(
@@ -1134,26 +1135,33 @@ impl Runtime {
                             b.button(3, 340., 354., 824., c.get_create(), false);
                         }
                     } else if let Some(setup) = setup {
-                        b.button(1, 340., 138., 394., c.get_play(), true);
-                        b.button(2, 758., 138., 406., c.get_order(), false);
+                        b.button(1, 340., 212., 394., c.get_play(), true);
+                        b.button(2, 758., 212., 406., c.get_order(), false);
                         let base = match &setup.iwad {
                             CustomIwad::Identified { variant } => variant.clone(),
                             CustomIwad::File { file } => {
                                 elide_path_start(&file.path.display().to_string(), 64)
                             }
                         };
-                        b.row(3, 340., 214., 824., c.get_iwad(), base.into(), true);
+                        b.row(3, 340., 288., 824., c.get_iwad(), base.into(), true);
                         b.row(
                             4,
                             340.,
-                            310.,
+                            384.,
                             824.,
                             c.get_compat(),
                             compatibility_name(ui, setup.compatibility),
                             true,
                         );
-                        b.button(6, 340., 414., 394., c.get_rename(), false);
-                        b.button(5, 758., 414., 406., c.get_delete(), false);
+                        b.button(6, 340., 488., 394., c.get_rename(), false);
+                        b.button(5, 758., 488., 406., c.get_delete(), false);
+                        if let Some(progress) = self
+                            .snapshot
+                            .as_ref()
+                            .and_then(|s| s.custom_progress.get(&setup.id))
+                        {
+                            b.progress_section(ui, progress, 340., 126., 824., 562.);
+                        }
                     }
                 }
                 View::Iwad => {
@@ -1516,12 +1524,27 @@ impl Runtime {
                     b.title(x + 24., y + 174., 336., 80., setup.name.clone().into(), 26.);
                     b.label(x + 24., y + 270., 336., 56., c.get_badge(), 22.);
                     b.label(x + 24., y + 340., 336., 40., c.get_order(), 20.);
-                    if let Some(line) = snapshot
+                    if let Some(recorded) = snapshot
                         .custom_progress
                         .get(&setup.id)
-                        .and_then(|progress| crate::runtime::progress_count(ui, progress))
+                        .and_then(|progress| progress.recorded())
                     {
-                        b.label(x + 24., y + 384., 336., 26., line, 18.);
+                        b.label(
+                            x + 24.,
+                            y + 384.,
+                            130.,
+                            26.,
+                            pair(ui, T::ProgressCount, recorded.completed, recorded.total),
+                            18.,
+                        );
+                        b.bar(
+                            x + 164.,
+                            y + 384.,
+                            164.,
+                            26.,
+                            recorded.completed,
+                            recorded.total,
+                        );
                     }
                 }
             }
