@@ -1,6 +1,6 @@
 # Status
 
-## Current checkpoint — 2026-10-28
+## Current checkpoint — 2026-11-03
 
 **Available for Deck testing:** [v0.0.20-progress](https://github.com/vittau/Doom-Deck-Launcher/releases/tag/v0.0.20-progress),
 immutable source `4ff47e999090ff6095312a7fdd501a07645cb7af`, published as a Linux tarball
@@ -13,11 +13,16 @@ succeeded on the tag source; the tarball matches its published SHA-256. The `cat
   per-profile `stats.txt` (engine 0.30.1 only): Library `N/M maps` with a bar, Mapset detail
   summary bar and per-map table (done, exits, skill, kills %, secrets %, UV-Max mark); a map
   is done with a recorded skill; totals are DSDA's detected PWAD maps minus a recipe's
-  `[progress] exclude_maps` (Abandon MAP18). Deck checks PG1–PG6 pending.
+  `[progress] exclude_maps` (Abandon MAP18, Arrival MAP10, Haste MAP17). The owner validated
+  PG1–PG6 on the Deck (2026-11-03).
 - **Menu launch (114, D-044, since 0.0.19):** games open at DSDA-Doom's menu; no skill setting.
-  Deck checks MM1–MM4 pending.
-- **Follow-up candidates:** `exclude_maps` for Arrival MAP10 and Haste MAP17 (ending maps per
-  their recipe evidence; report 116); a bar on base-game and custom-setup cards if wanted.
+  The owner validated MM1–MM4 on the Deck (2026-11-03).
+- **Ending-map exclusions (catalog only, after the tag):** Arrival MAP10 (94 things, no
+  monsters; the release text's "1 ending") and Haste MAP17 (one thing, "Thanks for Playing")
+  are excluded from progress totals, read from the hash-verified WADs' THINGS lumps. The
+  catalog floor stays 0.0.20, so 0.0.20 users get them from the catalog branch; no Deck check.
+- **Follow-up candidates (report 116 open questions):** a bar on custom-setup cards, per-map
+  tables on base-game/custom setup screens, the summary above the description on Mapset detail.
 
 ### Shipped
 

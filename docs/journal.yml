@@ -1350,3 +1350,18 @@
     the tarball matches its SHA-256; the catalog branch (c87c72e) requires 0.0.20. Deck checks
     PG1–PG6 and MM1–MM4 pending.
   refs: [docs/releases/v0.0.20-progress.md, docs/status.md, docs/deck-testing.md]
+
+- date: 2026-11-03
+  type: finding
+  summary: >-
+    The owner validated the 0.0.20 menu launch (MM1–MM4) and per-mapset progress (PG1–PG6) on
+    the Deck; all checks passed.
+  refs: [docs/deck-testing.md]
+
+- date: 2026-11-03
+  type: change
+  summary: >-
+    Catalog: progress totals exclude the ending maps Arrival MAP10 (94 things, no monsters) and
+    Haste MAP17 (one thing, "Thanks for Playing"), counted from the hash-verified WADs' THINGS
+    lumps. No app change; the catalog floor stays 0.0.20.
+  refs: [catalog/arrival.toml, catalog/haste.toml, docs/reports/116-mapset-progress.md]

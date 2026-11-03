@@ -318,28 +318,28 @@ Owner-validated on the Deck with 0.0.18 (2026-10-26); see [report112](reports/11
 
 ## Games open at DSDA-Doom's menu — source after spec 114
 
-**Needs Deck Validation:** see [report114](reports/114-launch-at-dsda-menu.md) (D-044). DDL no
+**Validated on the Deck (0.0.20, 2026-11-03):** see [report114](reports/114-launch-at-dsda-menu.md) (D-044). DDL no
 longer has a skill setting and passes neither `-skill` nor `-warp`. Published in `v0.0.19-menu`.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
-| MM1 | Play any catalog mapset, a base game and a custom setup: DSDA-Doom opens at its title screen and menu, not in the first map; New Game asks for the episode (where the mapset has several) and the skill | Gaming | ⏳ |
-| MM2 | With Pistol start On, start from the menu and finish the first map: the second map starts with only the pistol and 50 bullets; with it Off, the inventory carries over | Gaming | ⏳ |
-| MM3 | Home Continue also opens the menu; Load Game lists that profile's saves and loading one works | Gaming | ⏳ |
-| MM4 | Play setup, base-game setup and Mapset detail show no skill row or skill text; D-pad and Back still move cleanly around Pistol start | Gaming | ⏳ |
+| MM1 | Play any catalog mapset, a base game and a custom setup: DSDA-Doom opens at its title screen and menu, not in the first map; New Game asks for the episode (where the mapset has several) and the skill | Gaming | ✅ 0.0.20, 2026-11-03 |
+| MM2 | With Pistol start On, start from the menu and finish the first map: the second map starts with only the pistol and 50 bullets; with it Off, the inventory carries over | Gaming | ✅ 0.0.20, 2026-11-03 |
+| MM3 | Home Continue also opens the menu; Load Game lists that profile's saves and loading one works | Gaming | ✅ 0.0.20, 2026-11-03 |
+| MM4 | Play setup, base-game setup and Mapset detail show no skill row or skill text; D-pad and Back still move cleanly around Pistol start | Gaming | ✅ 0.0.20, 2026-11-03 |
 
 ## Per-mapset progress — source after spec 116
 
-**Needs Deck Validation:** see [report116](reports/116-mapset-progress.md) and the research
+**Validated on the Deck (0.0.20, 2026-11-03):** see [report116](reports/116-mapset-progress.md) and the research
 checks in [report115](reports/115-dsda-stats-research.md) (D-045). Published in
 `v0.0.20-progress`.
 
 | Check | Journey | Mode | Result |
 | --- | --- | --- | --- |
-| PG1 | Before playing an installed mapset, its page says there are no DSDA-Doom stats yet (no `0/N`). Finish one map from the menu and quit DSDA normally: back in DDL, the Library card shows `1/N maps` with a bar and the page's table marks that map done with exits, skill, kills % and secrets % | Gaming | ⏳ |
-| PG2 | Finish a map on UV killing every monster and finding every secret: it shows the UV-Max trophy; one on HMP, or with a secret missed, does not | Gaming | ⏳ |
-| PG3 | If DSDA-Doom's options offer a no-monsters game modifier, exit a map with it on: the exit is counted but the map is not marked done (skip if the option is not there) | Gaming | ⏳ |
-| PG4 | Two profiles on the same mapset keep separate progress; adding an extra WAD to a profile starts a separate, empty progress; removing it brings the old one back | Gaming | ⏳ |
-| PG5 | Abandon's total is 17 (its closing MAP18 is left out); a base game (e.g. DOOM II) counts its own maps | Gaming | ⏳ |
-| PG6 | The table reads at arm's length on the LCD; the right stick scrolls a long table while focus stays on the buttons; the bar and trophy are clear | Gaming | ⏳ |
+| PG1 | Before playing an installed mapset, its page says there are no DSDA-Doom stats yet (no `0/N`). Finish one map from the menu and quit DSDA normally: back in DDL, the Library card shows `1/N maps` with a bar and the page's table marks that map done with exits, skill, kills % and secrets % | Gaming | ✅ 0.0.20, 2026-11-03 |
+| PG2 | Finish a map on UV killing every monster and finding every secret: it shows the UV-Max trophy; one on HMP, or with a secret missed, does not | Gaming | ✅ 0.0.20, 2026-11-03 |
+| PG3 | If DSDA-Doom's options offer a no-monsters game modifier, exit a map with it on: the exit is counted but the map is not marked done (skip if the option is not there) | Gaming | ✅ 0.0.20, 2026-11-03 |
+| PG4 | Two profiles on the same mapset keep separate progress; adding an extra WAD to a profile starts a separate, empty progress; removing it brings the old one back | Gaming | ✅ 0.0.20, 2026-11-03 |
+| PG5 | Abandon's total is 17 (its closing MAP18 is left out); a base game (e.g. DOOM II) counts its own maps | Gaming | ✅ 0.0.20, 2026-11-03 |
+| PG6 | The table reads at arm's length on the LCD; the right stick scrolls a long table while focus stays on the buttons; the bar and trophy are clear | Gaming | ✅ 0.0.20, 2026-11-03 |
 

@@ -248,9 +248,10 @@ below are the ones most easily lost between sessions.
 ## Open follow-ups (keep this list current)
 
 - Published app: `v0.0.20-progress` (`4ff47e9`): per-mapset progress (116, D-045) on top of
-  0.0.19's menu launch (114, D-044). Deck checks PG1–PG6 and MM1–MM4 pending. Catalog floor
-  is 0.0.20.
-- Progress follow-ups: `exclude_maps` candidates Arrival MAP10 and Haste MAP17 (report 116).
+  0.0.19's menu launch (114, D-044). The owner validated PG1–PG6 and MM1–MM4 on the Deck
+  (2026-11-03). Catalog floor is 0.0.20.
+- Progress follow-ups: the report 116 open questions (custom-card bar, base/custom setup tables,
+  summary placement). Arrival MAP10 and Haste MAP17 are now excluded.
 - Outreach: plan in `docs/outreach.md`; repository gates done, owner did a fresh `.flatpakref`
   install. r/DoomMods and Doomworld (Source Ports) posted 2026-10-26; r/DoomMods removed it and
   Doomworld warned the account for "AI slop" (posting restricted). Outreach is on hold until the
