@@ -2,7 +2,8 @@
 
 **Status:** Ready · **Milestone:** M4 · **Depends on:** 116 · **Decision:** D-045
 **Origin:** coordinator, 2026-11-03, from report 116's open questions after the owner validated
-PG1–PG6 on the Deck (0.0.20); the owner approved this follow-up the same day.
+PG1–PG6 on the Deck (0.0.20); chosen by the coordinator as the recommended next step
+after the owner asked to finish, commit and push (not an explicit owner pick of this scope).
 
 ## Context
 
