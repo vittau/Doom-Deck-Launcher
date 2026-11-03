@@ -343,3 +343,13 @@ checks in [report115](reports/115-dsda-stats-research.md) (D-045). Published in
 | PG5 | Abandon's total is 17 (its closing MAP18 is left out); a base game (e.g. DOOM II) counts its own maps | Gaming | ✅ 0.0.20, 2026-11-03 |
 | PG6 | The table reads at arm's length on the LCD; the right stick scrolls a long table while focus stays on the buttons; the bar and trophy are clear | Gaming | ✅ 0.0.20, 2026-11-03 |
 
+## Progress polish — source after spec 117
+
+**Needs Deck Validation:** see [report117](reports/117-progress-polish.md). Merged on `main`
+(8c7ecc7); not yet in a release.
+
+| Check | Journey | Mode | Result |
+| --- | --- | --- | --- |
+| PP1 | Open an installed mapset with progress: the Progress summary and bar show without scrolling, above the description; the right stick reaches the table's last row while focus stays on the buttons | Gaming | ⏳ |
+| PP2 | A custom setup with a finished map shows `N/M maps` and a bar on its Library card, legible at arm's length | Gaming | ⏳ |
+| PP3 | Open a base game and a custom setup: each shows the summary near the top and, scrolled, the per-map table with UV-Max, Kills and Secrets; D-pad only visits actions and Back returns to the card; a never-played one says there are no stats yet | Gaming | ⏳ |

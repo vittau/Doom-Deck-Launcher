@@ -21,8 +21,11 @@ succeeded on the tag source; the tarball matches its published SHA-256. The `cat
   monsters; the release text's "1 ending") and Haste MAP17 (one thing, "Thanks for Playing")
   are excluded from progress totals, read from the hash-verified WADs' THINGS lumps. The
   catalog floor stays 0.0.20, so 0.0.20 users get them from the catalog branch; no Deck check.
-- **Follow-up candidates (report 116 open questions):** a bar on custom-setup cards, per-map
-  tables on base-game/custom setup screens, the summary above the description on Mapset detail.
+- **Progress polish (117, merged on `main` 8c7ecc7, not yet released):** Mapset detail shows
+  the progress summary above the description (visible without scrolling) and contains long
+  profile summaries; custom-setup cards draw the bar; base-game and custom-setup screens show
+  the same summary and per-map table through one shared builder. fmt, Clippy and the ordinary
+  suite (1049 tests) passed; headless PNGs reviewed. Deck checks PP1–PP3 after the next release.
 
 ### Shipped
 

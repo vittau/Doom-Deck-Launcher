@@ -1365,3 +1365,14 @@
     Haste MAP17 (one thing, "Thanks for Playing"), counted from the hash-verified WADs' THINGS
     lumps. No app change; the catalog floor stays 0.0.20.
   refs: [catalog/arrival.toml, catalog/haste.toml, docs/reports/116-mapset-progress.md]
+
+- date: 2026-11-03
+  type: change
+  summary: >-
+    Merged spec 117 progress polish (8c7ecc7): Mapset detail shows the progress summary above
+    the description and contains long profile summaries; custom-setup cards draw the bar;
+    base-game and custom-setup screens show the summary and per-map table through one shared
+    builder. Codex worker; fmt, Clippy and the ordinary suite (1049 tests) passed; headless
+    PNGs reviewed after one spacing fix. Not yet released; Deck checks PP1–PP3.
+  refs: [docs/specs/117-progress-polish.md, docs/reports/117-progress-polish.md,
+    docs/deck-testing.md]

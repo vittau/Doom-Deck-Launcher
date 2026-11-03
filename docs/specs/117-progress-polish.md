@@ -1,6 +1,6 @@
 # 117 — Progress polish: summary placement, custom-card bar, setup tables
 
-**Status:** Ready · **Milestone:** M4 · **Depends on:** 116 · **Decision:** D-045
+**Status:** Done (A6 needs Deck) · **Milestone:** M4 · **Depends on:** 116 · **Decision:** D-045
 **Origin:** coordinator, 2026-11-03, from report 116's open questions after the owner validated
 PG1–PG6 on the Deck (0.0.20); chosen by the coordinator as the recommended next step
 after the owner asked to finish, commit and push (not an explicit owner pick of this scope).
@@ -60,13 +60,13 @@ in `ddl-core::progress` and are already read for base games and custom setups
 
 ## Acceptance criteria
 
-- [ ] **A1** (R1, R5) — headless test and PNG: the summary is inside the viewport at the default
+- [x] **A1** (R1, R5) — headless test and PNG: the summary is inside the viewport at the default
   scroll on Mapset detail with a long description.
-- [ ] **A2** (R2, R5) — headless test and PNG: the custom-setup card shows `N/M maps` with a bar
+- [x] **A2** (R2, R5) — headless test and PNG: the custom-setup card shows `N/M maps` with a bar
   inside the card's inset.
-- [ ] **A3** (R3, R4, R5) — headless tests and PNGs for both setup screens (recorded with UV-Max,
+- [x] **A3** (R3, R4, R5) — headless tests and PNGs for both setup screens (recorded with UV-Max,
   no stats yet); focus skips progress nodes; one builder serves all three screens.
-- [ ] **A4** — fmt, denied-warning workspace Clippy and the ordinary test command pass.
-- [ ] **A5** — PNGs reviewed by the coordinator before merge.
+- [x] **A4** — fmt, denied-warning workspace Clippy and the ordinary test command pass.
+- [x] **A5** — PNGs reviewed by the coordinator before merge.
 - [ ] **A6** — on the Deck: the three screens read well at arm's length and the right stick
   scrolls the tables. *(Needs Deck Validation → `docs/deck-testing.md`.)*
