@@ -2773,7 +2773,7 @@ impl Runtime {
                         );
                         b.label(
                             428.,
-                            166.,
+                            240.,
                             760.,
                             68.,
                             match &item.recipe_status {
@@ -2793,7 +2793,7 @@ impl Runtime {
                         // The title's second line leaves a shorter description slot.
                         // Elide its last complete line rather than cutting a glyph.
                         b.nodes.last_mut().unwrap().kind = 23;
-                        let mut y = 242.;
+                        let mut y = 316.;
                         if let Some(s) = &self.snapshot {
                             let labels = tag_labels(s, &item.recipe, usize::MAX, None);
                             if !labels.is_empty() {
@@ -2877,134 +2877,13 @@ impl Runtime {
                                 .into(),
                             20.,
                         );
+                        // Keep long add-on names within the profile summary slot,
+                        // eliding the last complete line just like the description.
+                        b.nodes.last_mut().unwrap().kind = 23;
                         b.button(6, 1052., y + 52., 136., text(ui, T::EditProfile), false);
-                        // Spec 116 R7: a short summary plus the plain per-map table
-                        // for this profile. The table is read-only content: focus
-                        // stays on the actions and the right stick scrolls it.
-                        let mut progress_y = y + 146.;
-                        b.label(428., progress_y, 760., 30., text(ui, T::ProgressTitle), 22.);
-                        progress_y += 34.;
-                        match &item.progress {
-                            ddl_core::progress::Progress::Recorded(recorded) => {
-                                b.label(
-                                    428.,
-                                    progress_y,
-                                    300.,
-                                    30.,
-                                    pair(
-                                        ui,
-                                        T::ProgressSummary,
-                                        recorded.completed,
-                                        recorded.total,
-                                    ),
-                                    22.,
-                                );
-                                b.bar(
-                                    740.,
-                                    progress_y,
-                                    388.,
-                                    30.,
-                                    recorded.completed,
-                                    recorded.total,
-                                );
-                                progress_y += 34.;
-                                for (x, width, label) in [
-                                    (428., 190., T::ProgressMap),
-                                    (626., 66., T::ProgressDone),
-                                    (700., 66., T::ProgressExits),
-                                    (774., 66., T::ProgressSkill),
-                                    (848., 90., T::ProgressKills),
-                                    (946., 120., T::ProgressSecrets),
-                                ] {
-                                    b.label(x, progress_y, width, 24., text(ui, label), 18.);
-                                    b.nodes.last_mut().unwrap().tone = 1;
-                                }
-                                progress_y += 28.;
-                                for map in &recorded.maps {
-                                    let mark = if map.completed {
-                                        text(ui, T::ProgressYes)
-                                    } else {
-                                        text(ui, T::ProgressNoMark)
-                                    };
-                                    let skill = map.best_skill.map_or_else(
-                                        || text(ui, T::ProgressNoMark),
-                                        |skill| skill.to_string().into(),
-                                    );
-                                    b.label(
-                                        428.,
-                                        progress_y,
-                                        100.,
-                                        28.,
-                                        map.id.clone().into(),
-                                        20.,
-                                    );
-                                    if map.uv_max {
-                                        // Spec 116 R10: mark and text beside the ID.
-                                        b.trophy(500., progress_y + 5., 18.);
-                                        b.label(
-                                            522.,
-                                            progress_y,
-                                            96.,
-                                            28.,
-                                            text(ui, T::UvMax),
-                                            18.,
-                                        );
-                                        b.nodes.last_mut().unwrap().tone = 2;
-                                    }
-                                    b.label(626., progress_y, 66., 28., mark, 20.);
-                                    b.label(
-                                        700.,
-                                        progress_y,
-                                        66.,
-                                        28.,
-                                        map.total_exits.to_string().into(),
-                                        20.,
-                                    );
-                                    b.label(774., progress_y, 66., 28., skill, 20.);
-                                    b.label(
-                                        848.,
-                                        progress_y,
-                                        90.,
-                                        28.,
-                                        percent_text(ui, map.kills_percent),
-                                        20.,
-                                    );
-                                    b.label(
-                                        946.,
-                                        progress_y,
-                                        120.,
-                                        28.,
-                                        percent_text(ui, map.secrets_percent),
-                                        20.,
-                                    );
-                                    progress_y += 30.;
-                                }
-                            }
-                            ddl_core::progress::Progress::NoStatsYet => {
-                                b.label(
-                                    428.,
-                                    progress_y,
-                                    760.,
-                                    32.,
-                                    text(ui, T::ProgressNoStats),
-                                    20.,
-                                );
-                                b.nodes.last_mut().unwrap().tone = 1;
-                                progress_y += 36.;
-                            }
-                            ddl_core::progress::Progress::Unavailable(_) => {
-                                b.label(
-                                    428.,
-                                    progress_y,
-                                    760.,
-                                    32.,
-                                    text(ui, T::ProgressUnavailable),
-                                    20.,
-                                );
-                                b.nodes.last_mut().unwrap().tone = 1;
-                                progress_y += 36.;
-                            }
-                        }
+                        // The summary ends at y + 140; leave 20 px before the table.
+                        let progress_y =
+                            b.progress_section(ui, &item.progress, 428., 166., 760., y + 160.);
                         let page_y = progress_y + 6.;
                         b.label(
                             428.,
@@ -5021,6 +4900,125 @@ impl Nodes {
             true,
             false,
         );
+    }
+    /// Shared read-only progress section (spec 117 R4). The summary can precede
+    /// metadata/actions while the table starts below them; returns the section bottom.
+    #[allow(clippy::too_many_arguments)]
+    fn progress_section(
+        &mut self,
+        ui: &AppWindow,
+        progress: &ddl_core::progress::Progress,
+        x: f32,
+        y: f32,
+        width: f32,
+        table_y: f32,
+    ) -> f32 {
+        let mut progress_y = y;
+        self.label(x, progress_y, width, 30., text(ui, T::ProgressTitle), 22.);
+        progress_y += 34.;
+        match progress {
+            ddl_core::progress::Progress::Recorded(recorded) => {
+                self.label(
+                    x,
+                    progress_y,
+                    300.,
+                    30.,
+                    pair(ui, T::ProgressSummary, recorded.completed, recorded.total),
+                    22.,
+                );
+                self.bar(
+                    x + 312.,
+                    progress_y,
+                    (width - 372.).max(0.),
+                    30.,
+                    recorded.completed,
+                    recorded.total,
+                );
+                progress_y = table_y;
+                for (column_x, column_width, label) in [
+                    (428., 190., T::ProgressMap),
+                    (626., 66., T::ProgressDone),
+                    (700., 66., T::ProgressExits),
+                    (774., 66., T::ProgressSkill),
+                    (848., 90., T::ProgressKills),
+                    (946., 120., T::ProgressSecrets),
+                ] {
+                    self.label(
+                        x + column_x - 428.,
+                        progress_y,
+                        column_width,
+                        24.,
+                        text(ui, label),
+                        18.,
+                    );
+                    self.nodes.last_mut().unwrap().tone = 1;
+                }
+                progress_y += 28.;
+                for map in &recorded.maps {
+                    let mark = if map.completed {
+                        text(ui, T::ProgressYes)
+                    } else {
+                        text(ui, T::ProgressNoMark)
+                    };
+                    let skill = map.best_skill.map_or_else(
+                        || text(ui, T::ProgressNoMark),
+                        |skill| skill.to_string().into(),
+                    );
+                    self.label(x, progress_y, 100., 28., map.id.clone().into(), 20.);
+                    if map.uv_max {
+                        // Spec 116 R10: mark and text beside the ID.
+                        self.trophy(x + 72., progress_y + 5., 18.);
+                        self.label(x + 94., progress_y, 96., 28., text(ui, T::UvMax), 18.);
+                        self.nodes.last_mut().unwrap().tone = 2;
+                    }
+                    self.label(x + 198., progress_y, 66., 28., mark, 20.);
+                    self.label(
+                        x + 272.,
+                        progress_y,
+                        66.,
+                        28.,
+                        map.total_exits.to_string().into(),
+                        20.,
+                    );
+                    self.label(x + 346., progress_y, 66., 28., skill, 20.);
+                    self.label(
+                        x + 420.,
+                        progress_y,
+                        90.,
+                        28.,
+                        percent_text(ui, map.kills_percent),
+                        20.,
+                    );
+                    self.label(
+                        x + 518.,
+                        progress_y,
+                        120.,
+                        28.,
+                        percent_text(ui, map.secrets_percent),
+                        20.,
+                    );
+                    progress_y += 30.;
+                }
+            }
+            ddl_core::progress::Progress::NoStatsYet => {
+                self.label(x, progress_y, width, 32., text(ui, T::ProgressNoStats), 20.);
+                self.nodes.last_mut().unwrap().tone = 1;
+                progress_y += 36.;
+            }
+            ddl_core::progress::Progress::Unavailable(_) => {
+                self.label(
+                    x,
+                    progress_y,
+                    width,
+                    32.,
+                    text(ui, T::ProgressUnavailable),
+                    20.,
+                );
+                self.nodes.last_mut().unwrap().tone = 1;
+                progress_y += 36.;
+            }
+        }
+        progress_y.max(table_y)
     }
     /// Spec 116, R9: a proportional bar beside an `N/M` count. `art` carries the
     /// filled permille and `tone` 2 selects the success fill; the node is never
