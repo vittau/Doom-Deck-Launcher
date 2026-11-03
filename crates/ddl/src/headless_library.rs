@@ -2045,3 +2045,228 @@ fn detail_distinguishes_no_stats_yet_from_unavailable() {
     assert!(!ui.get_nodes().iter().any(|node| node.kind == 30));
     write_png("116-detail-unavailable.png", &render(&window));
 }
+
+/// Spec 117: summary nodes are inside the Deck content viewport, including padding.
+fn assert_progress_summary_visible(ui: &AppWindow, summary: &str) {
+    let offset = ui.get_scroll_offset();
+    for label in ["Progress", summary] {
+        let node = ui.get_nodes().iter().find(|n| n.label == label).unwrap();
+        assert!(!node.actionable);
+        assert!(node.y + 8. >= offset, "{label} above viewport");
+        assert!(
+            node.y + node.h + 8. - offset <= 522.,
+            "{label} below viewport"
+        );
+    }
+}
+
+fn assert_progress_focus_skipped(r: &mut Runtime, ui: &AppWindow) {
+    use crate::input::Action;
+    let expected: Vec<_> = ui
+        .get_nodes()
+        .iter()
+        .filter(|n| n.actionable)
+        .map(|n| n.id)
+        .collect();
+    for action in [Action::Down, Action::Right, Action::Up, Action::Left] {
+        for _ in 0..16 {
+            r.action(ui, action);
+            assert!(
+                expected.contains(&r.focus),
+                "progress must never take focus"
+            );
+        }
+    }
+}
+
+#[test]
+fn progress_polish_detail_summary_and_long_table() {
+    if isolated(
+        module_path!(),
+        "progress_polish_detail_summary_and_long_table",
+    ) {
+        return;
+    }
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let index = abandon_with_progress(&mut r, Progress::Recorded(abandon_recorded(false)));
+    r.selected = index;
+    r.screen = Screen::Detail;
+    r.focus = 1;
+    for description in [
+        "Short description.".to_owned(),
+        "A long description with many details. ".repeat(80),
+    ] {
+        let item = &mut r.snapshot.as_mut().unwrap().items[index];
+        item.recipe.description = description;
+        item.profile.components = vec!["Additional content".repeat(12)];
+        item.profile.extras = vec![ddl_core::local::UserFile {
+            path: temp.path().join("extra.wad"),
+            size: 12,
+            sha256: "a".repeat(64),
+            kind: ddl_core::local::Kind::Wad,
+        }];
+        r.sync(&ui);
+        advance_time(20);
+        assert_eq!(ui.get_scroll_offset(), 0.);
+        assert_progress_summary_visible(&ui, "12/18 maps completed");
+    }
+    write_png("117-detail-long-description-default.png", &render(&window));
+    assert_progress_focus_skipped(&mut r, &ui);
+    r.focus = 1;
+    r.sync(&ui);
+    ui.invoke_scroll(0., 10000.);
+    advance_time(20);
+    let last = ui.get_nodes().iter().find(|n| n.label == "MAP18").unwrap();
+    assert!(last.y + 8. >= ui.get_presented_scroll_offset());
+    assert!(last.y + last.h + 8. - ui.get_presented_scroll_offset() <= 522.);
+    write_png("117-detail-table-end.png", &render(&window));
+    for (progress, label) in [
+        (
+            Progress::NoStatsYet,
+            ui.global::<crate::WiringStrings>().get_progress_no_stats(),
+        ),
+        (
+            Progress::Unavailable(ddl_core::progress::Unavailable::UnsupportedEngine {
+                version: "test".into(),
+            }),
+            ui.global::<crate::WiringStrings>()
+                .get_progress_unavailable(),
+        ),
+    ] {
+        r.snapshot.as_mut().unwrap().items[index].progress = progress;
+        r.sync(&ui);
+        ui.invoke_follow_scroll(0., false);
+        assert_progress_summary_visible(&ui, label.as_str());
+        assert!(!ui.get_nodes().iter().any(|n| n.kind == 6));
+    }
+}
+
+#[test]
+fn progress_polish_custom_card_bar() {
+    if isolated(module_path!(), "progress_polish_custom_card_bar") {
+        return;
+    }
+    use crate::services::ViewFormat;
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    r.view_format = ViewFormat::Cards;
+    let id = r.snapshot.as_ref().unwrap().custom[0].id.clone();
+    r.focus = 6100;
+    for (completed, permille) in [(0, 0), (3, 750), (4, 1000)] {
+        let mut recorded = short_recorded();
+        recorded.completed = completed;
+        r.snapshot
+            .as_mut()
+            .unwrap()
+            .custom_progress
+            .insert(id.clone(), Progress::Recorded(recorded));
+        r.sync(&ui);
+        advance_time(20);
+        let nodes = ui.get_nodes();
+        let card = nodes.iter().find(|n| n.id == 6100).unwrap();
+        let count = nodes
+            .iter()
+            .find(|n| n.label == format!("{completed}/4 maps").as_str())
+            .unwrap();
+        let bar = nodes
+            .iter()
+            .find(|n| n.kind == 6 && n.y == count.y && n.x > count.x)
+            .unwrap();
+        assert_eq!((bar.art, bar.tone, bar.actionable), (permille, 2, false));
+        assert_eq!(card.h, 448.);
+        assert!(bar.x >= count.x + count.w);
+        assert!(bar.x + bar.w <= card.x + card.w - 28.);
+        assert!(bar.y + bar.h <= card.y + card.h - 28.);
+        assert!(bar.y + 8. >= ui.get_scroll_offset());
+        assert!(bar.y + bar.h + 8. - ui.get_scroll_offset() <= 522.);
+        if completed == 3 {
+            write_png("117-custom-card-bar.png", &render(&window));
+        }
+    }
+    for progress in [
+        Progress::NoStatsYet,
+        Progress::Unavailable(ddl_core::progress::Unavailable::UnsupportedEngine {
+            version: "test".into(),
+        }),
+    ] {
+        r.snapshot
+            .as_mut()
+            .unwrap()
+            .custom_progress
+            .insert(id.clone(), progress);
+        r.sync(&ui);
+        assert!(!ui.get_nodes().iter().any(|n| n.kind == 6));
+    }
+}
+
+#[test]
+fn progress_polish_base_and_custom_sections() {
+    if isolated(module_path!(), "progress_polish_base_and_custom_sections") {
+        return;
+    }
+    use crate::input::Action;
+    let (window, ui) = setup();
+    ui.show().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let mut r = owner_runtime(temp.path(), &ui);
+    let custom_id = r.snapshot.as_ref().unwrap().custom[0].id.clone();
+    for (card, name) in [(6300, "base"), (6100, "custom")] {
+        for (progress, state, summary) in [
+            (
+                Progress::Recorded(short_recorded()),
+                "recorded",
+                "3/4 maps completed".to_owned(),
+            ),
+            (
+                Progress::NoStatsYet,
+                "no-stats",
+                ui.global::<crate::WiringStrings>()
+                    .get_progress_no_stats()
+                    .to_string(),
+            ),
+            (
+                Progress::Unavailable(ddl_core::progress::Unavailable::UnsupportedEngine {
+                    version: "test".into(),
+                }),
+                "unavailable",
+                ui.global::<crate::WiringStrings>()
+                    .get_progress_unavailable()
+                    .to_string(),
+            ),
+        ] {
+            let s = r.snapshot.as_mut().unwrap();
+            s.base_games[0].progress = progress.clone();
+            s.custom_progress.insert(custom_id.clone(), progress);
+            r.focus = card;
+            r.sync(&ui);
+            r.action(&ui, Action::Confirm);
+            advance_time(20);
+            assert_eq!(r.focus, 1);
+            assert_eq!(ui.get_scroll_offset(), 0.);
+            assert_progress_summary_visible(&ui, &summary);
+            write_png(&format!("117-{name}-{state}-default.png"), &render(&window));
+            if state == "recorded" {
+                assert_detail_marks(&ui, 750, 3);
+                let labels = progress_labels(&ui);
+                for label in ["Kills", "Secrets", "UV-Max", "100%", "MAP13"] {
+                    assert!(labels.iter().any(|l| l == label));
+                }
+                ui.invoke_scroll(0., 10000.);
+                advance_time(20);
+                assert!(ui.get_presented_scroll_offset() > 0.);
+                write_png(&format!("117-{name}-recorded-table.png"), &render(&window));
+            } else {
+                assert!(!ui.get_nodes().iter().any(|n| n.kind == 6 || n.kind == 30));
+            }
+            assert_progress_focus_skipped(&mut r, &ui);
+            r.action(&ui, Action::Back);
+            assert!(ui.get_nodes().iter().any(|n| n.id == card && n.kind == 1));
+            assert_eq!(r.focus, card, "Back restores the invoking card");
+        }
+    }
+}
