@@ -2112,11 +2112,25 @@ fn progress_polish_detail_summary_and_long_table() {
         advance_time(20);
         assert_eq!(ui.get_scroll_offset(), 0.);
         assert_progress_summary_visible(&ui, "12/18 maps completed");
+        let nodes = ui.get_nodes();
+        let profile_summary = nodes
+            .iter()
+            .find(|n| n.label.contains("Additional content"))
+            .expect("the profile summary contains the long add-on name");
+        assert_eq!(profile_summary.kind, 23, "elide within the summary box");
+        let header = nodes.iter().find(|n| n.label == "Map").unwrap();
+        assert!(
+            header.y >= profile_summary.y + profile_summary.h + 20.,
+            "the table header needs at least 20 px below the profile summary"
+        );
     }
     write_png("117-detail-long-description-default.png", &render(&window));
     assert_progress_focus_skipped(&mut r, &ui);
     r.focus = 1;
     r.sync(&ui);
+    ui.invoke_scroll(0., 220.);
+    advance_time(20);
+    write_png("117-detail-profile-table-gap.png", &render(&window));
     ui.invoke_scroll(0., 10000.);
     advance_time(20);
     let last = ui.get_nodes().iter().find(|n| n.label == "MAP18").unwrap();

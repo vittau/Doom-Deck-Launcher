@@ -2877,9 +2877,13 @@ impl Runtime {
                                 .into(),
                             20.,
                         );
+                        // Keep long add-on names within the profile summary slot,
+                        // eliding the last complete line just like the description.
+                        b.nodes.last_mut().unwrap().kind = 23;
                         b.button(6, 1052., y + 52., 136., text(ui, T::EditProfile), false);
+                        // The summary ends at y + 140; leave 20 px before the table.
                         let progress_y =
-                            b.progress_section(ui, &item.progress, 428., 166., 760., y + 146.);
+                            b.progress_section(ui, &item.progress, 428., 166., 760., y + 160.);
                         let page_y = progress_y + 6.;
                         b.label(
                             428.,

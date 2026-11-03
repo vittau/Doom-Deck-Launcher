@@ -4,7 +4,10 @@
 
 - **R1:** Mapset detail now places the progress title and summary above the description,
   independent of the description, tag, add-on and extra-file content below it. Existing
-  metadata, actions, source/credits and table remain present on the scroll plane.
+  metadata, actions, source/credits and table remain present on the scroll plane. After
+  coordinator review, the profile summary uses the description's complete-line elision
+  (node kind 23), and the table header starts 20 px below its box; the source/credits move
+  down with the table.
 - **R2:** Custom-setup Library cards draw the same success-colored proportional bar as catalog
   cards, beside the existing count, at the existing 448 px card height and text size. Empty,
   partial and full counts use the existing bar rules; missing/unavailable counts omit it.
@@ -30,6 +33,7 @@ Focused commands:
 - `cargo test -p ddl progress_polish -- --nocapture` — passed, 3 tests:
   - `headless::library::progress_polish_detail_summary_and_long_table`: short and very long
     descriptions, an add-on and an extra file; default-scroll title/summary viewport bounds;
+    profile-summary elision and at least 20 px between its box and the table header;
     read-only focus; right-stick scroll to the final MAP18 row; no-stats and unavailable
     summaries with no bar.
   - `headless::library::progress_polish_custom_card_bar`: empty/partial/full fill, success tone,
@@ -57,6 +61,7 @@ Paths below are relative to the worktree root
 | View | PNG |
 | --- | --- |
 | Mapset detail, long description, default scroll | `target/headless/progress_polish_detail_summary_and_long_table/117-detail-long-description-default.png` |
+| Mapset detail, profile/table junction after review fix | `target/headless/progress_polish_detail_summary_and_long_table/117-detail-profile-table-gap.png` |
 | Mapset detail, end of long table | `target/headless/progress_polish_detail_summary_and_long_table/117-detail-table-end.png` |
 | Custom Library card with bar | `target/headless/progress_polish_custom_card_bar/117-custom-card-bar.png` |
 | Base game, recorded summary at default scroll | `target/headless/progress_polish_base_and_custom_sections/117-base-recorded-default.png` |
@@ -68,9 +73,11 @@ Paths below are relative to the worktree root
 | Custom setup, no stats yet | `target/headless/progress_polish_base_and_custom_sections/117-custom-no-stats-default.png` |
 | Custom setup, unavailable | `target/headless/progress_polish_base_and_custom_sections/117-custom-unavailable-default.png` |
 
-Worker visual review: all required PNGs inspected. The summaries fit at default scroll; the
-custom card count/bar remain legible inside the original card; the scrolled tables show
-UV-Max and aligned percentages without progress-content overlap. The base/custom recorded
+Worker visual review: coordinator review caught a wrapped profile-summary line overlapping
+Mapset detail's header in the original evidence. The follow-up adds bounded complete-line
+elision and a 20 px gap, and regenerates the default, junction and table-end detail PNGs.
+The summaries fit at default scroll; the custom card count/bar remain legible inside the
+original card, and the scrolled tables show UV-Max and aligned percentages. The base/custom recorded
 screens have separate default and scrolled evidence because their tables follow existing
 actions. **Coordinator PNG review remains required before merge (A5).**
 
@@ -85,3 +92,16 @@ actions. **Coordinator PNG review remains required before merge (A5).**
   Kills and Secrets readability. Confirm D-pad only visits actions, Back returns to the
   invoking card, and custom-card empty/partial/full bars remain legible without shrinking
   text. Check both no-stats and unavailable messages on setup screens.
+
+## Coordinator review fix verification
+
+- `cargo test -p ddl progress_polish_detail_summary_and_long_table -- --nocapture` — passed.
+  The test asserts the long add-on summary is kind 23 and the header starts at least 20 px
+  below the summary box, for both short and long descriptions.
+- `cargo fmt --all --check` — passed.
+- `cargo clippy --workspace --all-targets -- -D warnings` — passed, exit 0.
+- `cargo test --workspace --locked -- --skip headless::journeys::title_fit_ --skip headless::journeys::categories_favorites_and_screenshots`
+  — passed, exit 0; 1,049 tests passed, including 265 DDL unit/headless tests (the prescribed
+  10 cases filtered). This run regenerated the detail PNGs listed above, including the new
+  profile/table-junction view; all three were visually inspected after regeneration.
+- Full-check logs: `target/117-review-clippy.log` and `target/117-review-tests.log`.
