@@ -79,11 +79,18 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
 - **Headless Chicken:** **known broken on Linux with DSDA-Doom 0.30.1**, at any complevel and
   install path. The engine crashes while precaching the mapset's stereo Ogg sound effects:
   the official AppImage bundles SDL 2.0.20, whose SSE3 stereo-to-mono conversion makes an
-  aligned load from DSDA's 8-byte-aligned buffer. `-nosound` is the only workaround and DDL
-  does not expose it. Upstream: issue [dsda-doom#1049](https://github.com/dsda-org/dsda-doom/issues/1049),
-  fix [dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050) (opened by the owner
-  2026-10-23, CI green, awaiting review). When a release contains it, add that engine to
-  `engines.toml` and re-test the mapset (110).
+  aligned load from DSDA's 8-byte-aligned buffer. `-nosound` works and DDL does not expose it.
+  **No upstream fix is coming:** on 2026-10-31 the DSDA-Doom maintainer closed the owner's fix
+  [dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050) unreviewed and issues
+  [#1049](https://github.com/dsda-org/dsda-doom/issues/1049) and
+  [#1051](https://github.com/dsda-org/dsda-doom/issues/1051) as not planned, because the
+  project does not accept AI-generated code or issues. Diagnostic run
+  [42076275943](https://github.com/vittau/Doom-Deck-Launcher/actions/runs/42076275943)
+  (2026-11-05, ubuntu-24.04, official AppImage, Freedoom) confirms the SDL cause: with the
+  host SDL 2.30.0 forced in through `LD_PRELOAD` precaching finishes and the game runs;
+  `SDL_DYNAMIC_API` is ignored by the bundled SDL and still crashes. Not tested on the Deck
+  or inside the Flatpak (its runtime ships sdl2-compat, which needs SDL3). What DDL does with
+  the mapset is an open owner decision.
 - **Only fixture and documentation commits follow the tag.** The post-tag history adds the
   `v0.0.15-local` saved-state fixture, its guard and this status; it does not imply a newer
   binary than the published one.

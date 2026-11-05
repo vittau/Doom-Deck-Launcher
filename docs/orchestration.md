@@ -259,10 +259,11 @@ below are the ones most easily lost between sessions.
   D-042 allows breaking state while experimental, so add fixtures only if the owner wants them.
 - Pending Deck checks that need the owner's own WAD folder: LC2, LC4–LC6, the remaining parts
   of LC7 and RV3 (custom/blocked setups). No SD card on the owner's Deck (SD steps N/A).
-- Headless Chicken is known broken on Linux with DSDA-Doom 0.30.1 (report 110). The owner's
-  upstream fix is [dsda-doom#1050](https://github.com/dsda-org/dsda-doom/pull/1050); when a DSDA
-  release contains it, add that engine to `crates/ddl-core/data/engines.toml` with its SHA-256
-  and re-test the mapset.
+- Headless Chicken is known broken on Linux with DSDA-Doom 0.30.1 (report 110, status). The
+  maintainer closed the owner's fix and issues on 2026-10-31: dsda-org/dsda-doom does not
+  review AI-generated PRs or issues. Never open or draft an upstream contribution there; any
+  report to that project is written by the owner. Forcing a newer host SDL2 with `LD_PRELOAD`
+  avoids the crash in CI; whether DDL uses that is an owner decision.
 - Codex was at 74% of its 5h window on 2026-10-23 evening; check usage before routing per the
   temporary override (through 2026-11-01).
 - CI follow-up (owner deferred on 2026-10-23): cache the Flatpak build dir and `target/`

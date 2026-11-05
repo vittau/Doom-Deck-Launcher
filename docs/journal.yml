@@ -1384,3 +1384,15 @@
     signed Flatpak 41689529480 (site version 0.0.21), CI 41689500183 and packaging metadata
     41689500195 succeeded; the tarball matches its SHA-256. Deck checks PP1–PP3 pending.
   refs: [docs/releases/v0.0.21-polish.md, docs/status.md, docs/deck-testing.md]
+
+- date: 2026-11-05
+  type: finding
+  summary: >-
+    Upstream will not fix the Headless Chicken crash: on 2026-10-31 the DSDA-Doom maintainer
+    closed dsda-org/dsda-doom#1050 unreviewed and #1049/#1051 as not planned, since the
+    project does not accept AI-generated code or issues. Diagnostic run 42076275943 confirms
+    the SDL 2.0.20 cause: forcing the runner's SDL 2.30.0 with LD_PRELOAD lets the official
+    0.30.1 AppImage finish precaching and run; SDL_DYNAMIC_API is ignored and still crashes.
+    Untested on the Deck and in the Flatpak. The mapset stays known broken pending an owner
+    decision; agents do not contribute to dsda-doom.
+  refs: [docs/status.md, docs/orchestration.md, catalog/headless-chicken.toml]
