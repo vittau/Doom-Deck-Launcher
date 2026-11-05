@@ -34,14 +34,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq libopengl0 libgl1 libglu1-mesa libsdl2-2.0-0 \
             libsndfile1 libfluidsynth3 libportmidi0 libmad0 libvorbisfile3 libxkbcommon0
-          echo "--- AppRun ---"; cat squashfs-root/AppRun || true
+          echo "--- AppRun ---"; file squashfs-root/AppRun; ls squashfs-root squashfs-root/usr/lib | head -40
           echo "--- bundled SDL ---"; find squashfs-root -name 'libSDL2*'
           echo "--- system SDL ---"; dpkg -l libsdl2-2.0-0 | tail -1
           ls -l /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0*
 
       - name: Run variants
         run: |
-          set -uo pipefail
+          set +e -uo pipefail
           run() {
             label="$1"; shift
             rm -rf "run-$label"; mkdir -p "run-$label/data" "run-$label/save"
@@ -68,7 +68,7 @@ jobs:
       - name: Run the override inside the Flatpak runtime the app uses
         continue-on-error: true
         run: |
-          set -uo pipefail
+          set +e -uo pipefail
           sudo apt-get install -y -qq flatpak
           flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak --user install -y --noninteractive flathub org.freedesktop.Platform//26.08
