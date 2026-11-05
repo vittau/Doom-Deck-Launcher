@@ -1,0 +1,90 @@
+# Temporary diagnostic for the Headless Chicken startup crash (removed after use).
+#
+# Tests whether pointing SDL's dynamic API (SDL_DYNAMIC_API) at a newer SDL2 than
+# the 2.0.20 bundled in the official AppImage avoids the precache crash, without
+# modifying the engine. Uses the public idgames archive and Freedoom only.
+name: Diagnose HC SDL override
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Fetch engine, mapset and a free IWAD
+        run: |
+          set -euo pipefail
+          curl -fsSL -o dsda.AppImage \
+            https://github.com/dsda-org/dsda-doom/releases/download/v0.30.1/dsda-doom-0.30.1-linux-x86_64.appimage
+          echo "b06adf3f0c7d4e82dc1870baf97e67e4dc4e663e37f69070ddc02fa3e97608b0  dsda.AppImage" | sha256sum -c -
+          chmod +x dsda.AppImage
+          ./dsda.AppImage --appimage-extract >/dev/null
+          curl -fsSL -o hc.zip \
+            https://ftp.fu-berlin.de/pc/games/idgames/levels/doom2/Ports/megawads/hdlschkn.zip
+          echo "de8926c8d3c22dc739718eb06c18da994f3a9fcd12c0f404cbc4c342ec5c4659  hc.zip" | sha256sum -c -
+          unzip -o -q hc.zip
+          curl -fsSL -o freedoom.zip \
+            https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip
+          unzip -o -q freedoom.zip
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libopengl0 libgl1 libglu1-mesa libsdl2-2.0-0 \
+            libsndfile1 libfluidsynth3 libportmidi0 libmad0 libvorbisfile3 libxkbcommon0
+          echo "--- AppRun ---"; cat squashfs-root/AppRun || true
+          echo "--- bundled SDL ---"; find squashfs-root -name 'libSDL2*'
+          echo "--- system SDL ---"; dpkg -l libsdl2-2.0-0 | tail -1
+          ls -l /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0*
+
+      - name: Run variants
+        run: |
+          set -uo pipefail
+          run() {
+            label="$1"; shift
+            rm -rf "run-$label"; mkdir -p "run-$label/data" "run-$label/save"
+            env SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy "$@" \
+              squashfs-root/AppRun \
+                -iwad freedoom-0.13.0/freedoom2.wad -file HDLSCHKN.wad \
+                -config "run-$label/cfg" -data "run-$label/data" -save "run-$label/save" \
+                -complevel mbf21 -nodraw -verbose >"log-$label.txt" 2>&1 &
+            pid=$!
+            sleep 20
+            echo "=== $label: SDL mapped after 20s ==="
+            grep -i sdl2 "/proc/$pid/maps" 2>/dev/null | awk '{print $6}' | sort -u || true
+            if kill -0 "$pid" 2>/dev/null; then
+              echo "$label: STILL RUNNING after 20s"; kill "$pid"; wait "$pid" 2>/dev/null
+            else
+              wait "$pid"; echo "$label: EXITED code=$?"
+            fi
+            grep -n -E "Precaching|Named sound|signal|Segmentation|error" "log-$label.txt" | tail -8
+            tail -5 "log-$label.txt"
+          }
+          run baseline
+          run override SDL_DYNAMIC_API=/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0
+
+      - name: Run the override inside the Flatpak runtime the app uses
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          sudo apt-get install -y -qq flatpak
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y --noninteractive flathub org.freedesktop.Platform//26.08
+          inner() {
+            label="$1"; shift
+            flatpak run --user --filesystem="$PWD" --env=SDL_AUDIODRIVER=dummy \
+              --env=SDL_VIDEODRIVER=dummy "$@" --command=sh org.freedesktop.Platform//26.08 -c '
+                ls -l /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0* 2>&1
+                cd "'"$PWD"'"
+                timeout 20 squashfs-root/AppRun -iwad freedoom-0.13.0/freedoom2.wad \
+                  -file HDLSCHKN.wad -complevel mbf21 -nodraw -verbose \
+                  -config flat/cfg -data flat -save flat > "log-flat-'"$label"'.txt" 2>&1
+                echo "exit=$? (124 = still running at timeout)"
+                tail -4 "log-flat-'"$label"'.txt"'
+          }
+          mkdir -p flat
+          echo "=== flatpak baseline ==="; inner baseline
+          echo "=== flatpak override ==="
+          inner override --env=SDL_DYNAMIC_API=/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0
