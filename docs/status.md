@@ -89,8 +89,8 @@ succeeded on 2026-10-23; the app archive browser remains unimplemented and depri
   (2026-11-05, ubuntu-24.04, official AppImage, Freedoom) confirms the SDL cause: with the
   host SDL 2.30.0 forced in through `LD_PRELOAD` precaching finishes and the game runs;
   `SDL_DYNAMIC_API` is ignored by the bundled SDL and still crashes. Not tested on the Deck
-  or inside the Flatpak (its runtime ships sdl2-compat, which needs SDL3). What DDL does with
-  the mapset is an open owner decision.
+  or inside the Flatpak (its runtime ships sdl2-compat, which needs SDL3). The owner parked the
+  case on 2026-11-05: no work, decision or recipe change until the owner reopens it.
 - **Only fixture and documentation commits follow the tag.** The post-tag history adds the
   `v0.0.15-local` saved-state fixture, its guard and this status; it does not imply a newer
   binary than the published one.

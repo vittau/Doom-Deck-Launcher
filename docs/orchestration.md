@@ -263,7 +263,8 @@ below are the ones most easily lost between sessions.
   maintainer closed the owner's fix and issues on 2026-10-31: dsda-org/dsda-doom does not
   review AI-generated PRs or issues. Never open or draft an upstream contribution there; any
   report to that project is written by the owner. Forcing a newer host SDL2 with `LD_PRELOAD`
-  avoids the crash in CI; whether DDL uses that is an owner decision.
+  avoids the crash in CI; the owner parked the case on
+  2026-11-05; do not raise or work on it (recipe text included) until the owner reopens it.
 - Codex was at 74% of its 5h window on 2026-10-23 evening; check usage before routing per the
   temporary override (through 2026-11-01).
 - CI follow-up (owner deferred on 2026-10-23): cache the Flatpak build dir and `target/`
