@@ -33,7 +33,7 @@ jobs:
           unzip -o -q freedoom.zip
           sudo apt-get update -qq
           sudo apt-get install -y -qq libopengl0 libgl1 libglu1-mesa libsdl2-2.0-0 \
-            libsndfile1 libfluidsynth3 libportmidi0 libmad0 libvorbisfile3 libxkbcommon0
+            gdb libsndfile1 libfluidsynth3 libportmidi0 libmad0 libvorbisfile3 libxkbcommon0
           echo "--- AppRun ---"; file squashfs-root/AppRun; ls squashfs-root squashfs-root/usr/lib | head -40
           echo "--- bundled SDL ---"; find squashfs-root -name 'libSDL2*'
           echo "--- system SDL ---"; dpkg -l libsdl2-2.0-0 | tail -1
@@ -62,29 +62,35 @@ jobs:
             grep -n -E "Precaching|Named sound|signal|Segmentation|error" "log-$label.txt" | tail -8
             tail -5 "log-$label.txt"
           }
-          run baseline
-          run override SDL_DYNAMIC_API=/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0
-
-      - name: Run the override inside the Flatpak runtime the app uses
-        continue-on-error: true
-        run: |
-          set +e -uo pipefail
-          sudo apt-get install -y -qq flatpak
-          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak --user install -y --noninteractive flathub org.freedesktop.Platform//26.08
-          inner() {
-            label="$1"; shift
-            flatpak run --user --filesystem="$PWD" --env=SDL_AUDIODRIVER=dummy \
-              --env=SDL_VIDEODRIVER=dummy "$@" --command=sh org.freedesktop.Platform//26.08 -c '
-                ls -l /usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0* 2>&1
-                cd "'"$PWD"'"
-                timeout 20 squashfs-root/AppRun -iwad freedoom-0.13.0/freedoom2.wad \
-                  -file HDLSCHKN.wad -complevel mbf21 -nodraw -verbose \
-                  -config flat/cfg -data flat -save flat > "log-flat-'"$label"'.txt" 2>&1
-                echo "exit=$? (124 = still running at timeout)"
-                tail -4 "log-flat-'"$label"'.txt"'
-          }
-          mkdir -p flat
-          echo "=== flatpak baseline ==="; inner baseline
-          echo "=== flatpak override ==="
-          inner override --env=SDL_DYNAMIC_API=/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0
+          SYS=/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0; mkdir -p ldd
+          run override SDL_DYNAMIC_API=$SYS
+          LD_DEBUG=libs SDL_DYNAMIC_API=$SYS SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+            squashfs-root/AppRun -iwad freedoom-0.13.0/freedoom2.wad -file HDLSCHKN.wad \
+            -complevel mbf21 -nodraw -config ldd/cfg -data ldd -save ldd 2>&1 \
+            | grep -i -E "calling init:.*SDL|file=.*SDL2-2" | head -10
+          run preload LD_PRELOAD=$SYS
+          for label in override preload; do
+            case $label in
+              override) extra="set environment SDL_DYNAMIC_API $SYS" ;;
+              preload) extra="set environment LD_PRELOAD $SYS" ;;
+            esac
+            mkdir -p "g-$label"
+            cat > "gdb-$label.cmd" <<EOF2
+          set pagination off
+          set environment LD_LIBRARY_PATH $PWD/squashfs-root/usr/lib
+          set environment SDL_AUDIODRIVER dummy
+          set environment SDL_VIDEODRIVER dummy
+          $extra
+          run
+          bt 8
+          info symbol \$pc
+          x/2i \$pc
+          info registers rdi rsi rcx
+          info sharedlibrary SDL2
+          EOF2
+            echo "=== gdb $label ==="
+            timeout 150 gdb -batch -q -x "gdb-$label.cmd" --args squashfs-root/usr/bin/dsda-doom \
+              -iwad freedoom-0.13.0/freedoom2.wad -file HDLSCHKN.wad -complevel mbf21 -nodraw \
+              -config "g-$label/cfg" -data "g-$label" -save "g-$label" 2>&1 \
+              | grep -v -E "^\[|Named sound|^ *$" | tail -30
+          done
